@@ -1,5 +1,5 @@
-/** 每轮成绩海报：纯 Canvas 绘制（主题 / 背景图 / 平移），导出 PNG（无依赖） */
-import { getTheme } from './posterThemes'
+/** 每轮成绩海报：背景（极简场景/照片）+ 每字段半透明白底框，导出 PNG */
+import { getBackground } from './posterScenes'
 
 export interface PosterWrong {
   answer: string
@@ -8,7 +8,6 @@ export interface PosterWrong {
 }
 
 export interface PosterData {
-  /** 右上角模式标签，如「鸟图版」「鸟声版」 */
   modeLabel: string
   tierLabel: string
   correct: number
@@ -19,6 +18,7 @@ export interface PosterData {
 }
 
 export interface PosterOptions {
+  /** 背景 id（见 posterScenes） */
   themeId: string
   bgImage?: HTMLImageElement | null
   bgOffset?: { x: number; y: number }
@@ -27,6 +27,18 @@ export interface PosterOptions {
 const W = 1080
 const H = 1440
 const FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif'
+const DARK = '#14342a'
+const MUTED = '#5a7a6f'
+const ACCENT = '#2d6a4f'
+const WRONG = '#c1121f'
+const BOX = 'rgba(255,255,255,0.82)'
+
+interface Seg {
+  text: string
+  color: string
+  weight: number
+  size: number
+}
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -45,12 +57,8 @@ function roundRect(
   ctx.closePath()
 }
 
-/** 计算背景图 cover 布局（含平移），并夹取到不留空白 */
-export function computeCover(
-  imgW: number,
-  imgH: number,
-  offset?: { x: number; y: number },
-) {
+/** 计算背景图 cover 布局（含平移），夹取到不留空白 */
+export function computeCover(imgW: number, imgH: number, offset?: { x: number; y: number }) {
   const scale = Math.max(W / imgW, H / imgH)
   const dw = imgW * scale
   const dh = imgH * scale
@@ -59,7 +67,44 @@ export function computeCover(
   return { x, y, dw, dh }
 }
 
-/** 把海报画到指定 canvas 上 */
+const GAP = 10
+const PAD_X = 20
+const PAD_Y = 12
+
+/** 画一组文字片段，并在其下方铺半透明白底框（保证白底黑字） */
+function drawSegments(
+  ctx: CanvasRenderingContext2D,
+  segs: Seg[],
+  anchor: number,
+  baseline: number,
+  align: 'center' | 'left',
+) {
+  const widths = segs.map((s) => {
+    ctx.font = `${s.weight} ${s.size}px ${FONT}`
+    return ctx.measureText(s.text).width
+  })
+  const total = widths.reduce((a, b) => a + b, 0) + GAP * Math.max(0, segs.length - 1)
+  const maxSize = Math.max(...segs.map((s) => s.size))
+  const boxW = total + PAD_X * 2
+  const boxH = maxSize + PAD_Y * 2
+  const boxX = align === 'center' ? anchor - boxW / 2 : anchor - PAD_X
+  const boxY = baseline - maxSize * 0.78 - PAD_Y
+
+  ctx.fillStyle = BOX
+  roundRect(ctx, boxX, boxY, boxW, boxH, 16)
+  ctx.fill()
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+  let x = align === 'center' ? boxX + PAD_X : anchor
+  segs.forEach((s, i) => {
+    ctx.font = `${s.weight} ${s.size}px ${FONT}`
+    ctx.fillStyle = s.color
+    ctx.fillText(s.text, x, baseline)
+    x += widths[i]! + GAP
+  })
+}
+
 export function drawPoster(
   canvas: HTMLCanvasElement,
   data: PosterData,
@@ -68,7 +113,6 @@ export function drawPoster(
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')!
-  const theme = getTheme(opts.themeId)
   const hasImage = !!opts.bgImage
 
   // 背景
@@ -78,150 +122,90 @@ export function drawPoster(
     ctx.fillRect(0, 0, W, H)
     ctx.drawImage(opts.bgImage, x, y, dw, dh)
   } else {
-    const bg = ctx.createLinearGradient(0, 0, 0, H)
-    bg.addColorStop(0, theme.stops[0])
-    bg.addColorStop(0.5, theme.stops[1])
-    bg.addColorStop(1, theme.stops[2])
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, W, H)
+    getBackground(opts.themeId).draw(ctx, W, H)
   }
-
-  const panelAlpha = hasImage ? 0.74 : 1
-  const panelFill = hasImage ? `rgba(255,255,255,${panelAlpha})` : '#ffffff'
 
   ctx.textBaseline = 'alphabetic'
 
-  // 顶部标题（去掉 emoji 与“鸟语识别”）
-  if (hasImage) {
-    drawLabel(ctx, 'UNiaoer', W / 2, 118, 56, true)
-    drawLabel(ctx, data.date, W / 2, 174, 28, false)
-  } else {
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#ffffff'
-    ctx.font = `800 56px ${FONT}`
-    ctx.fillText('UNiaoer', W / 2, 118)
-    ctx.fillStyle = 'rgba(255,255,255,0.75)'
-    ctx.font = `400 28px ${FONT}`
-    ctx.fillText(data.date, W / 2, 174)
-  }
+  // 顶部标题（无 emoji、无“鸟语识别”）
+  drawSegments(ctx, [{ text: 'UNiaoer', color: DARK, weight: 800, size: 56 }], W / 2, 118, 'center')
+  drawSegments(ctx, [{ text: data.date, color: MUTED, weight: 400, size: 28 }], W / 2, 184, 'center')
 
   // 右上角模式标签
-  const badgeText = data.modeLabel
   ctx.font = `700 32px ${FONT}`
-  const bw = ctx.measureText(badgeText).width + 48
+  const bw = ctx.measureText(data.modeLabel).width + 48
   const bx = W - 60 - bw
-  const by = 64
-  ctx.fillStyle = hasImage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.18)'
+  const by = 60
+  ctx.fillStyle = BOX
   roundRect(ctx, bx, by, bw, 60, 30)
   ctx.fill()
   ctx.textAlign = 'center'
-  ctx.fillStyle = hasImage ? '#14342a' : '#ffffff'
-  ctx.fillText(badgeText, bx + bw / 2, by + 41)
+  ctx.fillStyle = DARK
+  ctx.fillText(data.modeLabel, bx + bw / 2, by + 41)
 
-  // 内容面板
-  const cardX = 90
-  const cardY = 250
-  const cardW = W - 180
-  const cardH = 1010
-  ctx.fillStyle = panelFill
-  roundRect(ctx, cardX, cardY, cardW, cardH, 44)
-  ctx.fill()
-
-  ctx.textAlign = 'center'
-  const dark = '#14342a'
-  const muted = '#5a7a6f'
-
-  // 第一行小字
-  ctx.fillStyle = muted
-  ctx.font = `400 40px ${FONT}`
-  ctx.fillText('你在认鸟测试中', W / 2, cardY + 150)
-
-  // 第二行：比第一行大一点
+  // 正文（居中，逐字段白底框）
+  drawSegments(
+    ctx,
+    [{ text: '你在认鸟测试中', color: MUTED, weight: 400, size: 40 }],
+    W / 2,
+    540,
+    'center',
+  )
   const perfect = data.total > 0 && data.correct === data.total
-  ctx.fillStyle = dark
-  ctx.font = `800 64px ${FONT}`
-  ctx.fillText(perfect ? '全对了！' : '答对了！', W / 2, cardY + 250)
+  drawSegments(
+    ctx,
+    [{ text: perfect ? '全对了！' : '答对了！', color: DARK, weight: 800, size: 64 }],
+    W / 2,
+    650,
+    'center',
+  )
+  drawSegments(
+    ctx,
+    [
+      { text: String(data.correct), color: ACCENT, weight: 800, size: 150 },
+      { text: `/${data.total}`, color: MUTED, weight: 600, size: 44 },
+    ],
+    W / 2,
+    860,
+    'center',
+  )
+  drawSegments(
+    ctx,
+    [{ text: `正确率 ${data.accuracy}% · ${data.tierLabel}`, color: MUTED, weight: 500, size: 28 }],
+    W / 2,
+    950,
+    'center',
+  )
 
-  // 分数：9 大字，/10 小字，整体居中
-  const scoreBase = cardY + 420
-  ctx.font = `800 150px ${FONT}`
-  const numW = ctx.measureText(String(data.correct)).width
-  ctx.font = `600 44px ${FONT}`
-  const denW = ctx.measureText(`/${data.total}`).width
-  let sx = W / 2 - (numW + denW + 10) / 2
-  ctx.textAlign = 'left'
-  ctx.fillStyle = theme.stops[1]
-  ctx.font = `800 150px ${FONT}`
-  ctx.fillText(String(data.correct), sx, scoreBase)
-  sx += numW + 10
-  ctx.fillStyle = muted
-  ctx.font = `600 44px ${FONT}`
-  ctx.fillText(`/${data.total}`, sx, scoreBase)
-
-  ctx.textAlign = 'center'
-  ctx.fillStyle = muted
-  ctx.font = `500 28px ${FONT}`
-  ctx.fillText(`正确率 ${data.accuracy}% · ${data.tierLabel}`, W / 2, cardY + 500)
-
-  // 错题（更小、更靠下）
-  const wrongTitleY = cardY + 640
-  ctx.textAlign = 'left'
-  ctx.fillStyle = '#9bb3a8'
-  ctx.font = `600 28px ${FONT}`
-  ctx.fillText('错题回顾', cardX + 64, wrongTitleY)
-
+  // 错题回顾（左对齐，逐行白底框）
+  drawSegments(ctx, [{ text: '错题回顾', color: MUTED, weight: 600, size: 28 }], 110, 1080, 'left')
   const list = data.wrong.slice(0, 4)
   if (list.length === 0) {
-    ctx.fillStyle = theme.stops[1]
-    ctx.font = `400 28px ${FONT}`
-    ctx.fillText('🎉 全对，没有错题', cardX + 64, wrongTitleY + 54)
+    drawSegments(ctx, [{ text: '🎉 全对，没有错题', color: ACCENT, weight: 400, size: 28 }], 110, 1140, 'left')
   } else {
     list.forEach((w, i) => {
-      const y = wrongTitleY + 54 + i * 52
-      ctx.fillStyle = dark
-      ctx.font = `600 27px ${FONT}`
-      ctx.fillText(`${i + 1}. ${w.answer}`, cardX + 64, y)
-      ctx.fillStyle = '#c1121f'
-      ctx.font = `400 25px ${FONT}`
       const mine = w.timedOut ? '超时未作答' : `认成了「${w.chosen ?? '—'}」`
-      ctx.fillText(mine, cardX + 360, y)
+      drawSegments(
+        ctx,
+        [
+          { text: `${i + 1}. ${w.answer}`, color: DARK, weight: 600, size: 27 },
+          { text: mine, color: WRONG, weight: 400, size: 25 },
+        ],
+        110,
+        1140 + i * 58,
+        'left',
+      )
     })
   }
 
   // 页脚
-  if (hasImage) {
-    drawLabel(ctx, '开源非商业 · 数据来源 iNaturalist / Xeno-canto', W / 2, H - 58, 26, false)
-  } else {
-    ctx.textAlign = 'center'
-    ctx.fillStyle = 'rgba(255,255,255,0.75)'
-    ctx.font = `400 26px ${FONT}`
-    ctx.fillText('开源非商业 · 数据来源 iNaturalist / Xeno-canto', W / 2, H - 64)
-  }
-}
-
-/** 在背景图上给文字加半透明白色背景框（保证白底黑字） */
-function drawLabel(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  cx: number,
-  baseline: number,
-  size: number,
-  bold: boolean,
-) {
-  ctx.font = `${bold ? 800 : 400} ${size}px ${FONT}`
-  const tw = ctx.measureText(text).width
-  const padX = 22
-  const padY = 14
-  const bw = tw + padX * 2
-  const bh = size + padY * 2
-  const bx = cx - bw / 2
-  const by = baseline - size - padY + 6
-  ctx.fillStyle = 'rgba(255,255,255,0.82)'
-  roundRect(ctx, bx, by, bw, bh, 16)
-  ctx.fill()
-  ctx.textAlign = 'center'
-  ctx.fillStyle = '#14342a'
-  ctx.fillText(text, cx, baseline)
+  drawSegments(
+    ctx,
+    [{ text: '开源非商业 · 数据来源 iNaturalist / Xeno-canto', color: MUTED, weight: 400, size: 26 }],
+    W / 2,
+    H - 56,
+    'center',
+  )
 }
 
 export function renderPoster(data: PosterData, opts: PosterOptions): HTMLCanvasElement {
@@ -230,7 +214,6 @@ export function renderPoster(data: PosterData, opts: PosterOptions): HTMLCanvasE
   return canvas
 }
 
-/** 生成并下载海报 PNG */
 export function downloadPoster(
   data: PosterData,
   opts: PosterOptions,
@@ -254,7 +237,6 @@ export function downloadPoster(
   })
 }
 
-/** 加载背景图（跨域图片需 CORS 才能导出 canvas） */
 export function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()

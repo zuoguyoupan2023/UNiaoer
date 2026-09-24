@@ -64,10 +64,15 @@ self.addEventListener('fetch', (event) => {
 async function cacheFirst(req, cacheName) {
   const cache = await caches.open(cacheName)
   const hit = await cache.match(req)
-  if (hit) return hit
+  // CORS 请求不能复用不透明（opaque）缓存，否则 canvas 会判定跨域失败
+  const usableHit = hit && !(req.mode === 'cors' && hit.type === 'opaque')
+  if (usableHit) return hit
   const res = await fetch(req)
   if (res && (res.ok || res.type === 'opaque')) {
-    cache.put(req, res.clone()).catch(() => {})
+    // 不要把不透明响应覆盖到已有的 CORS 缓存上
+    if (!(req.mode === 'cors' && res.type === 'opaque')) {
+      cache.put(req, res.clone()).catch(() => {})
+    }
   }
   return res
 }

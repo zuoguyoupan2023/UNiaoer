@@ -7,7 +7,7 @@ import {
   type PosterData,
   type PosterOptions,
 } from '@/core/poster'
-import { POSTER_THEMES } from '@/core/posterThemes'
+import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
 
 const props = defineProps<{ open: boolean; data: PosterData; images: string[] }>()
 const emit = defineEmits<{ close: [] }>()
@@ -140,35 +140,37 @@ function download() {
         </div>
 
         <div class="controls">
-          <!-- 配色 -->
+          <!-- 背景 -->
           <div class="group">
             <div class="group-title">
-              配色
+              背景
               <span v-if="locked" class="lock-tag">已锁定</span>
             </div>
             <div class="swatches">
               <button
-                v-for="t in POSTER_THEMES"
+                v-for="t in POSTER_BACKGROUNDS"
                 :key="t.id"
                 class="swatch"
                 :class="{ on: themeId === t.id, disabled: locked }"
                 :style="{ background: t.swatch }"
                 :title="t.label"
                 @click="selectTheme(t.id)"
-              ></button>
+              >
+                <span class="swatch-label">{{ t.label }}</span>
+              </button>
             </div>
           </div>
 
-          <!-- 背景图（仅鸟图版有图） -->
+          <!-- 背景照片（仅鸟图版有图） -->
           <div v-if="images.length" class="group">
-            <div class="group-title">背景图</div>
+            <div class="group-title">背景照片</div>
             <div class="thumbs">
               <button
                 class="thumb none"
                 :class="{ on: !bgUrl, disabled: locked }"
                 @click="selectImage(null)"
               >
-                纯配色
+                纯场景
               </button>
               <button
                 v-for="url in images"
@@ -317,6 +319,16 @@ function download() {
   box-shadow: 0 0 0 1.5px var(--border);
   cursor: pointer;
   transition: transform 0.15s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+}
+.swatch-label {
+  font-size: 0.58rem;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
 }
 .swatch:hover:not(.disabled) {
   transform: scale(1.08);
