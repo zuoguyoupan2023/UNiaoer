@@ -1,8 +1,21 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import type { LicensePolicy } from '@/types'
 
 const settings = useSettingsStore()
+const cacheMsg = ref('')
+
+async function clearMediaCache() {
+  if (!('caches' in window)) {
+    cacheMsg.value = '当前浏览器不支持缓存管理'
+    return
+  }
+  const keys = await caches.keys()
+  const targets = keys.filter((k) => k.startsWith('uniaoer-'))
+  await Promise.all(targets.map((k) => caches.delete(k)))
+  cacheMsg.value = targets.length ? `已清除 ${targets.length} 个缓存` : '没有可清除的缓存'
+}
 
 const policies: { value: LicensePolicy; label: string; hint: string }[] = [
   {
@@ -60,8 +73,19 @@ const policies: { value: LicensePolicy; label: string; hint: string }[] = [
     </div>
 
     <p class="muted" style="margin-top: 8px">
-      设置保存在浏览器本地。自动播放将在 <strong>P5</strong> 阶段接入答题流程。
+      设置保存在浏览器本地。自动播放仅在第 2 题起生效（第 1 题需手动播放一次以解锁浏览器策略）。
     </p>
+
+    <div class="setting">
+      <h3>媒体缓存</h3>
+      <p class="muted">
+        图片与音频会缓存在本地（Service Worker），二次访问与离线可秒开。如占用过大可清除。
+      </p>
+      <button class="btn btn-secondary" style="margin-top: 10px" @click="clearMediaCache">
+        清除媒体缓存
+      </button>
+      <p v-if="cacheMsg" class="muted" style="margin-top: 8px">{{ cacheMsg }}</p>
+    </div>
   </section>
 </template>
 

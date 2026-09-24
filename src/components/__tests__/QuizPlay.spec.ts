@@ -64,6 +64,11 @@ describe('QuizPlay', () => {
 
   it('切到下一题后，图片 src 会变化', async () => {
     const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+
+    // 先看到介绍页
+    await vi.waitFor(() => expect(wrapper.find('.intro').exists()).toBe(true))
+    await wrapper.find('.intro button').trigger('click')
+
     // 等待题库加载
     await vi.waitFor(() => expect(wrapper.find('img').exists()).toBe(true))
 

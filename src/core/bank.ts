@@ -29,7 +29,7 @@ let cache: Manifest | null = null
 export async function loadBank(): Promise<Manifest> {
   if (cache) return cache
   const url = `${import.meta.env.BASE_URL}data/manifest.json`
-  const res = await fetch(url, { cache: 'force-cache' })
+  const res = await fetch(url)
   if (!res.ok) {
     throw new Error(
       res.status === 404
