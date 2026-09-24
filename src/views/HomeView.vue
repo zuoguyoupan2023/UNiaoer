@@ -1,5 +1,22 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { loadBank } from '@/core/bank'
+
+const stats = ref<{ total: number; image: number; audio: number } | null>(null)
+const bankError = ref('')
+
+onMounted(async () => {
+  try {
+    const bank = await loadBank()
+    stats.value = {
+      total: bank.total,
+      image: bank.stats.withImage,
+      audio: bank.stats.withAudio,
+    }
+  } catch (e) {
+    bankError.value = e instanceof Error ? e.message : String(e)
+  }
+})
 </script>
 
 <template>
@@ -8,6 +25,11 @@ import { RouterLink } from 'vue-router'
     <p class="muted" style="margin-bottom: 20px">
       用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。
     </p>
+
+    <p v-if="stats" class="bank-stats">
+      📚 题库：{{ stats.total }} 种 · 图片 {{ stats.image }} · 音频 {{ stats.audio }}
+    </p>
+    <p v-else-if="bankError" class="bank-error">⚠️ {{ bankError }}</p>
 
     <div class="modes">
       <RouterLink to="/quiz/image" class="mode-card">
@@ -25,6 +47,23 @@ import { RouterLink } from 'vue-router'
 </template>
 
 <style scoped>
+.bank-stats {
+  font-size: 0.8rem;
+  color: var(--primary);
+  background: #eaf4ef;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  display: inline-block;
+}
+.bank-error {
+  font-size: 0.8rem;
+  color: #8a6d00;
+  background: #fdf3d8;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
 .modes {
   display: grid;
   grid-template-columns: 1fr 1fr;

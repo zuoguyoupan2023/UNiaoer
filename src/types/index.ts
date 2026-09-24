@@ -44,6 +44,8 @@ export interface Question {
   type: MediaType
   media: MediaAsset
   answer: string
+  sci: string
+  family: string
   options: string[]
   answerMode: AnswerMode
   timeLimitSec?: number
