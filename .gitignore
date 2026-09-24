@@ -50,7 +50,6 @@ __screenshots__/
 # 构建期抓取的数据缓存与产物（体积大 / 含署名，按需重建）
 /data-cache/
 /public/media/
-/public/data/manifest*.json
 # Cloudflare 本地状态
 .wrangler/
 .dev.vars

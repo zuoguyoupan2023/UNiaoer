@@ -43,9 +43,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 题库：network-first
+  // 题库：network-first（只缓存 JSON，避免把 SPA 回退的 HTML 缓存下来）
   if (url.pathname.includes('/data/manifest')) {
-    event.respondWith(networkFirst(req, RUNTIME_CACHE))
+    event.respondWith(manifestFetch(req))
     return
   }
 
@@ -77,11 +77,12 @@ async function cacheFirst(req, cacheName) {
   return res
 }
 
-async function networkFirst(req, cacheName) {
-  const cache = await caches.open(cacheName)
+async function manifestFetch(req) {
+  const cache = await caches.open(RUNTIME_CACHE)
   try {
     const res = await fetch(req)
-    if (res && res.ok) cache.put(req, res.clone()).catch(() => {})
+    const ct = res.headers.get('content-type') || ''
+    if (res.ok && ct.includes('json')) cache.put(req, res.clone()).catch(() => {})
     return res
   } catch {
     const hit = await cache.match(req)

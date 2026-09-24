@@ -1,0 +1,348 @@
+{
+  "generatedAt": "2026-09-24T13:33:00.352Z",
+  "policy": "relaxed",
+  "mediaMode": "remote",
+  "total": 12,
+  "stats": {
+    "withImage": 12,
+    "withAudio": 12
+  },
+  "species": [
+    {
+      "id": "passer-montanus",
+      "nameZh": "麻雀",
+      "nameSci": "Passer montanus",
+      "family": "雀科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1903005/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) joyful-islander, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/1535882",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/786502.mp3?1691282122",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Tate Putman, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/176870358",
+        "transcode": true
+      }
+    },
+    {
+      "id": "parus-minor",
+      "nameZh": "大山雀",
+      "nameSci": "Parus minor",
+      "family": "山雀科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/62897600/large.jpeg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) guyincognito, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/39633296",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/910367.wav?1709125284",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Rob Macfie, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/200713659",
+        "transcode": true
+      }
+    },
+    {
+      "id": "pycnonotus-sinensis",
+      "nameZh": "白头鹎",
+      "nameSci": "Pycnonotus sinensis",
+      "family": "鹎科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/112235385/large.jpeg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Chen Shu, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/69199327",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/583483.mp3?1673402054",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/146180271",
+        "transcode": true
+      }
+    },
+    {
+      "id": "turdus-merula",
+      "nameZh": "乌鸫",
+      "nameSci": "Turdus merula",
+      "family": "鸫科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/299609865/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) toki999, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/172578277",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/387251.wav?1649357303",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Codrin Bucur, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/110684075",
+        "transcode": true
+      }
+    },
+    {
+      "id": "spilopelia-chinensis",
+      "nameZh": "珠颈斑鸠",
+      "nameSci": "Spilopelia chinensis",
+      "family": "鸠鸽科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/12304138/large.jpeg",
+        "license": "CC-BY-NC-ND",
+        "licenseRaw": "cc-by-nc-nd",
+        "author": "(c) Nature Ali, some rights reserved (CC BY-NC-ND)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/9107412",
+        "transcode": false
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/836991.m4a?1698280711",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Pin-Tsen JIN, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/188957738",
+        "transcode": true
+      }
+    },
+    {
+      "id": "pica-pica",
+      "nameZh": "喜鹊",
+      "nameSci": "Pica pica",
+      "family": "鸦科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/65991573/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/41592036",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/575886.mpga?1671882441",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Gianni Del Bufalo bygdb, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/144979476",
+        "transcode": true
+      }
+    },
+    {
+      "id": "cyanopica-cyanus",
+      "nameZh": "灰喜鹊",
+      "nameSci": "Cyanopica cyanus",
+      "family": "鸦科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/116191357/large.jpeg",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Andrew Bazdyrev, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/71373412",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/369913.m4a?1647160067",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) onidiras-iNaturalist, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/108493328",
+        "transcode": true
+      }
+    },
+    {
+      "id": "urocissa-erythroryncha",
+      "nameZh": "红嘴蓝鹊",
+      "nameSci": "Urocissa erythroryncha",
+      "family": "鸦科",
+      "commonness": 2,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/403265382/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Kevin Chen, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/227325365",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/1933142.mpga?1778163733",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) 管牧山, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/359219119",
+        "transcode": true
+      }
+    },
+    {
+      "id": "motacilla-alba",
+      "nameZh": "白鹡鸰",
+      "nameSci": "Motacilla alba",
+      "family": "鹡鸰科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/57751012/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Peter, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/36526661",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/277930.mp3?1626701558",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Марина Горбунова-Ëлкина, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/87710855",
+        "transcode": true
+      }
+    },
+    {
+      "id": "copsychus-saularis",
+      "nameZh": "鹊鸲",
+      "nameSci": "Copsychus saularis",
+      "family": "鹟科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/406167461/large.jpeg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Sam Hambly, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/228856718",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/837434.m4a?1698361586",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Animotions, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/189061417",
+        "transcode": true
+      }
+    },
+    {
+      "id": "upupa-epops",
+      "nameZh": "戴胜",
+      "nameSci": "Upupa epops",
+      "family": "戴胜科",
+      "commonness": 2,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1843019/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) adiashkenazi, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/1487250",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/368200.mp3?1646852579",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Марина Горбунова-Ëлкина, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/101705252",
+        "transcode": true
+      }
+    },
+    {
+      "id": "alcedo-atthis",
+      "nameZh": "普通翠鸟",
+      "nameSci": "Alcedo atthis",
+      "family": "翠鸟科",
+      "commonness": 2,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": {
+        "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/12584278/large.jpg",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Maurizio Bonora, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/9284651",
+        "transcode": true
+      },
+      "audio": {
+        "url": "https://static.inaturalist.org/sounds/952947.mp3?1712227514",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Svetlana Akulova, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/204976561",
+        "transcode": true
+      }
+    }
+  ]
+}

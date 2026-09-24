@@ -28,15 +28,25 @@ let cache: Manifest | null = null
 /** 加载题库（构建脚本产物 public/data/manifest.json） */
 export async function loadBank(): Promise<Manifest> {
   if (cache) return cache
-  const res = await fetch(`${import.meta.env.BASE_URL}data/manifest.json`)
+  const url = `${import.meta.env.BASE_URL}data/manifest.json`
+  const res = await fetch(url)
   if (!res.ok) {
     throw new Error(
-      res.status === 404
-        ? '题库不存在，请先运行 `npm run bank` 生成 public/data/manifest.json'
-        : `题库加载失败（HTTP ${res.status}）`,
+      `题库不存在（HTTP ${res.status}）。请确认构建时已运行 \`npm run bank\` 生成 ${url}`,
     )
   }
-  cache = (await res.json()) as Manifest
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('json')) {
+    // 常见于 SPA 回退把缺失的 manifest 改写成了 index.html
+    throw new Error(
+      '题库返回的不是 JSON（被回退成了 HTML）。说明构建时没有生成题库，请在构建命令中加入 `npm run bank`。',
+    )
+  }
+  try {
+    cache = (await res.json()) as Manifest
+  } catch {
+    throw new Error('题库 JSON 解析失败，文件可能损坏，请重新运行 `npm run bank`。')
+  }
   return cache
 }
 

@@ -48,24 +48,32 @@ npm run format       # 格式化
 
 ## 部署（Cloudflare Pages）
 
-当前是纯静态 SPA，用 **Cloudflare Pages** 即可。构建时**现场生成题库**：
+当前是纯静态 SPA，用 **Cloudflare Pages** 即可。
+
+### 方案 A（推荐，最简单）：题库随仓库提交
+1. 本地跑一次 `npm run bank`（生成 `public/data/manifest.json`），把它 `git add` 提交。
+2. Pages 设置：
 
 | 设置 | 值 |
 |---|---|
-| Build command | `npm run build:pages` |
+| Build command | `npm run build` |
 | Output directory | `dist` |
-| Node version | 22+（环境变量 `NODE_VERSION=22`） |
-| 环境变量 | `XC_API_KEY` = 你的 Xeno-canto 个人 Key（**加密变量**） |
+| Node version | 22+（`NODE_VERSION=22`） |
 
-`build:pages` = `node scripts/build-bank.mjs --concurrency 6 --max-minutes 15 && npm run build`：
-- 抓取 iNat/XC → 许可过滤 → 生成 `public/data/manifest.json` → 再打包
-- `--max-minutes 15` 是**时间预算**：超出就跳过剩余物种并先出一版题库，避免 Pages 构建超时失败
-- 未配置 `XC_API_KEY` 也能构建（音频退化为仅 iNaturalist sounds）
+> `public/data/manifest.json` 只是元数据 + 远端 URL + 署名（不含媒体），体积很小。
+> 需要更新题库时，本地重跑 `npm run bank` 再提交即可。
 
-**注意 / 兜底**：
-- Cloudflare Pages 构建默认上限约 20 分钟；100 种 + 慢速 iNat 可能吃紧。若常超时：
-  1. 调小物种数（`data/species.json`）或提高 `--concurrency`；或
-  2. 改为**本地生成后提交** `public/data/manifest.json`（构建命令改回 `npm run build`）；或
-  3. 等 P6 用 R2/Worker 存题库，构建时直接读取（最快）。
+### 方案 B：构建时现场生成题库
+| 设置 | 值 |
+|---|---|
+| Build command | `npm run bank && npm run build` |
+| Output directory | `dist` |
+| 环境变量 | `XC_API_KEY` = Xeno-canto 个人 Key（加密） |
+
+- 也可用等价的 `npm run build:pages`（= `bank --concurrency 6 --max-minutes 15 && build`）。
+- ⚠️ Pages 构建默认上限约 20 分钟；100 种 + 慢速 iNat 可能超时，故有 `--max-minutes 15` 兜底。
+
+### 其它
 - SPA 深链（`/wrong`、`/profile`）由 `public/_redirects` 处理。
-- 媒体素材每次访问直接走源站（iNat/XC），由浏览器/Service Worker 缓存；P6 再迁到 R2。
+- **千万别在 Pages 里只写 `npm run build` 而不提交题库**：那样 `/data/manifest.json` 不存在，会被 SPA 回退成 HTML，前端报 `Unexpected token '<'`。
+- P6 后可把题库放 R2/Worker，构建时直接读取，彻底免去这一步。
