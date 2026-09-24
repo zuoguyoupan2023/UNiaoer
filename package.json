@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:unit": "vitest",
+    "bank": "node scripts/build-bank.mjs",
+    "bank:dev": "node scripts/build-bank.mjs --limit 8",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
