@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuizStore } from '@/stores/quiz'
+import { TIMEOUT, useQuizStore } from '@/stores/quiz'
+import { TIERS } from '@/core/difficulty'
+import { persistRound } from '@/core/roundRecorder'
+import { downloadPoster, type PosterWrong } from '@/core/poster'
+import type { BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
 
 const router = useRouter()
 const quiz = useQuizStore()
 
 const hasResult = computed(() => quiz.total > 0)
+const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音找鸟' : '看图找鸟'))
+const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
+const newBadges = ref<BadgeDef[]>([])
 
 const message = computed(() => {
   const p = quiz.accuracy
@@ -18,18 +25,44 @@ const message = computed(() => {
   return '📚 别灰心，从常见鸟开始慢慢学。'
 })
 
-onMounted(() => {
-  if (!hasResult.value) router.replace('/')
+onMounted(async () => {
+  if (!hasResult.value) {
+    router.replace('/')
+    return
+  }
+  newBadges.value = await persistRound(quiz)
 })
 
 function again() {
   router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
+}
+
+async function poster() {
+  const wrong: PosterWrong[] = quiz.questions
+    .map((q, i) => ({ q, chosen: quiz.chosen[i] ?? null }))
+    .filter(({ q, chosen }) => chosen !== q.answer)
+    .map(({ q, chosen }) => ({
+      answer: q.answer,
+      chosen: chosen === TIMEOUT ? null : chosen,
+      timedOut: chosen === TIMEOUT,
+    }))
+  await downloadPoster({
+    modeLabel: modeLabel.value,
+    tierLabel: tierLabel.value,
+    correct: quiz.correctCount,
+    total: quiz.total,
+    accuracy: quiz.accuracy,
+    date: new Date().toLocaleDateString('zh-CN'),
+    wrong,
+    encouragement: message.value,
+  })
 }
 </script>
 
 <template>
   <section v-if="hasResult" class="card result">
     <h2>🎉 答题完成</h2>
+    <p class="muted">{{ modeLabel }} · {{ tierLabel }}</p>
     <div class="score">
       <span class="num">{{ quiz.correctCount }}</span>
       <span class="den">/ {{ quiz.total }}</span>
@@ -37,8 +70,14 @@ function again() {
     <p class="muted">正确率 {{ quiz.accuracy }}%</p>
     <p class="msg">{{ message }}</p>
 
+    <div v-if="newBadges.length" class="badges-new">
+      <span class="muted">🎖️ 获得新徽章：</span>
+      <span v-for="b in newBadges" :key="b.id" class="badge-chip">{{ b.emoji }} {{ b.label }}</span>
+    </div>
+
     <div class="actions">
       <button class="btn btn-primary" @click="again">再来一轮</button>
+      <button class="btn btn-secondary" @click="poster">生成海报</button>
       <RouterLink class="btn btn-secondary" to="/">返回首页</RouterLink>
     </div>
   </section>
@@ -53,7 +92,7 @@ function again() {
           <span class="muted">{{ q.sci }} · {{ q.family }}</span>
         </div>
         <div class="muted small">
-          你的选择：{{ quiz.chosen[i] || '未作答' }}
+          你的选择：{{ quiz.chosen[i] === TIMEOUT ? '超时未作答' : quiz.chosen[i] || '未作答' }}
         </div>
         <AttributionLine :media="q.media" />
       </li>
@@ -95,7 +134,23 @@ function again() {
 .msg {
   font-size: 1rem;
   font-weight: 700;
-  margin: 14px 0 20px;
+  margin: 14px 0 12px;
+}
+.badges-new {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.badge-chip {
+  background: var(--grad-gold);
+  color: #4a3200;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
 }
 .actions {
   display: flex;

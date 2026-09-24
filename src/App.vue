@@ -12,6 +12,8 @@ import { RouterLink, RouterView } from 'vue-router'
     <RouterLink to="/">首页</RouterLink>
     <RouterLink to="/quiz/image">看图找鸟</RouterLink>
     <RouterLink to="/quiz/audio">听音找鸟</RouterLink>
+    <RouterLink to="/wrong">错题本</RouterLink>
+    <RouterLink to="/profile">我的</RouterLink>
     <RouterLink to="/settings">设置</RouterLink>
   </nav>
 

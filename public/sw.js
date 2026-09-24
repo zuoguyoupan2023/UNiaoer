@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 题库：network-first
-  if (url.pathname.endsWith('/data/manifest.json')) {
+  if (url.pathname.includes('/data/manifest')) {
     event.respondWith(networkFirst(req, RUNTIME_CACHE))
     return
   }

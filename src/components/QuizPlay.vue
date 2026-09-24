@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuizStore } from '@/stores/quiz'
+import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import type { MediaType } from '@/types'
+import { TIER_LIST, TIERS } from '@/core/difficulty'
+import type { MediaType, Tier } from '@/types'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
 import ProgressBar from './ProgressBar.vue'
@@ -15,6 +16,7 @@ const quiz = useQuizStore()
 const settings = useSettingsStore()
 
 const started = ref(false)
+const tier = ref<Tier>(2)
 
 const intro = computed(() =>
   props.type === 'audio'
@@ -22,44 +24,71 @@ const intro = computed(() =>
         emoji: '🔊',
         title: '听音找鸟',
         lead: '聆听一段真实鸟鸣，判断是哪一种鸟。',
-        rules: [
-          '每轮 10 题，从 Xeno-canto / iNaturalist 加载真实鸟鸣',
-          '从多个选项中选出正确的鸟名',
-          '可用键盘 1/2/3/4 或 A/B/C/D 作答',
-          '答完可在结果页逐题回顾（含素材署名）',
-        ],
       }
     : {
         emoji: '🖼️',
         title: '看图找鸟',
         lead: '观察一张真实鸟类照片，判断是哪一种鸟。',
-        rules: [
-          '每轮 10 题，从 iNaturalist 加载开放许可照片',
-          '从多个选项中选出正确的鸟名',
-          '可用键盘 1/2/3/4 或 A/B/C/D 作答',
-          '答完可在结果页逐题回顾（含素材署名）',
-        ],
       },
 )
 
+const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
+
+// ---- 计时 ----
+const timeLeft = ref<number | null>(null)
+let tick: number | undefined
+
+function stopTimer() {
+  if (tick !== undefined) {
+    clearInterval(tick)
+    tick = undefined
+  }
+}
+function startTimer() {
+  stopTimer()
+  const q = quiz.current
+  if (!q?.timeLimitSec || quiz.answered) {
+    timeLeft.value = null
+    return
+  }
+  timeLeft.value = q.timeLimitSec
+  tick = window.setInterval(() => {
+    if (timeLeft.value === null) return
+    timeLeft.value -= 1
+    if (timeLeft.value <= 0) {
+      stopTimer()
+      quiz.timeUp()
+    }
+  }, 1000)
+}
 
 async function begin() {
   started.value = true
-  await quiz.start(props.type)
-  // 起手：当前题 + 后面 3 题
-  preloadQuestions(quiz.questions, 0, 4)
+  await quiz.start(props.type, { tier: tier.value })
+  preloadQuestions(quiz.questions, 0, 4) // 当前题 + 后 3 题
+  startTimer()
 }
 
 onMounted(() => document.addEventListener('keydown', onKey))
-onUnmounted(() => document.removeEventListener('keydown', onKey))
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKey)
+  stopTimer()
+})
 
-// 每切一题，确保后面 3 题已加载
 watch(
   () => quiz.index,
-  (i) => preloadQuestions(quiz.questions, i + 1, 3),
+  (i) => {
+    preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
+    startTimer()
+  },
 )
-
+watch(
+  () => quiz.answered,
+  (a) => {
+    if (a) stopTimer()
+  },
+)
 watch(
   () => quiz.finished,
   (f) => {
@@ -85,9 +114,21 @@ function onKey(e: KeyboardEvent) {
     <div class="emoji">{{ intro.emoji }}</div>
     <h2>{{ intro.title }}</h2>
     <p class="lead muted">{{ intro.lead }}</p>
-    <ul class="rules muted">
-      <li v-for="r in intro.rules" :key="r">{{ r }}</li>
-    </ul>
+
+    <h3 class="tier-title">选择难度</h3>
+    <div class="tiers">
+      <button
+        v-for="t in TIER_LIST"
+        :key="t.tier"
+        class="tier"
+        :class="{ on: tier === t.tier }"
+        @click="tier = t.tier"
+      >
+        <strong>{{ t.label }}</strong>
+        <span>{{ t.desc }}</span>
+      </button>
+    </div>
+
     <button class="btn btn-primary" @click="begin">开始答题</button>
   </section>
 
@@ -112,8 +153,14 @@ function onKey(e: KeyboardEvent) {
   <template v-else-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <div class="status-bar">
-      <span>第 {{ quiz.index + 1 }} / {{ quiz.total }} 题</span>
-      <span>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
+      <span>
+        第 {{ quiz.index + 1 }} / {{ quiz.total }} 题
+        <span class="tier-tag">{{ TIERS[quiz.current.tier].label }}</span>
+      </span>
+      <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= 3 }">
+        ⏱ {{ timeLeft }}s
+      </span>
+      <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
     </div>
 
     <div class="card">
@@ -133,7 +180,8 @@ function onKey(e: KeyboardEvent) {
       />
 
       <div v-if="quiz.answered" class="feedback" :class="isCorrect ? 'ok' : 'no'">
-        <strong>{{ isCorrect ? '✅ 回答正确！' : '❌ 回答错误' }}</strong>
+        <strong v-if="timedOut">⏰ 时间到！</strong>
+        <strong v-else>{{ isCorrect ? '✅ 回答正确！' : '❌ 回答错误' }}</strong>
         正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）
         <span class="muted"> · {{ quiz.current.family }}</span>
       </div>
@@ -160,14 +208,51 @@ function onKey(e: KeyboardEvent) {
   margin: 14px 0 8px;
 }
 .intro .lead {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
-.rules {
-  text-align: left;
-  max-width: 460px;
+.tier-title {
+  font-size: 0.9rem;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+.tiers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 520px;
   margin: 0 auto 22px;
-  padding-left: 20px;
-  line-height: 2;
+}
+@media (max-width: 520px) {
+  .tiers {
+    grid-template-columns: 1fr;
+  }
+}
+.tier {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+.tier:hover {
+  border-color: var(--primary-light);
+}
+.tier.on {
+  border-color: var(--primary);
+  background: #f3fbf7;
+}
+.tier strong {
+  font-size: 0.9rem;
+}
+.tier span {
+  font-size: 0.74rem;
+  color: var(--text-light);
 }
 .intro .btn {
   min-width: 180px;
@@ -180,9 +265,38 @@ function onKey(e: KeyboardEvent) {
   font-size: 0.86rem;
   color: var(--text-light);
 }
-.status-bar span {
+.status-bar > span {
   font-weight: 700;
   color: var(--text);
+}
+.tier-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.68rem;
+}
+.timer {
+  font-variant-numeric: tabular-nums;
+  background: #eaf4ef;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+.timer.warn {
+  color: var(--wrong);
+  background: #fdecee;
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 .feedback {
   margin-top: 16px;

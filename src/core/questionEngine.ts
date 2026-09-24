@@ -1,10 +1,11 @@
 import type { MediaType, Question, Tier } from '@/types'
 import type { BankSpecies } from './bank'
+import { TIERS, type DistractorStrategy } from './difficulty'
 
 export interface BuildOptions {
   type: MediaType
   count?: number
-  optionCount?: number
+  tier?: Tier
 }
 
 export function shuffle<T>(arr: readonly T[]): T[] {
@@ -18,15 +19,34 @@ export function shuffle<T>(arr: readonly T[]): T[] {
   return a
 }
 
-/** 选出干扰项：优先同科（更难），不足则用其他物种补足，保证去重 */
-export function pickDistractors(target: BankSpecies, pool: BankSpecies[], n: number): string[] {
+/** 按策略选出干扰项（去重，不含答案） */
+export function pickDistractors(
+  target: BankSpecies,
+  pool: BankSpecies[],
+  n: number,
+  strategy: DistractorStrategy = 'mixed',
+): string[] {
   const others = pool.filter((s) => s.id !== target.id)
-  const sameFamily = others.filter((s) => s.family && s.family === target.family)
-  const different = others.filter((s) => !sameFamily.includes(s))
+  const same = others.filter((s) => s.family && s.family === target.family)
+  const diff = others.filter((s) => !same.includes(s))
+
+  const shuffledSame = shuffle(same)
+  const shuffledDiff = shuffle(diff)
+
+  let ordered: BankSpecies[]
+  if (strategy === 'cross') {
+    ordered = [...shuffledDiff, ...shuffledSame]
+  } else if (strategy === 'same') {
+    ordered = [...shuffledSame, ...shuffledDiff]
+  } else {
+    // mixed：先放 1 个同科，再跨科，最后补同科
+    const head = shuffledSame.slice(0, 1)
+    ordered = [...head, ...shuffledDiff, ...shuffledSame.slice(1)]
+  }
 
   const picked: string[] = []
   const used = new Set<string>([target.nameZh])
-  for (const s of [...shuffle(sameFamily), ...shuffle(different)]) {
+  for (const s of ordered) {
     if (picked.length >= n) break
     if (used.has(s.nameZh)) continue
     used.add(s.nameZh)
@@ -35,21 +55,30 @@ export function pickDistractors(target: BankSpecies, pool: BankSpecies[], n: num
   return picked
 }
 
+function mediaPool(bank: BankSpecies[], type: MediaType): BankSpecies[] {
+  return bank.filter((s) => (type === 'image' ? s.image : s.audio))
+}
+
 /**
  * 从题库构建一轮题目。
- * 只使用具备所需媒体（image / audio）的物种；不足时返回实际数量。
+ * - 按档位筛常见度（样本不足时放宽到全部）
+ * - 选项数量与干扰项策略来自档位配置
  */
 export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
-  const { type, count = 10, optionCount = 4 } = opts
-  const pool = bank.filter((s) => (type === 'image' ? s.image : s.audio))
+  const { type, count = 10, tier = 2 } = opts
+  const cfg = TIERS[tier]
+  const full = mediaPool(bank, type)
+
+  const tiered = full.filter((s) => cfg.commonness.includes(s.commonness))
+  const pool = tiered.length >= Math.min(count, 4) ? tiered : full
   const picked = shuffle(pool).slice(0, Math.min(count, pool.length))
 
   return picked.map((sp, i) => {
     const media = (type === 'image' ? sp.image : sp.audio)!
-    const distractors = pickDistractors(sp, pool, Math.max(0, optionCount - 1))
+    const distractors = pickDistractors(sp, full, Math.max(0, cfg.optionCount - 1), cfg.distractor)
     return {
       id: `${sp.id}-${type}-${i}`,
-      tier: (sp.commonness >= 1 && sp.commonness <= 4 ? sp.commonness : 2) as Tier,
+      tier,
       type,
       media,
       answer: sp.nameZh,
@@ -57,6 +86,7 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
       family: sp.family,
       options: shuffle([sp.nameZh, ...distractors]),
       answerMode: 'choice',
+      timeLimitSec: cfg.timeLimitSec,
     }
   })
 }

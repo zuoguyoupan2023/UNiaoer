@@ -1,11 +1,18 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { MediaType, Question } from '@/types'
+import type { MediaType, Question, Tier } from '@/types'
 import { loadBank } from '@/core/bank'
 import { buildQuestions } from '@/core/questionEngine'
 
+/** 超时未作答的标记（区别于 null=未作答） */
+export const TIMEOUT = '__timeout__'
+
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
+  const tier = ref<Tier>(2)
+  const category = ref<string>('bird')
+  const roundId = ref<string>('')
+  const startedAt = ref<number>(0)
   const questions = ref<Question[]>([])
   const chosen = ref<(string | null)[]>([])
   const index = ref(0)
@@ -24,19 +31,26 @@ export const useQuizStore = defineStore('quiz', () => {
   )
   const finished = computed(() => total.value > 0 && index.value >= total.value)
 
-  async function start(type: MediaType, count = 10) {
+  async function start(type: MediaType, opts: { count?: number; tier?: Tier } = {}) {
     mode.value = type
+    if (opts.tier) tier.value = opts.tier
     loading.value = true
     error.value = ''
     try {
       const bank = await loadBank()
-      const qs = buildQuestions(bank.species, { type, count })
+      category.value = bank.category
+      const qs = buildQuestions(bank.species, { type, count: opts.count ?? 10, tier: tier.value })
       if (!qs.length) {
         throw new Error(`题库中没有可用的${type === 'image' ? '图片' : '音频'}素材`)
       }
       questions.value = qs
       chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
       index.value = 0
+      roundId.value =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      startedAt.value = Date.now()
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       questions.value = []
@@ -52,6 +66,12 @@ export const useQuizStore = defineStore('quiz', () => {
     chosen.value[index.value] = choice
   }
 
+  /** 超时：标记为未作答但已结束 */
+  function timeUp() {
+    if (answered.value || !current.value) return
+    chosen.value[index.value] = TIMEOUT
+  }
+
   function next() {
     if (index.value < questions.value.length) index.value++
   }
@@ -65,6 +85,10 @@ export const useQuizStore = defineStore('quiz', () => {
 
   return {
     mode,
+    tier,
+    category,
+    roundId,
+    startedAt,
     questions,
     chosen,
     index,
@@ -79,6 +103,7 @@ export const useQuizStore = defineStore('quiz', () => {
     finished,
     start,
     answer,
+    timeUp,
     next,
     reset,
   }

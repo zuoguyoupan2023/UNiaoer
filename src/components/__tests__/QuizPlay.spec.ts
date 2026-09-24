@@ -42,6 +42,7 @@ function sp(id: string, nameZh: string, url: string): BankSpecies {
 
 const manifest: Manifest = {
   generatedAt: '',
+  category: 'bird',
   policy: 'relaxed',
   mediaMode: 'remote',
   total: 3,
@@ -67,7 +68,9 @@ describe('QuizPlay', () => {
 
     // 先看到介绍页
     await vi.waitFor(() => expect(wrapper.find('.intro').exists()).toBe(true))
-    await wrapper.find('.intro button').trigger('click')
+    const startBtn = wrapper.findAll('.intro button').find((b) => b.text().includes('开始答题'))
+    expect(startBtn).toBeTruthy()
+    await startBtn!.trigger('click')
 
     // 等待题库加载
     await vi.waitFor(() => expect(wrapper.find('img').exists()).toBe(true))
