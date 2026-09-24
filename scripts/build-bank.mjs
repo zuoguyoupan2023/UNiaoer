@@ -11,6 +11,7 @@
  */
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -31,6 +32,7 @@ import {
   inatLicenseQuery,
   normalizeLicense,
 } from './lib/license.mjs'
+import { makeR2 } from './lib/r2.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -38,17 +40,23 @@ const INAT = 'https://api.inaturalist.org/v1'
 const CACHE = path.join(ROOT, 'data-cache')
 const PUBLIC_DATA = path.join(ROOT, 'public/data')
 const PUBLIC_MEDIA = path.join(ROOT, 'public/media')
+const TMP = path.join(os.tmpdir(), 'uniaoer-bank')
 
 const args = parseArgs(process.argv.slice(2))
 const OPT = {
   limit: args.limit ? Number(args.limit) : Infinity,
   policy: args.policy || 'relaxed',
-  media: args.media || 'remote', // remote | download
+  media: args.media || 'remote', // remote | download | stage | r2
   concurrency: args.concurrency ? Number(args.concurrency) : 3,
   maxMinutes: args['max-minutes'] ? Number(args['max-minutes']) : Infinity,
   force: !!args.force,
   xcKey: args['xc-key'] || process.env.XC_API_KEY || '',
+  publicBase: (args['public-base'] || process.env.R2_PUBLIC_BASE || '').replace(/\/$/, ''),
 }
+
+/** R2 S3 客户端（仅 --media r2 用）；--media stage 只需 publicBase */
+let R2CLIENT = null
+let PUBLIC_BASE = ''
 
 function stub(sp) {
   return {
@@ -68,8 +76,25 @@ function stub(sp) {
 async function main() {
   await loadEnv(path.join(ROOT, '.env'))
   OPT.xcKey = OPT.xcKey || process.env.XC_API_KEY || ''
+  // .env 在模块加载后才读取，这里补读并规范化 R2_PUBLIC_BASE
+  OPT.publicBase = OPT.publicBase || (process.env.R2_PUBLIC_BASE || '').replace(/\/$/, '')
+  if (OPT.publicBase && !/^https?:\/\//i.test(OPT.publicBase)) {
+    OPT.publicBase = 'https://' + OPT.publicBase
+  }
   const useXc = !!OPT.xcKey
   const deadline = OPT.maxMinutes === Infinity ? Infinity : Date.now() + OPT.maxMinutes * 60_000
+
+  const R2 = OPT.media === 'r2' ? makeR2() : null
+  if (R2 && !R2.ready) {
+    console.error(`❌ --media r2 需要环境变量：${R2.missing.join(', ')}`)
+    process.exit(1)
+  }
+  R2CLIENT = R2
+  PUBLIC_BASE = OPT.publicBase
+  if (OPT.media === 'stage' && !PUBLIC_BASE) {
+    console.error('❌ --media stage 需要 R2_PUBLIC_BASE（或 --public-base），用于改写 manifest 里的媒体地址')
+    process.exit(1)
+  }
 
   const species = JSON.parse(await fs.readFile(path.join(ROOT, 'data/species.json'), 'utf8'))
   const list = species.slice(0, OPT.limit)
@@ -77,7 +102,9 @@ async function main() {
   console.log(`\n🐦 UNiaoer 题库构建`)
   console.log(`   物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
   console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : '（未提供 XC_API_KEY，仅 iNat）'}`)
-  console.log(`   时间预算: ${OPT.maxMinutes === Infinity ? '不限' : OPT.maxMinutes + ' 分钟'}\n`)
+  console.log(`   时间预算: ${OPT.maxMinutes === Infinity ? '不限' : OPT.maxMinutes + ' 分钟'}`)
+  if (R2) console.log(`   R2: ${R2.publicBase}/media/<species>/…`)
+  console.log('')
 
   let done = 0
   let skipped = 0
@@ -137,7 +164,7 @@ async function buildSpecies(sp, useXc) {
       if (xcAudio) base.audio = xcAudio // XC 优先（质量更可控）
     }
 
-    if (OPT.media === 'download') {
+    if (OPT.media === 'download' || OPT.media === 'stage' || OPT.media === 'r2') {
       await materialize(base, id)
     }
   } catch (e) {
@@ -207,7 +234,7 @@ function pickInatImage(results, policy) {
   for (const o of results) {
     for (const p of o.photos || []) {
       if (!licenseAllowed(p.license_code, policy)) continue
-      const url = (p.url || '').replace('/square.', '/large.')
+      const url = (p.url || '').replace('/square.', '/medium.')
       if (!url) continue
       return asset(url, p.license_code, p.attribution, 'iNaturalist', `https://www.inaturalist.org/observations/${o.id}`)
     }
@@ -228,7 +255,10 @@ function pickInatAudio(results, policy) {
 
 function pickXcAudio(data, policy) {
   const order = { A: 0, B: 1, C: 2, D: 3, E: 4 }
-  const recs = [...(data.recordings || [])].sort((a, b) => (order[a.q] ?? 9) - (order[b.q] ?? 9))
+  // 质量优先；同质量下优先短录音（体积小、加载快）
+  const recs = [...(data.recordings || [])].sort(
+    (a, b) => (order[a.q] ?? 9) - (order[b.q] ?? 9) || lengthSec(a.length) - lengthSec(b.length),
+  )
   for (const r of recs) {
     if (!licenseAllowed(r.lic, policy)) continue
     let file = r.file || ''
@@ -239,6 +269,12 @@ function pickXcAudio(data, policy) {
     return a
   }
   return null
+}
+
+/** "4:08" → 248 秒；未知按很长处理 */
+function lengthSec(s) {
+  const m = String(s || '').match(/^(\d+):(\d{1,2})$/)
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 9999
 }
 
 function asset(url, rawLicense, author, source, sourceUrl) {
@@ -253,38 +289,89 @@ function asset(url, rawLicense, author, source, sourceUrl) {
   }
 }
 
-/** 下载并转码（--media download） */
+/** 下载 →（可选）转码 → 落盘 public/media，或 stage（本地暂存+URL 指向 R2），或上传 R2 */
 async function materialize(rec, id) {
-  const dir = path.join(PUBLIC_MEDIA, id)
-  await ensureDir(dir)
+  if (rec.image) rec.image = await persistOne(rec.image, id, 'image', 'webp')
+  if (rec.audio) rec.audio = await persistOne(rec.audio, id, 'audio', 'mp3')
+}
 
-  if (rec.image) {
-    rec.image = await materializeOne(rec.image, dir, 'image', 'webp')
+async function persistOne(a, id, kind, ext) {
+  const tmpDir = path.join(TMP, id)
+  await ensureDir(tmpDir)
+
+  let raw
+  try {
+    raw = await download(a.url, path.join(tmpDir, `${kind}.src`))
+  } catch (e) {
+    // 下载失败：保留源站地址，不阻塞整个物种
+    console.warn(`      ↳ ${kind} 下载失败，保留源站地址：${e.message}`)
+    await fs.rm(tmpDir, { recursive: true, force: true })
+    return a
   }
-  if (rec.audio) {
-    rec.audio = await materializeOne(rec.audio, dir, 'audio', 'mp3')
+
+  let file = raw
+  // 未转码（ND 或转码失败）时保留原始扩展名，避免出现 image.src 这种怪文件名
+  let outExt = extFromUrl(a.url) || (kind === 'image' ? 'jpg' : 'mp3')
+  if (a.transcode) {
+    const out = path.join(tmpDir, `${kind}.${ext}`)
+    try {
+      await transcode(kind, raw, out)
+      file = out
+      outExt = ext
+      await fs.rm(raw, { force: true })
+    } catch {
+      file = raw
+    }
+  }
+
+  const rel = `media/${id}/${kind}.${outExt}`
+  let url
+  if (OPT.media === 'r2') {
+    const body = await fs.readFile(file)
+    await R2CLIENT.put(rel, body, guessContentType(a.url, kind, outExt))
+    url = `${R2CLIENT.publicBase}/${rel}`
+  } else {
+    const dir = path.join(PUBLIC_MEDIA, id)
+    await ensureDir(dir)
+    await fs.copyFile(file, path.join(dir, `${kind}.${outExt}`))
+    // stage：本地暂存，但 manifest 指向 R2（之后用 wrangler 把 public/media 上传到桶）
+    url = OPT.media === 'stage' ? `${PUBLIC_BASE}/${rel}` : `/media/${id}/${kind}.${outExt}`
+  }
+  await fs.rm(tmpDir, { recursive: true, force: true })
+  return { ...a, url }
+}
+
+/** 从 URL 猜原始扩展名 */
+function extFromUrl(url) {
+  const m = String(url || '').match(/\.([a-z0-9]+)(?:[?#]|$)/i)
+  return m ? m[1].toLowerCase() : ''
+}
+
+async function transcode(kind, src, out) {
+  if (kind === 'image') {
+    await execFileP('ffmpeg', [
+      '-y', '-i', src,
+      '-vf', "scale='min(1280,iw)':-2",
+      '-c:v', 'libwebp', '-quality', '80', out,
+    ])
+  } else {
+    await execFileP('ffmpeg', [
+      '-y', '-i', src,
+      '-c:a', 'libmp3lame', '-b:a', '128k', '-ac', '1', out,
+    ])
   }
 }
 
-async function materializeOne(a, dir, kind, ext) {
-  const raw = await download(a.url, path.join(dir, `${kind}.src`))
-  let outName = `${kind}.${ext}`
-  if (a.transcode) {
-    try {
-      if (kind === 'image') {
-        await execFileP('ffmpeg', ['-y', '-i', raw, '-vf', "scale='min(1280,iw)':-2", '-c:v', 'libwebp', '-quality', '80', path.join(dir, outName)])
-      } else {
-        await execFileP('ffmpeg', ['-y', '-i', raw, '-c:a', 'libmp3lame', '-b:a', '128k', '-ac', '1', path.join(dir, outName)])
-      }
-      await fs.rm(raw, { force: true })
-    } catch {
-      // 转码失败则保留原文件
-      outName = `${kind}.src`
-    }
-  } else {
-    outName = `${kind}.src` // ND 素材不转码
-  }
-  return { ...a, url: `/media/${path.basename(dir)}/${outName}` }
+function guessContentType(url, kind, ext) {
+  if (ext === 'webp') return 'image/webp'
+  if (ext === 'mp3') return 'audio/mpeg'
+  const u = (url || '').toLowerCase()
+  if (u.includes('.png')) return 'image/png'
+  if (u.includes('.webp')) return 'image/webp'
+  if (u.includes('.wav')) return 'audio/wav'
+  if (u.includes('.ogg')) return 'audio/ogg'
+  if (u.includes('.mp3')) return 'audio/mpeg'
+  return kind === 'image' ? 'image/jpeg' : 'audio/mpeg'
 }
 
 async function download(url, dest) {
