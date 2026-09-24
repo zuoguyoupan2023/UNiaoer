@@ -2,6 +2,8 @@
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
+import { useSettingsStore } from '@/stores/settings'
+import { preloadQuestions } from '@/core/mediaLoader'
 import type { MediaType } from '@/types'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -10,16 +12,25 @@ import ProgressBar from './ProgressBar.vue'
 const props = defineProps<{ type: MediaType }>()
 const router = useRouter()
 const quiz = useQuizStore()
+const settings = useSettingsStore()
 
 const isCorrect = computed(
   () => quiz.answered && quiz.currentChoice === quiz.current?.answer,
 )
 
-onMounted(() => {
-  quiz.start(props.type)
+onMounted(async () => {
   document.addEventListener('keydown', onKey)
+  await quiz.start(props.type)
+  // 起手预加载前 3 题，Q2 起切题无等待
+  preloadQuestions(quiz.questions, 0, 3)
 })
 onUnmounted(() => document.removeEventListener('keydown', onKey))
+
+// 每答完/切题后，提前加载后面两题
+watch(
+  () => quiz.index,
+  (i) => preloadQuestions(quiz.questions, i + 1, 2),
+)
 
 watch(
   () => quiz.finished,
@@ -64,7 +75,15 @@ function onKey(e: KeyboardEvent) {
     </div>
 
     <div class="card">
-      <MediaCard :type="quiz.current.type" :media="quiz.current.media" />
+      <MediaCard
+        :key="quiz.current.id"
+        :type="quiz.current.type"
+        :media="quiz.current.media"
+        :autoplay="
+          quiz.current.type === 'audio' && quiz.index >= 1 && settings.autoplayAudio
+        "
+        :autoplay-delay="settings.autoplayDelayMs"
+      />
 
       <OptionList
         :options="quiz.current.options"
