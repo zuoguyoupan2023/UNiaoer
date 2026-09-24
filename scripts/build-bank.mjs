@@ -45,24 +45,47 @@ const OPT = {
   policy: args.policy || 'relaxed',
   media: args.media || 'remote', // remote | download
   concurrency: args.concurrency ? Number(args.concurrency) : 3,
+  maxMinutes: args['max-minutes'] ? Number(args['max-minutes']) : Infinity,
   force: !!args.force,
   xcKey: args['xc-key'] || process.env.XC_API_KEY || '',
+}
+
+function stub(sp) {
+  return {
+    id: slug(sp.nameSci),
+    nameZh: sp.nameZh,
+    nameSci: sp.nameSci,
+    family: sp.family,
+    commonness: sp.commonness,
+    desc: '',
+    location: '',
+    habit: '',
+    image: null,
+    audio: null,
+  }
 }
 
 async function main() {
   await loadEnv(path.join(ROOT, '.env'))
   OPT.xcKey = OPT.xcKey || process.env.XC_API_KEY || ''
   const useXc = !!OPT.xcKey
+  const deadline = OPT.maxMinutes === Infinity ? Infinity : Date.now() + OPT.maxMinutes * 60_000
 
   const species = JSON.parse(await fs.readFile(path.join(ROOT, 'data/species.json'), 'utf8'))
   const list = species.slice(0, OPT.limit)
 
   console.log(`\n🐦 UNiaoer 题库构建`)
   console.log(`   物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
-  console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : ''}\n`)
+  console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : '（未提供 XC_API_KEY，仅 iNat）'}`)
+  console.log(`   时间预算: ${OPT.maxMinutes === Infinity ? '不限' : OPT.maxMinutes + ' 分钟'}\n`)
 
   let done = 0
+  let skipped = 0
   const records = await mapPool(list, OPT.concurrency, async (sp) => {
+    if (Date.now() > deadline) {
+      skipped++
+      return stub(sp)
+    }
     const rec = await buildSpecies(sp, useXc)
     done++
     const flags = [rec.image ? '图' : '·', rec.audio ? '音' : '·'].join('')
@@ -86,25 +109,15 @@ async function main() {
   await fs.writeFile(path.join(PUBLIC_DATA, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
   console.log(`\n✅ 完成：${records.length} 种，图片 ${withImage}，音频 ${withAudio}`)
+  if (skipped) console.log(`   ⏱️ 因时间预算跳过 ${skipped} 种（下次构建会补齐）`)
   console.log(`   写入 public/data/manifest.json`)
-  const failed = records.filter((r) => !r.image && !r.audio).map((r) => r.nameZh)
+  const failed = records.filter((r) => !r.image && !r.audio && !skipped).map((r) => r.nameZh)
   if (failed.length) console.log(`   ⚠️ 无任何素材: ${failed.join('、')}`)
 }
 
 async function buildSpecies(sp, useXc) {
   const id = slug(sp.nameSci)
-  const base = {
-    id,
-    nameZh: sp.nameZh,
-    nameSci: sp.nameSci,
-    family: sp.family,
-    commonness: sp.commonness,
-    desc: '',
-    location: '',
-    habit: '',
-    image: null,
-    audio: null,
-  }
+  const base = stub(sp)
 
   try {
     const taxon = await resolveTaxon(sp)

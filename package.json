@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "build:pages": "node scripts/build-bank.mjs --concurrency 6 --max-minutes 15 && npm run build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:unit": "vitest",

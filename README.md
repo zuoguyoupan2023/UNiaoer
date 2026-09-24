@@ -48,16 +48,24 @@ npm run format       # 格式化
 
 ## 部署（Cloudflare Pages）
 
-当前是纯静态 SPA，用 **Cloudflare Pages** 即可：
+当前是纯静态 SPA，用 **Cloudflare Pages** 即可。构建时**现场生成题库**：
 
 | 设置 | 值 |
 |---|---|
-| Build command | `npm run build` |
+| Build command | `npm run build:pages` |
 | Output directory | `dist` |
-| Node version | 22+ |
+| Node version | 22+（环境变量 `NODE_VERSION=22`） |
+| 环境变量 | `XC_API_KEY` = 你的 Xeno-canto 个人 Key（**加密变量**） |
 
-- SPA 深链（`/wrong`、`/profile`）已由 `public/_redirects` 处理。
-- **题库**：`public/data/manifest.json` 是构建产物（默认被 gitignore）。部署前需二选一：
-  1. 本地跑 `npm run bank` 后把 `public/data/manifest.json` 纳入版本库（仅元数据 + 远端 URL + 署名，不含媒体）；或
-  2. 在 Pages 构建命令里跑 `npm run bank`，并把 `XC_API_KEY` 设为构建环境变量。
-- **P6**：再引入 Worker（Pages Functions 或独立 Worker）+ D1 + R2，用同源 `/api` 代理隐藏密钥。
+`build:pages` = `node scripts/build-bank.mjs --concurrency 6 --max-minutes 15 && npm run build`：
+- 抓取 iNat/XC → 许可过滤 → 生成 `public/data/manifest.json` → 再打包
+- `--max-minutes 15` 是**时间预算**：超出就跳过剩余物种并先出一版题库，避免 Pages 构建超时失败
+- 未配置 `XC_API_KEY` 也能构建（音频退化为仅 iNaturalist sounds）
+
+**注意 / 兜底**：
+- Cloudflare Pages 构建默认上限约 20 分钟；100 种 + 慢速 iNat 可能吃紧。若常超时：
+  1. 调小物种数（`data/species.json`）或提高 `--concurrency`；或
+  2. 改为**本地生成后提交** `public/data/manifest.json`（构建命令改回 `npm run build`）；或
+  3. 等 P6 用 R2/Worker 存题库，构建时直接读取（最快）。
+- SPA 深链（`/wrong`、`/profile`）由 `public/_redirects` 处理。
+- 媒体素材每次访问直接走源站（iNat/XC），由浏览器/Service Worker 缓存；P6 再迁到 R2。
