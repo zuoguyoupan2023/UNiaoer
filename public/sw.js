@@ -5,7 +5,7 @@
  *   - 构建后的同源 /assets/：cache-first（内容哈希，可长缓存）
  *   - 页面导航：network-first，断网回退缓存的首页
  */
-const VERSION = 'uniaoer-v1'
+const VERSION = 'uniaoer-v2'
 const MEDIA_CACHE = `${VERSION}-media`
 const RUNTIME_CACHE = `${VERSION}-runtime`
 
