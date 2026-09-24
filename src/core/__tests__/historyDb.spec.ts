@@ -5,6 +5,7 @@ import {
   getStats,
   getWrongBook,
   listRounds,
+  listWrongHistory,
   removeWrong,
   saveRound,
   _resetDb,
@@ -73,6 +74,16 @@ describe('historyDb', () => {
     await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
     await removeWrong('a')
     expect(await getWrongBook()).toHaveLength(0)
+  })
+
+  it('历史错题永久保留，当前错题本动态变化', async () => {
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    await saveRound(round('r2', [{ sid: 'a', answer: '甲', chosen: '甲' }])) // 答对 → 掌握
+    expect(await getWrongBook()).toHaveLength(0) // 当前错题本已移除
+    const h = await listWrongHistory() // 历史仍保留
+    expect(h).toHaveLength(1)
+    expect(h[0]!.answer).toBe('甲')
+    expect(h[0]!.chosen).toBe('乙')
   })
 
   it('getStats 汇总正确', async () => {

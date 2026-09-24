@@ -10,7 +10,6 @@ export const TIMEOUT = '__timeout__'
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
   const tier = ref<Tier>(2)
-  const category = ref<string>('bird')
   const roundId = ref<string>('')
   const startedAt = ref<number>(0)
   const questions = ref<Question[]>([])
@@ -38,7 +37,6 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = ''
     try {
       const bank = await loadBank()
-      category.value = bank.category
       const qs = buildQuestions(bank.species, { type, count: opts.count ?? 10, tier: tier.value })
       if (!qs.length) {
         throw new Error(`题库中没有可用的${type === 'image' ? '图片' : '音频'}素材`)
@@ -86,7 +84,6 @@ export const useQuizStore = defineStore('quiz', () => {
   return {
     mode,
     tier,
-    category,
     roundId,
     startedAt,
     questions,

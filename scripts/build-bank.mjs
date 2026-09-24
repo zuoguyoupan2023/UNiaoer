@@ -42,7 +42,6 @@ const PUBLIC_MEDIA = path.join(ROOT, 'public/media')
 const args = parseArgs(process.argv.slice(2))
 const OPT = {
   limit: args.limit ? Number(args.limit) : Infinity,
-  category: args.category || 'bird',
   policy: args.policy || 'relaxed',
   media: args.media || 'remote', // remote | download
   concurrency: args.concurrency ? Number(args.concurrency) : 3,
@@ -53,14 +52,13 @@ const OPT = {
 async function main() {
   await loadEnv(path.join(ROOT, '.env'))
   OPT.xcKey = OPT.xcKey || process.env.XC_API_KEY || ''
-  const useXc = !!OPT.xcKey && OPT.category === 'bird'
+  const useXc = !!OPT.xcKey
 
-  const speciesFile = path.join(ROOT, `data/species.${OPT.category}.json`)
-  const species = JSON.parse(await fs.readFile(speciesFile, 'utf8'))
+  const species = JSON.parse(await fs.readFile(path.join(ROOT, 'data/species.json'), 'utf8'))
   const list = species.slice(0, OPT.limit)
 
   console.log(`\n🐦 UNiaoer 题库构建`)
-  console.log(`   类群: ${OPT.category}  物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
+  console.log(`   物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
   console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : ''}\n`)
 
   let done = 0
@@ -77,7 +75,6 @@ async function main() {
   const withAudio = records.filter((r) => r.audio).length
   const manifest = {
     generatedAt: new Date().toISOString(),
-    category: OPT.category,
     policy: OPT.policy,
     mediaMode: OPT.media,
     total: records.length,
@@ -86,11 +83,10 @@ async function main() {
   }
 
   await ensureDir(PUBLIC_DATA)
-  const outFile = `manifest.${OPT.category}.json`
-  await fs.writeFile(path.join(PUBLIC_DATA, outFile), JSON.stringify(manifest, null, 2))
+  await fs.writeFile(path.join(PUBLIC_DATA, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
   console.log(`\n✅ 完成：${records.length} 种，图片 ${withImage}，音频 ${withAudio}`)
-  console.log(`   写入 public/data/${outFile}`)
+  console.log(`   写入 public/data/manifest.json`)
   const failed = records.filter((r) => !r.image && !r.audio).map((r) => r.nameZh)
   if (failed.length) console.log(`   ⚠️ 无任何素材: ${failed.join('、')}`)
 }

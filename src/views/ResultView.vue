@@ -47,14 +47,13 @@ async function poster() {
       timedOut: chosen === TIMEOUT,
     }))
   await downloadPoster({
-    modeLabel: modeLabel.value,
+    modeLabel: quiz.mode === 'audio' ? '鸟声版' : '鸟图版',
     tierLabel: tierLabel.value,
     correct: quiz.correctCount,
     total: quiz.total,
     accuracy: quiz.accuracy,
     date: new Date().toLocaleDateString('zh-CN'),
     wrong,
-    encouragement: message.value,
   })
 }
 </script>

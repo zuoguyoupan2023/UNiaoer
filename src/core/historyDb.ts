@@ -162,6 +162,41 @@ export function getWrongBook(): Promise<WrongEntry[]> {
   return getAll<WrongEntry>(STORE_WRONG)
 }
 
+export interface WrongHistoryItem {
+  speciesId: string
+  answer: string
+  sci: string
+  family: string
+  chosen: string | null
+  timedOut: boolean
+  at: number
+  mode: MediaType
+  tier: Tier
+}
+
+/** 历史错题：从全部轮次记录里展开（只增不减，永久保留） */
+export async function listWrongHistory(): Promise<WrongHistoryItem[]> {
+  const rounds = await listRounds()
+  const out: WrongHistoryItem[] = []
+  for (const r of rounds) {
+    for (const it of r.items) {
+      if (it.correct) continue
+      out.push({
+        speciesId: it.speciesId,
+        answer: it.answer,
+        sci: it.sci,
+        family: it.family,
+        chosen: it.chosen,
+        timedOut: it.timedOut,
+        at: r.at,
+        mode: r.mode,
+        tier: r.tier,
+      })
+    }
+  }
+  return out.sort((a, b) => b.at - a.at)
+}
+
 export function removeWrong(speciesId: string): Promise<void> {
   return del(STORE_WRONG, speciesId)
 }

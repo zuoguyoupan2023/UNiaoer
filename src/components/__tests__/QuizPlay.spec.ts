@@ -42,7 +42,6 @@ function sp(id: string, nameZh: string, url: string): BankSpecies {
 
 const manifest: Manifest = {
   generatedAt: '',
-  category: 'bird',
   policy: 'relaxed',
   mediaMode: 'remote',
   total: 3,

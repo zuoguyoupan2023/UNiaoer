@@ -41,7 +41,7 @@ export async function persistRound(quiz: QuizStore): Promise<BadgeDef[]> {
   const record: RoundRecord = {
     id: quiz.roundId,
     at: Date.now(),
-    category: quiz.category,
+    category: 'bird',
     mode: quiz.mode,
     tier: quiz.tier,
     total: quiz.total,
