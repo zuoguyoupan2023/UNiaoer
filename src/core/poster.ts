@@ -27,11 +27,23 @@ export interface PosterOptions {
 const W = 1080
 const H = 1440
 const FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif'
-const DARK = '#14342a'
-const MUTED = '#5a7a6f'
-const ACCENT = '#2d6a4f'
-const WRONG = '#c1121f'
-const BOX = 'rgba(255,255,255,0.82)'
+
+/** 有底框：白底黑字（用于场景/照片背景） */
+const PALETTE_BOXED = {
+  dark: '#14342a',
+  muted: '#5a7a6f',
+  accent: '#2d6a4f',
+  wrong: '#c1121f',
+  box: 'rgba(255,255,255,0.82)' as string | null,
+}
+/** 无底框：白字直接铺在纯色渐变上 */
+const PALETTE_PLAIN = {
+  dark: '#ffffff',
+  muted: 'rgba(255,255,255,0.82)',
+  accent: '#e9b949',
+  wrong: '#ffc2c7',
+  box: null as string | null,
+}
 
 interface Seg {
   text: string
@@ -71,13 +83,14 @@ const GAP = 10
 const PAD_X = 20
 const PAD_Y = 12
 
-/** 画一组文字片段，并在其下方铺半透明白底框（保证白底黑字） */
+/** 画一组文字片段；有 box 时铺半透明白底框（白底黑字），无 box 时直接绘制（纯色背景） */
 function drawSegments(
   ctx: CanvasRenderingContext2D,
   segs: Seg[],
   anchor: number,
   baseline: number,
   align: 'center' | 'left',
+  box: string | null,
 ) {
   const widths = segs.map((s) => {
     ctx.font = `${s.weight} ${s.size}px ${FONT}`
@@ -85,18 +98,24 @@ function drawSegments(
   })
   const total = widths.reduce((a, b) => a + b, 0) + GAP * Math.max(0, segs.length - 1)
   const maxSize = Math.max(...segs.map((s) => s.size))
-  const boxW = total + PAD_X * 2
-  const boxH = maxSize + PAD_Y * 2
-  const boxX = align === 'center' ? anchor - boxW / 2 : anchor - PAD_X
-  const boxY = baseline - maxSize * 0.78 - PAD_Y
 
-  ctx.fillStyle = BOX
-  roundRect(ctx, boxX, boxY, boxW, boxH, 16)
-  ctx.fill()
+  let startX: number
+  if (box) {
+    const boxW = total + PAD_X * 2
+    const boxH = maxSize + PAD_Y * 2
+    const boxX = align === 'center' ? anchor - boxW / 2 : anchor - PAD_X
+    const boxY = baseline - maxSize * 0.78 - PAD_Y
+    ctx.fillStyle = box
+    roundRect(ctx, boxX, boxY, boxW, boxH, 16)
+    ctx.fill()
+    startX = align === 'center' ? boxX + PAD_X : anchor
+  } else {
+    startX = align === 'center' ? anchor - total / 2 : anchor
+  }
 
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  let x = align === 'center' ? boxX + PAD_X : anchor
+  let x = startX
   segs.forEach((s, i) => {
     ctx.font = `${s.weight} ${s.size}px ${FONT}`
     ctx.fillStyle = s.color
@@ -125,75 +144,85 @@ export function drawPoster(
     getBackground(opts.themeId).draw(ctx, W, H)
   }
 
+  // 纯色背景：文字直接铺在渐变上（白字、无白底框）
+  const plain = !hasImage && !!getBackground(opts.themeId).plain
+  const P = plain ? PALETTE_PLAIN : PALETTE_BOXED
+  const box = P.box
+
   ctx.textBaseline = 'alphabetic'
 
   // 顶部标题（无 emoji、无“鸟语识别”）
-  drawSegments(ctx, [{ text: 'UNiaoer', color: DARK, weight: 800, size: 56 }], W / 2, 118, 'center')
-  drawSegments(ctx, [{ text: data.date, color: MUTED, weight: 400, size: 28 }], W / 2, 184, 'center')
+  drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: 56 }], W / 2, 118, 'center', box)
+  drawSegments(ctx, [{ text: data.date, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
   // 右上角模式标签
   ctx.font = `700 32px ${FONT}`
   const bw = ctx.measureText(data.modeLabel).width + 48
   const bx = W - 60 - bw
   const by = 60
-  ctx.fillStyle = BOX
+  ctx.fillStyle = box ?? 'rgba(255,255,255,0.18)'
   roundRect(ctx, bx, by, bw, 60, 30)
   ctx.fill()
   ctx.textAlign = 'center'
-  ctx.fillStyle = DARK
+  ctx.fillStyle = box ? P.dark : '#ffffff'
   ctx.fillText(data.modeLabel, bx + bw / 2, by + 41)
 
-  // 正文（居中，逐字段白底框）
-  drawSegments(
-    ctx,
-    [{ text: '你在认鸟测试中', color: MUTED, weight: 400, size: 40 }],
-    W / 2,
-    540,
-    'center',
-  )
+  // 正文
+  drawSegments(ctx, [{ text: '你在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
   const perfect = data.total > 0 && data.correct === data.total
   drawSegments(
     ctx,
-    [{ text: perfect ? '全对了！' : '答对了！', color: DARK, weight: 800, size: 64 }],
+    [{ text: perfect ? '全对了！' : '答对了！', color: P.dark, weight: 800, size: 64 }],
     W / 2,
     650,
     'center',
+    box,
   )
   drawSegments(
     ctx,
     [
-      { text: String(data.correct), color: ACCENT, weight: 800, size: 150 },
-      { text: `/${data.total}`, color: MUTED, weight: 600, size: 44 },
+      { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
+      { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
     ],
     W / 2,
     860,
     'center',
+    box,
   )
   drawSegments(
     ctx,
-    [{ text: `正确率 ${data.accuracy}% · ${data.tierLabel}`, color: MUTED, weight: 500, size: 28 }],
+    [{ text: `正确率 ${data.accuracy}% · ${data.tierLabel}`, color: P.muted, weight: 500, size: 28 }],
     W / 2,
     950,
     'center',
+    box,
   )
 
-  // 错题回顾（左对齐，逐行白底框）
-  drawSegments(ctx, [{ text: '错题回顾', color: MUTED, weight: 600, size: 28 }], 110, 1080, 'left')
+  // 错题回顾
+  drawSegments(ctx, [{ text: '错题回顾', color: P.muted, weight: 600, size: 28 }], 110, 1080, 'left', box)
   const list = data.wrong.slice(0, 4)
   if (list.length === 0) {
-    drawSegments(ctx, [{ text: '🎉 全对，没有错题', color: ACCENT, weight: 400, size: 28 }], 110, 1140, 'left')
+    drawSegments(
+      ctx,
+      [{ text: '🎉 全对，没有错题', color: P.accent, weight: 400, size: 28 }],
+      110,
+      1140,
+      'left',
+      box,
+    )
   } else {
     list.forEach((w, i) => {
       const mine = w.timedOut ? '超时未作答' : `认成了「${w.chosen ?? '—'}」`
       drawSegments(
         ctx,
         [
-          { text: `${i + 1}. ${w.answer}`, color: DARK, weight: 600, size: 27 },
-          { text: mine, color: WRONG, weight: 400, size: 25 },
+          { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 27 },
+          { text: mine, color: P.wrong, weight: 400, size: 25 },
         ],
         110,
         1140 + i * 58,
         'left',
+        box,
       )
     })
   }
@@ -201,10 +230,11 @@ export function drawPoster(
   // 页脚
   drawSegments(
     ctx,
-    [{ text: '开源非商业 · 数据来源 iNaturalist / Xeno-canto', color: MUTED, weight: 400, size: 26 }],
+    [{ text: '开源非商业 · 数据来源 iNaturalist / Xeno-canto', color: P.muted, weight: 400, size: 26 }],
     W / 2,
     H - 56,
     'center',
+    box,
   )
 }
 

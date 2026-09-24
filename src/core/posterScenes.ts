@@ -4,6 +4,8 @@ export interface PosterBackground {
   id: string
   label: string
   swatch: string
+  /** 纯色背景：文字直接铺在渐变上（白色字，不加白底框） */
+  plain?: boolean
   draw: (ctx: CanvasRenderingContext2D, W: number, H: number) => void
 }
 
@@ -266,6 +268,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'mint',
     label: '薄荷纯色',
     swatch: '#40916c',
+    plain: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#1b4332'],
@@ -278,6 +281,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'graphite',
     label: '石墨纯色',
     swatch: '#232326',
+    plain: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#0f0f10'],

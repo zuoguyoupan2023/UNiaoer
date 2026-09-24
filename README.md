@@ -34,13 +34,30 @@ npm run format       # 格式化
 
 > 若 npm 安装缓慢，可配置国内镜像：`npm config set registry https://registry.npmmirror.com`
 
-## 分阶段路线图
+## 功能进度
 
-- **P0 脚手架**（当前）：工程化基建 + 核心类型 + 许可过滤器
-- P1 静态题库：构建期抓取 iNat/XC → 许可过滤 → manifest
-- P2 核心玩法：看图找鸟 / 听音找鸟
-- P3 体验优化：缓存 / 预加载 / 懒加载 / Service Worker
-- P4 难度梯度：L1~L4
-- P5 音频自动播放（第 2 题起、延迟 2s）
-- P6 边缘后端：Cloudflare Workers + D1 + R2
-- P7 自适应与扩展
+- ✅ P0 脚手架：Vite + Vue3 + TS + Pinia + 路由 + 测试 + Lint
+- ✅ P1 静态题库：`scripts/build-bank.mjs` 抓 iNat/XC → 许可过滤 → `manifest.json`
+- ✅ P2 核心玩法：看图找鸟 / 听音找鸟（选项、反馈、署名、结果回顾）
+- ✅ P3 体验：预加载（当前 + 后 3 题）、懒加载、Service Worker 持久化
+- ✅ P4 难度梯度：L1 入门 / L2 进阶 / L3 高手 / L4 专家（选项数、干扰项、限时）
+- ✅ P5 音频自动播放：第 2 题起、延迟 2s（可在设置调整）
+- ✅ 用户数据（本地 IndexedDB）：每轮记录、错题本（当前 + 历史）、徽章、成绩海报（可编辑）
+- ⏳ P6 边缘后端：Cloudflare Workers + D1 + R2（密钥下沉、动态出题、首屏走 R2）
+- ⏳ P7 自适应难度、题库扩充
+
+## 部署（Cloudflare Pages）
+
+当前是纯静态 SPA，用 **Cloudflare Pages** 即可：
+
+| 设置 | 值 |
+|---|---|
+| Build command | `npm run build` |
+| Output directory | `dist` |
+| Node version | 22+ |
+
+- SPA 深链（`/wrong`、`/profile`）已由 `public/_redirects` 处理。
+- **题库**：`public/data/manifest.json` 是构建产物（默认被 gitignore）。部署前需二选一：
+  1. 本地跑 `npm run bank` 后把 `public/data/manifest.json` 纳入版本库（仅元数据 + 远端 URL + 署名，不含媒体）；或
+  2. 在 Pages 构建命令里跑 `npm run bank`，并把 `XC_API_KEY` 设为构建环境变量。
+- **P6**：再引入 Worker（Pages Functions 或独立 Worker）+ D1 + R2，用同源 `/api` 代理隐藏密钥。

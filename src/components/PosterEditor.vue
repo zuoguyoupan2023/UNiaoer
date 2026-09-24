@@ -186,8 +186,8 @@ function download() {
             <p v-if="error" class="err small">{{ error }}</p>
           </div>
 
-          <!-- 锁定 / 平移 -->
-          <div class="group">
+          <!-- 锁定 / 平移（仅鸟图版有背景照片时才需要） -->
+          <div v-if="images.length" class="group">
             <button class="btn btn-secondary" style="width: 100%" @click="locked = !locked">
               {{ locked ? '🔓 已锁定（点击解锁）' : '🔒 锁定其他修改' }}
             </button>
@@ -200,7 +200,7 @@ function download() {
               重置背景位置
             </button>
             <p class="muted small" style="margin-top: 8px">
-              锁定后只能上下左右平移背景，配色与背景图不可再改。
+              锁定后只能上下左右平移背景，背景与照片不可再改。
             </p>
           </div>
 
