@@ -1,4 +1,5 @@
-/** 每轮成绩海报：纯 Canvas 绘制 → 导出 PNG（无依赖） */
+/** 每轮成绩海报：纯 Canvas 绘制（主题 / 背景图 / 平移），导出 PNG（无依赖） */
+import { getTheme } from './posterThemes'
 
 export interface PosterWrong {
   answer: string
@@ -15,6 +16,12 @@ export interface PosterData {
   accuracy: number
   date: string
   wrong: PosterWrong[]
+}
+
+export interface PosterOptions {
+  themeId: string
+  bgImage?: HTMLImageElement | null
+  bgOffset?: { x: number; y: number }
 }
 
 const W = 1080
@@ -38,29 +45,65 @@ function roundRect(
   ctx.closePath()
 }
 
-export function renderPoster(data: PosterData): HTMLCanvasElement {
-  const canvas = document.createElement('canvas')
+/** 计算背景图 cover 布局（含平移），并夹取到不留空白 */
+export function computeCover(
+  imgW: number,
+  imgH: number,
+  offset?: { x: number; y: number },
+) {
+  const scale = Math.max(W / imgW, H / imgH)
+  const dw = imgW * scale
+  const dh = imgH * scale
+  const x = Math.min(0, Math.max(W - dw, (W - dw) / 2 + (offset?.x ?? 0)))
+  const y = Math.min(0, Math.max(H - dh, (H - dh) / 2 + (offset?.y ?? 0)))
+  return { x, y, dw, dh }
+}
+
+/** 把海报画到指定 canvas 上 */
+export function drawPoster(
+  canvas: HTMLCanvasElement,
+  data: PosterData,
+  opts: PosterOptions,
+): void {
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')!
+  const theme = getTheme(opts.themeId)
+  const hasImage = !!opts.bgImage
 
   // 背景
-  const bg = ctx.createLinearGradient(0, 0, 0, H)
-  bg.addColorStop(0, '#1b4332')
-  bg.addColorStop(0.5, '#2d6a4f')
-  bg.addColorStop(1, '#40916c')
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, W, H)
+  if (hasImage && opts.bgImage) {
+    const { x, y, dw, dh } = computeCover(opts.bgImage.width, opts.bgImage.height, opts.bgOffset)
+    ctx.fillStyle = '#111'
+    ctx.fillRect(0, 0, W, H)
+    ctx.drawImage(opts.bgImage, x, y, dw, dh)
+  } else {
+    const bg = ctx.createLinearGradient(0, 0, 0, H)
+    bg.addColorStop(0, theme.stops[0])
+    bg.addColorStop(0.5, theme.stops[1])
+    bg.addColorStop(1, theme.stops[2])
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, W, H)
+  }
 
-  // 顶部标题（去掉“鸟语识别”）
-  ctx.textAlign = 'center'
+  const panelAlpha = hasImage ? 0.74 : 1
+  const panelFill = hasImage ? `rgba(255,255,255,${panelAlpha})` : '#ffffff'
+
   ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = '#ffffff'
-  ctx.font = `800 56px ${FONT}`
-  ctx.fillText('🐦 UNiaoer', W / 2, 120)
-  ctx.font = `400 28px ${FONT}`
-  ctx.fillStyle = 'rgba(255,255,255,0.72)'
-  ctx.fillText(data.date, W / 2, 172)
+
+  // 顶部标题（去掉 emoji 与“鸟语识别”）
+  if (hasImage) {
+    drawLabel(ctx, 'UNiaoer', W / 2, 118, 56, true)
+    drawLabel(ctx, data.date, W / 2, 174, 28, false)
+  } else {
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#ffffff'
+    ctx.font = `800 56px ${FONT}`
+    ctx.fillText('UNiaoer', W / 2, 118)
+    ctx.fillStyle = 'rgba(255,255,255,0.75)'
+    ctx.font = `400 28px ${FONT}`
+    ctx.fillText(data.date, W / 2, 174)
+  }
 
   // 右上角模式标签
   const badgeText = data.modeLabel
@@ -68,58 +111,60 @@ export function renderPoster(data: PosterData): HTMLCanvasElement {
   const bw = ctx.measureText(badgeText).width + 48
   const bx = W - 60 - bw
   const by = 64
-  ctx.fillStyle = 'rgba(255,255,255,0.18)'
+  ctx.fillStyle = hasImage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.18)'
   roundRect(ctx, bx, by, bw, 60, 30)
   ctx.fill()
-  ctx.fillStyle = '#ffffff'
   ctx.textAlign = 'center'
+  ctx.fillStyle = hasImage ? '#14342a' : '#ffffff'
   ctx.fillText(badgeText, bx + bw / 2, by + 41)
 
-  // 白色卡片
+  // 内容面板
   const cardX = 90
   const cardY = 250
   const cardW = W - 180
   const cardH = 1010
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = panelFill
   roundRect(ctx, cardX, cardY, cardW, cardH, 44)
   ctx.fill()
 
   ctx.textAlign = 'center'
+  const dark = '#14342a'
+  const muted = '#5a7a6f'
 
   // 第一行小字
-  ctx.fillStyle = '#5a7a6f'
-  ctx.font = `400 38px ${FONT}`
+  ctx.fillStyle = muted
+  ctx.font = `400 40px ${FONT}`
   ctx.fillText('你在认鸟测试中', W / 2, cardY + 150)
 
-  // 大字：答对了！
+  // 第二行：比第一行大一点
   const perfect = data.total > 0 && data.correct === data.total
-  ctx.fillStyle = '#14342a'
-  ctx.font = `800 128px ${FONT}`
-  ctx.fillText(perfect ? '全对了！' : '答对了！', W / 2, cardY + 320)
+  ctx.fillStyle = dark
+  ctx.font = `800 64px ${FONT}`
+  ctx.fillText(perfect ? '全对了！' : '答对了！', W / 2, cardY + 250)
 
   // 分数：9 大字，/10 小字，整体居中
-  const scoreBase = cardY + 520
-  ctx.font = `800 200px ${FONT}`
+  const scoreBase = cardY + 420
+  ctx.font = `800 150px ${FONT}`
   const numW = ctx.measureText(String(data.correct)).width
-  ctx.font = `600 54px ${FONT}`
+  ctx.font = `600 44px ${FONT}`
   const denW = ctx.measureText(`/${data.total}`).width
-  let sx = W / 2 - (numW + denW + 12) / 2
+  let sx = W / 2 - (numW + denW + 10) / 2
   ctx.textAlign = 'left'
-  ctx.fillStyle = '#2d6a4f'
-  ctx.font = `800 200px ${FONT}`
+  ctx.fillStyle = theme.stops[1]
+  ctx.font = `800 150px ${FONT}`
   ctx.fillText(String(data.correct), sx, scoreBase)
-  sx += numW + 12
-  ctx.fillStyle = '#5a7a6f'
-  ctx.font = `600 54px ${FONT}`
+  sx += numW + 10
+  ctx.fillStyle = muted
+  ctx.font = `600 44px ${FONT}`
   ctx.fillText(`/${data.total}`, sx, scoreBase)
 
   ctx.textAlign = 'center'
-  ctx.fillStyle = '#5a7a6f'
-  ctx.font = `500 30px ${FONT}`
-  ctx.fillText(`正确率 ${data.accuracy}% · ${data.tierLabel}`, W / 2, cardY + 610)
+  ctx.fillStyle = muted
+  ctx.font = `500 28px ${FONT}`
+  ctx.fillText(`正确率 ${data.accuracy}% · ${data.tierLabel}`, W / 2, cardY + 500)
 
   // 错题（更小、更靠下）
-  const wrongTitleY = cardY + 730
+  const wrongTitleY = cardY + 640
   ctx.textAlign = 'left'
   ctx.fillStyle = '#9bb3a8'
   ctx.font = `600 28px ${FONT}`
@@ -127,13 +172,13 @@ export function renderPoster(data: PosterData): HTMLCanvasElement {
 
   const list = data.wrong.slice(0, 4)
   if (list.length === 0) {
-    ctx.fillStyle = '#2d6a4f'
+    ctx.fillStyle = theme.stops[1]
     ctx.font = `400 28px ${FONT}`
     ctx.fillText('🎉 全对，没有错题', cardX + 64, wrongTitleY + 54)
   } else {
     list.forEach((w, i) => {
       const y = wrongTitleY + 54 + i * 52
-      ctx.fillStyle = '#14342a'
+      ctx.fillStyle = dark
       ctx.font = `600 27px ${FONT}`
       ctx.fillText(`${i + 1}. ${w.answer}`, cardX + 64, y)
       ctx.fillStyle = '#c1121f'
@@ -144,18 +189,55 @@ export function renderPoster(data: PosterData): HTMLCanvasElement {
   }
 
   // 页脚
-  ctx.textAlign = 'center'
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'
-  ctx.font = `400 26px ${FONT}`
-  ctx.fillText('开源非商业 · 数据来源 iNaturalist / Xeno-canto', W / 2, H - 64)
+  if (hasImage) {
+    drawLabel(ctx, '开源非商业 · 数据来源 iNaturalist / Xeno-canto', W / 2, H - 58, 26, false)
+  } else {
+    ctx.textAlign = 'center'
+    ctx.fillStyle = 'rgba(255,255,255,0.75)'
+    ctx.font = `400 26px ${FONT}`
+    ctx.fillText('开源非商业 · 数据来源 iNaturalist / Xeno-canto', W / 2, H - 64)
+  }
+}
 
+/** 在背景图上给文字加半透明白色背景框（保证白底黑字） */
+function drawLabel(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  baseline: number,
+  size: number,
+  bold: boolean,
+) {
+  ctx.font = `${bold ? 800 : 400} ${size}px ${FONT}`
+  const tw = ctx.measureText(text).width
+  const padX = 22
+  const padY = 14
+  const bw = tw + padX * 2
+  const bh = size + padY * 2
+  const bx = cx - bw / 2
+  const by = baseline - size - padY + 6
+  ctx.fillStyle = 'rgba(255,255,255,0.82)'
+  roundRect(ctx, bx, by, bw, bh, 16)
+  ctx.fill()
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#14342a'
+  ctx.fillText(text, cx, baseline)
+}
+
+export function renderPoster(data: PosterData, opts: PosterOptions): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  drawPoster(canvas, data, opts)
   return canvas
 }
 
 /** 生成并下载海报 PNG */
-export function downloadPoster(data: PosterData, filename = 'uniaoer-result.png'): Promise<void> {
+export function downloadPoster(
+  data: PosterData,
+  opts: PosterOptions,
+  filename = 'uniaoer-result.png',
+): Promise<void> {
   return new Promise((resolve) => {
-    const canvas = renderPoster(data)
+    const canvas = renderPoster(data, opts)
     canvas.toBlob((blob) => {
       if (!blob) {
         resolve()
@@ -169,5 +251,16 @@ export function downloadPoster(data: PosterData, filename = 'uniaoer-result.png'
       setTimeout(() => URL.revokeObjectURL(url), 1000)
       resolve()
     }, 'image/png')
+  })
+}
+
+/** 加载背景图（跨域图片需 CORS 才能导出 canvas） */
+export function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('图片加载失败：' + url))
+    img.src = url
   })
 }
