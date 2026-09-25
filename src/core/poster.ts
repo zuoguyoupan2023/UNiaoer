@@ -22,27 +22,81 @@ export interface PosterOptions {
   themeId: string
   bgImage?: ImageBitmap | null
   bgOffset?: { x: number; y: number }
+  /** 右下角二维码指向的站点（占位文案/后续替换真码用） */
+  qrUrl?: string
+  /** 真二维码图（可选，提供后替代占位框） */
+  qrImage?: ImageBitmap | null
+}
+
+/** 官网地址（二维码默认指向；正式域名确定后替换） */
+export const DEFAULT_SITE_URL = 'https://uniaoer.pages.dev'
+
+/** 海报错题区最多展示条数（左右各 4） */
+export const POSTER_WRONG_MAX = 8
+
+/** 海报错题行：真实错题，或"放不下了"占位行 */
+export interface PosterWrongRow extends PosterWrong {
+  placeholder?: boolean
+}
+
+/**
+ * 选取用于海报展示的错题行（F2）：
+ * - ≤8 条：全部展示
+ * - >8 条：展示前 7 条，第 8 条替换为「这里放不下了」
+ */
+export function buildWrongRows(wrong: PosterWrong[]): PosterWrongRow[] {
+  const overflow = wrong.length > POSTER_WRONG_MAX
+  const kept = overflow ? wrong.slice(0, POSTER_WRONG_MAX - 1) : wrong.slice(0, POSTER_WRONG_MAX)
+  const rows: PosterWrongRow[] = kept.map((w) => ({ ...w }))
+  if (overflow) rows.push({ answer: '这里放不下了', chosen: null, timedOut: false, placeholder: true })
+  return rows
 }
 
 const W = 1080
 const H = 1440
 const FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif'
 
+interface Palette {
+  dark: string
+  muted: string
+  accent: string
+  wrong: string
+  /** 字段底框颜色；null 表示无底框（纯色背景直接铺字） */
+  box: string | null
+  /** 模式标签胶囊：背景 / 文字 */
+  chipBg: string
+  chipText: string
+}
+
 /** 有底框：白底黑字（用于场景/照片背景） */
-const PALETTE_BOXED = {
+const PALETTE_BOXED: Palette = {
   dark: '#14342a',
   muted: '#5a7a6f',
   accent: '#2d6a4f',
   wrong: '#c1121f',
-  box: 'rgba(255,255,255,0.82)' as string | null,
+  box: 'rgba(255,255,255,0.82)',
+  chipBg: 'rgba(255,255,255,0.82)',
+  chipText: '#14342a',
 }
-/** 无底框：白字直接铺在纯色渐变上 */
-const PALETTE_PLAIN = {
+/** 无底框·暗色纯色：白字直接铺在背景上 */
+const PALETTE_PLAIN: Palette = {
   dark: '#ffffff',
   muted: 'rgba(255,255,255,0.82)',
   accent: '#e9b949',
   wrong: '#ffc2c7',
   box: null as string | null,
+  chipBg: 'rgba(255,255,255,0.18)',
+  chipText: '#ffffff',
+}
+/** 无底框·浅色纯色（纯白）：深字直接铺在背景上 */
+const PALETTE_PLAIN_LIGHT: Palette = {
+  dark: '#14181a',
+  muted: 'rgba(20,24,26,0.6)',
+  accent: '#2d6a4f',
+  wrong: '#c1121f',
+  box: null,
+  chipBg: 'rgba(20,24,26,0.08)',
+  chipText: '#14181a',
 }
 
 interface Seg {
@@ -77,6 +131,21 @@ export function computeCover(imgW: number, imgH: number, offset?: { x: number; y
   const x = Math.min(0, Math.max(W - dw, (W - dw) / 2 + (offset?.x ?? 0)))
   const y = Math.min(0, Math.max(H - dh, (H - dh) / 2 + (offset?.y ?? 0)))
   return { x, y, dw, dh }
+}
+
+/** 按给定字体把文本截断到 maxWidth 内（超出补 …） */
+function fitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  weight: number,
+  size: number,
+  maxWidth: number,
+): string {
+  ctx.font = `${weight} ${size}px ${FONT}`
+  if (maxWidth <= 0 || ctx.measureText(text).width <= maxWidth) return text
+  let t = text
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1)
+  return t + '…'
 }
 
 const GAP = 10
@@ -124,6 +193,50 @@ function drawSegments(
   })
 }
 
+/** F4：右下角二维码位（有真码则绘真码，否则绘制虚线占位框） */
+const QR_SIZE = 130
+const QR_MARGIN = 36
+
+function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptions) {
+  const size = QR_SIZE
+  const x = W - QR_MARGIN - size
+  const y = H - QR_MARGIN - size
+
+  if (opts.qrImage) {
+    ctx.drawImage(opts.qrImage, x, y, size, size)
+  } else {
+    ctx.save()
+    ctx.setLineDash([8, 6])
+    ctx.lineWidth = 2
+    ctx.strokeStyle = P.muted
+    roundRect(ctx, x, y, size, size, 12)
+    ctx.stroke()
+    ctx.restore()
+
+    let host = ''
+    try {
+      host = new URL(opts.qrUrl ?? DEFAULT_SITE_URL).host
+    } catch {
+      host = ''
+    }
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillStyle = P.muted
+    ctx.font = `500 22px ${FONT}`
+    ctx.fillText('二维码', x + size / 2, y + size / 2 + 4)
+    if (host) {
+      ctx.font = `400 13px ${FONT}`
+      ctx.fillText(host, x + size / 2, y + size / 2 + 28)
+    }
+  }
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = P.muted
+  ctx.font = `400 18px ${FONT}`
+  ctx.fillText('扫码访问官网', x + size / 2, y + size + 22)
+}
+
 export function drawPoster(
   canvas: HTMLCanvasElement,
   data: PosterData,
@@ -144,9 +257,10 @@ export function drawPoster(
     getBackground(opts.themeId).draw(ctx, W, H)
   }
 
-  // 纯色背景：文字直接铺在渐变上（白字、无白底框）
-  const plain = !hasImage && !!getBackground(opts.themeId).plain
-  const P = plain ? PALETTE_PLAIN : PALETTE_BOXED
+  // 纯色背景：文字直接铺在背景上（无白底框）；浅色底改用深字
+  const bg = getBackground(opts.themeId)
+  const plain = !hasImage && !!bg.plain
+  const P = plain ? (bg.light ? PALETTE_PLAIN_LIGHT : PALETTE_PLAIN) : PALETTE_BOXED
   const box = P.box
 
   ctx.textBaseline = 'alphabetic'
@@ -160,11 +274,11 @@ export function drawPoster(
   const bw = ctx.measureText(data.modeLabel).width + 48
   const bx = W - 60 - bw
   const by = 60
-  ctx.fillStyle = box ?? 'rgba(255,255,255,0.18)'
+  ctx.fillStyle = P.chipBg
   roundRect(ctx, bx, by, bw, 60, 30)
   ctx.fill()
   ctx.textAlign = 'center'
-  ctx.fillStyle = box ? P.dark : '#ffffff'
+  ctx.fillStyle = P.chipText
   ctx.fillText(data.modeLabel, bx + bw / 2, by + 41)
 
   // 正文
@@ -198,44 +312,58 @@ export function drawPoster(
     box,
   )
 
-  // 错题回顾
-  drawSegments(ctx, [{ text: '错题回顾', color: P.muted, weight: 600, size: 28 }], 110, 1080, 'left', box)
-  const list = data.wrong.slice(0, 4)
-  if (list.length === 0) {
+  // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
+  drawSegments(ctx, [{ text: '错题回顾', color: P.muted, weight: 600, size: 28 }], 60, 1040, 'left', box)
+  const rows = buildWrongRows(data.wrong)
+  if (rows.length === 0) {
     drawSegments(
       ctx,
       [{ text: '🎉 全对，没有错题', color: P.accent, weight: 400, size: 28 }],
-      110,
-      1140,
+      60,
+      1100,
       'left',
       box,
     )
   } else {
-    list.forEach((w, i) => {
-      const mine = w.timedOut ? '超时未作答' : `认成了「${w.chosen ?? '—'}」`
-      drawSegments(
-        ctx,
-        [
-          { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 27 },
-          { text: mine, color: P.wrong, weight: 400, size: 25 },
-        ],
-        110,
-        1140 + i * 58,
-        'left',
-        box,
-      )
+    const colWidth = 440
+    const rowGap = 50
+    const top = 1090
+    ctx.textAlign = 'left'
+    rows.forEach((w, i) => {
+      const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
+      const y = top + (i % (POSTER_WRONG_MAX / 2)) * rowGap
+      if (w.placeholder) {
+        drawSegments(
+          ctx,
+          [{ text: `${i + 1}. 这里放不下了`, color: P.wrong, weight: 600, size: 25 }],
+          x,
+          y,
+          'left',
+          box,
+        )
+        return
+      }
+      const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
+      const mineText = w.timedOut ? '超时未作答' : `认成了「${w.chosen ?? '—'}」`
+      ctx.font = `600 26px ${FONT}`
+      const headW = ctx.measureText(head.text).width
+      const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
+      drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 24 }], x, y, 'left', box)
     })
   }
 
-  // 页脚
+  // 页脚（左对齐，给右下角二维码让位）
   drawSegments(
     ctx,
-    [{ text: '开源非商业 · 数据来源 iNaturalist / Xeno-canto', color: P.muted, weight: 400, size: 26 }],
-    W / 2,
-    H - 56,
-    'center',
+    [{ text: '开源非商业 · 数据来源 iNaturalist / Xeno-canto', color: P.muted, weight: 400, size: 24 }],
+    60,
+    H - 30,
+    'left',
     box,
   )
+
+  // 右下角二维码位（F4）
+  drawQrSlot(ctx, P, opts)
 }
 
 export function renderPoster(data: PosterData, opts: PosterOptions): HTMLCanvasElement {

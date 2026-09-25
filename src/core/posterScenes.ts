@@ -4,8 +4,10 @@ export interface PosterBackground {
   id: string
   label: string
   swatch: string
-  /** 纯色背景：文字直接铺在渐变上（白色字，不加白底框） */
+  /** 纯色背景：文字直接铺在渐变上（不加白底框） */
   plain?: boolean
+  /** 浅色纯色背景：需改用深色文字（如纯白） */
+  light?: boolean
   draw: (ctx: CanvasRenderingContext2D, W: number, H: number) => void
 }
 
@@ -288,6 +290,27 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
         [0.5, '#232326'],
         [1, '#3a3a40'],
       ])
+    },
+  },
+  {
+    id: 'white',
+    label: '纯白',
+    swatch: '#ffffff',
+    plain: true,
+    light: true,
+    draw: (ctx, W, H) => {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, W, H)
+    },
+  },
+  {
+    id: 'black',
+    label: '纯黑',
+    swatch: '#000000',
+    plain: true,
+    draw: (ctx, W, H) => {
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(0, 0, W, H)
     },
   },
 ]

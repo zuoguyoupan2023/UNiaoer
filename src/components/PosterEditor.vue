@@ -158,7 +158,7 @@ function download() {
                 v-for="t in POSTER_BACKGROUNDS"
                 :key="t.id"
                 class="swatch"
-                :class="{ on: themeId === t.id, disabled: locked }"
+                :class="{ on: themeId === t.id, disabled: locked, light: t.light }"
                 :style="{ background: t.swatch }"
                 :title="t.label"
                 @click="selectTheme(t.id)"
@@ -342,6 +342,10 @@ function download() {
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   white-space: nowrap;
+}
+.swatch.light .swatch-label {
+  color: #333;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 .swatch:hover:not(.disabled) {
   transform: scale(1.08);
