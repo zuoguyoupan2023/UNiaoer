@@ -378,27 +378,50 @@ export function renderPoster(data: PosterData, opts: PosterOptions): HTMLCanvasE
   return canvas
 }
 
-export function downloadPoster(
+/** 把 canvas 转成 PNG Blob；旧浏览器无 `toBlob` 时回退 `toDataURL` */
+export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob((blob) => resolve(blob), 'image/png')
+      return
+    }
+    try {
+      const dataUrl = canvas.toDataURL('image/png')
+      const bin = atob(dataUrl.split(',')[1] ?? '')
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      resolve(new Blob([bytes], { type: 'image/png' }))
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
+/** 产出海报 PNG Blob（不触发下载，供弹层内预览/保存，见 006 F7） */
+export function renderPosterBlob(data: PosterData, opts: PosterOptions): Promise<Blob | null> {
+  return canvasToPngBlob(renderPoster(data, opts))
+}
+
+/** 触发浏览器下载。用于保存已生成的 blob（不再自动关闭弹层） */
+export function downloadBlob(blob: Blob, filename = 'uniaoer-result.png'): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/** 生成并下载（保留旧接口，供一次性调用场景） */
+export async function downloadPoster(
   data: PosterData,
   opts: PosterOptions,
   filename = 'uniaoer-result.png',
 ): Promise<void> {
-  return new Promise((resolve) => {
-    const canvas = renderPoster(data, opts)
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        resolve()
-        return
-      }
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      resolve()
-    }, 'image/png')
-  })
+  const blob = await renderPosterBlob(data, opts)
+  if (blob) downloadBlob(blob, filename)
 }
 
 /**

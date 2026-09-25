@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
-  downloadPoster,
+  downloadBlob,
   drawPoster,
   loadImage,
+  renderPosterBlob,
   type PosterData,
   type PosterImage,
   type PosterOptions,
@@ -24,6 +25,14 @@ const loadingBg = ref(false)
 /** N6-B：移动端隐藏锁定按钮，背景自由平移，不做干涉 */
 const isMobile = ref(false)
 
+// ---- F7 导出：弹层内预览 + 保存（不自动关闭，保留继续编辑） ----
+const blobUrl = ref<string | null>(null)
+const resultBlob = ref<Blob | null>(null)
+const generating = ref(false)
+/** 生成后又改了配置 → 预览过期，需重新生成 */
+const stale = ref(false)
+const resultMsg = ref('')
+
 const W = 1080
 const H = 1440
 
@@ -31,6 +40,7 @@ onMounted(() => {
   isMobile.value =
     typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 })
+onUnmounted(revokeResult)
 
 function options(): PosterOptions {
   return { themeId: themeId.value, bgImage: bgImage.value, bgOffset: offset.value }
@@ -45,9 +55,20 @@ watch(
   () => props.open,
   (o) => {
     if (o) nextTick(redraw)
+    else {
+      revokeResult()
+      stale.value = false
+    }
   },
 )
-watch([themeId, bgImage, offset], redraw, { deep: true })
+watch(
+  [themeId, bgImage, offset],
+  () => {
+    redraw()
+    if (blobUrl.value) stale.value = true
+  },
+  { deep: true },
+)
 
 function clampOffset(next: { x: number; y: number }) {
   const img = bgImage.value
@@ -120,8 +141,37 @@ function resetOffset() {
   offset.value = { x: 0, y: 0 }
 }
 
+function revokeResult() {
+  if (blobUrl.value) URL.revokeObjectURL(blobUrl.value)
+  blobUrl.value = null
+  resultBlob.value = null
+}
+
+async function generate() {
+  if (generating.value) return
+  generating.value = true
+  resultMsg.value = ''
+  try {
+    const blob = await renderPosterBlob(props.data, options())
+    if (!blob) {
+      resultMsg.value = '生成失败，请重试'
+      return
+    }
+    revokeResult()
+    resultBlob.value = blob
+    blobUrl.value = URL.createObjectURL(blob)
+    stale.value = false
+  } finally {
+    generating.value = false
+  }
+}
+
 function download() {
-  downloadPoster(props.data, options())
+  if (resultBlob.value && !stale.value) downloadBlob(resultBlob.value)
+}
+
+function openImage() {
+  if (blobUrl.value && !stale.value) window.open(blobUrl.value, '_blank', 'noopener')
 }
 </script>
 
@@ -221,7 +271,34 @@ function download() {
             </p>
           </div>
 
-          <button class="btn btn-primary" style="width: 100%" @click="download">下载海报 PNG</button>
+          <!-- 导出：先生成预览，可在弹层内保存/继续修改（F7） -->
+          <div class="group export">
+            <button
+              class="btn btn-primary"
+              style="width: 100%"
+              :disabled="generating"
+              @click="generate"
+            >
+              {{ generating ? '生成中…' : blobUrl ? '重新生成海报' : '生成海报' }}
+            </button>
+
+            <div v-if="blobUrl" class="result" aria-live="polite">
+              <img class="result-img" :src="blobUrl" alt="海报预览" />
+              <p v-if="stale" class="result-status stale">配置已修改，点「生成海报」更新预览</p>
+              <p v-else class="result-status">
+                海报已生成 ✓ 若未自动下载，请长按图片保存到相册。
+              </p>
+              <div class="result-actions">
+                <button class="btn btn-secondary" :disabled="stale" @click="download">
+                  下载 PNG
+                </button>
+                <button class="btn btn-secondary" :disabled="stale" @click="openImage">
+                  在新标签打开
+                </button>
+              </div>
+            </div>
+            <p v-if="resultMsg" class="err small" style="margin-top: 8px">{{ resultMsg }}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -426,6 +503,52 @@ function download() {
 }
 .err {
   color: var(--wrong);
+}
+.export {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+.result {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f7faf8;
+  text-align: center;
+}
+.result-img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: block;
+  margin: 0 auto 10px;
+  -webkit-touch-callout: default;
+}
+.result-status {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.result-status.stale {
+  color: #8a6d00;
+}
+.result-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.result-actions .btn {
+  padding: 9px 16px;
+  font-size: 0.84rem;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 @media (max-width: 720px) {
   .body {
