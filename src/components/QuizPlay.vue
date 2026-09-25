@@ -271,6 +271,7 @@ function onTouchEnd(e: TouchEvent) {
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"
         :hidden="optionsHidden"
+        :mode="quiz.current.type"
         @select="quiz.answer($event)"
       />
 

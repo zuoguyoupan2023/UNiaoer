@@ -63,7 +63,7 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
       <h3>音频自动播放</h3>
       <label class="switch">
         <input v-model="settings.autoplayAudio" type="checkbox" />
-        <span>开启后，从第 2 题起、切题后延迟自动播放鸟鸣</span>
+        <span>开启后，从第 2 题起、切题后自动播放；关闭则每题都需手动点击</span>
       </label>
 
       <label class="delay">
@@ -80,7 +80,7 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
     </div>
 
     <p class="muted" style="margin-top: 8px">
-      设置保存在浏览器本地。自动播放仅在第 2 题起生效（第 1 题需手动播放一次以解锁浏览器策略）。
+      默认开启。第 1 题始终需手动播放一次以解锁浏览器策略，之后各题才会自动播放。
     </p>
 
     <div class="setting">

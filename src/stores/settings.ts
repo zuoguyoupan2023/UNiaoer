@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { AutoNextMode, LicensePolicy } from '@/types'
 
-const STORAGE_KEY = 'uniaoer.settings.v1'
+// v2：音频自动播放默认由「关」改为「开」（见 006），旧键不复用以免沿用旧默认
+const STORAGE_KEY = 'uniaoer.settings.v2'
 
 interface Persisted {
   licensePolicy: LicensePolicy
@@ -25,8 +26,8 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /** 默认 relaxed：项目非商业，优先保证素材可用（见 001 决策 D2） */
   const licensePolicy = ref<LicensePolicy>(saved.licensePolicy ?? 'relaxed')
-  /** 音频自动播放：默认关（第 2 题起、延迟后再播） */
-  const autoplayAudio = ref<boolean>(saved.autoplayAudio ?? false)
+  /** 音频自动播放：默认开；第 1 题手动，第 2 题起自动（可在设置中改回每题手动） */
+  const autoplayAudio = ref<boolean>(saved.autoplayAudio ?? true)
   /** 自动播放延迟（ms） */
   const autoplayDelayMs = ref<number>(saved.autoplayDelayMs ?? 2000)
   /** 自动进入下一题：默认答对后等 2s（见 006 D2） */

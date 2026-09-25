@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Eye } from 'lucide-vue-next'
+import { Ear, Eye } from 'lucide-vue-next'
+import type { MediaType } from '@/types'
 
 const props = defineProps<{
   options: string[]
   answer: string
   chosen: string | null
   hidden?: boolean
+  /** 鸟声版用「先倾听」，鸟图版用「先观察」 */
+  mode?: MediaType
 }>()
 
 const emit = defineEmits<{ select: [value: string] }>()
@@ -22,8 +25,9 @@ function state(opt: string): string {
 
 <template>
   <div v-if="hidden" class="options-hidden">
-    <Eye class="ic" :size="16" />
-    先观察，选项稍后出现
+    <Ear v-if="mode === 'audio'" class="ic" :size="16" />
+    <Eye v-else class="ic" :size="16" />
+    {{ mode === 'audio' ? '先倾听，选项稍后出现' : '先观察，选项稍后出现' }}
   </div>
   <div v-else class="options">
     <button
