@@ -17,8 +17,9 @@ const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 
-const started = ref(false)
-const tier = ref<Tier>(2)
+// 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
+const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
+const tier = ref<Tier>(quiz.tier)
 
 const intro = computed(() =>
   props.type === 'audio'
@@ -109,7 +110,14 @@ async function begin() {
   startTimer()
 }
 
-onMounted(() => document.addEventListener('keydown', onKey))
+onMounted(() => {
+  document.addEventListener('keydown', onKey)
+  if (quiz.pendingContinue) {
+    quiz.pendingContinue = false
+    preloadQuestions(quiz.questions, 0, 4)
+    startTimer()
+  }
+})
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   stopTimer()

@@ -110,6 +110,12 @@ function selectTheme(id: string) {
   themeId.value = id
 }
 
+/** F6：缩略图标题（带"答错"提示） */
+function thumbTitle(img: PosterImage): string {
+  const base = img.sci ? `${img.answer} · ${img.sci}` : img.answer
+  return img.wrong ? `${base}（这题你答错了，试试用它做背景？）` : base
+}
+
 // ---- 拖拽平移背景 ----
 let dragging = false
 let last = { x: 0, y: 0 }
@@ -231,14 +237,23 @@ function openImage() {
                 纯场景
               </button>
               <div v-for="img in images" :key="img.url" class="thumb-cell">
-                <button
-                  class="thumb"
-                  :class="{ on: bgUrl === img.url, disabled: locked }"
-                  :title="img.sci ? `${img.answer} · ${img.sci}` : img.answer"
-                  @click="selectImage(img.url)"
-                >
-                  <img :src="img.url" alt="背景候选" loading="lazy" />
-                </button>
+                <div class="thumb-wrap">
+                  <button
+                    class="thumb"
+                    :class="{ on: bgUrl === img.url, disabled: locked, wrong: img.wrong }"
+                    :title="thumbTitle(img)"
+                    @click="selectImage(img.url)"
+                  >
+                    <img :src="img.url" alt="背景候选" loading="lazy" />
+                  </button>
+                  <span
+                    v-if="img.wrong"
+                    class="wrong-badge"
+                    title="这题你答错了，试试用它做背景？"
+                    aria-label="这题你答错了"
+                    >✕</span
+                  >
+                </div>
                 <span class="thumb-name">{{ img.answer }}</span>
                 <span v-if="img.sci" class="thumb-sci">{{ img.sci }}</span>
               </div>
@@ -476,6 +491,30 @@ function openImage() {
   cursor: pointer;
   padding: 0;
   position: relative;
+}
+.thumb-wrap {
+  position: relative;
+  line-height: 0;
+}
+/* F6：答错题所用图 —— 暖色描边 + 右上角小角标（不遮主体） */
+.thumb.wrong {
+  border-color: #e0a800;
+}
+.wrong-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c1121f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 .thumb img {
   width: 100%;

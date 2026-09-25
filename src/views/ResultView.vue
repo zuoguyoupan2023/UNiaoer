@@ -43,6 +43,8 @@ const posterData = computed<PosterData>(() => {
     total: quiz.total,
     accuracy: quiz.accuracy,
     date: new Date().toLocaleDateString('zh-CN'),
+    round: quiz.sessionRound,
+    overallAccuracy: quiz.overallAccuracy,
     wrong,
   }
 })
@@ -50,11 +52,12 @@ const posterData = computed<PosterData>(() => {
 const posterImages = computed<PosterImage[]>(() => {
   const seen = new Set<string>()
   const out: PosterImage[] = []
-  for (const q of quiz.questions) {
-    if (q.type !== 'image' || !q.media.url || seen.has(q.media.url)) continue
+  quiz.questions.forEach((q, i) => {
+    if (q.type !== 'image' || !q.media.url || seen.has(q.media.url)) return
     seen.add(q.media.url)
-    out.push({ url: q.media.url, answer: q.answer, sci: q.sci })
-  }
+    // F6：答错题所用的图打标记，引导用户优先选它做背景
+    out.push({ url: q.media.url, answer: q.answer, sci: q.sci, wrong: quiz.chosen[i] !== q.answer })
+  })
   return out
 })
 
@@ -66,7 +69,8 @@ onMounted(async () => {
   newBadges.value = await persistRound(quiz)
 })
 
-function again() {
+async function again() {
+  await quiz.nextRound()
   router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
 }
 </script>

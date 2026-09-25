@@ -15,6 +15,10 @@ export interface PosterData {
   total: number
   accuracy: number
   date: string
+  /** F3：本次 session 的轮次（>1 时海报显示「第 N 轮」） */
+  round?: number
+  /** F3：本次 session 的整体正确率（含本轮） */
+  overallAccuracy?: number
   wrong: PosterWrong[]
 }
 
@@ -287,6 +291,19 @@ export function drawPoster(
   ctx.fillStyle = P.chipText
   ctx.fillText(data.modeLabel, bx + bw / 2, by + 41)
 
+  // 左上角轮次标签（多轮 session 时，F3）
+  if (data.round && data.round > 1) {
+    const rt = `第 ${data.round} 轮`
+    ctx.font = `700 32px ${FONT}`
+    const rw = ctx.measureText(rt).width + 48
+    ctx.fillStyle = P.chipBg
+    roundRect(ctx, 60, 60, rw, 60, 30)
+    ctx.fill()
+    ctx.textAlign = 'center'
+    ctx.fillStyle = P.chipText
+    ctx.fillText(rt, 60 + rw / 2, 101)
+  }
+
   // 正文
   drawSegments(ctx, [{ text: '你在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
   const perfect = data.total > 0 && data.correct === data.total
@@ -309,9 +326,13 @@ export function drawPoster(
     'center',
     box,
   )
+  const accText =
+    data.round && data.round > 1 && data.overallAccuracy !== undefined
+      ? `正确率 ${data.accuracy}% · ${data.tierLabel} · 整体 ${data.overallAccuracy}%`
+      : `正确率 ${data.accuracy}% · ${data.tierLabel}`
   drawSegments(
     ctx,
-    [{ text: `正确率 ${data.accuracy}% · ${data.tierLabel}`, color: P.muted, weight: 500, size: 28 }],
+    [{ text: accText, color: P.muted, weight: 500, size: 28 }],
     W / 2,
     950,
     'center',
