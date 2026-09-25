@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
-import type { PosterData, PosterWrong } from '@/core/poster'
+import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import type { BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -13,7 +13,7 @@ const router = useRouter()
 const quiz = useQuizStore()
 
 const hasResult = computed(() => quiz.total > 0)
-const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音找鸟' : '看图找鸟'))
+const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音认鸟' : '看图认鸟'))
 const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
 const newBadges = ref<BadgeDef[]>([])
 const showPoster = ref(false)
@@ -47,9 +47,15 @@ const posterData = computed<PosterData>(() => {
   }
 })
 
-const posterImages = computed(() => {
-  const urls = quiz.questions.filter((q) => q.type === 'image').map((q) => q.media.url)
-  return [...new Set(urls)]
+const posterImages = computed<PosterImage[]>(() => {
+  const seen = new Set<string>()
+  const out: PosterImage[] = []
+  for (const q of quiz.questions) {
+    if (q.type !== 'image' || !q.media.url || seen.has(q.media.url)) continue
+    seen.add(q.media.url)
+    out.push({ url: q.media.url, answer: q.answer, sci: q.sci })
+  }
+  return out
 })
 
 onMounted(async () => {

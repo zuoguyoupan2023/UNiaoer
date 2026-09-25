@@ -1,4 +1,5 @@
 /** 每轮成绩海报：背景（极简场景/照片）+ 每字段半透明白底框，导出 PNG */
+import qrcode from 'qrcode-generator'
 import { getBackground } from './posterScenes'
 
 export interface PosterWrong {
@@ -15,6 +16,14 @@ export interface PosterData {
   accuracy: number
   date: string
   wrong: PosterWrong[]
+}
+
+/** 可选作背景的鸟图（携带该题答案，供缩略图标注；wrong 为 F6 预留） */
+export interface PosterImage {
+  url: string
+  answer: string
+  sci?: string
+  wrong?: boolean
 }
 
 export interface PosterOptions {
@@ -149,8 +158,8 @@ function fitText(
 }
 
 const GAP = 10
-const PAD_X = 20
-const PAD_Y = 12
+const PAD_X = 14
+const PAD_Y = 8
 
 /** 画一组文字片段；有 box 时铺半透明白底框（白底黑字），无 box 时直接绘制（纯色背景） */
 function drawSegments(
@@ -193,9 +202,10 @@ function drawSegments(
   })
 }
 
-/** F4：右下角二维码位（有真码则绘真码，否则绘制虚线占位框） */
-const QR_SIZE = 130
+/** F4：右下角官网二维码（可扫码；有自定义真码图则优先使用） */
+const QR_SIZE = 170
 const QR_MARGIN = 36
+const QR_QUIET = 4
 
 function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptions) {
   const size = QR_SIZE
@@ -205,28 +215,25 @@ function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptio
   if (opts.qrImage) {
     ctx.drawImage(opts.qrImage, x, y, size, size)
   } else {
-    ctx.save()
-    ctx.setLineDash([8, 6])
-    ctx.lineWidth = 2
-    ctx.strokeStyle = P.muted
-    roundRect(ctx, x, y, size, size, 12)
-    ctx.stroke()
-    ctx.restore()
+    const url = opts.qrUrl ?? DEFAULT_SITE_URL
+    const qr = qrcode(0, 'M')
+    qr.addData(url)
+    qr.make()
+    const count = qr.getModuleCount()
+    const cell = Math.max(1, Math.floor(size / (count + QR_QUIET * 2)))
+    const qrPx = cell * count
+    const qrX = x + Math.floor((size - qrPx) / 2)
+    const qrY = y + Math.floor((size - qrPx) / 2)
 
-    let host = ''
-    try {
-      host = new URL(opts.qrUrl ?? DEFAULT_SITE_URL).host
-    } catch {
-      host = ''
-    }
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'alphabetic'
-    ctx.fillStyle = P.muted
-    ctx.font = `500 22px ${FONT}`
-    ctx.fillText('二维码', x + size / 2, y + size / 2 + 4)
-    if (host) {
-      ctx.font = `400 13px ${FONT}`
-      ctx.fillText(host, x + size / 2, y + size / 2 + 28)
+    ctx.fillStyle = '#ffffff'
+    roundRect(ctx, x, y, size, size, 12)
+    ctx.fill()
+
+    ctx.fillStyle = '#000000'
+    for (let row = 0; row < count; row++) {
+      for (let col = 0; col < count; col++) {
+        if (qr.isDark(row, col)) ctx.fillRect(qrX + col * cell, qrY + row * cell, cell, cell)
+      }
     }
   }
 
@@ -257,11 +264,10 @@ export function drawPoster(
     getBackground(opts.themeId).draw(ctx, W, H)
   }
 
-  // 纯色背景：文字直接铺在背景上（无白底框）；浅色底改用深字
+  // 背景框：仅"背景照片"启用；官方内置背景一律无框，按明暗选深/浅字色
   const bg = getBackground(opts.themeId)
-  const plain = !hasImage && !!bg.plain
-  const P = plain ? (bg.light ? PALETTE_PLAIN_LIGHT : PALETTE_PLAIN) : PALETTE_BOXED
-  const box = P.box
+  const P = hasImage ? PALETTE_BOXED : bg.light ? PALETTE_PLAIN_LIGHT : PALETTE_PLAIN
+  const box = hasImage ? PALETTE_BOXED.box : null
 
   ctx.textBaseline = 'alphabetic'
 
@@ -313,21 +319,21 @@ export function drawPoster(
   )
 
   // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
-  drawSegments(ctx, [{ text: '错题回顾', color: P.muted, weight: 600, size: 28 }], 60, 1040, 'left', box)
+  drawSegments(ctx, [{ text: '错题回顾', color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
   const rows = buildWrongRows(data.wrong)
   if (rows.length === 0) {
     drawSegments(
       ctx,
       [{ text: '🎉 全对，没有错题', color: P.accent, weight: 400, size: 28 }],
       60,
-      1100,
+      1070,
       'left',
       box,
     )
   } else {
     const colWidth = 440
-    const rowGap = 50
-    const top = 1090
+    const rowGap = 48
+    const top = 1058
     ctx.textAlign = 'left'
     rows.forEach((w, i) => {
       const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
@@ -355,7 +361,7 @@ export function drawPoster(
   // 页脚（左对齐，给右下角二维码让位）
   drawSegments(
     ctx,
-    [{ text: '开源非商业 · 数据来源 iNaturalist / Xeno-canto', color: P.muted, weight: 400, size: 24 }],
+    [{ text: '数据来源 iNaturalist / Xeno-canto', color: P.muted, weight: 400, size: 24 }],
     60,
     H - 30,
     'left',

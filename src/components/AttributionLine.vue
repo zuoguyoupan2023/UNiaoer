@@ -7,7 +7,7 @@ defineProps<{ media: MediaAsset }>()
 <template>
   <p class="attribution">
     <span class="dot">🟢</span>
-    真实数据 · {{ media.source }} · {{ media.author }} · {{ media.license }}
+    {{ media.source }} · {{ media.author }} · {{ media.license }}
     <a v-if="media.sourceUrl" :href="media.sourceUrl" target="_blank" rel="noopener noreferrer">
       原始页面
     </a>

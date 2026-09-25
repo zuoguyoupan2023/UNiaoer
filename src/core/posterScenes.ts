@@ -128,6 +128,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'forest',
     label: '山林',
     swatch: '#2d6a4f',
+    light: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#bfe3d0'],
@@ -149,6 +150,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'grassland',
     label: '草原',
     swatch: '#c9a227',
+    light: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#fbe6b8'],
@@ -168,6 +170,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'river',
     label: '河岸',
     swatch: '#2a7fb8',
+    light: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#cfe8f5'],
@@ -193,6 +196,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'bush',
     label: '灌木丛',
     swatch: '#3f7a52',
+    light: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#dff0e0'],
@@ -226,6 +230,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
     id: 'migratory',
     label: '候鸟',
     swatch: '#5b8fb9',
+    light: true,
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
         [0, '#a9cfe8'],

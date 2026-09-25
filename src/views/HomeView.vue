@@ -34,12 +34,12 @@ onMounted(async () => {
     <div class="modes">
       <RouterLink to="/quiz/image" class="mode-card">
         <span class="mode-emoji">🖼️</span>
-        <span class="mode-title">看图找鸟</span>
+        <span class="mode-title">看图认鸟</span>
         <span class="mode-sub">来自 iNaturalist 的开放许可照片</span>
       </RouterLink>
       <RouterLink to="/quiz/audio" class="mode-card">
         <span class="mode-emoji">🔊</span>
-        <span class="mode-title">听音找鸟</span>
+        <span class="mode-title">听音认鸟</span>
         <span class="mode-sub">来自 Xeno-canto 的真实鸟鸣</span>
       </RouterLink>
     </div>

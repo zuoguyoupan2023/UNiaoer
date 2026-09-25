@@ -35,7 +35,7 @@ export const BADGES: BadgeDef[] = [
     id: 'listener',
     label: '听风者',
     emoji: '🎧',
-    desc: '完成一轮听音找鸟',
+    desc: '完成一轮听音认鸟',
     test: (s) => s.audioRounds >= 1,
   },
   {

@@ -5,11 +5,12 @@ import {
   drawPoster,
   loadImage,
   type PosterData,
+  type PosterImage,
   type PosterOptions,
 } from '@/core/poster'
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
 
-const props = defineProps<{ open: boolean; data: PosterData; images: string[] }>()
+const props = defineProps<{ open: boolean; data: PosterData; images: PosterImage[] }>()
 const emit = defineEmits<{ close: [] }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -179,15 +180,18 @@ function download() {
               >
                 纯场景
               </button>
-              <button
-                v-for="url in images"
-                :key="url"
-                class="thumb"
-                :class="{ on: bgUrl === url, disabled: locked }"
-                @click="selectImage(url)"
-              >
-                <img :src="url" alt="背景候选" loading="lazy" />
-              </button>
+              <div v-for="img in images" :key="img.url" class="thumb-cell">
+                <button
+                  class="thumb"
+                  :class="{ on: bgUrl === img.url, disabled: locked }"
+                  :title="img.sci ? `${img.answer} · ${img.sci}` : img.answer"
+                  @click="selectImage(img.url)"
+                >
+                  <img :src="img.url" alt="背景候选" loading="lazy" />
+                </button>
+                <span class="thumb-name">{{ img.answer }}</span>
+                <span v-if="img.sci" class="thumb-sci">{{ img.sci }}</span>
+              </div>
             </div>
             <p v-if="loadingBg" class="muted small">背景图加载中…</p>
             <p v-if="error" class="err small">{{ error }}</p>
@@ -361,6 +365,29 @@ function download() {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: flex-start;
+}
+.thumb-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+}
+.thumb-name {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.thumb-sci {
+  font-size: 0.6rem;
+  color: var(--text-light);
+  font-style: italic;
+  text-align: center;
+  line-height: 1.2;
 }
 .thumb {
   width: 72px;

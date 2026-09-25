@@ -24,12 +24,12 @@ const intro = computed(() =>
   props.type === 'audio'
     ? {
         emoji: '🔊',
-        title: '听音找鸟',
+        title: '听音认鸟',
         lead: '聆听一段真实鸟鸣，判断是哪一种鸟。',
       }
     : {
         emoji: '🖼️',
-        title: '看图找鸟',
+        title: '看图认鸟',
         lead: '观察一张真实鸟类照片，判断是哪一种鸟。',
       },
 )
