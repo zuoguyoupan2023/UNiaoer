@@ -82,10 +82,10 @@ describe('buildQuestions', () => {
 })
 
 describe('难度梯度', () => {
-  it('L1 选项数为 3、不限时', () => {
+  it('L1 选项数为 3、限时 25s', () => {
     const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 1 })
     expect(qs[0]!.options.length).toBe(3)
-    expect(qs[0]!.timeLimitSec).toBeUndefined()
+    expect(qs[0]!.timeLimitSec).toBe(25)
     expect(qs[0]!.tier).toBe(1)
   })
 

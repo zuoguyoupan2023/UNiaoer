@@ -12,6 +12,8 @@ export interface TierConfig {
   distractor: DistractorStrategy
   /** 限时（秒），undefined 为不限时 */
   timeLimitSec?: number
+  /** 隐藏选项的时长（秒）；缺省按限时的 1/3（见 pacing OPTION_REVEAL_RATIO） */
+  optionRevealSec?: number
   /** 允许的物种常见度（1 最常见 → 4 最少见） */
   commonness: number[]
 }
@@ -20,9 +22,11 @@ export const TIERS: Record<Tier, TierConfig> = {
   1: {
     tier: 1,
     label: 'L1 入门',
-    desc: '3 个选项 · 干扰项跨科 · 不限时',
+    desc: '3 个选项 · 干扰项跨科 · 限时 25s（前 5s 隐藏选项）',
     optionCount: 3,
     distractor: 'cross',
+    timeLimitSec: 25,
+    optionRevealSec: 5,
     commonness: [1, 2],
   },
   2: {

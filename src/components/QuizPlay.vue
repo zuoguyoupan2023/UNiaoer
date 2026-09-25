@@ -5,6 +5,7 @@ import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
 import { AUTO_NEXT_DELAY_MS, optionsHiddenFor } from '@/core/pacing'
+import { isLeftSwipe } from '@/core/swipe'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
 import type { MediaType, Tier } from '@/types'
 import MediaCard from './MediaCard.vue'
@@ -40,10 +41,12 @@ const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.cu
 const timeLeft = ref<number | null>(null)
 let tick: number | undefined
 
-/** D1：限时题前 1/3 时间隐藏选项 */
-const optionsHidden = computed(() =>
-  quiz.answered ? false : optionsHiddenFor(quiz.current?.timeLimitSec, timeLeft.value),
-)
+/** D1：限时题前段隐藏选项（缺省 1/3；L1 固定前 5s） */
+const optionsHidden = computed(() => {
+  if (quiz.answered || !quiz.current) return false
+  const revealSec = TIERS[quiz.current.tier]?.optionRevealSec
+  return optionsHiddenFor(quiz.current.timeLimitSec, timeLeft.value, revealSec)
+})
 
 function stopTimer() {
   if (tick !== undefined) {
@@ -141,13 +144,40 @@ watch(
 
 function onKey(e: KeyboardEvent) {
   const q = quiz.current
-  if (!q || quiz.answered || optionsHidden.value) return
+  if (!q) return
+
+  // 已作答：→ / 空格 = 下一题
+  if (quiz.answered) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.code === 'Space') {
+      e.preventDefault()
+      goNext()
+    }
+    return
+  }
+
+  if (optionsHidden.value) return
   const map: Record<string, number> = { '1': 0, '2': 1, '3': 2, '4': 3, a: 0, b: 1, c: 2, d: 3 }
   const idx = map[e.key.toLowerCase()]
   if (idx !== undefined) {
     const opt = q.options[idx]
     if (opt) quiz.answer(opt)
   }
+}
+
+// ---- D3 触屏左滑 = 下一题 ----
+let touchStart: { x: number; y: number } | null = null
+
+function onTouchStart(e: TouchEvent) {
+  const t = e.changedTouches?.[0]
+  touchStart = t ? { x: t.clientX, y: t.clientY } : null
+}
+
+function onTouchEnd(e: TouchEvent) {
+  const start = touchStart
+  touchStart = null
+  const t = e.changedTouches?.[0]
+  if (!start || !t || !quiz.answered) return
+  if (isLeftSwipe(t.clientX - start.x, t.clientY - start.y)) goNext()
 }
 </script>
 
@@ -206,7 +236,7 @@ function onKey(e: KeyboardEvent) {
       <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
     </div>
 
-    <div class="card">
+    <div class="card" @touchstart.passive="onTouchStart" @touchend="onTouchEnd">
       <MediaCard
         :key="quiz.current.id"
         :type="quiz.current.type"
@@ -235,6 +265,9 @@ function onKey(e: KeyboardEvent) {
           {{ quiz.index + 1 >= quiz.total ? '查看结果 →' : '下一题 →' }}
         </button>
       </div>
+      <p v-if="quiz.answered && !autoPending" class="next-hint">
+        ⌨️ 按 → 或空格 · 📱 左滑，也可进入下一题
+      </p>
       <p v-if="autoPending" class="auto-hint">⏳ 即将自动进入下一题…</p>
     </div>
   </template>
@@ -371,7 +404,8 @@ function onKey(e: KeyboardEvent) {
 .actions .btn {
   flex: 1;
 }
-.auto-hint {
+.auto-hint,
+.next-hint {
   margin-top: 10px;
   text-align: center;
   font-size: 0.8rem;
