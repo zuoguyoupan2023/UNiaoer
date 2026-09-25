@@ -10,6 +10,9 @@ export type AnswerMode = 'choice' | 'input'
 /** 许可策略：strict = 仅开放许可(CC0/BY/BY-SA)；relaxed = 放行全部(含 NC，非商业项目) */
 export type LicensePolicy = 'strict' | 'relaxed'
 
+/** 自动进入下一题的时机 */
+export type AutoNextMode = 'correct' | 'all' | 'manual'
+
 /** 物种 */
 export interface Species {
   id: string // 'turdus-merula'

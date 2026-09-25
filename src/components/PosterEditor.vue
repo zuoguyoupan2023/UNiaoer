@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import {
   downloadPoster,
   drawPoster,
@@ -20,9 +20,16 @@ const offset = ref({ x: 0, y: 0 })
 const locked = ref(false)
 const error = ref('')
 const loadingBg = ref(false)
+/** N6-B：移动端隐藏锁定按钮，背景自由平移，不做干涉 */
+const isMobile = ref(false)
 
 const W = 1080
 const H = 1440
+
+onMounted(() => {
+  isMobile.value =
+    typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+})
 
 function options(): PosterOptions {
   return { themeId: themeId.value, bgImage: bgImage.value, bgOffset: offset.value }
@@ -186,20 +193,26 @@ function download() {
             <p v-if="error" class="err small">{{ error }}</p>
           </div>
 
-          <!-- 锁定 / 平移（仅鸟图版有背景照片时才需要） -->
-          <div v-if="images.length" class="group">
-            <button class="btn btn-secondary" style="width: 100%" @click="locked = !locked">
+          <!-- 锁定 / 平移（仅鸟图版有背景照片时才需要；移动端隐藏锁定，自由平移） -->
+          <div v-if="images.length && (!isMobile || bgImage)" class="group">
+            <button
+              v-if="!isMobile"
+              class="btn btn-secondary"
+              style="width: 100%"
+              @click="locked = !locked"
+            >
               {{ locked ? '🔓 已锁定（点击解锁）' : '🔒 锁定其他修改' }}
             </button>
             <button
               v-if="bgImage"
               class="btn btn-secondary"
-              style="width: 100%; margin-top: 8px"
+              style="width: 100%"
+              :style="{ marginTop: isMobile ? '0' : '8px' }"
               @click="resetOffset"
             >
               重置背景位置
             </button>
-            <p class="muted small" style="margin-top: 8px">
+            <p v-if="!isMobile" class="muted small" style="margin-top: 8px">
               锁定后只能上下左右平移背景，背景与照片不可再改。
             </p>
           </div>

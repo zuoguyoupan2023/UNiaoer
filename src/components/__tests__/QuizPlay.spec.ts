@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import type { Manifest, BankSpecies } from '@/core/bank'
 
@@ -57,7 +57,24 @@ vi.mock('@/core/bank', () => ({
   loadBank: vi.fn<() => Promise<Manifest>>(async () => manifest),
 }))
 
+import { useQuizStore } from '@/stores/quiz'
 import QuizPlay from '../QuizPlay.vue'
+
+/** 让 flushPromises 的 setImmediate 保持真实，仅伪造计时相关 */
+function useQuizFakeTimers() {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+}
+
+async function startWithTier(wrapper: VueWrapper, label: string) {
+  await flushPromises()
+  const tierBtn = wrapper.findAll('.tier').find((b) => b.text().includes(label))
+  expect(tierBtn).toBeTruthy()
+  await tierBtn!.trigger('click')
+  const startBtn = wrapper.findAll('.intro button').find((b) => b.text().includes('开始答题'))
+  expect(startBtn).toBeTruthy()
+  await startBtn!.trigger('click')
+  await flushPromises()
+}
 
 describe('QuizPlay', () => {
   beforeEach(() => setActivePinia(createPinia()))
@@ -65,13 +82,8 @@ describe('QuizPlay', () => {
   it('切到下一题后，图片 src 会变化', async () => {
     const wrapper = mount(QuizPlay, { props: { type: 'image' } })
 
-    // 先看到介绍页
-    await vi.waitFor(() => expect(wrapper.find('.intro').exists()).toBe(true))
-    const startBtn = wrapper.findAll('.intro button').find((b) => b.text().includes('开始答题'))
-    expect(startBtn).toBeTruthy()
-    await startBtn!.trigger('click')
-
-    // 等待题库加载
+    // 选 L1：不限时，选项立即可见
+    await startWithTier(wrapper, 'L1')
     await vi.waitFor(() => expect(wrapper.find('img').exists()).toBe(true))
 
     const firstSrc = wrapper.find('img').attributes('src')
@@ -86,5 +98,54 @@ describe('QuizPlay', () => {
 
     const secondSrc = wrapper.find('img').attributes('src')
     expect(secondSrc).not.toBe(firstSrc)
+  })
+
+  it('D1：限时题前 1/3 隐藏选项，之后显示', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+
+      // 默认 L2：20s 限时
+      await startWithTier(wrapper, 'L2')
+
+      expect(wrapper.find('.options-hidden').exists()).toBe(true)
+      expect(wrapper.findAll('.option')).toHaveLength(0)
+
+      vi.advanceTimersByTime(7000) // 超过 20s 的 1/3
+      await flushPromises()
+
+      expect(wrapper.find('.options-hidden').exists()).toBe(false)
+      expect(wrapper.findAll('.option').length).toBeGreaterThan(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('D1：不限时题不隐藏选项', async () => {
+    const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+    await startWithTier(wrapper, 'L1')
+    expect(wrapper.find('.options-hidden').exists()).toBe(false)
+    expect(wrapper.findAll('.option').length).toBeGreaterThan(0)
+  })
+
+  it('D2：答对后 2s 自动下一题（默认答对自动）', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startWithTier(wrapper, 'L1')
+
+      const store = useQuizStore()
+      const answer = store.current!.answer
+      const option = wrapper.findAll('.option').find((b) => b.text().includes(answer))
+      expect(option).toBeTruthy()
+      await option!.trigger('click')
+      expect(store.index).toBe(0)
+
+      vi.advanceTimersByTime(2000)
+      await flushPromises()
+      expect(store.index).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

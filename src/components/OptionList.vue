@@ -3,6 +3,7 @@ const props = defineProps<{
   options: string[]
   answer: string
   chosen: string | null
+  hidden?: boolean
 }>()
 
 const emit = defineEmits<{ select: [value: string] }>()
@@ -18,7 +19,11 @@ function state(opt: string): string {
 </script>
 
 <template>
-  <div class="options">
+  <div v-if="hidden" class="options-hidden">
+    <span class="eye">👀</span>
+    先观察，选项稍后出现
+  </div>
+  <div v-else class="options">
     <button
       v-for="(opt, i) in options"
       :key="opt"
@@ -34,6 +39,21 @@ function state(opt: string): string {
 </template>
 
 <style scoped>
+.options-hidden {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 26px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  background: #f5f8f6;
+  color: var(--text-light);
+  font-size: 0.86rem;
+}
+.options-hidden .eye {
+  font-size: 1rem;
+}
 .options {
   display: grid;
   grid-template-columns: 1fr 1fr;

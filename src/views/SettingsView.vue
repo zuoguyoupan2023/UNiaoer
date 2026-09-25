@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
-import type { LicensePolicy } from '@/types'
+import type { AutoNextMode, LicensePolicy } from '@/types'
 
 const settings = useSettingsStore()
 const cacheMsg = ref('')
@@ -28,6 +28,12 @@ const policies: { value: LicensePolicy; label: string; hint: string }[] = [
     label: '严格（仅 CC0 / BY / BY-SA）',
     hint: '保证下游也可商用；素材相对少。',
   },
+]
+
+const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = [
+  { value: 'correct', label: '答对自动', hint: '答对后等 2s 自动进入下一题（默认）' },
+  { value: 'all', label: '都自动', hint: '答对、答错、超时后都等 2s 自动进入下一题' },
+  { value: 'manual', label: '都手动', hint: '始终手动点击「下一题」' },
 ]
 </script>
 
@@ -75,6 +81,23 @@ const policies: { value: LicensePolicy; label: string; hint: string }[] = [
     <p class="muted" style="margin-top: 8px">
       设置保存在浏览器本地。自动播放仅在第 2 题起生效（第 1 题需手动播放一次以解锁浏览器策略）。
     </p>
+
+    <div class="setting">
+      <h3>自动进入下一题</h3>
+      <p class="muted">作答后是否自动跳到下一题，以及触发的时机。</p>
+      <div class="choices">
+        <button
+          v-for="o in autoNextOptions"
+          :key="o.value"
+          class="choice"
+          :class="{ on: settings.autoNext === o.value }"
+          @click="settings.autoNext = o.value"
+        >
+          <strong>{{ o.label }}</strong>
+          <span>{{ o.hint }}</span>
+        </button>
+      </div>
+    </div>
 
     <div class="setting">
       <h3>媒体缓存</h3>

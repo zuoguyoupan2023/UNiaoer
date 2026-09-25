@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { LicensePolicy } from '@/types'
+import type { AutoNextMode, LicensePolicy } from '@/types'
 
 const STORAGE_KEY = 'uniaoer.settings.v1'
 
@@ -8,6 +8,7 @@ interface Persisted {
   licensePolicy: LicensePolicy
   autoplayAudio: boolean
   autoplayDelayMs: number
+  autoNext: AutoNextMode
 }
 
 function load(): Partial<Persisted> {
@@ -28,9 +29,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const autoplayAudio = ref<boolean>(saved.autoplayAudio ?? false)
   /** 自动播放延迟（ms） */
   const autoplayDelayMs = ref<number>(saved.autoplayDelayMs ?? 2000)
+  /** 自动进入下一题：默认答对后等 2s（见 006 D2） */
+  const autoNext = ref<AutoNextMode>(saved.autoNext ?? 'correct')
 
   watch(
-    [licensePolicy, autoplayAudio, autoplayDelayMs],
+    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext],
     () => {
       try {
         localStorage.setItem(
@@ -39,6 +42,7 @@ export const useSettingsStore = defineStore('settings', () => {
             licensePolicy: licensePolicy.value,
             autoplayAudio: autoplayAudio.value,
             autoplayDelayMs: autoplayDelayMs.value,
+            autoNext: autoNext.value,
           } satisfies Persisted),
         )
       } catch {
@@ -48,5 +52,5 @@ export const useSettingsStore = defineStore('settings', () => {
     { flush: 'post' },
   )
 
-  return { licensePolicy, autoplayAudio, autoplayDelayMs }
+  return { licensePolicy, autoplayAudio, autoplayDelayMs, autoNext }
 })

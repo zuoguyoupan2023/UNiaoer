@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
+import { AUTO_NEXT_DELAY_MS, optionsHiddenFor } from '@/core/pacing'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
 import type { MediaType, Tier } from '@/types'
 import MediaCard from './MediaCard.vue'
@@ -39,6 +40,11 @@ const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.cu
 const timeLeft = ref<number | null>(null)
 let tick: number | undefined
 
+/** D1：限时题前 1/3 时间隐藏选项 */
+const optionsHidden = computed(() =>
+  quiz.answered ? false : optionsHiddenFor(quiz.current?.timeLimitSec, timeLeft.value),
+)
+
 function stopTimer() {
   if (tick !== undefined) {
     clearInterval(tick)
@@ -63,6 +69,36 @@ function startTimer() {
   }, 1000)
 }
 
+// ---- D2 自动下一题 ----
+const autoPending = ref(false)
+let autoNextTimer: number | undefined
+
+function clearAutoNext() {
+  if (autoNextTimer !== undefined) {
+    clearTimeout(autoNextTimer)
+    autoNextTimer = undefined
+  }
+  autoPending.value = false
+}
+
+function scheduleAutoNext() {
+  clearAutoNext()
+  const mode = settings.autoNext
+  if (mode === 'manual') return
+  if (mode === 'correct' && !isCorrect.value) return
+  autoPending.value = true
+  autoNextTimer = window.setTimeout(() => {
+    autoNextTimer = undefined
+    autoPending.value = false
+    quiz.next()
+  }, AUTO_NEXT_DELAY_MS)
+}
+
+function goNext() {
+  clearAutoNext()
+  quiz.next()
+}
+
 async function begin() {
   started.value = true
   await quiz.start(props.type, { tier: tier.value })
@@ -74,11 +110,13 @@ onMounted(() => document.addEventListener('keydown', onKey))
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   stopTimer()
+  clearAutoNext()
 })
 
 watch(
   () => quiz.index,
   (i) => {
+    clearAutoNext()
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
     startTimer()
   },
@@ -86,7 +124,12 @@ watch(
 watch(
   () => quiz.answered,
   (a) => {
-    if (a) stopTimer()
+    if (a) {
+      stopTimer()
+      scheduleAutoNext()
+    } else {
+      clearAutoNext()
+    }
   },
 )
 watch(
@@ -98,7 +141,7 @@ watch(
 
 function onKey(e: KeyboardEvent) {
   const q = quiz.current
-  if (!q || quiz.answered) return
+  if (!q || quiz.answered || optionsHidden.value) return
   const map: Record<string, number> = { '1': 0, '2': 1, '3': 2, '4': 3, a: 0, b: 1, c: 2, d: 3 }
   const idx = map[e.key.toLowerCase()]
   if (idx !== undefined) {
@@ -176,6 +219,7 @@ function onKey(e: KeyboardEvent) {
         :options="quiz.current.options"
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"
+        :hidden="optionsHidden"
         @select="quiz.answer($event)"
       />
 
@@ -187,10 +231,11 @@ function onKey(e: KeyboardEvent) {
       </div>
 
       <div v-if="quiz.answered" class="actions">
-        <button class="btn btn-primary" @click="quiz.next()">
+        <button class="btn btn-primary" @click="goNext">
           {{ quiz.index + 1 >= quiz.total ? '查看结果 →' : '下一题 →' }}
         </button>
       </div>
+      <p v-if="autoPending" class="auto-hint">⏳ 即将自动进入下一题…</p>
     </div>
   </template>
 </template>
@@ -325,6 +370,12 @@ function onKey(e: KeyboardEvent) {
 }
 .actions .btn {
   flex: 1;
+}
+.auto-hint {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-light);
 }
 .spinner {
   width: 46px;
