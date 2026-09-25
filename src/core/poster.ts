@@ -20,7 +20,7 @@ export interface PosterData {
 export interface PosterOptions {
   /** 背景 id（见 posterScenes） */
   themeId: string
-  bgImage?: HTMLImageElement | null
+  bgImage?: ImageBitmap | null
   bgOffset?: { x: number; y: number }
 }
 
@@ -267,12 +267,14 @@ export function downloadPoster(
   })
 }
 
-export function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('图片加载失败：' + url))
-    img.src = url
-  })
+/**
+ * 加载背景图。
+ * 用 fetch(mode:'cors') + createImageBitmap，并加缓存旁路参数：
+ * 避免命中此前 <img>（无 CORS）留下的"无 ACAO"缓存，导致 canvas 跨域失败。
+ */
+export async function loadImage(url: string): Promise<ImageBitmap> {
+  const bust = url + (url.includes('?') ? '&' : '?') + '_cors=1'
+  const res = await fetch(bust, { mode: 'cors', cache: 'reload' })
+  if (!res.ok) throw new Error('图片加载失败 HTTP ' + res.status)
+  return await createImageBitmap(await res.blob())
 }

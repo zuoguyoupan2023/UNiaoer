@@ -118,6 +118,7 @@ async function put(store: string, value: unknown): Promise<void> {
 }
 
 async function del(store: string, key: string): Promise<void> {
+  if (key == null || key === '') return
   await run(store, 'readwrite', (s) => s.delete(key) as IDBRequest<undefined>)
 }
 
@@ -129,6 +130,7 @@ async function clearStore(store: string): Promise<void> {
 export async function saveRound(record: RoundRecord): Promise<void> {
   await put(STORE_ROUNDS, record)
   for (const item of record.items) {
+    if (!item.speciesId) continue // 无唯一键则跳过，避免 IndexedDB 报错
     if (item.correct) {
       await del(STORE_WRONG, item.speciesId)
     } else {

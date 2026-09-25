@@ -22,8 +22,10 @@ export async function persistRound(quiz: QuizStore): Promise<BadgeDef[]> {
   const items: RoundItem[] = quiz.questions.map((q, i) => {
     const raw = quiz.chosen[i] ?? null
     const timedOut = raw === TIMEOUT
+    // 旧题库的媒体可能没有 speciesId，退化为用 url 作为唯一键
+    const speciesId = q.media.speciesId || q.media.url
     return {
-      speciesId: q.media.speciesId,
+      speciesId,
       answer: q.answer,
       sci: q.sci,
       family: q.family,

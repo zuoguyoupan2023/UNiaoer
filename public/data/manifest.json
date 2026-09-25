@@ -24,7 +24,9 @@
         "author": "(c) joyful-islander, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/1535882",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "passer-montanus",
+        "type": "image"
       },
       "audio": {
         "url": "https://xeno-canto.org/964945/download",
@@ -34,7 +36,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/964945",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "passer-montanus",
+        "type": "audio"
       }
     },
     {
@@ -53,7 +57,9 @@
         "author": "(c) guyincognito, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/39633296",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "parus-minor",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/parus-minor/audio.src",
@@ -63,7 +69,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1147321",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "parus-minor",
+        "type": "audio"
       }
     },
     {
@@ -82,7 +90,9 @@
         "author": "(c) Chen Shu, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/69199327",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "pycnonotus-sinensis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pycnonotus-sinensis/audio.mp3",
@@ -92,7 +102,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/882595",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "pycnonotus-sinensis",
+        "type": "audio"
       }
     },
     {
@@ -111,7 +123,9 @@
         "author": "(c) toki999, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/172578277",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "turdus-merula",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/turdus-merula/audio.src",
@@ -121,7 +135,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1175419",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "turdus-merula",
+        "type": "audio"
       }
     },
     {
@@ -140,7 +156,9 @@
         "author": "(c) Nature Ali, some rights reserved (CC BY-NC-ND)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/9107412",
-        "transcode": false
+        "transcode": false,
+        "speciesId": "spilopelia-chinensis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spilopelia-chinensis/audio.mp3",
@@ -150,7 +168,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/877988",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "spilopelia-chinensis",
+        "type": "audio"
       }
     },
     {
@@ -169,7 +189,9 @@
         "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/41592036",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "pica-pica",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pica-pica/audio.mp3",
@@ -179,7 +201,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1166972",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "pica-pica",
+        "type": "audio"
       }
     },
     {
@@ -198,7 +222,9 @@
         "author": "(c) Andrew Bazdyrev, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/71373412",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cyanopica-cyanus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cyanopica-cyanus/audio.mp3",
@@ -208,7 +234,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/971204",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cyanopica-cyanus",
+        "type": "audio"
       }
     },
     {
@@ -227,7 +255,9 @@
         "author": "(c) Kevin Chen, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/227325365",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "urocissa-erythroryncha",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/urocissa-erythroryncha/audio.mp3",
@@ -237,7 +267,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/793898",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "urocissa-erythroryncha",
+        "type": "audio"
       }
     },
     {
@@ -256,7 +288,9 @@
         "author": "(c) Peter, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/36526661",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "motacilla-alba",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/motacilla-alba/audio.mp3",
@@ -266,7 +300,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/979151",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "motacilla-alba",
+        "type": "audio"
       }
     },
     {
@@ -285,7 +321,9 @@
         "author": "(c) Sam Hambly, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/228856718",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "copsychus-saularis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/copsychus-saularis/audio.mp3",
@@ -294,7 +332,9 @@
         "author": "(c) Animotions, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/189061417",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "copsychus-saularis",
+        "type": "audio"
       }
     },
     {
@@ -313,7 +353,9 @@
         "author": "(c) adiashkenazi, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/1487250",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "upupa-epops",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/upupa-epops/audio.mp3",
@@ -323,7 +365,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/891007",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "upupa-epops",
+        "type": "audio"
       }
     },
     {
@@ -342,7 +386,9 @@
         "author": "(c) Maurizio Bonora, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/9284651",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "alcedo-atthis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/alcedo-atthis/audio.mp3",
@@ -352,7 +398,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1180890",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "alcedo-atthis",
+        "type": "audio"
       }
     },
     {
@@ -371,7 +419,9 @@
         "author": "(c) Brian Vigorito, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/63981654",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cuculus-canorus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cuculus-canorus/audio.mp3",
@@ -381,7 +431,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/371124",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cuculus-canorus",
+        "type": "audio"
       }
     },
     {
@@ -400,7 +452,9 @@
         "author": "(c) Ujjal Kishor De, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/289906454",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cuculus-micropterus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cuculus-micropterus/audio.mp3",
@@ -410,7 +464,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/822364",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cuculus-micropterus",
+        "type": "audio"
       }
     },
     {
@@ -429,7 +485,9 @@
         "author": "(c) Chia⚡aka Cory Chiappone, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/10006129",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "hirundo-rustica",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/hirundo-rustica/audio.mp3",
@@ -439,7 +497,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1102130",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "hirundo-rustica",
+        "type": "audio"
       }
     },
     {
@@ -458,7 +518,9 @@
         "author": "(c) Dhruva Punde, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/341347177",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cecropis-daurica",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cecropis-daurica/audio.mp3",
@@ -468,7 +530,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1142064",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cecropis-daurica",
+        "type": "audio"
       }
     },
     {
@@ -487,7 +551,9 @@
         "author": "(c) earthquest_canada, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/196603525",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "phoenicurus-auroreus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phoenicurus-auroreus/audio.mp3",
@@ -497,7 +563,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/943173",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "phoenicurus-auroreus",
+        "type": "audio"
       }
     },
     {
@@ -516,7 +584,9 @@
         "author": "(c) Shumik A, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/256005415",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "tarsiger-cyanurus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/tarsiger-cyanurus/audio.mp3",
@@ -526,7 +596,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/992675",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "tarsiger-cyanurus",
+        "type": "audio"
       }
     },
     {
@@ -545,7 +617,9 @@
         "author": "(c) gg_copen, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/337779487",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "spodiopsar-cineraceus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spodiopsar-cineraceus/audio.mp3",
@@ -555,7 +629,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/820836",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "spodiopsar-cineraceus",
+        "type": "audio"
       }
     },
     {
@@ -574,7 +650,9 @@
         "author": "(c) graeme45, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/98303086",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "acridotheres-cristatellus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/acridotheres-cristatellus/audio.mp3",
@@ -584,7 +662,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/900187",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "acridotheres-cristatellus",
+        "type": "audio"
       }
     },
     {
@@ -603,7 +683,9 @@
         "author": "(c) Kalvin Chan, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/188259006",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "spodiopsar-sericeus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spodiopsar-sericeus/audio.mp3",
@@ -613,7 +695,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1173175",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "spodiopsar-sericeus",
+        "type": "audio"
       }
     },
     {
@@ -632,7 +716,9 @@
         "author": "(c) joshshuman, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/264898773",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "garrulax-canorus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/garrulax-canorus/audio.mp3",
@@ -641,7 +727,9 @@
         "author": "(c) watermargin, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/135493478",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "garrulax-canorus",
+        "type": "audio"
       }
     },
     {
@@ -660,7 +748,9 @@
         "author": "(c) madeleineosherman, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/57903170",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "leiothrix-lutea",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/leiothrix-lutea/audio.src",
@@ -669,7 +759,9 @@
         "author": "(c) Jessica Peruzzo, some rights reserved (CC BY-NC-ND)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/351529871",
-        "transcode": false
+        "transcode": false,
+        "speciesId": "leiothrix-lutea",
+        "type": "audio"
       }
     },
     {
@@ -688,7 +780,9 @@
         "author": "(c) 小铖/Smalltown, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/148501757",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "sinosuthora-webbiana",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/sinosuthora-webbiana/audio.mp3",
@@ -698,7 +792,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/992708",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "sinosuthora-webbiana",
+        "type": "audio"
       }
     },
     {
@@ -717,7 +813,9 @@
         "author": "(c) fangchen, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/169124828",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "aegithalos-glaucogularis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/aegithalos-glaucogularis/audio.mp3",
@@ -727,7 +825,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/992720",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "aegithalos-glaucogularis",
+        "type": "audio"
       }
     },
     {
@@ -746,7 +846,9 @@
         "author": "(c) night-heron, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/259035308",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "pardaliparus-venustulus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pardaliparus-venustulus/audio.mp3",
@@ -756,7 +858,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/957204",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "pardaliparus-venustulus",
+        "type": "audio"
       }
     },
     {
@@ -775,7 +879,9 @@
         "author": "(c) Андрей Деев, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/66520992",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "poecile-palustris",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/poecile-palustris/audio.src",
@@ -785,7 +891,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/627495",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "poecile-palustris",
+        "type": "audio"
       }
     },
     {
@@ -804,7 +912,9 @@
         "author": "(c) Avinash Bhagat, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/171545315",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "aegithalos-concinnus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/aegithalos-concinnus/audio.src",
@@ -814,7 +924,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1138394",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "aegithalos-concinnus",
+        "type": "audio"
       }
     },
     {
@@ -833,7 +945,9 @@
         "author": "(c) llareta, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/167668829",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "pterorhinus-sannio",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pterorhinus-sannio/audio.mp3",
@@ -843,7 +957,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/911381",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "pterorhinus-sannio",
+        "type": "audio"
       }
     },
     {
@@ -862,7 +978,9 @@
         "author": "(c) yangyunwu10, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/253894405",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "pterorhinus-perspicillatus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/audio.src",
@@ -872,7 +990,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/209674",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "pterorhinus-perspicillatus",
+        "type": "audio"
       }
     },
     {
@@ -891,7 +1011,9 @@
         "author": "(c) egorbirder, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/87511281",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "streptopelia-orientalis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/streptopelia-orientalis/audio.mp3",
@@ -901,7 +1023,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/409198",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "streptopelia-orientalis",
+        "type": "audio"
       }
     },
     {
@@ -920,7 +1044,9 @@
         "author": "(c) Jorge A. Pérez Torres, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/110911263",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "streptopelia-decaocto",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/streptopelia-decaocto/audio.mp3",
@@ -930,7 +1056,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/379502",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "streptopelia-decaocto",
+        "type": "audio"
       }
     },
     {
@@ -949,7 +1077,9 @@
         "author": "(c) Нурхайдарова Татьяна, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/72618157",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "columba-rupestris",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/columba-rupestris/audio.mp3",
@@ -959,7 +1089,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/263292",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "columba-rupestris",
+        "type": "audio"
       }
     },
     {
@@ -978,7 +1110,9 @@
         "author": "(c) Susan J. Hewitt, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/19807660",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "columba-livia",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/columba-livia/audio.mp3",
@@ -988,7 +1122,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/121677",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "columba-livia",
+        "type": "audio"
       }
     },
     {
@@ -1007,7 +1143,9 @@
         "author": "(c) tjeerd, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/19656152",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "egretta-garzetta",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/egretta-garzetta/audio.mp3",
@@ -1017,7 +1155,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/827349",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "egretta-garzetta",
+        "type": "audio"
       }
     },
     {
@@ -1036,7 +1176,9 @@
         "author": "(c) Skyler Kardell, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/58985088",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "ardea-cinerea",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/ardea-cinerea/audio.mp3",
@@ -1046,7 +1188,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1083537",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "ardea-cinerea",
+        "type": "audio"
       }
     },
     {
@@ -1065,7 +1209,9 @@
         "author": "(c) Marco Chan, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/101600110",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "ardeola-bacchus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/ardeola-bacchus/audio.mp3",
@@ -1075,7 +1221,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1069291",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "ardeola-bacchus",
+        "type": "audio"
       }
     },
     {
@@ -1094,7 +1242,9 @@
         "author": "(c) eleggua, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/278117134",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "nycticorax-nycticorax",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/nycticorax-nycticorax/audio.mp3",
@@ -1104,7 +1254,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/997269",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "nycticorax-nycticorax",
+        "type": "audio"
       }
     },
     {
@@ -1123,7 +1275,9 @@
         "author": "(c) Nick Hobgood, some rights reserved (CC BY-NC-ND)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/131889281",
-        "transcode": false
+        "transcode": false,
+        "speciesId": "tachybaptus-ruficollis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/tachybaptus-ruficollis/audio.src",
@@ -1133,7 +1287,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/510719",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "tachybaptus-ruficollis",
+        "type": "audio"
       }
     },
     {
@@ -1152,7 +1308,9 @@
         "author": "(c) Greg Lasley, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/8174772",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "anas-platyrhynchos",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/anas-platyrhynchos/audio.mp3",
@@ -1162,7 +1320,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/528945",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "anas-platyrhynchos",
+        "type": "audio"
       }
     },
     {
@@ -1181,7 +1341,9 @@
         "author": "(c) 小铖/Smalltown, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/136209009",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "anas-zonorhyncha",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/anas-zonorhyncha/audio.src",
@@ -1191,7 +1353,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/21569",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "anas-zonorhyncha",
+        "type": "audio"
       }
     },
     {
@@ -1210,7 +1374,9 @@
         "author": "(c) Blake Ross, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/102309745",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "aix-galericulata",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/aix-galericulata/audio.mp3",
@@ -1220,7 +1386,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1062516",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "aix-galericulata",
+        "type": "audio"
       }
     },
     {
@@ -1239,7 +1407,9 @@
         "author": "(c) vm_ovchinnikov, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/198239528",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "tadorna-ferruginea",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/tadorna-ferruginea/audio.mp3",
@@ -1249,7 +1419,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1027627",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "tadorna-ferruginea",
+        "type": "audio"
       }
     },
     {
@@ -1268,7 +1440,9 @@
         "author": "(c) Andrea Kreuzhage, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/34861833",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "mergus-merganser",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/mergus-merganser/audio.src",
@@ -1278,7 +1452,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/94638",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "mergus-merganser",
+        "type": "audio"
       }
     },
     {
@@ -1297,7 +1473,9 @@
         "author": "(c) brian stahls, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/148625683",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cygnus-columbianus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cygnus-columbianus/audio.mp3",
@@ -1307,7 +1485,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/802347",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cygnus-columbianus",
+        "type": "audio"
       }
     },
     {
@@ -1326,7 +1506,9 @@
         "author": "(c) spinomaly, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/147346011",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cygnus-olor",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cygnus-olor/audio.mp3",
@@ -1336,7 +1518,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/705255",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cygnus-olor",
+        "type": "audio"
       }
     },
     {
@@ -1355,7 +1539,9 @@
         "author": "(c) Данилова Валерия, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/19031323",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "gallinula-chloropus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/gallinula-chloropus/audio.mp3",
@@ -1365,7 +1551,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1180739",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "gallinula-chloropus",
+        "type": "audio"
       }
     },
     {
@@ -1384,7 +1572,9 @@
         "author": "(c) clara_g, some rights reserved (CC BY-NC-SA)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/90178562",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "fulica-atra",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/fulica-atra/audio.mp3",
@@ -1394,7 +1584,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1178826",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "fulica-atra",
+        "type": "audio"
       }
     },
     {
@@ -1413,7 +1605,9 @@
         "author": "(c) Carmelo López Abad, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/1720479",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "amaurornis-phoenicurus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/amaurornis-phoenicurus/audio.mp3",
@@ -1423,7 +1617,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1006537",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "amaurornis-phoenicurus",
+        "type": "audio"
       }
     },
     {
@@ -1442,7 +1638,9 @@
         "author": "(c) sbbon26, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/35052948",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "chroicocephalus-ridibundus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/audio.src",
@@ -1452,7 +1650,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/792494",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "chroicocephalus-ridibundus",
+        "type": "audio"
       }
     },
     {
@@ -1471,7 +1671,9 @@
         "author": "(c) Africa Gomez, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/270381676",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "larus-argentatus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/larus-argentatus/audio.mp3",
@@ -1481,7 +1683,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/924449",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "larus-argentatus",
+        "type": "audio"
       }
     },
     {
@@ -1500,7 +1704,9 @@
         "author": "(c) Mikhail Ezdakov, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/112083082",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "podiceps-cristatus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/podiceps-cristatus/audio.mp3",
@@ -1510,7 +1716,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/592118",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "podiceps-cristatus",
+        "type": "audio"
       }
     },
     {
@@ -1529,7 +1737,9 @@
         "author": "(c) Dr Caesar Sengupta, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/1464592",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "phalacrocorax-carbo",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phalacrocorax-carbo/audio.mp3",
@@ -1539,7 +1749,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1087149",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "phalacrocorax-carbo",
+        "type": "audio"
       }
     },
     {
@@ -1558,7 +1770,9 @@
         "author": "(c) Jonathan Layman, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/14902467",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "sterna-hirundo",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/sterna-hirundo/audio.src",
@@ -1568,7 +1782,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/696914",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "sterna-hirundo",
+        "type": "audio"
       }
     },
     {
@@ -1587,7 +1803,9 @@
         "author": "(c) Austin 0201, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/9600943",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "grus-japonensis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/grus-japonensis/audio.mp3",
@@ -1597,7 +1815,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/217342",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "grus-japonensis",
+        "type": "audio"
       }
     },
     {
@@ -1616,7 +1836,9 @@
         "author": "(c) Hinrich Matthes, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/190005602",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "grus-grus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/grus-grus/audio.mp3",
@@ -1626,7 +1848,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1036362",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "grus-grus",
+        "type": "audio"
       }
     },
     {
@@ -1645,7 +1869,9 @@
         "author": "(c) emskakoon, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/121691669",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "leucogeranus-leucogeranus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/audio.mp3",
@@ -1655,7 +1881,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/217348",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "leucogeranus-leucogeranus",
+        "type": "audio"
       }
     },
     {
@@ -1674,7 +1902,9 @@
         "author": "(c) Zinogre, some rights reserved (CC BY-SA)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/258658098",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "ciconia-nigra",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/ciconia-nigra/audio.mp3",
@@ -1684,7 +1914,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/999435",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "ciconia-nigra",
+        "type": "audio"
       }
     },
     {
@@ -1703,7 +1935,9 @@
         "author": "(c) 祐, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/339543675",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "ciconia-boyciana",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/ciconia-boyciana/audio.mp3",
@@ -1713,7 +1947,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/401954",
         "transcode": true,
-        "quality": "C"
+        "quality": "C",
+        "speciesId": "ciconia-boyciana",
+        "type": "audio"
       }
     },
     {
@@ -1732,7 +1968,9 @@
         "author": "(c) Vitalii Kolomiichuk, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/67533336",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "platalea-leucorodia",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/platalea-leucorodia/audio.mp3",
@@ -1742,7 +1980,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/333853",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "platalea-leucorodia",
+        "type": "audio"
       }
     },
     {
@@ -1761,7 +2001,9 @@
         "author": "(c) Paul Ha, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/332311718",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "buteo-japonicus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/buteo-japonicus/audio.mp3",
@@ -1771,7 +2013,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/858003",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "buteo-japonicus",
+        "type": "audio"
       }
     },
     {
@@ -1790,7 +2034,9 @@
         "author": "(c) entomor, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/120553164",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "milvus-migrans",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/milvus-migrans/audio.mp3",
@@ -1800,7 +2046,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1106027",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "milvus-migrans",
+        "type": "audio"
       }
     },
     {
@@ -1819,7 +2067,9 @@
         "author": "(c) Manuel Raab, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/258762312",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "falco-tinnunculus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/falco-tinnunculus/audio.mp3",
@@ -1829,7 +2079,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1012113",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "falco-tinnunculus",
+        "type": "audio"
       }
     },
     {
@@ -1848,7 +2100,9 @@
         "author": "(c) nautiboy, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/125312057",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "falco-peregrinus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/falco-peregrinus/audio.mp3",
@@ -1858,7 +2112,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1013450",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "falco-peregrinus",
+        "type": "audio"
       }
     },
     {
@@ -1877,7 +2133,9 @@
         "author": "(c) egorbirder, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/71955281",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "accipiter-nisus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/accipiter-nisus/audio.mp3",
@@ -1887,7 +2145,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/282604",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "accipiter-nisus",
+        "type": "audio"
       }
     },
     {
@@ -1906,7 +2166,9 @@
         "author": "(c) Anneliese Mak, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/193552701",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "asio-flammeus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/asio-flammeus/audio.mp3",
@@ -1916,7 +2178,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/698070",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "asio-flammeus",
+        "type": "audio"
       }
     },
     {
@@ -1935,7 +2199,9 @@
         "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/337369795",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "athene-noctua",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/athene-noctua/audio.mp3",
@@ -1945,7 +2211,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1063547",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "athene-noctua",
+        "type": "audio"
       }
     },
     {
@@ -1964,7 +2232,9 @@
         "author": "(c) muangpaisuetrong, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/217807987",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "otus-lettia",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/otus-lettia/audio.mp3",
@@ -1974,7 +2244,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/823360",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "otus-lettia",
+        "type": "audio"
       }
     },
     {
@@ -1993,7 +2265,9 @@
         "author": "(c) Mikhail Ezdakov, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/112083082",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "bubo-bubo",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/bubo-bubo/audio.mp3",
@@ -2003,7 +2277,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/761678",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "bubo-bubo",
+        "type": "audio"
       }
     },
     {
@@ -2022,7 +2298,9 @@
         "author": "(c) photokeen, some rights reserved (CC BY-NC-ND)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/139456684",
-        "transcode": false
+        "transcode": false,
+        "speciesId": "eurystomus-orientalis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/eurystomus-orientalis/audio.mp3",
@@ -2032,7 +2310,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/461027",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "eurystomus-orientalis",
+        "type": "audio"
       }
     },
     {
@@ -2051,7 +2331,9 @@
         "author": "(c) Patricia, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/50540962",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "halcyon-smyrnensis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/halcyon-smyrnensis/audio.mp3",
@@ -2061,7 +2343,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/986143",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "halcyon-smyrnensis",
+        "type": "audio"
       }
     },
     {
@@ -2080,7 +2364,9 @@
         "author": "(c) Sam Hambly, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/108852285",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "halcyon-pileata",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/halcyon-pileata/audio.mp3",
@@ -2090,7 +2376,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/902043",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "halcyon-pileata",
+        "type": "audio"
       }
     },
     {
@@ -2109,7 +2397,9 @@
         "author": "(c) balwantnegi, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/9768226",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "megaceryle-lugubris",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/megaceryle-lugubris/audio.mp3",
@@ -2119,7 +2409,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/864418",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "megaceryle-lugubris",
+        "type": "audio"
       }
     },
     {
@@ -2138,7 +2430,9 @@
         "author": "(c) Александр, some rights reserved (CC BY-NC-ND)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/18538790",
-        "transcode": false
+        "transcode": false,
+        "speciesId": "picus-canus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/picus-canus/audio.mp3",
@@ -2148,7 +2442,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1067928",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "picus-canus",
+        "type": "audio"
       }
     },
     {
@@ -2167,7 +2463,9 @@
         "author": "(c) Дмитрий Ерохин ( Dmitri Erokhin), some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/137979249",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "dendrocopos-major",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dendrocopos-major/audio.mp3",
@@ -2177,7 +2475,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1180584",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "dendrocopos-major",
+        "type": "audio"
       }
     },
     {
@@ -2196,7 +2496,9 @@
         "author": "(c) Геннадий, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/342457579",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "dendrocopos-canicapillus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dendrocopos-canicapillus/audio.mp3",
@@ -2205,7 +2507,9 @@
         "author": "(c) nawendy, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/190652374",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "dendrocopos-canicapillus",
+        "type": "audio"
       }
     },
     {
@@ -2224,7 +2528,9 @@
         "author": "(c) abcdefgewing, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/29687940",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "jynx-torquilla",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/jynx-torquilla/audio.mp3",
@@ -2234,7 +2540,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/571813",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "jynx-torquilla",
+        "type": "audio"
       }
     },
     {
@@ -2253,7 +2561,9 @@
         "author": "(c) Анна Голубева, some rights reserved (CC BY-NC-ND)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/85011607",
-        "transcode": false
+        "transcode": false,
+        "speciesId": "oriolus-chinensis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/oriolus-chinensis/audio.mp3",
@@ -2262,7 +2572,9 @@
         "author": "(c) Baixun Xun, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/359150410",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "oriolus-chinensis",
+        "type": "audio"
       }
     },
     {
@@ -2281,7 +2593,9 @@
         "author": "(c) Anil Kumar Verma, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/107098865",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "dicrurus-leucophaeus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dicrurus-leucophaeus/audio.mp3",
@@ -2291,7 +2605,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1000899",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "dicrurus-leucophaeus",
+        "type": "audio"
       }
     },
     {
@@ -2310,7 +2626,9 @@
         "author": "(c) Игорь Двуреков, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/367972761",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "dicrurus-macrocercus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dicrurus-macrocercus/audio.src",
@@ -2320,7 +2638,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/162829",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "dicrurus-macrocercus",
+        "type": "audio"
       }
     },
     {
@@ -2339,7 +2659,9 @@
         "author": "(c) rupperrt78, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/90952926",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "terpsiphone-incei",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/terpsiphone-incei/audio.mp3",
@@ -2349,7 +2671,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/756447",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "terpsiphone-incei",
+        "type": "audio"
       }
     },
     {
@@ -2368,7 +2692,9 @@
         "author": "(c) Ian Cruickshank, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/41066244",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "lanius-cristatus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/lanius-cristatus/audio.mp3",
@@ -2378,7 +2704,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/526805",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "lanius-cristatus",
+        "type": "audio"
       }
     },
     {
@@ -2397,7 +2725,9 @@
         "author": "(c) Andrew Bazdyrev, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/131584241",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "lanius-schach",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/lanius-schach/audio.mp3",
@@ -2406,7 +2736,9 @@
         "author": "(c) Shainy, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/150003350",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "lanius-schach",
+        "type": "audio"
       }
     },
     {
@@ -2425,7 +2757,9 @@
         "author": "(c) watermargin, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/91207669",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "passer-cinnamomeus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/passer-cinnamomeus/audio.src",
@@ -2435,7 +2769,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/105278",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "passer-cinnamomeus",
+        "type": "audio"
       }
     },
     {
@@ -2454,7 +2790,9 @@
         "author": "(c) Mikhail Ezdakov, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/105770575",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "spinus-spinus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spinus-spinus/audio.mp3",
@@ -2464,7 +2802,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/666230",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "spinus-spinus",
+        "type": "audio"
       }
     },
     {
@@ -2483,7 +2823,9 @@
         "author": "(c) gg_copen, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/329037017",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "chloris-sinica",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/chloris-sinica/audio.mp3",
@@ -2493,7 +2835,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/992333",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "chloris-sinica",
+        "type": "audio"
       }
     },
     {
@@ -2512,7 +2856,9 @@
         "author": "(c) Александр Коробейников, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/142682696",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "fringilla-montifringilla",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/fringilla-montifringilla/audio.mp3",
@@ -2522,7 +2868,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/585153",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "fringilla-montifringilla",
+        "type": "audio"
       }
     },
     {
@@ -2541,7 +2889,9 @@
         "author": "(c) Kelvin Joshua Che, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/69851183",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "eophona-migratoria",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/eophona-migratoria/audio.mp3",
@@ -2550,7 +2900,9 @@
         "author": "(c) MP Zhou, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/118273668",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "eophona-migratoria",
+        "type": "audio"
       }
     },
     {
@@ -2569,7 +2921,9 @@
         "author": "(c) egorbirder, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/87510180",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "emberiza-tristrami",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-tristrami/audio.src",
@@ -2579,7 +2933,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1147488",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "emberiza-tristrami",
+        "type": "audio"
       }
     },
     {
@@ -2598,7 +2954,9 @@
         "author": "(c) verdit, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/82391072",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "emberiza-elegans",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-elegans/audio.mp3",
@@ -2608,7 +2966,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/769445",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "emberiza-elegans",
+        "type": "audio"
       }
     },
     {
@@ -2627,7 +2987,9 @@
         "author": "(c) Viktor Björkert, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/336937579",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "emberiza-pusilla",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-pusilla/audio.mp3",
@@ -2637,7 +2999,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/899176",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "emberiza-pusilla",
+        "type": "audio"
       }
     },
     {
@@ -2656,7 +3020,9 @@
         "author": "(c) Илья Уколов, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/262691120",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "emberiza-cioides",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-cioides/audio.mp3",
@@ -2666,7 +3032,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/665056",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "emberiza-cioides",
+        "type": "audio"
       }
     },
     {
@@ -2685,7 +3053,9 @@
         "author": "(c) Ian Cruickshank, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/324101313",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "emberiza-rustica",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-rustica/audio.mp3",
@@ -2695,7 +3065,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1142004",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "emberiza-rustica",
+        "type": "audio"
       }
     },
     {
@@ -2714,7 +3086,9 @@
         "author": "(c) Steven Mlodinow, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/2712964",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "phylloscopus-inornatus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phylloscopus-inornatus/audio.mp3",
@@ -2724,7 +3098,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1077927",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "phylloscopus-inornatus",
+        "type": "audio"
       }
     },
     {
@@ -2743,7 +3119,9 @@
         "author": "(c) Christoph Moning, some rights reserved (CC BY)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/57106526",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "phylloscopus-proregulus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phylloscopus-proregulus/audio.mp3",
@@ -2753,7 +3131,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/795808",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "phylloscopus-proregulus",
+        "type": "audio"
       }
     },
     {
@@ -2772,7 +3152,9 @@
         "author": "(c) Олександр Гриб, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/130614413",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "phylloscopus-fuscatus",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phylloscopus-fuscatus/audio.mp3",
@@ -2782,7 +3164,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/486663",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "phylloscopus-fuscatus",
+        "type": "audio"
       }
     },
     {
@@ -2801,7 +3185,9 @@
         "author": "(c) Nat Panda, some rights reserved (CC BY-NC-SA)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/326430938",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "horornis-fortipes",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/horornis-fortipes/audio.mp3",
@@ -2811,7 +3197,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/1024792",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "horornis-fortipes",
+        "type": "audio"
       }
     },
     {
@@ -2830,7 +3218,9 @@
         "author": "(c) BlackFern, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/271702196",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "acrocephalus-orientalis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/acrocephalus-orientalis/audio.src",
@@ -2840,7 +3230,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/285612",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "acrocephalus-orientalis",
+        "type": "audio"
       }
     },
     {
@@ -2859,7 +3251,9 @@
         "author": "(c) Helen Badenhorst, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/187642286",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "cisticola-juncidis",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cisticola-juncidis/audio.mp3",
@@ -2869,7 +3263,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/650391",
         "transcode": true,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "cisticola-juncidis",
+        "type": "audio"
       }
     },
     {
@@ -2888,7 +3284,9 @@
         "author": "(c) 莲子, some rights reserved (CC BY-NC)",
         "source": "iNaturalist",
         "sourceUrl": "https://www.inaturalist.org/observations/288758693",
-        "transcode": true
+        "transcode": true,
+        "speciesId": "caprimulgus-jotaka",
+        "type": "image"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/caprimulgus-jotaka/audio.src",
@@ -2898,7 +3296,9 @@
         "source": "Xeno-canto",
         "sourceUrl": "https://xeno-canto.org/107108",
         "transcode": false,
-        "quality": "A"
+        "quality": "A",
+        "speciesId": "caprimulgus-jotaka",
+        "type": "audio"
       }
     }
   ]

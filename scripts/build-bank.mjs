@@ -164,6 +164,15 @@ async function buildSpecies(sp, useXc) {
       if (xcAudio) base.audio = xcAudio // XC 优先（质量更可控）
     }
 
+    // 给媒体补上归属信息（前端错题本等依赖 speciesId）
+    for (const kind of ['image', 'audio']) {
+      const a = base[kind]
+      if (a) {
+        a.speciesId = base.id
+        a.type = kind
+      }
+    }
+
     if (OPT.media === 'download' || OPT.media === 'stage' || OPT.media === 'r2') {
       await materialize(base, id)
     }
