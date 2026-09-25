@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, type Component } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  Award,
+  BookOpen,
+  CircleCheck,
+  CircleX,
+  Flame,
+  PartyPopper,
+  Star,
+  ThumbsUp,
+  Trophy,
+} from 'lucide-vue-next'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import type { BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
+import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
 
 const router = useRouter()
@@ -18,13 +30,13 @@ const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
 const newBadges = ref<BadgeDef[]>([])
 const showPoster = ref(false)
 
-const message = computed(() => {
+const message = computed<{ icon: Component; text: string }>(() => {
   const p = quiz.accuracy
-  if (p === 100) return '🏆 完美！你就是鸟语达人！'
-  if (p >= 80) return '🌟 非常棒！辨识能力很强！'
-  if (p >= 60) return '👍 不错，继续练习会更好。'
-  if (p >= 40) return '💪 加油，多听多看。'
-  return '📚 别灰心，从常见鸟开始慢慢学。'
+  if (p === 100) return { icon: Trophy, text: '完美！你就是鸟语达人！' }
+  if (p >= 80) return { icon: Star, text: '非常棒！辨识能力很强！' }
+  if (p >= 60) return { icon: ThumbsUp, text: '不错，继续练习会更好。' }
+  if (p >= 40) return { icon: Flame, text: '加油，多听多看。' }
+  return { icon: BookOpen, text: '别灰心，从常见鸟开始慢慢学。' }
 })
 
 const posterData = computed<PosterData>(() => {
@@ -77,18 +89,20 @@ async function again() {
 
 <template>
   <section v-if="hasResult" class="card result">
-    <h2>🎉 答题完成</h2>
+    <h2><PartyPopper class="ic" :size="22" /> 答题完成</h2>
     <p class="muted">{{ modeLabel }} · {{ tierLabel }}</p>
     <div class="score">
       <span class="num">{{ quiz.correctCount }}</span>
       <span class="den">/ {{ quiz.total }}</span>
     </div>
     <p class="muted">正确率 {{ quiz.accuracy }}%</p>
-    <p class="msg">{{ message }}</p>
+    <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
 
     <div v-if="newBadges.length" class="badges-new">
-      <span class="muted">🎖️ 获得新徽章：</span>
-      <span v-for="b in newBadges" :key="b.id" class="badge-chip">{{ b.emoji }} {{ b.label }}</span>
+      <span class="muted"><Award class="ic" :size="15" /> 获得新徽章：</span>
+      <span v-for="b in newBadges" :key="b.id" class="badge-chip">
+        <BadgeIcon :name="b.icon" :size="15" /> {{ b.label }}
+      </span>
     </div>
 
     <div class="actions">
@@ -110,7 +124,8 @@ async function again() {
     <ol>
       <li v-for="(q, i) in quiz.questions" :key="q.id" :class="{ ok: quiz.chosen[i] === q.answer }">
         <div class="line">
-          <span class="mark">{{ quiz.chosen[i] === q.answer ? '✅' : '❌' }}</span>
+          <CircleCheck v-if="quiz.chosen[i] === q.answer" class="mark ok" :size="16" />
+          <CircleX v-else class="mark no" :size="16" />
           <span class="ans">{{ q.answer }}</span>
           <span class="muted">{{ q.sci }} · {{ q.family }}</span>
         </div>
@@ -168,12 +183,21 @@ async function again() {
   margin-bottom: 18px;
 }
 .badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: var(--grad-gold);
   color: #4a3200;
   font-size: 0.8rem;
   font-weight: 700;
   padding: 5px 12px;
   border-radius: 20px;
+}
+.mark.ok {
+  color: var(--correct);
+}
+.mark.no {
+  color: var(--wrong);
 }
 .actions {
   display: flex;
@@ -199,7 +223,7 @@ async function again() {
 }
 .line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }

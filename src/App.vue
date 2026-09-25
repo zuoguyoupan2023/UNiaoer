@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { Bird } from 'lucide-vue-next'
 
 const route = useRoute()
 /** 答题模式沉浸式：隐藏顶部标题与导航（页脚保留） */
@@ -9,7 +10,7 @@ const immersive = computed(() => String(route.name ?? '').startsWith('quiz'))
 
 <template>
   <header v-if="!immersive" class="app-header">
-    <h1>🐦 UNiaoer</h1>
+    <h1><Bird class="brand-icon" :size="30" /> UNiaoer</h1>
   </header>
 
   <nav v-if="!immersive" class="app-nav">

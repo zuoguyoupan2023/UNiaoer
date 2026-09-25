@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Leaf } from 'lucide-vue-next'
 import type { MediaAsset } from '@/types'
 
 defineProps<{ media: MediaAsset }>()
@@ -6,7 +7,7 @@ defineProps<{ media: MediaAsset }>()
 
 <template>
   <p class="attribution">
-    <span class="dot">🟢</span>
+    <Leaf class="dot ic" :size="13" />
     {{ media.source }} · {{ media.author }} · {{ media.license }}
     <a v-if="media.sourceUrl" :href="media.sourceUrl" target="_blank" rel="noopener noreferrer">
       原始页面
@@ -25,5 +26,6 @@ defineProps<{ media: MediaAsset }>()
 }
 .attribution .dot {
   margin-right: 4px;
+  color: var(--primary);
 }
 </style>

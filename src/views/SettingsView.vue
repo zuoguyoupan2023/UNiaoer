@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import type { AutoNextMode, LicensePolicy } from '@/types'
 
@@ -39,7 +40,7 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
 
 <template>
   <section class="card">
-    <h2 class="sec">⚙️ 设置</h2>
+    <h2 class="sec"><Settings class="ic" :size="20" /> 设置</h2>
 
     <div class="setting">
       <h3>素材许可策略</h3>

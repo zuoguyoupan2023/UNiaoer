@@ -7,6 +7,18 @@ import { preloadQuestions } from '@/core/mediaLoader'
 import { AUTO_NEXT_DELAY_MS, optionsHiddenFor } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
+import {
+  AlarmClock,
+  ArrowRight,
+  AudioLines,
+  CircleCheck,
+  CircleX,
+  Hourglass,
+  Image as ImageIcon,
+  Keyboard,
+  Smartphone,
+  Timer,
+} from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -24,12 +36,10 @@ const tier = ref<Tier>(quiz.tier)
 const intro = computed(() =>
   props.type === 'audio'
     ? {
-        emoji: '🔊',
         title: '听音认鸟',
         lead: '聆听一段真实鸟鸣，判断是哪一种鸟。',
       }
     : {
-        emoji: '🖼️',
         title: '看图认鸟',
         lead: '观察一张真实鸟类照片，判断是哪一种鸟。',
       },
@@ -192,7 +202,10 @@ function onTouchEnd(e: TouchEvent) {
 <template>
   <!-- 介绍页 -->
   <section v-if="!started" class="card intro">
-    <div class="emoji">{{ intro.emoji }}</div>
+    <div class="intro-icon">
+      <AudioLines v-if="type === 'audio'" :size="46" />
+      <ImageIcon v-else :size="46" />
+    </div>
     <h2>{{ intro.title }}</h2>
     <p class="lead muted">{{ intro.lead }}</p>
 
@@ -239,7 +252,7 @@ function onTouchEnd(e: TouchEvent) {
         <span class="tier-tag">{{ TIERS[quiz.current.tier].label }}</span>
       </span>
       <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= 3 }">
-        ⏱ {{ timeLeft }}s
+        <Timer class="ic" :size="14" /> {{ timeLeft }}s
       </span>
       <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
     </div>
@@ -262,21 +275,26 @@ function onTouchEnd(e: TouchEvent) {
       />
 
       <div v-if="quiz.answered" class="feedback" :class="isCorrect ? 'ok' : 'no'">
-        <strong v-if="timedOut">⏰ 时间到！</strong>
-        <strong v-else>{{ isCorrect ? '✅ 回答正确！' : '❌ 回答错误' }}</strong>
+        <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> 时间到！</strong>
+        <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> 回答正确！</strong>
+        <strong v-else><CircleX class="ic" :size="16" /> 回答错误</strong>
         正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）
         <span class="muted"> · {{ quiz.current.family }}</span>
       </div>
 
       <div v-if="quiz.answered" class="actions">
         <button class="btn btn-primary" @click="goNext">
-          {{ quiz.index + 1 >= quiz.total ? '查看结果 →' : '下一题 →' }}
+          {{ quiz.index + 1 >= quiz.total ? '查看结果' : '下一题' }}
+          <ArrowRight class="ic" :size="16" />
         </button>
       </div>
       <p v-if="quiz.answered && !autoPending" class="next-hint">
-        ⌨️ 按 → 或空格 · 📱 左滑，也可进入下一题
+        <Keyboard class="ic" :size="14" /> 按 <ArrowRight class="ic" :size="13" /> 或空格 ·
+        <Smartphone class="ic" :size="14" /> 左滑，也可进入下一题
       </p>
-      <p v-if="autoPending" class="auto-hint">⏳ 即将自动进入下一题…</p>
+      <p v-if="autoPending" class="auto-hint">
+        <Hourglass class="ic" :size="14" /> 即将自动进入下一题…
+      </p>
     </div>
   </template>
 </template>
@@ -285,8 +303,10 @@ function onTouchEnd(e: TouchEvent) {
 .intro {
   text-align: center;
 }
-.intro .emoji {
-  font-size: 3rem;
+.intro-icon {
+  display: flex;
+  justify-content: center;
+  color: var(--primary);
   animation: float 3s ease-in-out infinite;
 }
 .intro h2 {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Eye } from 'lucide-vue-next'
+
 const props = defineProps<{
   options: string[]
   answer: string
@@ -20,7 +22,7 @@ function state(opt: string): string {
 
 <template>
   <div v-if="hidden" class="options-hidden">
-    <span class="eye">👀</span>
+    <Eye class="ic" :size="16" />
     先观察，选项稍后出现
   </div>
   <div v-else class="options">
@@ -50,9 +52,6 @@ function state(opt: string): string {
   background: #f5f8f6;
   color: var(--text-light);
   font-size: 0.86rem;
-}
-.options-hidden .eye {
-  font-size: 1rem;
 }
 .options {
   display: grid;

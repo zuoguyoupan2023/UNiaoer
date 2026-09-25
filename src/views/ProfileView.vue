@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { Award, User } from 'lucide-vue-next'
 import { clearAll, getBadges, getStats, type EarnedBadge, type Stats } from '@/core/historyDb'
 import { BADGES } from '@/core/badges'
+import BadgeIcon from '@/components/BadgeIcon.vue'
 
 const stats = ref<Stats | null>(null)
 const earned = ref<Set<string>>(new Set())
@@ -26,7 +28,7 @@ async function reset() {
 
 <template>
   <section class="card">
-    <h2 class="sec">👤 我的</h2>
+    <h2 class="sec"><User class="ic" :size="20" /> 我的</h2>
     <p v-if="loading" class="muted">加载中…</p>
 
     <template v-else-if="stats">
@@ -39,10 +41,12 @@ async function reset() {
         <div class="stat"><span class="n">{{ stats.bestStreak }}</span><span class="l">最长连对</span></div>
       </div>
 
-      <h3 class="sec" style="margin-top: 22px">🎖️ 徽章（{{ earned.size }} / {{ BADGES.length }}）</h3>
+      <h3 class="sec" style="margin-top: 22px">
+        <Award class="ic" :size="18" /> 徽章（{{ earned.size }} / {{ BADGES.length }}）
+      </h3>
       <div class="badge-grid">
         <div v-for="b in BADGES" :key="b.id" class="badge" :class="{ locked: !earned.has(b.id) }">
-          <span class="emoji">{{ b.emoji }}</span>
+          <BadgeIcon class="badge-icon" :name="b.icon" :size="28" />
           <span class="label">{{ b.label }}</span>
           <span class="desc">{{ b.desc }}</span>
         </div>
@@ -100,8 +104,8 @@ async function reset() {
   border-radius: var(--radius-sm);
   background: #fff;
 }
-.badge .emoji {
-  font-size: 1.8rem;
+.badge .badge-icon {
+  color: var(--primary);
 }
 .badge .label {
   font-size: 0.85rem;

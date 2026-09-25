@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { Bird, BookX } from 'lucide-vue-next'
 import {
   clearWrong,
   getWrongBook,
@@ -44,7 +45,7 @@ function fmt(at: number) {
 
 <template>
   <section class="card">
-    <h2 class="sec">📕 错题本</h2>
+    <h2 class="sec"><BookX class="ic" :size="20" /> 错题本</h2>
 
     <div class="tabs">
       <button class="tab" :class="{ on: tab === 'current' }" @click="tab = 'current'">
@@ -66,7 +67,9 @@ function fmt(at: number) {
 
     <!-- 当前错题本 -->
     <template v-else-if="tab === 'current'">
-      <p v-if="current.length === 0" class="muted">当前没有错题，去答题吧 🐦</p>
+      <p v-if="current.length === 0" class="muted">
+        当前没有错题，去答题吧 <Bird class="ic" :size="14" />
+      </p>
       <ul v-else class="list">
         <li v-for="e in current" :key="e.speciesId" class="item">
           <div class="info">

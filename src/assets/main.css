@@ -12,6 +12,9 @@
   padding: 30px 16px 14px;
 }
 .app-header h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: clamp(1.6rem, 5vw, 2.2rem);
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -19,6 +22,9 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+.app-header h1 .brand-icon {
+  color: var(--primary);
 }
 .app-header p {
   color: var(--text-light);
@@ -135,6 +141,12 @@
   color: var(--text-light);
   font-size: 0.85rem;
   line-height: 1.85;
+}
+
+/* 行内图标（lucide）：与文字基线对齐 */
+.ic {
+  vertical-align: -0.16em;
+  flex-shrink: 0;
 }
 
 .tag {

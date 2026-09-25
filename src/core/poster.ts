@@ -345,7 +345,7 @@ export function drawPoster(
   if (rows.length === 0) {
     drawSegments(
       ctx,
-      [{ text: '🎉 全对，没有错题', color: P.accent, weight: 400, size: 28 }],
+      [{ text: '全对，没有错题', color: P.accent, weight: 400, size: 28 }],
       60,
       1070,
       'left',

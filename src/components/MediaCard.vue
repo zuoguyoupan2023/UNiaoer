@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { ImageOff, VolumeX } from 'lucide-vue-next'
 import type { MediaAsset, MediaType } from '@/types'
 import AttributionLine from './AttributionLine.vue'
 
@@ -47,12 +48,16 @@ onUnmounted(() => {
       <div v-if="!imageLoaded && !imageFailed" class="skeleton">
         <span class="spin"></span> 图片加载中…
       </div>
-      <div v-else-if="imageFailed" class="failed">🖼️ 图片加载失败</div>
+      <div v-else-if="imageFailed" class="failed">
+        <ImageOff class="ic" :size="18" /> 图片加载失败
+      </div>
     </div>
 
     <template v-else>
       <audio ref="audioEl" :src="media.url" controls preload="auto"></audio>
-      <p v-if="playBlocked" class="hint">🔇 浏览器拦截了自动播放，请点击播放按钮</p>
+      <p v-if="playBlocked" class="hint">
+        <VolumeX class="ic" :size="15" /> 浏览器拦截了自动播放，请点击播放按钮
+      </p>
     </template>
 
     <AttributionLine :media="media" />

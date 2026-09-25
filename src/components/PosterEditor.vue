@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { CircleCheck, Lock, Unlock, X } from 'lucide-vue-next'
 import {
   downloadBlob,
   drawPoster,
@@ -186,7 +187,7 @@ function openImage() {
     <div class="panel">
       <div class="head">
         <h3>生成海报</h3>
-        <button class="x" @click="emit('close')">✕</button>
+        <button class="x" aria-label="关闭" @click="emit('close')"><X :size="16" /></button>
       </div>
 
       <div class="body">
@@ -251,8 +252,9 @@ function openImage() {
                     class="wrong-badge"
                     title="这题你答错了，试试用它做背景？"
                     aria-label="这题你答错了"
-                    >✕</span
                   >
+                    <X :size="12" :stroke-width="3" />
+                  </span>
                 </div>
                 <span class="thumb-name">{{ img.answer }}</span>
                 <span v-if="img.sci" class="thumb-sci">{{ img.sci }}</span>
@@ -270,7 +272,9 @@ function openImage() {
               style="width: 100%"
               @click="locked = !locked"
             >
-              {{ locked ? '🔓 已锁定（点击解锁）' : '🔒 锁定其他修改' }}
+              <Unlock v-if="locked" :size="15" />
+              <Lock v-else :size="15" />
+              {{ locked ? '已锁定（点击解锁）' : '锁定其他修改' }}
             </button>
             <button
               v-if="bgImage"
@@ -301,7 +305,7 @@ function openImage() {
               <img class="result-img" :src="blobUrl" alt="海报预览" />
               <p v-if="stale" class="result-status stale">配置已修改，点「生成海报」更新预览</p>
               <p v-else class="result-status">
-                海报已生成 ✓ 若未自动下载，请长按图片保存到相册。
+                <CircleCheck class="ic" :size="14" /> 海报已生成，若未自动下载，请长按图片保存到相册。
               </p>
               <div class="result-actions">
                 <button class="btn btn-secondary" :disabled="stale" @click="download">
@@ -509,10 +513,9 @@ function openImage() {
   border-radius: 50%;
   background: #c1121f;
   color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }

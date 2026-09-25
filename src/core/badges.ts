@@ -3,7 +3,7 @@ import type { Stats } from './historyDb'
 export interface BadgeDef {
   id: string
   label: string
-  emoji: string
+  icon: string
   desc: string
   test: (s: Stats) => boolean
 }
@@ -13,49 +13,49 @@ export const BADGES: BadgeDef[] = [
   {
     id: 'first-round',
     label: '首战告捷',
-    emoji: '🐣',
+    icon: 'egg',
     desc: '完成第一轮答题',
     test: (s) => s.rounds >= 1,
   },
   {
     id: 'perfect',
     label: '满分达人',
-    emoji: '💯',
+    icon: 'badge-check',
     desc: '某一轮全部答对',
     test: (s) => s.perfectRounds >= 1,
   },
   {
     id: 'hundred',
     label: '百题斩',
-    emoji: '🎯',
+    icon: 'target',
     desc: '累计答题 100 题',
     test: (s) => s.totalQuestions >= 100,
   },
   {
     id: 'listener',
     label: '听风者',
-    emoji: '🎧',
+    icon: 'headphones',
     desc: '完成一轮听音认鸟',
     test: (s) => s.audioRounds >= 1,
   },
   {
     id: 'expert',
     label: '专家挑战',
-    emoji: '🧠',
+    icon: 'brain',
     desc: '完成一轮 L4 专家难度',
     test: (s) => s.maxTier >= 4,
   },
   {
     id: 'beginner-birder',
     label: '鸟类入门',
-    emoji: '📖',
+    icon: 'book-open',
     desc: '累计认识 10 种鸟',
     test: (s) => s.distinctSpecies >= 10,
   },
   {
     id: 'streak',
     label: '连对达人',
-    emoji: '🔥',
+    icon: 'flame',
     desc: '单轮连续答对 5 题',
     test: (s) => s.bestStreak >= 5,
   },

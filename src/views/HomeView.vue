@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { AlertTriangle, AudioLines, Image as ImageIcon, Library } from 'lucide-vue-next'
 import { loadBank } from '@/core/bank'
 
 const stats = ref<{ total: number; image: number; audio: number } | null>(null)
@@ -27,18 +28,21 @@ onMounted(async () => {
     </p>
 
     <p v-if="stats" class="bank-stats">
-      📚 题库：{{ stats.total }} 种 · 图片 {{ stats.image }} · 音频 {{ stats.audio }}
+      <Library class="ic" :size="15" /> 题库：{{ stats.total }} 种 · 图片 {{ stats.image }} ·
+      音频 {{ stats.audio }}
     </p>
-    <p v-else-if="bankError" class="bank-error">⚠️ {{ bankError }}</p>
+    <p v-else-if="bankError" class="bank-error">
+      <AlertTriangle class="ic" :size="15" /> {{ bankError }}
+    </p>
 
     <div class="modes">
       <RouterLink to="/quiz/image" class="mode-card">
-        <span class="mode-emoji">🖼️</span>
+        <ImageIcon class="mode-icon" :size="40" />
         <span class="mode-title">看图认鸟</span>
         <span class="mode-sub">来自 iNaturalist 的开放许可照片</span>
       </RouterLink>
       <RouterLink to="/quiz/audio" class="mode-card">
-        <span class="mode-emoji">🔊</span>
+        <AudioLines class="mode-icon" :size="40" />
         <span class="mode-title">听音认鸟</span>
         <span class="mode-sub">来自 Xeno-canto 的真实鸟鸣</span>
       </RouterLink>
@@ -93,8 +97,9 @@ onMounted(async () => {
   box-shadow: var(--shadow);
   text-decoration: none;
 }
-.mode-emoji {
-  font-size: 2.4rem;
+.mode-icon {
+  color: var(--primary);
+  margin-bottom: 2px;
 }
 .mode-title {
   font-size: 1.05rem;
