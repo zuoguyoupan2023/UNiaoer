@@ -43,7 +43,7 @@ const byMode = computed(() =>
 // ---- 趋势折线图几何（viewBox 300×130，左右留 6 边距） ----
 const W = 300
 const H = 130
-const PAD = 6
+const PAD = 12 /* R34：由 6 增大，修复 g=100 文字/圆点顶部被 viewBox 裁切 */
 
 const trendPts = computed(() =>
   trend.value.map((p, i) => ({

@@ -12,7 +12,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  max-width: 720px;
+  width: 100%; /* R34：与 app-main 真等宽（否则 auto margin 使其收缩为内容宽） */
+  max-width: 760px; /* 与 app-main 等宽 */
   margin: 0 auto 12px;
   padding: 6px 8px 6px 12px;
   background: rgba(255, 255, 255, 0.72);

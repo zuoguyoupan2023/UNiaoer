@@ -297,7 +297,7 @@ async function onFile(e: Event) {
       <div class="wear-grid">
         <div class="wear-item">
           <div class="wear-line">
-            <Sparkles class="ic" :size="16" />
+            <Sparkles class="ic" :size="21" />
             <div class="wear-text">
               <span class="muted">称号</span>
               <strong>{{ wornLabel || '未佩戴' }}</strong>
@@ -328,7 +328,7 @@ async function onFile(e: Event) {
         </div>
         <div class="wear-item">
           <div class="wear-line">
-            <Award class="ic" :size="16" />
+            <Award class="ic" :size="21" />
             <div class="wear-text">
               <span class="muted">徽章</span>
               <strong>{{ wornBadgeLabel || '未佩戴' }}</strong>
@@ -529,6 +529,11 @@ h2.sec {
 .nickname-msg {
   font-size: 0.78rem;
   color: var(--wrong);
+}
+.wear-line .btn {
+  padding: 4px 10px; /* R34：更换按钮缩小（字号/内间距） */
+  font-size: 0.7rem;
+  border-radius: 8px;
 }
 /* ---- 数据 ---- */
 .stat-grid {
