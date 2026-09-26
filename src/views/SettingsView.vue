@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
-import type { AutoNextMode, LicensePolicy } from '@/types'
+import type { AutoNextMode } from '@/types'
 
 const settings = useSettingsStore()
 const cacheMsg = ref('')
@@ -42,19 +42,6 @@ async function clearMediaCache() {
   cacheMsg.value = targets.length ? `已清除 ${targets.length} 个缓存` : '没有可清除的缓存'
 }
 
-const policies: { value: LicensePolicy; label: string; hint: string }[] = [
-  {
-    value: 'relaxed',
-    label: '宽松（含 CC-BY-NC）',
-    hint: '非商业项目可用，素材最全。NC 素材不转码。',
-  },
-  {
-    value: 'strict',
-    label: '严格（仅 CC0 / BY / BY-SA）',
-    hint: '保证下游也可商用；素材相对少。',
-  },
-]
-
 const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = [
   { value: 'correct', label: '答对自动', hint: '答对后等 2s 自动进入下一题（默认）' },
   { value: 'all', label: '都自动', hint: '答对、答错、超时后都等 2s 自动进入下一题' },
@@ -65,23 +52,6 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
 <template>
   <section class="card">
     <h2 class="sec"><Settings class="ic" :size="20" /> 设置</h2>
-
-    <div class="setting">
-      <h3>素材许可策略</h3>
-      <p class="muted">决定抓取/出题时放行哪些许可证的素材。</p>
-      <div class="choices">
-        <button
-          v-for="p in policies"
-          :key="p.value"
-          class="choice"
-          :class="{ on: settings.licensePolicy === p.value }"
-          @click="settings.licensePolicy = p.value"
-        >
-          <strong>{{ p.label }}</strong>
-          <span>{{ p.hint }}</span>
-        </button>
-      </div>
-    </div>
 
     <div class="setting">
       <h3>音频自动播放</h3>

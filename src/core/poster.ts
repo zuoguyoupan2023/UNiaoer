@@ -21,6 +21,8 @@ export interface PosterData {
   overallAccuracy?: number
   /** R30：佩戴的称号（有则显示在日期旁） */
   wornTitle?: string
+  /** R31：佩戴的徽章（有则显示在日期旁） */
+  wornBadge?: string
   wrong: PosterWrong[]
 }
 
@@ -281,8 +283,8 @@ export function drawPoster(
 
   ctx.textBaseline = 'alphabetic'
 
-  // 顶部标题（无 emoji、无“鸟语识别”）；佩戴称号显示在日期旁（R30）
-  const dateLine = data.wornTitle ? `${data.date} · ${data.wornTitle}` : data.date
+  // 顶部标题（无 emoji、无“鸟语识别”）；佩戴称号/徽章显示在日期旁（R30/R31）
+  const dateLine = [data.date, data.wornTitle, data.wornBadge].filter(Boolean).join(' · ')
   drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: 56 }], W / 2, 118, 'center', box)
   drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
@@ -312,11 +314,11 @@ export function drawPoster(
   }
 
   // 正文
-  drawSegments(ctx, [{ text: '你在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
+  drawSegments(ctx, [{ text: '我在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
   const perfect = data.total > 0 && data.correct === data.total
   drawSegments(
     ctx,
-    [{ text: perfect ? '全对了！' : '答对了！', color: P.dark, weight: 800, size: 64 }],
+    [{ text: perfect ? '全对了！' : '我答对了！', color: P.dark, weight: 800, size: 64 }],
     W / 2,
     650,
     'center',

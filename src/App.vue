@@ -78,7 +78,6 @@ const immersive = computed(
         <RouterLink to="/quiz/audio">听音认鸟</RouterLink>
       </span>
       <span class="nav-group nav-utility">
-        <RouterLink to="/wrong">错题本</RouterLink>
         <RouterLink to="/profile">我的</RouterLink>
         <button
           class="ambience-btn"

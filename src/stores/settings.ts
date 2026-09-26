@@ -6,6 +6,7 @@ import type { AutoNextMode, LicensePolicy } from '@/types'
 const STORAGE_KEY = 'uniaoer.settings.v2'
 
 interface Persisted {
+  /** 许可策略：固定宽松（R31，不再向用户展示） */
   licensePolicy: LicensePolicy
   autoplayAudio: boolean
   autoplayDelayMs: number
@@ -14,6 +15,11 @@ interface Persisted {
   ambienceExcluded: string[]
   /** 佩戴的称号轨道 id（009）；null = 不佩戴 */
   wornTitle: string | null
+  /** 佩戴的徽章 id（009）；null = 不佩戴 */
+  wornBadge: string | null
+  /** 自动佩戴：新解锁称号/徽章时自动换上最新的（手动选择过则转为手动） */
+  titleAutoWear: boolean
+  badgeAutoWear: boolean
   /** 环境鸟鸣开关（R30）：默认开启，进入应用自动播放（被浏览器拦截则在首次手势后重试） */
   ambienceEnabled: boolean
 }
@@ -30,8 +36,8 @@ function load(): Partial<Persisted> {
 export const useSettingsStore = defineStore('settings', () => {
   const saved = load()
 
-  /** 默认 relaxed：项目非商业，优先保证素材可用（见 001 决策 D2） */
-  const licensePolicy = ref<LicensePolicy>(saved.licensePolicy ?? 'relaxed')
+  /** 许可策略：固定宽松（R31，不再作为用户可配置项） */
+  const licensePolicy = ref<LicensePolicy>('relaxed')
   /** 音频自动播放：默认开；第 1 题手动，第 2 题起自动（可在设置中改回每题手动） */
   const autoplayAudio = ref<boolean>(saved.autoplayAudio ?? true)
   /** 自动播放延迟（ms） */
@@ -42,11 +48,27 @@ export const useSettingsStore = defineStore('settings', () => {
   const ambienceExcluded = ref<string[]>(saved.ambienceExcluded ?? [])
   /** 佩戴称号（轨道 id；称号文本由当前数据实时派生） */
   const wornTitle = ref<string | null>(saved.wornTitle ?? null)
+  /** 佩戴徽章（徽章 id，R31） */
+  const wornBadge = ref<string | null>(saved.wornBadge ?? null)
+  /** 自动佩戴：新解锁时自动换上最新的（用户手动选择过佩戴则转为手动，R31） */
+  const titleAutoWear = ref<boolean>(saved.titleAutoWear ?? true)
+  const badgeAutoWear = ref<boolean>(saved.badgeAutoWear ?? true)
   /** 环境鸟鸣开关（默认开；用户手动关闭后记住，不再自动播放） */
   const ambienceEnabled = ref<boolean>(saved.ambienceEnabled ?? true)
 
   watch(
-    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded, wornTitle, ambienceEnabled],
+    [
+      licensePolicy,
+      autoplayAudio,
+      autoplayDelayMs,
+      autoNext,
+      ambienceExcluded,
+      wornTitle,
+      wornBadge,
+      titleAutoWear,
+      badgeAutoWear,
+      ambienceEnabled,
+    ],
     () => {
       try {
         localStorage.setItem(
@@ -58,6 +80,9 @@ export const useSettingsStore = defineStore('settings', () => {
             autoNext: autoNext.value,
             ambienceExcluded: ambienceExcluded.value,
             wornTitle: wornTitle.value,
+            wornBadge: wornBadge.value,
+            titleAutoWear: titleAutoWear.value,
+            badgeAutoWear: badgeAutoWear.value,
             ambienceEnabled: ambienceEnabled.value,
           } satisfies Persisted),
         )
@@ -75,6 +100,9 @@ export const useSettingsStore = defineStore('settings', () => {
     autoNext,
     ambienceExcluded,
     wornTitle,
+    wornBadge,
+    titleAutoWear,
+    badgeAutoWear,
     ambienceEnabled,
   }
 })

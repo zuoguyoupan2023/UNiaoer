@@ -1,4 +1,5 @@
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
+import { useSettingsStore } from '@/stores/settings'
 import {
   saveRound,
   getBadges,
@@ -100,6 +101,16 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
       }
     }
     if (titleMarks.length) await saveBadges(titleMarks)
+
+    // 自动佩戴（R31）：新解锁称号/徽章时自动换上最新的——第一轮做完海报即有标记；
+    // 用户在「我的」页手动选择过佩戴（autoWear=false）则不覆盖
+    const settings = useSettingsStore()
+    if (settings.badgeAutoWear && newBadges.length) {
+      settings.wornBadge = newBadges[newBadges.length - 1]!.id
+    }
+    if (settings.titleAutoWear && newTitles.length) {
+      settings.wornTitle = newTitles[newTitles.length - 1]!.trackId
+    }
 
     return { badges: newBadges, newTitles }
   } catch (e) {

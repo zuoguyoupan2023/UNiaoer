@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Award, Download, Sparkles, Upload, User } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Activity, Award, Download, Sparkles, Upload, User } from 'lucide-vue-next'
 import {
   clearAll,
   exportAll,
@@ -18,6 +18,7 @@ import { evaluateTitles, type EarnedTitle } from '@/core/titles'
 import { useSettingsStore } from '@/stores/settings'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import StatsCharts from '@/components/StatsCharts.vue'
+import WrongBookView from './WrongBookView.vue'
 
 const settings = useSettingsStore()
 const stats = ref<Stats | null>(null)
@@ -27,6 +28,38 @@ const backupMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const rounds = ref<RoundRecord[]>([])
 const pickerOpen = ref(false)
+const badgePickerOpen = ref(false)
+
+// 锚点导航（R31）：sticky 标签，点击滚动 / 滚动高亮
+const SECTIONS = [
+  { id: 'data', label: '数据' },
+  { id: 'titles', label: '称号' },
+  { id: 'badges', label: '徽章' },
+  { id: 'wrong', label: '错题本' },
+] as const
+const activeSection = ref<string>('data')
+let sectionObserver: IntersectionObserver | null = null
+
+function setupSectionObserver() {
+  sectionObserver?.disconnect()
+  sectionObserver = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) activeSection.value = e.target.id.replace('sec-', '')
+      }
+    },
+    { rootMargin: '-20% 0px -65% 0px' },
+  )
+  for (const s of SECTIONS) {
+    const el = document.getElementById(`sec-${s.id}`)
+    if (el) sectionObserver.observe(el)
+  }
+}
+
+function scrollToSection(id: string) {
+  document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  activeSection.value = id
+}
 
 // 称号（009）：由本地数据实时派生；佩戴位存 settings
 const titles = computed<EarnedTitle[]>(() =>
@@ -35,9 +68,20 @@ const titles = computed<EarnedTitle[]>(() =>
 const wornLabel = computed(
   () => titles.value.find((t) => t.trackId === settings.wornTitle)?.label ?? '',
 )
-function wear(trackId: string | null) {
+/** 手动选择佩戴即转为手动模式（不再自动换新的，R31） */
+function wearTitle(trackId: string | null) {
   settings.wornTitle = trackId
+  settings.titleAutoWear = false
   pickerOpen.value = false
+}
+
+/** 佩戴徽章（R31） */
+const wornBadgeLabel = computed(() => BADGES.find((b) => b.id === settings.wornBadge)?.label ?? '')
+const earnedBadgeDefs = computed(() => BADGES.filter((b) => earned.value.has(b.id)))
+function wearBadge(id: string | null) {
+  settings.wornBadge = id
+  settings.badgeAutoWear = false
+  badgePickerOpen.value = false
 }
 
 const SERIES_ORDER: BadgeSeries[] = ['入门', '进阶', '大师', '隐藏']
@@ -60,7 +104,11 @@ async function refresh() {
   loading.value = false
 }
 
-onMounted(refresh)
+onMounted(async () => {
+  await refresh()
+  setupSectionObserver()
+})
+onUnmounted(() => sectionObserver?.disconnect())
 
 async function reset() {
   if (!confirm('确定清空全部本地数据（记录 / 错题本 / 徽章）吗？此操作不可恢复。')) return
@@ -114,110 +162,231 @@ async function onFile(e: Event) {
 </script>
 
 <template>
-  <section class="card">
-    <h2 class="sec"><User class="ic" :size="20" /> 我的</h2>
-    <p v-if="loading" class="muted">加载中…</p>
+  <div class="profile-page">
+    <!-- 锚点导航（R31）：sticky 固定顶部，点击快速滚动 -->
+    <div class="section-tabs">
+      <button
+        v-for="s in SECTIONS"
+        :key="s.id"
+        :class="{ on: activeSection === s.id }"
+        @click="scrollToSection(s.id)"
+      >
+        {{ s.label }}
+      </button>
+    </div>
 
-    <template v-else-if="stats">
-      <div class="stat-grid">
-        <div class="stat"><span class="n">{{ stats.rounds }}</span><span class="l">轮次</span></div>
-        <div class="stat"><span class="n">{{ stats.totalQuestions }}</span><span class="l">累计题数</span></div>
-        <div class="stat"><span class="n">{{ stats.bestAccuracy }}%</span><span class="l">最佳正确率</span></div>
-        <div class="stat"><span class="n">{{ stats.perfectRounds }}</span><span class="l">满分轮次</span></div>
-        <div class="stat"><span class="n">{{ stats.distinctSpecies }}</span><span class="l">认识物种</span></div>
-        <div class="stat"><span class="n">{{ stats.bestStreak }}</span><span class="l">最长连对</span></div>
-      </div>
+    <!-- 数据 -->
+    <section class="card" id="sec-data">
+      <h2 class="sec"><User class="ic" :size="20" /> 我的</h2>
+      <h3 class="block-title"><Activity class="ic" :size="17" /> 数据</h3>
+      <p v-if="loading" class="muted">加载中…</p>
 
-      <!-- 佩戴称号（009） -->
-      <div class="title-card">
-        <div class="title-worn">
-          <Sparkles class="ic" :size="18" />
-          <div class="title-worn-text">
-            <span class="muted">佩戴称号</span>
-            <strong>{{ wornLabel || '未佩戴' }}</strong>
-          </div>
-          <button class="btn btn-secondary btn-sm" @click="pickerOpen = !pickerOpen">
-            {{ pickerOpen ? '收起' : '更换' }}
-          </button>
+      <template v-else-if="stats">
+        <div class="stat-grid">
+          <div class="stat"><span class="n">{{ stats.rounds }}</span><span class="l">轮次</span></div>
+          <div class="stat"><span class="n">{{ stats.totalQuestions }}</span><span class="l">累计题数</span></div>
+          <div class="stat"><span class="n">{{ stats.bestAccuracy }}%</span><span class="l">最佳正确率</span></div>
+          <div class="stat"><span class="n">{{ stats.perfectRounds }}</span><span class="l">满分轮次</span></div>
+          <div class="stat"><span class="n">{{ stats.distinctSpecies }}</span><span class="l">认识物种</span></div>
+          <div class="stat"><span class="n">{{ stats.bestStreak }}</span><span class="l">最长连对</span></div>
         </div>
-        <div v-if="pickerOpen" class="title-options">
-          <button
-            class="title-opt"
-            :class="{ on: settings.wornTitle === null }"
-            @click="wear(null)"
-          >
-            不佩戴
-          </button>
-          <button
-            v-for="t in titles"
-            :key="t.trackId"
-            class="title-opt"
-            :class="{ on: settings.wornTitle === t.trackId }"
-            @click="wear(t.trackId)"
-          >
-            <strong>{{ t.label }}</strong>
-            <span class="muted">{{ t.trackName }} · Lv.{{ t.level }}</span>
-          </button>
-        </div>
-        <p class="muted title-hint">
-          称号由本地数据实时派生：题量 · 物种图谱 · 连对 · 满分轮 · 听音 · 地狱 · 水平段位 · 物种之友
-        </p>
-      </div>
 
-      <h3 class="sec" style="margin-top: 22px">
-        <Award class="ic" :size="18" /> 徽章（{{ earned.size }} / {{ BADGES.length }}）
-      </h3>
-      <template v-for="series in SERIES_ORDER" :key="series">
-        <h4 class="series-title">
-          {{ series }}
-          <span class="series-count">{{ earnedCount(series) }}/{{ totalCount(series) }}</span>
-        </h4>
-        <div class="badge-grid">
-          <div
-            v-for="b in badgesOf(series)"
-            :key="b.id"
-            class="badge"
-            :class="{ locked: !earned.has(b.id) }"
-          >
-            <template v-if="b.hidden && !earned.has(b.id)">
-              <BadgeIcon class="badge-icon" name="lock" :size="28" />
-              <span class="label">???</span>
-              <span class="desc">隐藏徽章 · 继续探索</span>
-            </template>
-            <template v-else>
-              <BadgeIcon class="badge-icon" :name="b.icon" :size="28" />
-              <span class="label">{{ b.label }}</span>
-              <span class="desc">{{ b.desc }}</span>
-            </template>
+        <StatsCharts :rounds="rounds" />
+
+        <div class="actions">
+          <button class="btn btn-secondary" @click="exportJson">
+            <Download class="ic" :size="16" /> 导出数据
+          </button>
+          <button class="btn btn-secondary" @click="pickFile">
+            <Upload class="ic" :size="16" /> 导入数据
+          </button>
+          <button class="btn btn-secondary" @click="reset">清空我的数据</button>
+        </div>
+        <p v-if="backupMsg" class="backup-msg">{{ backupMsg }}</p>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".json,application/json"
+          class="hidden-input"
+          @change="onFile"
+        />
+      </template>
+    </section>
+
+    <!-- 称号 -->
+    <section class="card" id="sec-titles">
+      <h3 class="block-title"><Sparkles class="ic" :size="17" /> 称号</h3>
+      <p v-if="loading" class="muted">加载中…</p>
+      <template v-else>
+        <div class="title-card">
+          <div class="title-worn">
+            <div class="title-worn-text">
+              <span class="muted">佩戴中</span>
+              <strong>{{ wornLabel || '未佩戴' }}</strong>
+            </div>
+            <button class="btn btn-secondary btn-sm" @click="pickerOpen = !pickerOpen">
+              {{ pickerOpen ? '收起' : '更换' }}
+            </button>
           </div>
+          <div v-if="pickerOpen" class="title-options">
+            <button
+              class="title-opt"
+              :class="{ on: settings.wornTitle === null }"
+              @click="wearTitle(null)"
+            >
+              不佩戴
+            </button>
+            <button
+              v-for="t in titles"
+              :key="t.trackId"
+              class="title-opt"
+              :class="{ on: settings.wornTitle === t.trackId }"
+              @click="wearTitle(t.trackId)"
+            >
+              <strong>{{ t.label }}</strong>
+              <span class="muted">{{ t.trackName }} · Lv.{{ t.level }}</span>
+            </button>
+          </div>
+          <label class="auto-wear">
+            <input v-model="settings.titleAutoWear" type="checkbox" />
+            新解锁称号自动佩戴
+          </label>
+          <p class="muted title-hint">
+            轨道：题量 · 物种图谱 · 连对 · 满分轮 · 听音 · 地狱 · 水平段位 · 物种之友
+          </p>
         </div>
       </template>
+    </section>
 
-      <StatsCharts :rounds="rounds" />
+    <!-- 徽章 -->
+    <section class="card" id="sec-badges">
+      <h3 class="block-title"><Award class="ic" :size="17" /> 徽章（{{ earned.size }} / {{ BADGES.length }}）</h3>
+      <p v-if="loading" class="muted">加载中…</p>
+      <template v-else>
+        <div class="title-card">
+          <div class="title-worn">
+            <div class="title-worn-text">
+              <span class="muted">佩戴中</span>
+              <strong>{{ wornBadgeLabel || '未佩戴' }}</strong>
+            </div>
+            <button class="btn btn-secondary btn-sm" @click="badgePickerOpen = !badgePickerOpen">
+              {{ badgePickerOpen ? '收起' : '更换' }}
+            </button>
+          </div>
+          <div v-if="badgePickerOpen" class="title-options">
+            <button
+              class="title-opt"
+              :class="{ on: settings.wornBadge === null }"
+              @click="wearBadge(null)"
+            >
+              不佩戴
+            </button>
+            <button
+              v-for="b in earnedBadgeDefs"
+              :key="b.id"
+              class="title-opt"
+              :class="{ on: settings.wornBadge === b.id }"
+              @click="wearBadge(b.id)"
+            >
+              <strong>{{ b.label }}</strong>
+              <span class="muted">{{ b.series }}</span>
+            </button>
+          </div>
+          <label class="auto-wear">
+            <input v-model="settings.badgeAutoWear" type="checkbox" />
+            新解锁徽章自动佩戴
+          </label>
+        </div>
 
-      <div class="actions">
-        <RouterLink class="btn btn-secondary" to="/wrong">查看错题本</RouterLink>
-        <button class="btn btn-secondary" @click="exportJson">
-          <Download class="ic" :size="16" /> 导出数据
-        </button>
-        <button class="btn btn-secondary" @click="pickFile">
-          <Upload class="ic" :size="16" /> 导入数据
-        </button>
-        <button class="btn btn-secondary" @click="reset">清空我的数据</button>
-      </div>
-      <p v-if="backupMsg" class="backup-msg">{{ backupMsg }}</p>
-      <input
-        ref="fileInput"
-        type="file"
-        accept=".json,application/json"
-        class="hidden-input"
-        @change="onFile"
-      />
-    </template>
-  </section>
+        <template v-for="series in SERIES_ORDER" :key="series">
+          <h4 class="series-title">
+            {{ series }}
+            <span class="series-count">{{ earnedCount(series) }}/{{ totalCount(series) }}</span>
+          </h4>
+          <div class="badge-grid">
+            <div
+              v-for="b in badgesOf(series)"
+              :key="b.id"
+              class="badge"
+              :class="{ locked: !earned.has(b.id) }"
+            >
+              <template v-if="b.hidden && !earned.has(b.id)">
+                <BadgeIcon class="badge-icon" name="lock" :size="28" />
+                <span class="label">???</span>
+                <span class="desc">隐藏徽章 · 继续探索</span>
+              </template>
+              <template v-else>
+                <BadgeIcon class="badge-icon" :name="b.icon" :size="28" />
+                <span class="label">{{ b.label }}</span>
+                <span class="desc">{{ b.desc }}</span>
+              </template>
+            </div>
+          </div>
+        </template>
+      </template>
+    </section>
+
+    <!-- 错题本 -->
+    <div id="sec-wrong"><WrongBookView /></div>
+  </div>
 </template>
 
 <style scoped>
+/* ---- 锚点导航（R31）：sticky 固定顶部 ---- */
+.profile-page {
+  display: flex;
+  flex-direction: column;
+}
+.section-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  gap: 8px;
+  padding: 10px 4px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  background: rgba(244, 251, 247, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0 0 14px 14px;
+}
+.section-tabs button {
+  flex-shrink: 0;
+  padding: 7px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.section-tabs button.on {
+  background: var(--grad);
+  color: #fff;
+  border-color: transparent;
+}
+#sec-data,
+#sec-titles,
+#sec-badges,
+#sec-wrong {
+  scroll-margin-top: 58px;
+}
+h2.sec {
+  font-size: 1.15rem;
+  margin-bottom: 14px;
+}
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+/* ---- 数据 ---- */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -232,67 +401,22 @@ async function onFile(e: Event) {
   background: #f3fbf7;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 14px 10px;
+  padding: 12px 10px;
   text-align: center;
 }
 .stat .n {
   display: block;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: var(--primary);
 }
 .stat .l {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--text-light);
 }
-.badge-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-}
-.badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  text-align: center;
-  padding: 14px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-}
-.badge .badge-icon {
-  color: var(--primary);
-}
-.badge .label {
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-.badge .desc {
-  font-size: 0.7rem;
-  color: var(--text-light);
-}
-.badge.locked {
-  opacity: 0.45;
-  filter: grayscale(0.7);
-}
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-.backup-msg {
-  margin-top: 10px;
-  font-size: 0.82rem;
-  color: var(--primary);
-}
-.hidden-input {
-  display: none;
-}
-/* ---- 佩戴称号（009） ---- */
+/* ---- 称号 / 徽章佩戴 ---- */
 .title-card {
-  margin-top: 18px;
+  margin-bottom: 6px;
   padding: 14px 16px;
   border: 2px solid var(--primary-light);
   border-radius: var(--radius-sm);
@@ -303,9 +427,6 @@ async function onFile(e: Event) {
   align-items: center;
   gap: 10px;
 }
-.title-worn .ic {
-  color: var(--primary);
-}
 .title-worn-text {
   flex: 1;
   display: flex;
@@ -313,7 +434,7 @@ async function onFile(e: Event) {
   line-height: 1.3;
 }
 .title-worn-text strong {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   color: var(--primary-dark);
 }
 .title-worn .btn-sm {
@@ -346,11 +467,23 @@ async function onFile(e: Event) {
   border-color: var(--primary);
   background: #f3fbf7;
 }
+.auto-wear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.auto-wear input {
+  accent-color: var(--primary);
+}
 .title-hint {
   margin-top: 10px;
   font-size: 0.72rem;
 }
-/* ---- 徽章墙分组 ---- */
+/* ---- 徽章墙 ---- */
 .series-title {
   margin: 16px 0 8px;
   font-size: 0.85rem;
@@ -365,5 +498,51 @@ async function onFile(e: Event) {
   background: #eaf4ef;
   padding: 1px 8px;
   border-radius: 8px;
+}
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  padding: 12px 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.badge .badge-icon {
+  color: var(--primary);
+}
+.badge .label {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.badge .desc {
+  font-size: 0.68rem;
+  color: var(--text-light);
+}
+.badge.locked {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+/* ---- 数据操作 ---- */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.backup-msg {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--primary);
+}
+.hidden-input {
+  display: none;
 }
 </style>

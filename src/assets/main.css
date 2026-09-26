@@ -104,15 +104,13 @@
     transform: scale(0.85);
   }
 }
-/* 移动端：第一行 = 鸟图标 + 错题本/我的/设置；第二行 = 看图/听音 */
+/* 移动端：第一行 = 鸟图标 + UNiaoer + 我的/设置（错题本已并入「我的」，R31；
+   看图/听音在第二行），宽度足够显示完整品牌 */
 @media (max-width: 640px) {
   .app-topbar {
     flex-wrap: wrap;
     row-gap: 6px;
     padding-left: 10px;
-  }
-  .brand-name {
-    display: none;
   }
   .app-nav {
     display: contents;

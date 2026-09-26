@@ -20,7 +20,7 @@ import { persistRound } from '@/core/roundRecorder'
 import { getStats, listRounds } from '@/core/historyDb'
 import { evaluateTitles } from '@/core/titles'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
-import type { BadgeDef } from '@/core/badges'
+import { BADGES, type BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -34,6 +34,7 @@ const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
 const newBadges = ref<BadgeDef[]>([])
 const newTitleLabels = ref<string[]>([])
 const wornTitleLabel = ref('')
+const wornBadgeLabel = ref('')
 const settings = useSettingsStore()
 const showPoster = ref(false)
 
@@ -65,6 +66,7 @@ const posterData = computed<PosterData>(() => {
     round: quiz.sessionRound,
     overallAccuracy: quiz.overallAccuracy,
     wornTitle: wornTitleLabel.value || undefined,
+    wornBadge: wornBadgeLabel.value || undefined,
     wrong,
   }
 })
@@ -96,10 +98,12 @@ onMounted(async () => {
   const res = await persistRound(quiz)
   newBadges.value = res.badges
   newTitleLabels.value = res.newTitles.map((t) => t.label)
-  // 佩戴称号 → 海报（R30）
+  // 佩戴称号/徽章 → 海报（R30/R31）
   const [stats, rounds] = await Promise.all([getStats(), listRounds()])
   wornTitleLabel.value =
     evaluateTitles(stats, rounds).find((t) => t.trackId === settings.wornTitle)?.label ?? ''
+  wornBadgeLabel.value =
+    (settings.wornBadge && BADGES.find((b) => b.id === settings.wornBadge)?.label) || ''
 })
 
 async function again() {
