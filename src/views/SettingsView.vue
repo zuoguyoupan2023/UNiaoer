@@ -24,6 +24,14 @@ function isTrackChecked(id: string): boolean {
   return !settings.ambienceExcluded.includes(id)
 }
 
+/** 环境鸟鸣总开关（R36）：开 = 立即播放；关 = 停止并记住（不再自动播放） */
+function toggleAmbienceEnabled(e: Event) {
+  const on = (e.target as HTMLInputElement).checked
+  settings.ambienceEnabled = on
+  if (on) void ambiencePlayer.start().catch(() => {})
+  else ambiencePlayer.stop()
+}
+
 function toggleTrack(id: string, checked: boolean) {
   settings.ambienceExcluded = checked
     ? settings.ambienceExcluded.filter((x) => x !== id)
@@ -54,7 +62,7 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
     <h2 class="sec"><Settings class="ic" :size="20" /> 设置</h2>
 
     <div class="setting">
-      <h3>音频自动播放</h3>
+      <h3>听音版测试 · 音频自动播放</h3>
       <label class="switch">
         <input v-model="settings.autoplayAudio" type="checkbox" />
         <span>开启后，从第 2 题起、切题后自动播放；关闭则每题都需手动点击</span>
@@ -96,7 +104,15 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
 
     <div class="setting">
       <h3>环境鸟鸣</h3>
-      <p class="muted">
+      <label class="switch">
+        <input
+          type="checkbox"
+          :checked="settings.ambienceEnabled"
+          @change="toggleAmbienceEnabled"
+        />
+        <span>进入应用时自动播放背景鸟鸣；关闭后顶栏喇叭也不再自动开启</span>
+      </label>
+      <p class="muted" style="margin-top: 8px">
         顶栏的喇叭按钮可一键播放/停止：在你勾选的音轨中乱序轮流播放。默认全部勾选；取消勾选的音轨不会播放。勾选只保存在本地。
       </p>
       <p v-if="tracksError" class="muted">{{ tracksError }}</p>
