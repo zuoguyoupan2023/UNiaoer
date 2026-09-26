@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildShuffledQueue, pickRandomTracks } from '../ambience'
-
 const CATALOG = {
   items: [
     {
@@ -123,5 +122,36 @@ describe('loadBirdTracks', () => {
     await loadBirdTracks()
     await loadBirdTracks()
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('prewarmBirdTracks（音轨预热，R25）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('预热所有音轨且会话内只 fetch 一次', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(
+      async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith('categories.json')) {
+          return new Response(JSON.stringify(CATALOG), { status: 200 })
+        }
+        return new Response('mp3', { status: 200 })
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { loadBirdTracks, prewarmBirdTracks } = await import('../ambience')
+    await loadBirdTracks()
+    prewarmBirdTracks()
+    prewarmBirdTracks()
+    prewarmBirdTracks()
+    await new Promise((r) => setTimeout(r, 10))
+    const mp3Calls = fetchMock.mock.calls.filter((c) => String(c[0]).endsWith('.mp3'))
+    expect(mp3Calls).toHaveLength(2) // 目录里只有 birds + owl 是鸟叫
+    const urls = mp3Calls.map((c) => String(c[0]))
+    expect(new Set(urls).size).toBe(2)
+    expect(urls.every((u) => !u.endsWith('categories.json'))).toBe(true)
   })
 })

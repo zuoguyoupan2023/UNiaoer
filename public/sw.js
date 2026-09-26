@@ -14,6 +14,7 @@ const MEDIA_HOSTS = new Set([
   'static.inaturalist.org',
   'xeno-canto.org',
   'upload.wikimedia.org',
+  'whitenoise.earthtrip.online', // 环境鸟鸣/地狱干扰音（R22/R23），cache-first 秒开
 ])
 
 self.addEventListener('install', () => {

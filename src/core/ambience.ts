@@ -27,6 +27,8 @@ interface CatalogItem {
 }
 
 let tracksCache: AmbienceTrack[] | null = null
+/** 本会话已预热过的音轨 URL（避免重复 fetch） */
+const warmed = new Set<string>()
 
 /** 加载（并缓存）鸟叫音轨目录；网络失败时抛错，由调用方展示 */
 export async function loadBirdTracks(): Promise<AmbienceTrack[]> {
@@ -51,6 +53,22 @@ export async function loadBirdTracks(): Promise<AmbienceTrack[]> {
       }
     })
   return tracksCache
+}
+
+/**
+ * 后台预热全部音轨（共约 3.5MB）：fetch 会被 Service Worker 以 cache-first 持久缓存，
+ * 之后切题/重播都是本地命中、即时出声（R25）。会话内只预热一次，失败静默。
+ */
+export function prewarmBirdTracks(): void {
+  if (!tracksCache) return
+  for (const t of tracksCache) {
+    if (warmed.has(t.url)) continue
+    warmed.add(t.url)
+    fetch(t.url, { priority: 'low' }).catch(() => {
+      // 预热失败不影响功能：下次播放仍会按需加载并经 SW 缓存
+      warmed.delete(t.url)
+    })
+  }
 }
 
 /** 乱序队列：洗牌，并尽量避免与上一首相同 */
@@ -125,6 +143,7 @@ class AmbiencePlayer {
   /** 一键播放：加载目录 → 按勾选过滤 → 从乱序队列开始 */
   async start(): Promise<void> {
     const all = await loadBirdTracks()
+    prewarmBirdTracks() // 后台预热其余音轨（R25）：之后切题/重播都是本地命中
     const checked = all.filter((t) => !this.getExcluded().includes(t.id))
     if (!checked.length) throw new Error('没有已勾选的鸟叫音轨（请到设置中勾选）')
     this.failCount = 0
@@ -224,6 +243,7 @@ class InterferencePlayer {
   async start(count: number, volume = 0.3) {
     this.stop()
     const all = await loadBirdTracks()
+    prewarmBirdTracks() // 后台预热其余音轨（R25）：切题时干扰即时出声
     const picked = pickRandomTracks(all, count)
     this.audios = picked.map((t) => {
       const a = new Audio(t.url)
