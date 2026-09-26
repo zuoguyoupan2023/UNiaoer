@@ -60,6 +60,7 @@ vi.mock('@/core/bank', () => ({
 }))
 
 import { useQuizStore } from '@/stores/quiz'
+import { useSettingsStore } from '@/stores/settings'
 import QuizPlay from '../QuizPlay.vue'
 
 /** 让 flushPromises 的 setImmediate 保持真实，仅伪造计时相关 */
@@ -208,7 +209,7 @@ describe('QuizPlay', () => {
     }
   })
 
-  it('D2：答对后 2s 自动下一题（默认答对自动）', async () => {
+  it('D2：答对后 3s 自动下一题（默认答对自动，R43）', async () => {
     useQuizFakeTimers()
     try {
       const wrapper = mount(QuizPlay, { props: { type: 'image' } })
@@ -221,7 +222,85 @@ describe('QuizPlay', () => {
       await option!.trigger('click')
       expect(store.index).toBe(0)
 
-      vi.advanceTimersByTime(2000)
+      vi.advanceTimersByTime(2500)
+      await flushPromises()
+      expect(store.index).toBe(0) // 3s 未到
+
+      vi.advanceTimersByTime(500)
+      await flushPromises()
+      expect(store.index).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('R43：自动切换=浮窗；取消本次后回落下方，且仅此时出现「不再自动切换」', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      const settings = useSettingsStore()
+
+      const answer = store.current!.answer
+      await wrapper.findAll('.option').find((b) => b.text().includes(answer))!.trigger('click')
+
+      // 自动切换中：浮窗存在、下方无常驻反馈、「不再自动切换」不出现
+      expect(wrapper.find('.correct-toast').exists()).toBe(true)
+      expect(wrapper.find('.feedback').exists()).toBe(false)
+      expect(wrapper.findAll('button').some((b) => b.text().includes('不再自动切换'))).toBe(false)
+      const cancel = wrapper.findAll('button').find((b) => b.text().includes('取消切换'))
+      expect(cancel).toBeTruthy()
+
+      // 点「取消切换」：浮窗消失、下方常驻、出现「不再自动切换」
+      await cancel!.trigger('click')
+      expect(wrapper.find('.correct-toast').exists()).toBe(false)
+      expect(wrapper.find('.feedback').exists()).toBe(true)
+      const off = wrapper.findAll('button').find((b) => b.text().includes('不再自动切换'))
+      expect(off).toBeTruthy()
+
+      vi.advanceTimersByTime(5000)
+      await flushPromises()
+      expect(store.index).toBe(0) // 本次已取消
+
+      // 彻底关闭 → 手动：出现「自动切换」
+      await off!.trigger('click')
+      expect(settings.autoNext).toBe('manual')
+      const on = wrapper.findAll('button').find((b) => b.text().trim().includes('自动切换'))
+      expect(on).toBeTruthy()
+
+      // 手动点「自动切换」→ 恢复并开始倒计时
+      await on!.trigger('click')
+      expect(settings.autoNext).toBe('correct')
+      vi.advanceTimersByTime(3000)
+      await flushPromises()
+      expect(store.index).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('R43：都自动模式下，错题 4s 自动切换', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      const settings = useSettingsStore()
+      settings.autoNext = 'all'
+
+      const q = store.current!
+      const wrong = q.options.find((o) => o !== q.answer)!
+      await wrapper.findAll('.option').find((b) => b.text().includes(wrong))!.trigger('click')
+
+      const toast = wrapper.find('.correct-toast')
+      expect(toast.exists()).toBe(true)
+      expect(toast.classes()).toContain('is-wrong')
+
+      vi.advanceTimersByTime(3500)
+      await flushPromises()
+      expect(store.index).toBe(0) // 4s 未到
+      vi.advanceTimersByTime(500)
       await flushPromises()
       expect(store.index).toBe(1)
     } finally {

@@ -3,8 +3,11 @@
 /** 选项显示前所占限时的比例 */
 export const OPTION_REVEAL_RATIO = 1 / 3
 
-/** 自动进入下一题的等待时长（ms，见 006 D2） */
-export const AUTO_NEXT_DELAY_MS = 2000
+/** 答对时的自动进入下一题等待时长（ms，留足看答案时间，R43） */
+export const AUTO_NEXT_DELAY_CORRECT_MS = 3000
+
+/** 答错/超时且「都自动」时的等待时长（ms，R43） */
+export const AUTO_NEXT_DELAY_WRONG_MS = 4000
 
 /**
  * 是否应隐藏选项。

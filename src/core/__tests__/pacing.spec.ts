@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  AUTO_NEXT_DELAY_MS,
+  AUTO_NEXT_DELAY_CORRECT_MS,
+  AUTO_NEXT_DELAY_WRONG_MS,
   OPTION_REVEAL_RATIO,
   optionsHiddenFor,
   secondsUntilReveal,
@@ -38,9 +39,10 @@ describe('pacing', () => {
     expect(optionsHiddenFor(25, 20, 5)).toBe(false)
   })
 
-  it('比例常量为 1/3，自动延时为 2000ms', () => {
+  it('比例常量为 1/3；答对自动 3000ms、都自动的错题 4000ms', () => {
     expect(OPTION_REVEAL_RATIO).toBeCloseTo(1 / 3)
-    expect(AUTO_NEXT_DELAY_MS).toBe(2000)
+    expect(AUTO_NEXT_DELAY_CORRECT_MS).toBe(3000)
+    expect(AUTO_NEXT_DELAY_WRONG_MS).toBe(4000)
   })
 
   it('secondsUntilReveal：与 optionsHiddenFor 同步（null = 已显示），倒计时逐秒递减', () => {

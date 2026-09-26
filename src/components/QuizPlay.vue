@@ -5,7 +5,11 @@ import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
-import { AUTO_NEXT_DELAY_MS, secondsUntilReveal } from '@/core/pacing'
+import {
+  AUTO_NEXT_DELAY_CORRECT_MS,
+  AUTO_NEXT_DELAY_WRONG_MS,
+  secondsUntilReveal,
+} from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
 import {
@@ -18,8 +22,10 @@ import {
   Image as ImageIcon,
   Keyboard,
   LogOut,
+  Play,
   Smartphone,
   Timer,
+  X,
 } from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
 import AttributionLine from './AttributionLine.vue'
@@ -93,9 +99,27 @@ function startTimer() {
   }, 1000)
 }
 
-// ---- D2 自动下一题 ----
+// ---- D2 自动下一题 / R43 浮窗与取消 ----
 const autoPending = ref(false)
+/** 本题是否被用户点了「取消切换」（只影响这一次） */
+const cancelledThisQuestion = ref(false)
 let autoNextTimer: number | undefined
+
+/** 是否处于"会自动切换"的情形：「都自动」=任意；「答对自动」=仅答对 */
+const willAuto = computed(() => {
+  const mode = settings.autoNext
+  return mode === 'all' || (mode === 'correct' && isCorrect.value)
+})
+/** 自动切换中：显示浮窗 */
+const showToast = computed(() => quiz.answered && willAuto.value && !cancelledThisQuestion.value)
+/** 其余已作答情形（手动 / 不触发自动 / 取消本次后）：下方常驻 */
+const showInline = computed(() => quiz.answered && !showToast.value)
+/** 「不再自动切换」仅在"取消本次"后出现 */
+const showDisableBtn = computed(
+  () => quiz.answered && cancelledThisQuestion.value && settings.autoNext !== 'manual',
+)
+/** 彻底手动时出现「自动切换」 */
+const showEnableBtn = computed(() => quiz.answered && settings.autoNext === 'manual')
 
 function clearAutoNext() {
   if (autoNextTimer !== undefined) {
@@ -107,15 +131,15 @@ function clearAutoNext() {
 
 function scheduleAutoNext() {
   clearAutoNext()
-  const mode = settings.autoNext
-  if (mode === 'manual') return
-  if (mode === 'correct' && !isCorrect.value) return
+  if (!willAuto.value) return
   autoPending.value = true
+  // 答对 3s；「都自动」的错题/超时 4s
+  const delay = isCorrect.value ? AUTO_NEXT_DELAY_CORRECT_MS : AUTO_NEXT_DELAY_WRONG_MS
   autoNextTimer = window.setTimeout(() => {
     autoNextTimer = undefined
     autoPending.value = false
     quiz.next()
-  }, AUTO_NEXT_DELAY_MS)
+  }, delay)
 }
 
 function goNext() {
@@ -123,28 +147,23 @@ function goNext() {
   quiz.next()
 }
 
-// ---- R41 答对＝浮窗提示（切换前 500ms 自动消失）；答错才在下方常驻 ----
-const showCorrectToast = ref(false)
-let toastTimer: number | undefined
-
-function clearCorrectToast() {
-  if (toastTimer !== undefined) {
-    clearTimeout(toastTimer)
-    toastTimer = undefined
-  }
-  showCorrectToast.value = false
+/** 取消切换：只停"本次"自动切换 → 回落下方常驻，并出现「不再自动切换」（R43） */
+function cancelAutoOnce() {
+  clearAutoNext()
+  cancelledThisQuestion.value = true
 }
 
-function scheduleCorrectToast() {
-  clearCorrectToast()
-  if (!isCorrect.value) return
-  showCorrectToast.value = true
-  // 自动进入下一题时，提前 500ms 消失；手动模式则短暂展示后消失
-  const delay = autoPending.value ? Math.max(0, AUTO_NEXT_DELAY_MS - 500) : 2500
-  toastTimer = window.setTimeout(() => {
-    toastTimer = undefined
-    showCorrectToast.value = false
-  }, delay)
+/** 不再自动切换：与设置互通，后续一律手动（R43） */
+function disableAuto() {
+  clearAutoNext()
+  settings.autoNext = 'manual'
+  cancelledThisQuestion.value = false
+}
+
+/** 手动模式点「自动切换」：恢复默认"答对自动"，并在本题已答对时立即开始倒计时（R43） */
+function enableAuto() {
+  settings.autoNext = 'correct'
+  scheduleAutoNext()
 }
 
 /** 计时变红的最后秒数：L4/L5 为 3s，其余 5s（R30） */
@@ -233,7 +252,6 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   stopTimer()
   clearAutoNext()
-  clearCorrectToast()
   interferencePlayer.stop()
 })
 
@@ -241,7 +259,7 @@ watch(
   () => quiz.index,
   (i) => {
     clearAutoNext()
-    clearCorrectToast()
+    cancelledThisQuestion.value = false
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
     beginQuestionTiming() // 计时起点：看图立即 / 听音等音频开播（R24）
     updateInterference()
@@ -253,10 +271,9 @@ watch(
     if (a) {
       stopTimer()
       scheduleAutoNext()
-      scheduleCorrectToast()
     } else {
       clearAutoNext()
-      clearCorrectToast()
+      cancelledThisQuestion.value = false
     }
     updateInterference() // 作答后停止干扰；进入下一题（未作答）再开启
   },
@@ -400,12 +417,51 @@ function onTouchEnd(e: TouchEvent) {
         @select="quiz.answer($event)"
       />
 
-      <!-- 答错/超时：下方常驻详情；答对走浮窗（R41） -->
-      <div v-if="quiz.answered && !isCorrect" class="feedback no">
+      <!-- 自动切换中：浮窗（答对 3s / 都自动的错题 4s），可「取消切换」（R43） -->
+      <Transition name="toast">
+        <div
+          v-if="showToast"
+          class="correct-toast"
+          :class="{ 'is-wrong': !isCorrect }"
+          role="status"
+          aria-live="polite"
+        >
+          <div class="ct-row">
+            <CircleCheck v-if="isCorrect" class="ic" :size="20" />
+            <CircleX v-else class="ic" :size="20" />
+            <div class="ct-main">
+              <strong v-if="isCorrect">回答正确！</strong>
+              <strong v-else-if="timedOut">时间到！</strong>
+              <strong v-else>回答错误</strong>
+              <span>正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）</span>
+            </div>
+          </div>
+          <div class="ct-auto">
+            <span class="ct-count">
+              <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
+            </span>
+            <button class="btn-mini" type="button" @click="cancelAutoOnce">取消切换</button>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- 下方常驻反馈：手动 / 不触发自动 / 取消了本次自动 时显示 -->
+      <div v-if="showInline" class="feedback" :class="isCorrect ? 'ok' : 'no'">
         <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> 时间到！</strong>
+        <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> 回答正确！</strong>
         <strong v-else><CircleX class="ic" :size="16" /> 回答错误</strong>
         正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）
         <span class="muted"> · {{ quiz.current.family }}</span>
+      </div>
+
+      <!-- 「不再自动切换」仅在取消本次后出现；彻底手动时出现「自动切换」 -->
+      <div v-if="showDisableBtn || showEnableBtn" class="auto-ctrl">
+        <button v-if="showDisableBtn" class="btn-mini" type="button" @click="disableAuto">
+          <X class="ic" :size="12" /> 不再自动切换
+        </button>
+        <button v-else-if="showEnableBtn" class="btn-mini" type="button" @click="enableAuto">
+          <Play class="ic" :size="12" /> 自动切换
+        </button>
       </div>
 
       <div v-if="quiz.answered" class="actions">
@@ -414,12 +470,8 @@ function onTouchEnd(e: TouchEvent) {
           <ArrowRight class="ic" :size="16" />
         </button>
       </div>
-      <!-- 底部提示（退出测试已移至媒体左下角，R24；答对自动切换的提示已入浮窗） -->
-      <div v-if="quiz.answered && !(isCorrect && autoPending)" class="quiz-foot">
-        <span v-if="autoPending" class="foot-hint">
-          <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
-        </span>
-        <span v-else class="foot-hint">
+      <div v-if="quiz.answered && !autoPending" class="quiz-foot">
+        <span class="foot-hint">
           <Keyboard class="ic" :size="13" /> 按 <ArrowRight class="ic" :size="12" /> 或空格 ·
           <Smartphone class="ic" :size="13" /> 左滑进下一题
         </span>
@@ -428,22 +480,6 @@ function onTouchEnd(e: TouchEvent) {
       <!-- 署名信息移到卡片最底部，避免干扰（R41） -->
       <AttributionLine class="quiz-attr" :media="quiz.current.media" />
     </div>
-
-    <!-- 答对浮窗：正确信息 + 自动切换提示，切换前 500ms 自动消失 -->
-    <Transition name="toast">
-      <div v-if="showCorrectToast" class="correct-toast" role="status" aria-live="polite">
-        <div class="ct-row">
-          <CircleCheck class="ic" :size="20" />
-          <div class="ct-main">
-            <strong>回答正确！</strong>
-            <span>正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）</span>
-          </div>
-        </div>
-        <span v-if="autoPending" class="ct-auto">
-          <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
-        </span>
-      </div>
-    </Transition>
   </template>
 </template>
 
@@ -628,7 +664,7 @@ function onTouchEnd(e: TouchEvent) {
 .quiz-attr {
   margin-top: 14px;
 }
-/* 答对浮窗（R41） */
+/* 自动切换浮窗（R43）：可点击「取消切换」，取消后回落到下方常驻 */
 .correct-toast {
   position: fixed;
   left: 50%;
@@ -638,7 +674,7 @@ function onTouchEnd(e: TouchEvent) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   max-width: min(92vw, 560px);
   padding: 12px 18px;
   border-radius: 14px;
@@ -646,7 +682,10 @@ function onTouchEnd(e: TouchEvent) {
   border: 1px solid var(--correct);
   box-shadow: 0 18px 40px -18px rgba(20, 52, 42, 0.6);
   text-align: center;
-  pointer-events: none;
+}
+.correct-toast.is-wrong {
+  background: linear-gradient(135deg, #fdecee, #fbd8dc);
+  border-color: var(--wrong);
 }
 .ct-row {
   display: flex;
@@ -656,6 +695,9 @@ function onTouchEnd(e: TouchEvent) {
 .correct-toast .ic {
   color: var(--correct);
   flex-shrink: 0;
+}
+.correct-toast.is-wrong .ic {
+  color: var(--wrong);
 }
 .ct-main {
   display: flex;
@@ -667,12 +709,21 @@ function onTouchEnd(e: TouchEvent) {
   font-size: 0.92rem;
   color: var(--correct);
 }
+.correct-toast.is-wrong .ct-main strong {
+  color: var(--wrong);
+}
 .ct-main span {
   font-size: 0.8rem;
   color: var(--text-light);
 }
-/* 自动进入下一题提示另起一行（R42） */
 .ct-auto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ct-count {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -690,6 +741,34 @@ function onTouchEnd(e: TouchEvent) {
 .toast-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(10px);
+}
+/* 自动切换控制行（R43） */
+.auto-ctrl {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.btn-mini:hover {
+  color: var(--primary);
+  border-color: var(--primary-light);
+  background: #eaf4ef;
 }
 .quit-corner {
   display: inline-flex;
