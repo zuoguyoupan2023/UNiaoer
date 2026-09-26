@@ -22,6 +22,7 @@ import {
   Timer,
 } from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
+import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
 import ProgressBar from './ProgressBar.vue'
@@ -122,6 +123,30 @@ function goNext() {
   quiz.next()
 }
 
+// ---- R41 答对＝浮窗提示（切换前 500ms 自动消失）；答错才在下方常驻 ----
+const showCorrectToast = ref(false)
+let toastTimer: number | undefined
+
+function clearCorrectToast() {
+  if (toastTimer !== undefined) {
+    clearTimeout(toastTimer)
+    toastTimer = undefined
+  }
+  showCorrectToast.value = false
+}
+
+function scheduleCorrectToast() {
+  clearCorrectToast()
+  if (!isCorrect.value) return
+  showCorrectToast.value = true
+  // 自动进入下一题时，提前 500ms 消失；手动模式则短暂展示后消失
+  const delay = autoPending.value ? Math.max(0, AUTO_NEXT_DELAY_MS - 500) : 2500
+  toastTimer = window.setTimeout(() => {
+    toastTimer = undefined
+    showCorrectToast.value = false
+  }, delay)
+}
+
 /** 计时变红的最后秒数：L4/L5 为 3s，其余 5s（R30） */
 const warnThreshold = computed(() => (quiz.current && quiz.current.tier >= 4 ? 3 : 5))
 
@@ -208,6 +233,7 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   stopTimer()
   clearAutoNext()
+  clearCorrectToast()
   interferencePlayer.stop()
 })
 
@@ -215,6 +241,7 @@ watch(
   () => quiz.index,
   (i) => {
     clearAutoNext()
+    clearCorrectToast()
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
     beginQuestionTiming() // 计时起点：看图立即 / 听音等音频开播（R24）
     updateInterference()
@@ -226,8 +253,10 @@ watch(
     if (a) {
       stopTimer()
       scheduleAutoNext()
+      scheduleCorrectToast()
     } else {
       clearAutoNext()
+      clearCorrectToast()
     }
     updateInterference() // 作答后停止干扰；进入下一题（未作答）再开启
   },
@@ -351,6 +380,7 @@ function onTouchEnd(e: TouchEvent) {
         :media="quiz.current.media"
         :autoplay="quiz.current.type === 'audio' && quiz.index >= 1 && settings.autoplayAudio"
         :autoplay-delay="settings.autoplayDelayMs"
+        :show-attribution="false"
         @audio-play="onQuestionAudioPlay"
       >
         <template #media-corner>
@@ -370,9 +400,9 @@ function onTouchEnd(e: TouchEvent) {
         @select="quiz.answer($event)"
       />
 
-      <div v-if="quiz.answered" class="feedback" :class="isCorrect ? 'ok' : 'no'">
+      <!-- 答错/超时：下方常驻详情；答对走浮窗（R41） -->
+      <div v-if="quiz.answered && !isCorrect" class="feedback no">
         <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> 时间到！</strong>
-        <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> 回答正确！</strong>
         <strong v-else><CircleX class="ic" :size="16" /> 回答错误</strong>
         正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）
         <span class="muted"> · {{ quiz.current.family }}</span>
@@ -384,17 +414,34 @@ function onTouchEnd(e: TouchEvent) {
           <ArrowRight class="ic" :size="16" />
         </button>
       </div>
-      <!-- 底部提示（退出测试已移至媒体左下角，R24） -->
-      <div v-if="quiz.answered" class="quiz-foot">
-        <span v-if="!autoPending" class="foot-hint">
+      <!-- 底部提示（退出测试已移至媒体左下角，R24；答对自动切换的提示已入浮窗） -->
+      <div v-if="quiz.answered && !(isCorrect && autoPending)" class="quiz-foot">
+        <span v-if="autoPending" class="foot-hint">
+          <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
+        </span>
+        <span v-else class="foot-hint">
           <Keyboard class="ic" :size="13" /> 按 <ArrowRight class="ic" :size="12" /> 或空格 ·
           <Smartphone class="ic" :size="13" /> 左滑进下一题
         </span>
-        <span v-else class="foot-hint">
+      </div>
+
+      <!-- 署名信息移到卡片最底部，避免干扰（R41） -->
+      <AttributionLine class="quiz-attr" :media="quiz.current.media" />
+    </div>
+
+    <!-- 答对浮窗：正确信息 + 自动切换提示，切换前 500ms 自动消失 -->
+    <Transition name="toast">
+      <div v-if="showCorrectToast" class="correct-toast" role="status" aria-live="polite">
+        <CircleCheck class="ic" :size="20" />
+        <div class="ct-main">
+          <strong>回答正确！</strong>
+          <span>正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）</span>
+        </div>
+        <span v-if="autoPending" class="ct-auto">
           <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
         </span>
       </div>
-    </div>
+    </Transition>
   </template>
 </template>
 
@@ -574,6 +621,65 @@ function onTouchEnd(e: TouchEvent) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+/* 署名移到卡片最底部（R41） */
+.quiz-attr {
+  margin-top: 14px;
+}
+/* 答对浮窗（R41） */
+.correct-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 12vh;
+  z-index: 80;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 560px);
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eafaf1, #d8f3dc);
+  border: 1px solid var(--correct);
+  box-shadow: 0 18px 40px -18px rgba(20, 52, 42, 0.6);
+  pointer-events: none;
+}
+.correct-toast .ic {
+  color: var(--correct);
+  flex-shrink: 0;
+}
+.ct-main {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  text-align: left;
+}
+.ct-main strong {
+  font-size: 0.92rem;
+  color: var(--correct);
+}
+.ct-main span {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+.ct-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
 }
 .quit-corner {
   display: inline-flex;

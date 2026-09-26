@@ -11,6 +11,8 @@ const props = defineProps<{
   media: MediaAsset
   autoplay?: boolean
   autoplayDelay?: number
+  /** 是否在媒体下方显示署名行；答题中移到卡片最底部时置 false（R41） */
+  showAttribution?: boolean
 }>()
 
 /** audio-play：考题音频真正开始播放时触发（听音版计时/干扰以此为起点，R24） */
@@ -136,7 +138,7 @@ function closeZoom() {
       </div>
     </template>
 
-    <AttributionLine :media="media" />
+    <AttributionLine v-if="showAttribution !== false" :media="media" />
   </div>
 
   <!-- 原图弹层（xl） -->
