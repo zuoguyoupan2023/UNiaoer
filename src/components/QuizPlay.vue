@@ -287,7 +287,6 @@ function onTouchEnd(e: TouchEvent) {
       <CircleX class="ic" :size="15" /> 错题重练：本轮只出你答错过的鸟
     </p>
 
-    <h3 class="tier-title">选择难度</h3>
     <div class="tiers">
       <button
         v-for="t in TIER_LIST"
@@ -427,11 +426,6 @@ function onTouchEnd(e: TouchEvent) {
   color: var(--wrong);
   font-size: 0.82rem;
   font-weight: 600;
-}
-.tier-title {
-  font-size: 0.9rem;
-  color: var(--primary);
-  margin-bottom: 10px;
 }
 .tiers {
   display: grid;
