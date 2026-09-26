@@ -102,14 +102,16 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
     }
     if (titleMarks.length) await saveBadges(titleMarks)
 
-    // 自动佩戴（R31）：新解锁称号/徽章时自动换上最新的——第一轮做完海报即有标记；
-    // 用户在「我的」页手动选择过佩戴（autoWear=false）则不覆盖
+    // 自动佩戴（R32 固定规则）：仅**首枚**徽章/称号解锁时自动佩戴（让第一轮的海报就有标记），
+    // 之后由用户在「我的」页手动更换
     const settings = useSettingsStore()
-    if (settings.badgeAutoWear && newBadges.length) {
-      settings.wornBadge = newBadges[newBadges.length - 1]!.id
+    if (!settings.badgeAutoWorn && newBadges.length) {
+      settings.wornBadge = newBadges[0]!.id
+      settings.badgeAutoWorn = true
     }
-    if (settings.titleAutoWear && newTitles.length) {
-      settings.wornTitle = newTitles[newTitles.length - 1]!.trackId
+    if (!settings.titleAutoWorn && newTitles.length) {
+      settings.wornTitle = newTitles[0]!.trackId
+      settings.titleAutoWorn = true
     }
 
     return { badges: newBadges, newTitles }

@@ -14,7 +14,7 @@ import {
   type Stats,
 } from '@/core/historyDb'
 import { BADGES, type BadgeSeries } from '@/core/badges'
-import { evaluateTitles, type EarnedTitle } from '@/core/titles'
+import { evaluateTitles, TITLE_TRACKS, type EarnedTitle } from '@/core/titles'
 import { useSettingsStore } from '@/stores/settings'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import StatsCharts from '@/components/StatsCharts.vue'
@@ -68,19 +68,49 @@ const titles = computed<EarnedTitle[]>(() =>
 const wornLabel = computed(
   () => titles.value.find((t) => t.trackId === settings.wornTitle)?.label ?? '',
 )
-/** 手动选择佩戴即转为手动模式（不再自动换新的，R31） */
+/** 手动更换佩戴（R32 固定规则：仅首枚自动佩戴，之后手动） */
 function wearTitle(trackId: string | null) {
   settings.wornTitle = trackId
-  settings.titleAutoWear = false
   pickerOpen.value = false
 }
 
 /** 佩戴徽章（R31） */
 const wornBadgeLabel = computed(() => BADGES.find((b) => b.id === settings.wornBadge)?.label ?? '')
+
+/** 称号墙（R32）：全部轨道完整展示，未达成灰色显示并提示下一级 */
+const titleWall = computed(() => {
+  const s = stats.value ?? makeEmptyStats()
+  const byId = new Map(evaluateTitles(s, rounds.value).map((t) => [t.trackId, t]))
+  return TITLE_TRACKS.map((track) => {
+    const value = track.metric(s, rounds.value)
+    const next = track.levels.find((l) => l.threshold > value) ?? null
+    const earned = byId.get(track.id)
+    return {
+      id: track.id,
+      name: track.name,
+      earned: !!earned,
+      label: earned?.label ?? track.name,
+      level: earned?.level ?? 0,
+      nextText: next
+        ? `下一级「${next.label}」· 还差 ${Math.max(1, Math.ceil(next.threshold - value))}`
+        : '已满级',
+    }
+  })
+})
+
+function makeEmptyStats() {
+  return {
+    rounds: 0, totalQuestions: 0, totalCorrect: 0, bestAccuracy: 0, perfectRounds: 0,
+    distinctSpecies: 0, audioRounds: 0, maxTier: 0, bestStreak: 0, wrongCount: 0,
+    hellRounds: 0, hellQuestions: 0, hellCorrect: 0, hellPerfectRounds: 0, audioCorrect: 0,
+    wrongPracticeRounds: 0, wrongPracticeCorrect: 0, imagePerfectRounds: 0, audioPerfectRounds: 0,
+    maxCrossStreak: 0, distinctCorrect: 0, nightRound: false, dawnRound: false,
+    escapedQuitPerfect: false,
+  }
+}
 const earnedBadgeDefs = computed(() => BADGES.filter((b) => earned.value.has(b.id)))
 function wearBadge(id: string | null) {
   settings.wornBadge = id
-  settings.badgeAutoWear = false
   badgePickerOpen.value = false
 }
 
@@ -213,15 +243,15 @@ async function onFile(e: Event) {
       </template>
     </section>
 
-    <!-- 称号 -->
-    <section class="card" id="sec-titles">
-      <h3 class="block-title"><Sparkles class="ic" :size="17" /> 称号</h3>
-      <p v-if="loading" class="muted">加载中…</p>
-      <template v-else>
-        <div class="title-card">
-          <div class="title-worn">
-            <div class="title-worn-text">
-              <span class="muted">佩戴中</span>
+    <!-- 佩戴区（R32）：当前佩戴的称号与徽章，各自更换 -->
+    <section class="card wear-card">
+      <h3 class="block-title">佩戴</h3>
+      <div class="wear-grid">
+        <div class="wear-item">
+          <div class="wear-line">
+            <Sparkles class="ic" :size="16" />
+            <div class="wear-text">
+              <span class="muted">称号</span>
               <strong>{{ wornLabel || '未佩戴' }}</strong>
             </div>
             <button class="btn btn-secondary btn-sm" @click="pickerOpen = !pickerOpen">
@@ -247,26 +277,12 @@ async function onFile(e: Event) {
               <span class="muted">{{ t.trackName }} · Lv.{{ t.level }}</span>
             </button>
           </div>
-          <label class="auto-wear">
-            <input v-model="settings.titleAutoWear" type="checkbox" />
-            新解锁称号自动佩戴
-          </label>
-          <p class="muted title-hint">
-            轨道：题量 · 物种图谱 · 连对 · 满分轮 · 听音 · 地狱 · 水平段位 · 物种之友
-          </p>
         </div>
-      </template>
-    </section>
-
-    <!-- 徽章 -->
-    <section class="card" id="sec-badges">
-      <h3 class="block-title"><Award class="ic" :size="17" /> 徽章（{{ earned.size }} / {{ BADGES.length }}）</h3>
-      <p v-if="loading" class="muted">加载中…</p>
-      <template v-else>
-        <div class="title-card">
-          <div class="title-worn">
-            <div class="title-worn-text">
-              <span class="muted">佩戴中</span>
+        <div class="wear-item">
+          <div class="wear-line">
+            <Award class="ic" :size="16" />
+            <div class="wear-text">
+              <span class="muted">徽章</span>
               <strong>{{ wornBadgeLabel || '未佩戴' }}</strong>
             </div>
             <button class="btn btn-secondary btn-sm" @click="badgePickerOpen = !badgePickerOpen">
@@ -292,12 +308,28 @@ async function onFile(e: Event) {
               <span class="muted">{{ b.series }}</span>
             </button>
           </div>
-          <label class="auto-wear">
-            <input v-model="settings.badgeAutoWear" type="checkbox" />
-            新解锁徽章自动佩戴
-          </label>
         </div>
+      </div>
+    </section>
 
+    <!-- 称号 -->
+    <section class="card" id="sec-titles">
+      <h3 class="block-title"><Sparkles class="ic" :size="17" /> 称号（{{ titleWall.filter((t) => t.earned).length }} / {{ titleWall.length }}）</h3>
+      <p v-if="loading" class="muted">加载中…</p>
+      <div v-else class="badge-grid">
+        <div v-for="t in titleWall" :key="t.id" class="badge" :class="{ locked: !t.earned }">
+          <BadgeIcon class="badge-icon" name="sparkles" :size="26" />
+          <span class="label">{{ t.label }}</span>
+          <span class="desc">{{ t.earned ? `${t.name} · Lv.${t.level}` : t.nextText }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 徽章 -->
+    <section class="card" id="sec-badges">
+      <h3 class="block-title"><Award class="ic" :size="17" /> 徽章（{{ earned.size }} / {{ BADGES.length }}）</h3>
+      <p v-if="loading" class="muted">加载中…</p>
+      <template v-else>
         <template v-for="series in SERIES_ORDER" :key="series">
           <h4 class="series-title">
             {{ series }}
@@ -386,6 +418,35 @@ h2.sec {
   color: var(--primary);
   margin-bottom: 12px;
 }
+/* ---- 佩戴区（R32） ---- */
+.wear-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .wear-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.wear-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wear-line .ic {
+  color: var(--primary);
+}
+.wear-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.wear-text strong {
+  font-size: 1rem;
+  color: var(--primary-dark);
+}
 /* ---- 数据 ---- */
 .stat-grid {
   display: grid;
@@ -466,18 +527,6 @@ h2.sec {
 .title-opt.on {
   border-color: var(--primary);
   background: #f3fbf7;
-}
-.auto-wear {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  font-size: 0.78rem;
-  color: var(--text-light);
-  cursor: pointer;
-}
-.auto-wear input {
-  accent-color: var(--primary);
 }
 .title-hint {
   margin-top: 10px;

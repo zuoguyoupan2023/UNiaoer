@@ -17,9 +17,9 @@ interface Persisted {
   wornTitle: string | null
   /** 佩戴的徽章 id（009）；null = 不佩戴 */
   wornBadge: string | null
-  /** 自动佩戴：新解锁称号/徽章时自动换上最新的（手动选择过则转为手动） */
-  titleAutoWear: boolean
-  badgeAutoWear: boolean
+  /** 已自动佩戴过首枚称号/徽章（固定规则：仅首枚自动佩戴，R32） */
+  titleAutoWorn: boolean
+  badgeAutoWorn: boolean
   /** 环境鸟鸣开关（R30）：默认开启，进入应用自动播放（被浏览器拦截则在首次手势后重试） */
   ambienceEnabled: boolean
 }
@@ -50,9 +50,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const wornTitle = ref<string | null>(saved.wornTitle ?? null)
   /** 佩戴徽章（徽章 id，R31） */
   const wornBadge = ref<string | null>(saved.wornBadge ?? null)
-  /** 自动佩戴：新解锁时自动换上最新的（用户手动选择过佩戴则转为手动，R31） */
-  const titleAutoWear = ref<boolean>(saved.titleAutoWear ?? true)
-  const badgeAutoWear = ref<boolean>(saved.badgeAutoWear ?? true)
+  /** 已自动佩戴过首枚称号（固定规则：仅首枚自动佩戴，之后手动更换，R32） */
+  const titleAutoWorn = ref<boolean>(saved.titleAutoWorn ?? false)
+  const badgeAutoWorn = ref<boolean>(saved.badgeAutoWorn ?? false)
   /** 环境鸟鸣开关（默认开；用户手动关闭后记住，不再自动播放） */
   const ambienceEnabled = ref<boolean>(saved.ambienceEnabled ?? true)
 
@@ -65,8 +65,8 @@ export const useSettingsStore = defineStore('settings', () => {
       ambienceExcluded,
       wornTitle,
       wornBadge,
-      titleAutoWear,
-      badgeAutoWear,
+      titleAutoWorn,
+      badgeAutoWorn,
       ambienceEnabled,
     ],
     () => {
@@ -81,8 +81,8 @@ export const useSettingsStore = defineStore('settings', () => {
             ambienceExcluded: ambienceExcluded.value,
             wornTitle: wornTitle.value,
             wornBadge: wornBadge.value,
-            titleAutoWear: titleAutoWear.value,
-            badgeAutoWear: badgeAutoWear.value,
+            titleAutoWorn: titleAutoWorn.value,
+            badgeAutoWorn: badgeAutoWorn.value,
             ambienceEnabled: ambienceEnabled.value,
           } satisfies Persisted),
         )
@@ -101,8 +101,8 @@ export const useSettingsStore = defineStore('settings', () => {
     ambienceExcluded,
     wornTitle,
     wornBadge,
-    titleAutoWear,
-    badgeAutoWear,
+    titleAutoWorn,
+    badgeAutoWorn,
     ambienceEnabled,
   }
 })
