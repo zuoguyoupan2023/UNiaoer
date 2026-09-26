@@ -8,6 +8,7 @@ import {
   CircleX,
   Flame,
   PartyPopper,
+  Sparkles,
   Star,
   ThumbsUp,
   Trophy,
@@ -28,6 +29,7 @@ const hasResult = computed(() => quiz.total > 0)
 const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音认鸟' : '看图认鸟'))
 const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
 const newBadges = ref<BadgeDef[]>([])
+const newTitleLabels = ref<string[]>([])
 const showPoster = ref(false)
 
 const message = computed<{ icon: Component; text: string }>(() => {
@@ -85,7 +87,9 @@ onMounted(async () => {
     router.replace('/')
     return
   }
-  newBadges.value = await persistRound(quiz)
+  const res = await persistRound(quiz)
+  newBadges.value = res.badges
+  newTitleLabels.value = res.newTitles.map((t) => t.label)
 })
 
 async function again() {
@@ -104,6 +108,11 @@ async function again() {
     </div>
     <p class="muted">正确率 {{ quiz.accuracy }}%</p>
     <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
+
+    <div v-if="newTitleLabels.length" class="badges-new">
+      <span class="muted"><Sparkles class="ic" :size="15" /> 获得新称号：</span>
+      <span v-for="t in newTitleLabels" :key="t" class="badge-chip">{{ t }}</span>
+    </div>
 
     <div v-if="newBadges.length" class="badges-new">
       <span class="muted"><Award class="ic" :size="15" /> 获得新徽章：</span>

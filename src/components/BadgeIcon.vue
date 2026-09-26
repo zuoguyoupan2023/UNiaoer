@@ -1,6 +1,34 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
-import { Award, BadgeCheck, BookOpen, Brain, Egg, Flame, Headphones, Target } from 'lucide-vue-next'
+import {
+  Activity,
+  AudioLines,
+  Award,
+  BadgeCheck,
+  BookOpen,
+  Brain,
+  Crown,
+  Crosshair,
+  Ear,
+  Egg,
+  Flame,
+  Footprints,
+  Headphones,
+  HeartHandshake,
+  Lightbulb,
+  Lock,
+  Medal,
+  Moon,
+  Repeat,
+  RotateCcw,
+  Shield,
+  Skull,
+  Sparkles,
+  Sunrise,
+  Swords,
+  Target,
+  Undo2,
+} from 'lucide-vue-next'
 
 const props = defineProps<{ name: string; size?: number }>()
 
@@ -12,6 +40,25 @@ const MAP: Record<string, Component> = {
   brain: Brain,
   'book-open': BookOpen,
   flame: Flame,
+  skull: Skull,
+  ear: Ear,
+  swords: Swords,
+  footprints: Footprints,
+  shield: Shield,
+  crown: Crown,
+  medal: Medal,
+  activity: Activity,
+  'audio-lines': AudioLines,
+  'rotate-ccw': RotateCcw,
+  repeat: Repeat,
+  crosshair: Crosshair,
+  lightbulb: Lightbulb,
+  moon: Moon,
+  sunrise: Sunrise,
+  'undo-2': Undo2,
+  'heart-handshake': HeartHandshake,
+  sparkles: Sparkles,
+  lock: Lock,
 }
 
 const icon = computed(() => MAP[props.name] ?? Award)

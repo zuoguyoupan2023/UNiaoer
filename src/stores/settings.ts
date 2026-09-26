@@ -12,6 +12,8 @@ interface Persisted {
   autoNext: AutoNextMode
   /** 环境鸟鸣：被取消勾选的音轨 id（默认全部勾选，见 006 R22） */
   ambienceExcluded: string[]
+  /** 佩戴的称号轨道 id（009）；null = 不佩戴 */
+  wornTitle: string | null
 }
 
 function load(): Partial<Persisted> {
@@ -36,9 +38,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const autoNext = ref<AutoNextMode>(saved.autoNext ?? 'correct')
   /** 环境鸟鸣：取消勾选的音轨（默认全部勾选；新增音轨默认生效） */
   const ambienceExcluded = ref<string[]>(saved.ambienceExcluded ?? [])
+  /** 佩戴称号（轨道 id；称号文本由当前数据实时派生） */
+  const wornTitle = ref<string | null>(saved.wornTitle ?? null)
 
   watch(
-    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded],
+    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded, wornTitle],
     () => {
       try {
         localStorage.setItem(
@@ -49,6 +53,7 @@ export const useSettingsStore = defineStore('settings', () => {
             autoplayDelayMs: autoplayDelayMs.value,
             autoNext: autoNext.value,
             ambienceExcluded: ambienceExcluded.value,
+            wornTitle: wornTitle.value,
           } satisfies Persisted),
         )
       } catch {
@@ -58,5 +63,12 @@ export const useSettingsStore = defineStore('settings', () => {
     { flush: 'post' },
   )
 
-  return { licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded }
+  return {
+    licensePolicy,
+    autoplayAudio,
+    autoplayDelayMs,
+    autoNext,
+    ambienceExcluded,
+    wornTitle,
+  }
 })

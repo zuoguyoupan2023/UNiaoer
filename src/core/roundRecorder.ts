@@ -4,19 +4,30 @@ import {
   getBadges,
   saveBadges,
   getStats,
+  listRounds,
   type RoundItem,
   type RoundRecord,
 } from './historyDb'
 import { evaluateBadges, type BadgeDef } from './badges'
+import { evaluateTitles, titleLabelAt, TITLE_TRACKS, type EarnedTitle } from './titles'
 
 type QuizStore = ReturnType<typeof useQuizStore>
 
 /** 本轮已落库的标记，避免重复写入（错题计数需幂等） */
 const persisted = new Set<string>()
 
-/** 把当前一轮结果写入本地，并返回本次新获得的徽章 */
-export async function persistRound(quiz: QuizStore): Promise<BadgeDef[]> {
-  if (!quiz.roundId || !quiz.questions.length || persisted.has(quiz.roundId)) return []
+export interface PersistResult {
+  /** 本次新获得的徽章 */
+  badges: BadgeDef[]
+  /** 本次新解锁的称号级（每轨道只提示最高新级） */
+  newTitles: EarnedTitle[]
+}
+
+/** 把当前一轮结果写入本地，并返回本次新获得的徽章与称号 */
+export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
+  if (!quiz.roundId || !quiz.questions.length || persisted.has(quiz.roundId)) {
+    return { badges: [], newTitles: [] }
+  }
   persisted.add(quiz.roundId)
 
   const items: RoundItem[] = quiz.questions.map((q, i) => {
@@ -51,17 +62,49 @@ export async function persistRound(quiz: QuizStore): Promise<BadgeDef[]> {
     accuracy: quiz.accuracy,
     durationMs: quiz.startedAt ? Date.now() - quiz.startedAt : 0,
     items,
+    source: quiz.source,
+    ...(quiz.escapedQuit ? { escapedQuit: true } : {}),
   }
 
   try {
     await saveRound(record)
-    const [stats, earned] = await Promise.all([getStats(), getBadges()])
-    const newBadges = evaluateBadges(stats, new Set(earned.map((b) => b.id)))
-    if (newBadges.length) await saveBadges(newBadges.map((b) => ({ id: b.id, at: Date.now() })))
-    return newBadges
+    const [stats, earned, rounds] = await Promise.all([getStats(), getBadges(), listRounds()])
+    const earnedIds = new Set(earned.map((b) => b.id))
+    const newBadges = evaluateBadges(stats, rounds, earnedIds)
+    if (newBadges.length) {
+      await saveBadges(newBadges.map((b) => ({ id: b.id, at: Date.now() })))
+      for (const b of newBadges) earnedIds.add(b.id)
+    }
+
+    // 称号：逐轨计算当前级；与已标记级（id = title:{trackId}:{level}）diff，新升的每轨只提示最高新级
+    const current = evaluateTitles(stats, rounds)
+    const newTitles: EarnedTitle[] = []
+    const titleMarks: { id: string; at: number }[] = []
+    for (const t of current) {
+      let highestNew: number | null = null
+      for (let lv = 1; lv <= t.level; lv++) {
+        const id = `title:${t.trackId}:${lv}`
+        if (!earnedIds.has(id)) {
+          highestNew = lv
+          titleMarks.push({ id, at: Date.now() })
+          earnedIds.add(id)
+        }
+      }
+      if (highestNew !== null) {
+        const track = TITLE_TRACKS.find((x) => x.id === t.trackId)!
+        newTitles.push({
+          ...t,
+          level: highestNew,
+          label: titleLabelAt(track, highestNew, stats, rounds),
+        })
+      }
+    }
+    if (titleMarks.length) await saveBadges(titleMarks)
+
+    return { badges: newBadges, newTitles }
   } catch (e) {
     console.warn('保存记录失败：', e)
-    return []
+    return { badges: [], newTitles: [] }
   }
 }
 

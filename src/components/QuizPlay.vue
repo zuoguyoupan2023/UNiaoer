@@ -129,7 +129,11 @@ function quitRound() {
     n > 0
       ? `确定退出测试吗？已完成 ${n}/${quiz.total} 题，已答部分将按当前成绩记录（计入错题本与统计），未答题目不计入。`
       : '确定退出测试吗？本轮尚未作答，不会留下任何记录。'
-  if (!confirm(msg)) return
+  if (!confirm(msg)) {
+    // 隐藏徽章"浪子回头"：点了取消留下来继续答（R28）
+    quiz.escapedQuit = true
+    return
+  }
   stopTimer()
   clearAutoNext()
   interferencePlayer.stop()

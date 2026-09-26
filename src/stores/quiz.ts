@@ -28,6 +28,10 @@ export const useQuizStore = defineStore('quiz', () => {
 
   // ---- E1 错题重练：下一轮 start() 只出错误本中的物种；开轮后自动复原 ----
   const wrongPoolOnly = ref(false)
+  /** 本轮来源（落库标记，隐藏徽章/称号统计用，R28） */
+  const source = ref<'normal' | 'wrong-practice'>('normal')
+  /** 退出确认点了「取消」后继续答题（"浪子回头"标记） */
+  const escapedQuit = ref(false)
 
   const current = computed<Question | null>(() => questions.value[index.value] ?? null)
   const currentChoice = computed<string | null>(() => chosen.value[index.value] ?? null)
@@ -70,7 +74,11 @@ export const useQuizStore = defineStore('quiz', () => {
       if (wrongPoolOnly.value) {
         ids = new Set((await getWrongBook()).map((w) => w.speciesId))
         wrongPoolOnly.value = false // 只影响即将开始的这一轮
+        source.value = 'wrong-practice'
+      } else if (!opts.keepSession) {
+        source.value = 'normal'
       }
+      escapedQuit.value = false
       const qs = buildQuestions(bank.species, {
         type,
         count: opts.count ?? 10,
@@ -163,6 +171,8 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionTotal.value = 0
     pendingContinue.value = false
     wrongPoolOnly.value = false
+    source.value = 'normal'
+    escapedQuit.value = false
   }
 
   return {
@@ -188,6 +198,8 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionTotal,
     pendingContinue,
     wrongPoolOnly,
+    source,
+    escapedQuit,
     overallAccuracy,
     start,
     answer,

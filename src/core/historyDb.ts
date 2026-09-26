@@ -30,6 +30,10 @@ export interface RoundRecord {
   accuracy: number
   durationMs: number
   items: RoundItem[]
+  /** 轮次来源：错题重练（隐藏徽章/称号统计用，R28） */
+  source?: 'normal' | 'wrong-practice'
+  /** 退出确认点了「取消」后继续答完本轮（隐藏徽章"浪子回头"，R28） */
+  escapedQuit?: boolean
 }
 
 export interface WrongEntry {
@@ -63,6 +67,31 @@ export interface Stats {
   maxTier: number
   bestStreak: number
   wrongCount: number
+  // ---- 徽章/称号扩展计数（R28，均由 rounds 派生） ----
+  /** L5 地狱轮数 */
+  hellRounds: number
+  /** L5 地狱总题数 / 答对数 */
+  hellQuestions: number
+  hellCorrect: number
+  /** L5 满分轮数 */
+  hellPerfectRounds: number
+  /** 听音版累计答对题数 */
+  audioCorrect: number
+  /** 错题重练轮数 / 其中累计答对题数 */
+  wrongPracticeRounds: number
+  wrongPracticeCorrect: number
+  /** 看图 / 听音满分轮数 */
+  imagePerfectRounds: number
+  audioPerfectRounds: number
+  /** 跨轮连续答对最长（按时间顺序，答错即断） */
+  maxCrossStreak: number
+  /** 答对过的物种数（比 distinctSpecies 更严：不仅要见过，还要对） */
+  distinctCorrect: number
+  /** 存在深夜（23:00–1:00）/ 清晨（5:00–7:00）完成的轮 */
+  nightRound: boolean
+  dawnRound: boolean
+  /** 退出确认取消后答完且满分（"浪子回头"） */
+  escapedQuitPerfect: boolean
 }
 
 const DB_NAME = 'uniaoer'
@@ -233,6 +262,7 @@ function maxStreak(items: RoundItem[]): number {
 export async function getStats(): Promise<Stats> {
   const [rounds, wrong] = await Promise.all([listRounds(), getWrongBook()])
   const species = new Set<string>()
+  const correctSpecies = new Set<string>()
   let totalQuestions = 0
   let totalCorrect = 0
   let bestAccuracy = 0
@@ -240,16 +270,65 @@ export async function getStats(): Promise<Stats> {
   let audioRounds = 0
   let maxTier = 0
   let bestStreak = 0
-  for (const r of rounds) {
+  let hellRounds = 0
+  let hellQuestions = 0
+  let hellCorrect = 0
+  let hellPerfectRounds = 0
+  let audioCorrect = 0
+  let wrongPracticeRounds = 0
+  let wrongPracticeCorrect = 0
+  let imagePerfectRounds = 0
+  let audioPerfectRounds = 0
+  let maxCrossStreak = 0
+  let nightRound = false
+  let dawnRound = false
+  let escapedQuitPerfect = false
+
+  const sorted = [...rounds].sort((a, b) => a.at - b.at)
+  let cross = 0
+  for (const r of sorted) {
     totalQuestions += r.total
     totalCorrect += r.correct
     bestAccuracy = Math.max(bestAccuracy, r.accuracy)
-    if (r.total > 0 && r.correct === r.total) perfectRounds++
+    const isPerfect = r.total > 0 && r.correct === r.total
+    if (isPerfect) {
+      perfectRounds++
+      if (r.mode === 'image') imagePerfectRounds++
+      else audioPerfectRounds++
+    }
     if (r.mode === 'audio') audioRounds++
     maxTier = Math.max(maxTier, r.tier)
     bestStreak = Math.max(bestStreak, maxStreak(r.items))
-    for (const it of r.items) species.add(it.speciesId)
+
+    if (r.tier === 5) {
+      hellRounds++
+      hellQuestions += r.total
+      hellCorrect += r.correct
+      if (isPerfect) hellPerfectRounds++
+    }
+    if (r.source === 'wrong-practice') {
+      wrongPracticeRounds++
+      wrongPracticeCorrect += r.correct
+    }
+    if (r.mode === 'audio') {
+      audioCorrect += r.correct
+    }
+    for (const it of r.items) {
+      species.add(it.speciesId)
+      if (it.correct) {
+        correctSpecies.add(it.speciesId)
+        cross++
+        maxCrossStreak = Math.max(maxCrossStreak, cross)
+      } else {
+        cross = 0
+      }
+    }
+    const hour = new Date(r.at).getHours()
+    if (hour >= 23 || hour < 1) nightRound = true
+    if (hour >= 5 && hour < 7) dawnRound = true
+    if (r.escapedQuit && isPerfect) escapedQuitPerfect = true
   }
+
   return {
     rounds: rounds.length,
     totalQuestions,
@@ -261,6 +340,20 @@ export async function getStats(): Promise<Stats> {
     maxTier,
     bestStreak,
     wrongCount: wrong.length,
+    hellRounds,
+    hellQuestions,
+    hellCorrect,
+    hellPerfectRounds,
+    audioCorrect,
+    wrongPracticeRounds,
+    wrongPracticeCorrect,
+    imagePerfectRounds,
+    audioPerfectRounds,
+    maxCrossStreak,
+    distinctCorrect: correctSpecies.size,
+    nightRound,
+    dawnRound,
+    escapedQuitPerfect,
   }
 }
 
