@@ -13,6 +13,9 @@ const props = defineProps<{
   autoplayDelay?: number
 }>()
 
+/** audio-play：考题音频真正开始播放时触发（听音版计时/干扰以此为起点，R24） */
+const emit = defineEmits<{ 'audio-play': [] }>()
+
 const audioEl = ref<HTMLAudioElement | null>(null)
 const imageLoaded = ref(false)
 const imageFailed = ref(false)
@@ -112,6 +115,7 @@ function closeZoom() {
       >
         <ZoomIn class="ic" :size="16" />
       </button>
+      <span class="corner-left"><slot name="media-corner" /></span>
       <div v-if="!imageLoaded && !imageFailed && !placeholder" class="skeleton">
         <span class="spin"></span> 图片加载中…
       </div>
@@ -121,10 +125,15 @@ function closeZoom() {
     </div>
 
     <template v-else>
-      <audio ref="audioEl" :src="media.url" controls preload="auto"></audio>
-      <p v-if="playBlocked" class="hint">
-        <VolumeX class="ic" :size="15" /> 浏览器拦截了自动播放，请点击播放按钮
-      </p>
+      <div class="audio-row">
+        <audio ref="audioEl" :src="media.url" controls preload="auto" @play="emit('audio-play')"></audio>
+      </div>
+      <div class="audio-under">
+        <slot name="media-corner" />
+        <p v-if="playBlocked" class="hint">
+          <VolumeX class="ic" :size="15" /> 浏览器拦截了自动播放，请点击播放按钮
+        </p>
+      </div>
     </template>
 
     <AttributionLine :media="media" />
@@ -230,6 +239,23 @@ function closeZoom() {
   width: 100%;
   max-width: 440px;
   margin: 12px 0;
+}
+/* 听音版媒体行 + 角标容器（media-corner 由父级填充，R24） */
+.audio-row {
+  display: flex;
+  justify-content: center;
+}
+.audio-under {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 26px;
+}
+/* 图片模式：左下角标与 zoom-btn（右下）对称 */
+.corner-left {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
 }
 .hint {
   font-size: 0.78rem;

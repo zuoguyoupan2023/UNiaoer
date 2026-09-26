@@ -229,7 +229,7 @@ describe('QuizPlay', () => {
     }
   })
 
-  it('退出本轮：已作答 1 题时确认后截断到 1 题并跳结果页', async () => {
+  it('退出测试：已作答 1 题时确认后截断到 1 题并跳结果页', async () => {
     useQuizFakeTimers()
     try {
       window.confirm = vi.fn<() => boolean>(() => true)
@@ -238,7 +238,7 @@ describe('QuizPlay', () => {
       const store = useQuizStore()
       await wrapper.findAll('.option')[0]!.trigger('click')
 
-      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出本轮'))
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出测试'))
       expect(quitBtn).toBeTruthy()
       await quitBtn!.trigger('click')
       await flushPromises()
@@ -252,7 +252,7 @@ describe('QuizPlay', () => {
     }
   })
 
-  it('退出本轮：未作答时确认后不留记录并回首页', async () => {
+  it('退出测试：未作答时确认后不留记录并回首页', async () => {
     useQuizFakeTimers()
     try {
       window.confirm = vi.fn<() => boolean>(() => true)
@@ -261,7 +261,7 @@ describe('QuizPlay', () => {
       const store = useQuizStore()
       expect(store.answeredCount).toBe(0)
 
-      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出本轮'))
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出测试'))
       await quitBtn!.trigger('click')
       await flushPromises()
 
@@ -272,7 +272,7 @@ describe('QuizPlay', () => {
     }
   })
 
-  it('退出本轮：确认框取消则继续答题', async () => {
+  it('退出测试：确认框取消则继续答题', async () => {
     useQuizFakeTimers()
     try {
       window.confirm = vi.fn<() => boolean>(() => false)
@@ -281,7 +281,7 @@ describe('QuizPlay', () => {
       const store = useQuizStore()
       await wrapper.findAll('.option')[0]!.trigger('click')
 
-      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出本轮'))
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出测试'))
       await quitBtn!.trigger('click')
       await flushPromises()
 

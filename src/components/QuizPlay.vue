@@ -52,6 +52,8 @@ const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.cu
 
 // ---- 计时 ----
 const timeLeft = ref<number | null>(null)
+/** 本题计时是否已真正开始（听音版等考题音频开播，R24） */
+const timerBegun = ref(false)
 let tick: number | undefined
 
 /** D1：限时题前段隐藏选项（缺省 1/3；L1 固定前 5s），revealInSec 为出现前倒计时秒数 */
@@ -68,14 +70,18 @@ function stopTimer() {
     tick = undefined
   }
 }
-function startTimer() {
+
+/** 把计时冻结在满值显示（听音版音频未开播时不倒数，R24） */
+function resetTimer() {
   stopTimer()
   const q = quiz.current
-  if (!q?.timeLimitSec || quiz.answered) {
-    timeLeft.value = null
-    return
-  }
-  timeLeft.value = q.timeLimitSec
+  timeLeft.value = q?.timeLimitSec ?? null
+}
+
+/** 真正开始倒数：看图=切题即开始；听音=考题音频开播后（R24） */
+function startTimer() {
+  resetTimer()
+  if (timeLeft.value === null || quiz.answered) return
   tick = window.setInterval(() => {
     if (timeLeft.value === null) return
     timeLeft.value -= 1
@@ -116,16 +122,17 @@ function goNext() {
   quiz.next()
 }
 
-/** 中途退出本轮：已作答部分按"截至成绩"落库（错题本/统计同步），未答题目不计 */
+/** 中途退出测试：已作答部分按"截至成绩"落库（错题本/统计同步），未答题目不计 */
 function quitRound() {
   const n = quiz.answeredCount
   const msg =
     n > 0
-      ? `确定退出本轮吗？已完成 ${n}/${quiz.total} 题，已答部分将按当前成绩记录（计入错题本与统计），未答题目不计入。`
-      : '确定退出本轮吗？本轮尚未作答，不会留下任何记录。'
+      ? `确定退出测试吗？已完成 ${n}/${quiz.total} 题，已答部分将按当前成绩记录（计入错题本与统计），未答题目不计入。`
+      : '确定退出测试吗？本轮尚未作答，不会留下任何记录。'
   if (!confirm(msg)) return
   stopTimer()
   clearAutoNext()
+  interferencePlayer.stop()
   if (n === 0) {
     quiz.reset()
     router.push('/')
@@ -141,18 +148,37 @@ async function begin() {
   ambiencePlayer.stop()
   await quiz.start(props.type, { tier: tier.value })
   preloadQuestions(quiz.questions, 0, 4) // 当前题 + 后 3 题
+  beginQuestionTiming()
+  updateInterference()
+}
+
+/** 每题计时/干扰的启动点：看图=切题即开始；听音=考题音频开播后（R24） */
+function beginQuestionTiming() {
+  timerBegun.value = false
+  if (props.type === 'image') {
+    timerBegun.value = true
+    startTimer()
+  } else {
+    resetTimer() // 冻结在满值，等 MediaCard 的 audio-play
+  }
+}
+
+/** 听音版考题音频开播：计时开始；L5 地狱此时才启动干扰音 */
+function onQuestionAudioPlay() {
+  if (quiz.answered || timerBegun.value) return
+  timerBegun.value = true
   startTimer()
   updateInterference()
 }
 
-/** L5 地狱：每题随机鸟鸣干扰（看图 2 条 / 听音 1 条）；作答或非地狱难度即停止 */
+/** L5 地狱干扰：看图 2 条切题即启；听音 1 条等考题音频开播；作答即停 */
 function updateInterference() {
   const q = quiz.current
-  if (quiz.tier === 5 && q && !quiz.answered) {
-    void interferencePlayer.start(q.type === 'image' ? 2 : 1, q.type === 'image' ? 0.35 : 0.25)
-  } else {
+  if (quiz.tier !== 5 || !q || quiz.answered || !timerBegun.value) {
     interferencePlayer.stop()
+    return
   }
+  void interferencePlayer.start(q.type === 'image' ? 2 : 1, q.type === 'image' ? 0.35 : 0.25)
 }
 
 onMounted(() => {
@@ -162,7 +188,7 @@ onMounted(() => {
     // 从结果页续轮也是"测试开始"：环境鸟鸣停播
     ambiencePlayer.stop()
     preloadQuestions(quiz.questions, 0, 4)
-    startTimer()
+    beginQuestionTiming()
     updateInterference()
   } else {
     // 清掉上一轮残留（结果页/切模式后再进入时），让介绍页回到"非答题中"状态
@@ -183,8 +209,8 @@ watch(
   (i) => {
     clearAutoNext()
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
-    startTimer()
-    updateInterference() // 地狱难度：新题换一批随机干扰
+    beginQuestionTiming() // 计时起点：看图立即 / 听音等音频开播（R24）
+    updateInterference()
   },
 )
 watch(
@@ -296,15 +322,18 @@ function onTouchEnd(e: TouchEvent) {
   <!-- 答题 -->
   <template v-else-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
+    <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
-      <span>
-        第 {{ quiz.index + 1 }} / {{ quiz.total }} 题
+      <span class="sb-left">
         <span class="tier-tag">{{ TIERS[quiz.current.tier].label }}</span>
       </span>
-      <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= 3 }">
-        <Timer class="ic" :size="14" /> {{ timeLeft }}s
+      <span class="sb-mid">第 {{ quiz.index + 1 }} / {{ quiz.total }} 题</span>
+      <span class="sb-right">
+        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= 3 }">
+          <Timer class="ic" :size="14" /> {{ timeLeft }}s
+        </span>
+        <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
       </span>
-      <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
     </div>
 
     <div class="card" @touchstart.passive="onTouchStart" @touchend="onTouchEnd">
@@ -314,7 +343,14 @@ function onTouchEnd(e: TouchEvent) {
         :media="quiz.current.media"
         :autoplay="quiz.current.type === 'audio' && quiz.index >= 1 && settings.autoplayAudio"
         :autoplay-delay="settings.autoplayDelayMs"
-      />
+        @audio-play="onQuestionAudioPlay"
+      >
+        <template #media-corner>
+          <button class="quit-corner" type="button" @click="quitRound">
+            <LogOut class="ic" :size="13" /> 退出测试
+          </button>
+        </template>
+      </MediaCard>
 
       <OptionList
         :options="quiz.current.options"
@@ -340,18 +376,15 @@ function onTouchEnd(e: TouchEvent) {
           <ArrowRight class="ic" :size="16" />
         </button>
       </div>
-      <!-- 底部提示与退出合并为一行，避免占高（R20） -->
-      <div class="quiz-foot">
-        <span v-if="quiz.answered && !autoPending" class="foot-hint">
+      <!-- 底部提示（退出测试已移至媒体左下角，R24） -->
+      <div v-if="quiz.answered" class="quiz-foot">
+        <span v-if="!autoPending" class="foot-hint">
           <Keyboard class="ic" :size="13" /> 按 <ArrowRight class="ic" :size="12" /> 或空格 ·
           <Smartphone class="ic" :size="13" /> 左滑进下一题
         </span>
-        <span v-else-if="autoPending" class="foot-hint">
+        <span v-else class="foot-hint">
           <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
         </span>
-        <button class="quit-link" type="button" @click="quitRound">
-          <LogOut class="ic" :size="13" /> 退出本轮
-        </button>
       </div>
     </div>
   </template>
@@ -437,17 +470,28 @@ function onTouchEnd(e: TouchEvent) {
 .intro .btn {
   min-width: 180px;
 }
+/* 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） */
 .status-bar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  margin-bottom: 14px;
-  font-size: 0.86rem;
-  color: var(--text-light);
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
 }
-.status-bar > span {
+.sb-left {
+  justify-self: start;
+}
+.sb-mid {
   font-weight: 700;
   color: var(--text);
+}
+.sb-right {
+  justify-self: end;
+  font-weight: 700;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
 }
 .tier-tag {
   display: inline-block;
@@ -520,22 +564,24 @@ function onTouchEnd(e: TouchEvent) {
   align-items: center;
   gap: 4px;
 }
-.quit-link {
+.quit-corner {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
   color: var(--text-light);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   cursor: pointer;
+  backdrop-filter: blur(4px);
   transition: all 0.18s ease;
 }
-.quit-link:hover {
+.quit-corner:hover {
   color: var(--wrong);
-  background: #fdecee;
+  border-color: var(--wrong);
+  background: #fff;
 }
 .spinner {
   width: 46px;
