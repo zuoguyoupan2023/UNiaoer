@@ -52,7 +52,8 @@ export interface PosterOptions {
 }
 
 /** 官网地址（二维码默认指向；正式域名确定后替换） */
-export const DEFAULT_SITE_URL = 'https://uniaoer.pages.dev'
+/** 官网地址（二维码默认指向；R35：正式域名 uniaoer.com，已绑定 Pages） */
+export const DEFAULT_SITE_URL = 'https://uniaoer.com'
 
 /** 海报错题区最多展示条数（左右各 4） */
 export const POSTER_WRONG_MAX = 8

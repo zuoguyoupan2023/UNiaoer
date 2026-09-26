@@ -296,15 +296,15 @@ async function onFile(e: Event) {
       <h3 class="block-title">佩戴</h3>
       <div class="wear-grid">
         <div class="wear-item">
+          <button class="btn btn-secondary wear-change" @click="pickerOpen = !pickerOpen">
+            {{ pickerOpen ? '收起' : '更换' }}
+          </button>
           <div class="wear-line">
-            <Sparkles class="ic" :size="21" />
+            <Sparkles class="ic" :size="26" />
             <div class="wear-text">
               <span class="muted">称号</span>
               <strong>{{ wornLabel || '未佩戴' }}</strong>
             </div>
-            <button class="btn btn-secondary btn-sm" @click="pickerOpen = !pickerOpen">
-              {{ pickerOpen ? '收起' : '更换' }}
-            </button>
           </div>
           <div v-if="pickerOpen" class="title-options">
             <button
@@ -327,15 +327,15 @@ async function onFile(e: Event) {
           </div>
         </div>
         <div class="wear-item">
+          <button class="btn btn-secondary wear-change" @click="badgePickerOpen = !badgePickerOpen">
+            {{ badgePickerOpen ? '收起' : '更换' }}
+          </button>
           <div class="wear-line">
-            <Award class="ic" :size="21" />
+            <Award class="ic" :size="26" />
             <div class="wear-text">
               <span class="muted">徽章</span>
               <strong>{{ wornBadgeLabel || '未佩戴' }}</strong>
             </div>
-            <button class="btn btn-secondary btn-sm" @click="badgePickerOpen = !badgePickerOpen">
-              {{ badgePickerOpen ? '收起' : '更换' }}
-            </button>
           </div>
           <div v-if="badgePickerOpen" class="title-options">
             <button
@@ -530,10 +530,33 @@ h2.sec {
   font-size: 0.78rem;
   color: var(--wrong);
 }
-.wear-line .btn {
-  padding: 4px 10px; /* R34：更换按钮缩小（字号/内间距） */
-  font-size: 0.7rem;
-  border-radius: 8px;
+.wear-item {
+  position: relative;
+}
+/* R35：更换按钮固定在佩戴区右上角 */
+.wear-change {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 12px;
+  font-size: 0.72rem;
+  border-radius: 9px;
+}
+.wear-line {
+  padding-right: 72px; /* 给右上角按钮让位 */
+}
+.wear-line .ic {
+  width: 26px;
+  height: 26px;
+}
+@media (max-width: 640px) {
+  .wear-line {
+    padding-right: 64px;
+  }
+  .wear-line .ic {
+    width: 21px;
+    height: 21px;
+  }
 }
 /* ---- 数据 ---- */
 .stat-grid {

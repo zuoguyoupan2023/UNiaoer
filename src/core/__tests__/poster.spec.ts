@@ -62,7 +62,7 @@ describe('海报 · 背景（F1）', () => {
 })
 
 describe('海报 · 官网二维码（F4）', () => {
-  it('默认指向官网地址', () => {
-    expect(DEFAULT_SITE_URL).toBe('https://uniaoer.pages.dev')
+  it('默认指向官网地址（R35：正式域名 uniaoer.com）', () => {
+    expect(DEFAULT_SITE_URL).toBe('https://uniaoer.com')
   })
 })
