@@ -19,6 +19,8 @@ export interface PosterData {
   round?: number
   /** F3：本次 session 的整体正确率（含本轮） */
   overallAccuracy?: number
+  /** R30：佩戴的称号（有则显示在日期旁） */
+  wornTitle?: string
   wrong: PosterWrong[]
 }
 
@@ -279,9 +281,10 @@ export function drawPoster(
 
   ctx.textBaseline = 'alphabetic'
 
-  // 顶部标题（无 emoji、无“鸟语识别”）
+  // 顶部标题（无 emoji、无“鸟语识别”）；佩戴称号显示在日期旁（R30）
+  const dateLine = data.wornTitle ? `${data.date} · ${data.wornTitle}` : data.date
   drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: 56 }], W / 2, 118, 'center', box)
-  drawSegments(ctx, [{ text: data.date, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
+  drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
   // 右上角模式标签
   ctx.font = `700 32px ${FONT}`

@@ -89,6 +89,23 @@ export function buildShuffledQueue(ids: string[], lastId?: string): string[] {
   return a
 }
 
+/** 体积最小的音轨（0.1MB）：index.html preload + 环境鸟鸣首发 */
+export const FIRST_TRACK_ID = 'animals/owl'
+
+/**
+ * 背景音启动队列（R30）：首发音（preload 的小文件）打头，其余乱序跟上；
+ * 首发音被用户取消勾选时退化为纯乱序。
+ */
+export function buildStartQueue(
+  checkedIds: string[],
+  firstId = FIRST_TRACK_ID,
+  lastId?: string,
+): string[] {
+  if (!checkedIds.includes(firstId)) return buildShuffledQueue(checkedIds, lastId)
+  const rest = checkedIds.filter((id) => id !== firstId)
+  return [firstId, ...buildShuffledQueue(rest)]
+}
+
 // ---------- 播放器（单例） ----------
 
 export interface AmbienceState {
@@ -140,15 +157,16 @@ class AmbiencePlayer {
     return a
   }
 
-  /** 一键播放：加载目录 → 按勾选过滤 → 从乱序队列开始 */
+  /** 一键播放：加载目录 → 按勾选过滤 → 首发音打头 + 乱序队列 */
   async start(): Promise<void> {
     const all = await loadBirdTracks()
     prewarmBirdTracks() // 后台预热其余音轨（R25）：之后切题/重播都是本地命中
     const checked = all.filter((t) => !this.getExcluded().includes(t.id))
     if (!checked.length) throw new Error('没有已勾选的鸟叫音轨（请到设置中勾选）')
     this.failCount = 0
-    this.queue = buildShuffledQueue(
+    this.queue = buildStartQueue(
       checked.map((t) => t.id),
+      FIRST_TRACK_ID,
       state.currentId ?? undefined,
     )
     this.ensureAudio()

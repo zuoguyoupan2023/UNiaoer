@@ -14,6 +14,8 @@ interface Persisted {
   ambienceExcluded: string[]
   /** 佩戴的称号轨道 id（009）；null = 不佩戴 */
   wornTitle: string | null
+  /** 环境鸟鸣开关（R30）：默认开启，进入应用自动播放（被浏览器拦截则在首次手势后重试） */
+  ambienceEnabled: boolean
 }
 
 function load(): Partial<Persisted> {
@@ -40,9 +42,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const ambienceExcluded = ref<string[]>(saved.ambienceExcluded ?? [])
   /** 佩戴称号（轨道 id；称号文本由当前数据实时派生） */
   const wornTitle = ref<string | null>(saved.wornTitle ?? null)
+  /** 环境鸟鸣开关（默认开；用户手动关闭后记住，不再自动播放） */
+  const ambienceEnabled = ref<boolean>(saved.ambienceEnabled ?? true)
 
   watch(
-    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded, wornTitle],
+    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded, wornTitle, ambienceEnabled],
     () => {
       try {
         localStorage.setItem(
@@ -54,6 +58,7 @@ export const useSettingsStore = defineStore('settings', () => {
             autoNext: autoNext.value,
             ambienceExcluded: ambienceExcluded.value,
             wornTitle: wornTitle.value,
+            ambienceEnabled: ambienceEnabled.value,
           } satisfies Persisted),
         )
       } catch {
@@ -70,5 +75,6 @@ export const useSettingsStore = defineStore('settings', () => {
     autoNext,
     ambienceExcluded,
     wornTitle,
+    ambienceEnabled,
   }
 })

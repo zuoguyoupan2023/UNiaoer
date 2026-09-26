@@ -238,7 +238,7 @@ describe('QuizPlay', () => {
       const store = useQuizStore()
       await wrapper.findAll('.option')[0]!.trigger('click')
 
-      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出测试'))
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出'))
       expect(quitBtn).toBeTruthy()
       await quitBtn!.trigger('click')
       await flushPromises()
@@ -261,7 +261,7 @@ describe('QuizPlay', () => {
       const store = useQuizStore()
       expect(store.answeredCount).toBe(0)
 
-      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出测试'))
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出'))
       await quitBtn!.trigger('click')
       await flushPromises()
 
@@ -281,7 +281,7 @@ describe('QuizPlay', () => {
       const store = useQuizStore()
       await wrapper.findAll('.option')[0]!.trigger('click')
 
-      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出测试'))
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出'))
       await quitBtn!.trigger('click')
       await flushPromises()
 

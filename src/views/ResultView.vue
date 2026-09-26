@@ -14,8 +14,11 @@ import {
   Trophy,
 } from 'lucide-vue-next'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
+import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
+import { getStats, listRounds } from '@/core/historyDb'
+import { evaluateTitles } from '@/core/titles'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import type { BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
@@ -30,6 +33,8 @@ const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音认鸟' : '看�
 const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
 const newBadges = ref<BadgeDef[]>([])
 const newTitleLabels = ref<string[]>([])
+const wornTitleLabel = ref('')
+const settings = useSettingsStore()
 const showPoster = ref(false)
 
 const message = computed<{ icon: Component; text: string }>(() => {
@@ -59,6 +64,7 @@ const posterData = computed<PosterData>(() => {
     date: new Date().toLocaleDateString('zh-CN'),
     round: quiz.sessionRound,
     overallAccuracy: quiz.overallAccuracy,
+    wornTitle: wornTitleLabel.value || undefined,
     wrong,
   }
 })
@@ -90,6 +96,10 @@ onMounted(async () => {
   const res = await persistRound(quiz)
   newBadges.value = res.badges
   newTitleLabels.value = res.newTitles.map((t) => t.label)
+  // 佩戴称号 → 海报（R30）
+  const [stats, rounds] = await Promise.all([getStats(), listRounds()])
+  wornTitleLabel.value =
+    evaluateTitles(stats, rounds).find((t) => t.trackId === settings.wornTitle)?.label ?? ''
 })
 
 async function again() {

@@ -122,6 +122,9 @@ function goNext() {
   quiz.next()
 }
 
+/** 计时变红的最后秒数：L4/L5 为 3s，其余 5s（R30） */
+const warnThreshold = computed(() => (quiz.current && quiz.current.tier >= 4 ? 3 : 5))
+
 /** 中途退出测试：已作答部分按"截至成绩"落库（错题本/统计同步），未答题目不计 */
 function quitRound() {
   const n = quiz.answeredCount
@@ -334,7 +337,7 @@ function onTouchEnd(e: TouchEvent) {
       </span>
       <span class="sb-mid">第 {{ quiz.index + 1 }} / {{ quiz.total }} 题</span>
       <span class="sb-right">
-        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= 3 }">
+        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
         <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
@@ -352,7 +355,7 @@ function onTouchEnd(e: TouchEvent) {
       >
         <template #media-corner>
           <button class="quit-corner" type="button" @click="quitRound">
-            <LogOut class="ic" :size="13" /> 退出测试
+            <LogOut class="ic" :size="13" /> 退出
           </button>
         </template>
       </MediaCard>
@@ -518,6 +521,7 @@ function onTouchEnd(e: TouchEvent) {
 .timer.warn {
   color: var(--wrong);
   background: #fdecee;
+  font-size: 1rem; /* R30：警告期字号变大（比正常大 2 号），更醒目 */
   animation: pulse 1s infinite;
 }
 @keyframes pulse {

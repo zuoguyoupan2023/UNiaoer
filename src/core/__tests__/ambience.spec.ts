@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildShuffledQueue, pickRandomTracks } from '../ambience'
+import { buildShuffledQueue, buildStartQueue, pickRandomTracks } from '../ambience'
 const CATALOG = {
   items: [
     {
@@ -153,5 +153,28 @@ describe('prewarmBirdTracks（音轨预热，R25）', () => {
     const urls = mp3Calls.map((c) => String(c[0]))
     expect(new Set(urls).size).toBe(2)
     expect(urls.every((u) => !u.endsWith('categories.json'))).toBe(true)
+  })
+})
+
+describe('buildStartQueue（背景音首发，R30）', () => {
+  it('首发音（owl，体积最小）打头，其余乱序跟上', () => {
+    const ids = ['animals/owl', 'animals/birds', 'animals/crows', 'animals/seagulls']
+    for (let i = 0; i < 20; i++) {
+      const q = buildStartQueue(ids)
+      expect(q[0]).toBe('animals/owl')
+      expect([...q].sort()).toEqual([...ids].sort())
+    }
+  })
+
+  it('首发音被取消勾选时退化为纯乱序', () => {
+    const ids = ['animals/birds', 'animals/crows']
+    const q = buildStartQueue(ids)
+    expect([...q].sort()).toEqual([...ids].sort())
+  })
+
+  it('不修改入参数组', () => {
+    const ids = ['animals/owl', 'x', 'y']
+    buildStartQueue(ids)
+    expect(ids[0]).toBe('animals/owl')
   })
 })

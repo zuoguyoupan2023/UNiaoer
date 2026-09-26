@@ -4,7 +4,7 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { Bird, Volume2, VolumeX } from 'lucide-vue-next'
 import { useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
-import { ambiencePlayer, subscribeAmbience } from '@/core/ambience'
+import { ambiencePlayer, getAmbienceState, subscribeAmbience } from '@/core/ambience'
 
 const route = useRoute()
 const quiz = useQuizStore()
@@ -17,14 +17,42 @@ onMounted(() => {
   subscribeAmbience((s) => {
     ambienceOn.value = s.playing
   })
+  // R30：默认自动播放。浏览器拦截（无手势）时，首次用户交互后重试一次；
+  // 用户手动关闭过（ambienceEnabled=false）则不自动播
+  if (settings.ambienceEnabled) {
+    void tryStartAmbience().then((ok) => {
+      if (!ok) armGestureRetry()
+    })
+  }
 })
 
-async function toggleAmbience() {
+async function tryStartAmbience() {
   try {
-    if (ambienceOn.value) ambiencePlayer.stop()
-    else await ambiencePlayer.start()
-  } catch (e) {
-    console.warn('环境鸟鸣启动失败：', e)
+    await ambiencePlayer.start()
+    // start() 内部把连续失败的自动播放自行 stop（如无手势被拦截）——以实际状态为准
+    return getAmbienceState().playing
+  } catch {
+    return false // 目录加载失败
+  }
+}
+
+/** 首次手势后重试自动播放（一次性） */
+function armGestureRetry() {
+  const once = () => {
+    document.removeEventListener('keydown', once)
+    if (settings.ambienceEnabled && !ambienceOn.value) void tryStartAmbience()
+  }
+  document.addEventListener('pointerdown', once, { once: true, passive: true })
+  document.addEventListener('keydown', once)
+}
+
+async function toggleAmbience() {
+  if (ambienceOn.value) {
+    ambiencePlayer.stop()
+    settings.ambienceEnabled = false // 手动关闭后记住，不再自动播放
+  } else {
+    settings.ambienceEnabled = true
+    await tryStartAmbience()
   }
 }
 /**
