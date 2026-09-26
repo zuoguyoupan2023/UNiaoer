@@ -17,7 +17,7 @@ onMounted(() => {
   subscribeAmbience((s) => {
     ambienceOn.value = s.playing
   })
-  // R30：默认自动播放。浏览器拦截（无手势）时，首次用户交互后重试一次；
+  // R30/R37：默认自动播放。被浏览器拦截（无手势/无痕模式）时，持续监听用户交互重试直到成功；
   // 用户手动关闭过（ambienceEnabled=false）则不自动播
   if (settings.ambienceEnabled) {
     void tryStartAmbience().then((ok) => {
@@ -36,14 +36,22 @@ async function tryStartAmbience() {
   }
 }
 
-/** 首次手势后重试自动播放（一次性） */
+/** 持续监听用户交互重试自动播放（R37）：移动端首次触屏可能仍未获播放授权，直到成功为止 */
+let gestureRetryArmed = false
 function armGestureRetry() {
+  if (gestureRetryArmed) return
+  gestureRetryArmed = true
+  const events = ['pointerdown', 'touchend', 'keydown', 'click'] as const
   const once = () => {
-    document.removeEventListener('keydown', once)
-    if (settings.ambienceEnabled && !ambienceOn.value) void tryStartAmbience()
+    for (const e of events) document.removeEventListener(e, once)
+    gestureRetryArmed = false
+    if (settings.ambienceEnabled && !getAmbienceState().playing) {
+      void tryStartAmbience().then((ok) => {
+        if (!ok) armGestureRetry() // 这次交互仍未获授权，等下一次
+      })
+    }
   }
-  document.addEventListener('pointerdown', once, { once: true, passive: true })
-  document.addEventListener('keydown', once)
+  for (const e of events) document.addEventListener(e, once, { once: true, passive: true })
 }
 
 async function toggleAmbience() {

@@ -88,6 +88,7 @@ const titleWall = computed(() => {
     return {
       id: track.id,
       name: track.name,
+      icon: track.icon,
       earned: !!earned,
       label: earned?.label ?? track.name,
       level: earned?.level ?? 0,
@@ -366,7 +367,7 @@ async function onFile(e: Event) {
       <p v-if="loading" class="muted">加载中…</p>
       <div v-else class="badge-grid">
         <div v-for="t in titleWall" :key="t.id" class="badge" :class="{ locked: !t.earned }">
-          <BadgeIcon class="badge-icon" name="sparkles" :size="26" />
+          <BadgeIcon class="badge-icon" :name="t.icon" :size="26" />
           <span class="label">{{ t.label }}</span>
           <span class="desc">{{ t.earned ? `${t.name} · Lv.${t.level}` : t.nextText }}</span>
         </div>

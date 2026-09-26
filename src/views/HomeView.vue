@@ -22,7 +22,7 @@ onMounted(async () => {
 
 <template>
   <section class="card center">
-    <h2 class="pick-title">选择玩法</h2>
+    <h2 class="pick-title">是时候挑战一下自己了！</h2>
     <p class="muted lead">用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。</p>
 
     <p v-if="stats" class="bank-stats">

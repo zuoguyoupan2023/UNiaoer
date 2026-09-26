@@ -13,6 +13,8 @@ export interface TitleLevel {
 export interface TitleTrackDef {
   id: string
   name: string
+  /** 轨道独特图标（lucide 名称，R37：称号墙/佩戴选择器/海报识别用） */
+  icon: string
   metric: (s: Stats, rounds: RoundRecord[]) => number
   levels: TitleLevel[]
   /** 特殊轨道的称号文本（T7 物种之友带物种名）；缺省用 level.label */
@@ -74,6 +76,7 @@ function topSpeciesCorrect(rounds: RoundRecord[]): { count: number; name: string
 export const TITLE_TRACKS: TitleTrackDef[] = [
   {
     id: 'volume',
+    icon: 'feather',
     name: '题量',
     metric: (s) => s.totalQuestions,
     levels: [
@@ -84,6 +87,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'collection',
+    icon: 'book-open',
     name: '物种图谱',
     metric: (s) => s.distinctSpecies,
     levels: [
@@ -94,6 +98,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'streak',
+    icon: 'flame',
     name: '连对',
     metric: (s) => s.bestStreak,
     levels: [
@@ -104,6 +109,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'perfect',
+    icon: 'medal',
     name: '满分轮',
     metric: (s) => s.perfectRounds,
     levels: [
@@ -114,6 +120,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'audio',
+    icon: 'headphones',
     name: '听音专精',
     metric: (s) => s.audioRounds,
     levels: [
@@ -124,6 +131,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'hell',
+    icon: 'skull',
     name: '地狱',
     metric: (s) => s.hellRounds,
     levels: [
@@ -134,6 +142,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'rank',
+    icon: 'crown',
     name: '水平段位',
     metric: (_s, rounds) => levelScore(rounds),
     // threshold 0 = 人人起步身份；段位跟随分数可升降
@@ -147,6 +156,7 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
   },
   {
     id: 'species-friend',
+    icon: 'heart-handshake',
     name: '物种之友',
     metric: (_s, rounds) => topSpeciesCorrect(rounds).count,
     label: (_s, rounds) => {

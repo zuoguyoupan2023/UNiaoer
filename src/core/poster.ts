@@ -259,6 +259,31 @@ function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptio
   ctx.fillText('扫码访问官网', x + size / 2, y + size + 22)
 }
 
+/** 星芒（称号胶囊图标，R37） */
+function drawSparkle(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string) {
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(cx, cy - r)
+  ctx.quadraticCurveTo(cx, cy, cx + r, cy)
+  ctx.quadraticCurveTo(cx, cy, cx, cy + r)
+  ctx.quadraticCurveTo(cx, cy, cx - r, cy)
+  ctx.quadraticCurveTo(cx, cy, cx, cy - r)
+  ctx.fill()
+}
+
+/** 奖牌（徽章胶囊图标，R37） */
+function drawMedal(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string) {
+  ctx.strokeStyle = color
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2)
+  ctx.fillStyle = color
+  ctx.fill()
+}
+
 export function drawPoster(
   canvas: HTMLCanvasElement,
   data: PosterData,
@@ -291,24 +316,36 @@ export function drawPoster(
   drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: 56 }], W / 2, 118, 'center', box)
   drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
-  // 佩戴称号/徽章胶囊（R33）：醒目横排，无则不占位
-  const chips = [data.wornTitle, data.wornBadge].filter(Boolean) as string[]
+  // 佩戴称号/徽章胶囊（R37 放大 + 图标）：无则不占位
+  const chips: { label: string; kind: 'title' | 'badge' }[] = []
+  if (data.wornTitle) chips.push({ label: data.wornTitle, kind: 'title' })
+  if (data.wornBadge) chips.push({ label: data.wornBadge, kind: 'badge' })
   if (chips.length) {
-    ctx.font = `700 30px ${FONT}`
-    const padX = 30
-    const gap = 22
-    const widths = chips.map((c) => ctx.measureText(c).width + padX * 2)
+    const chipText = 40
+    const iconSlot = 52
+    const padX = 34
+    const gap = 24
+    const ch = 84
+    const cy = 208
+    ctx.font = `700 ${chipText}px ${FONT}`
+    const widths = chips.map(
+      (c) => padX * 2 + iconSlot + ctx.measureText(c.label).width,
+    )
     const total = widths.reduce((a, b) => a + b, 0) + gap * (chips.length - 1)
     let cx = (W - total) / 2
-    const cy = 222
-    const ch = 58
     for (let i = 0; i < chips.length; i++) {
       ctx.fillStyle = P.chipBg
-      roundRect(ctx, cx, cy, widths[i]!, ch, 29)
+      roundRect(ctx, cx, cy, widths[i]!, ch, 42)
       ctx.fill()
+      const iconCx = cx + padX + 22
+      const iconCy = cy + ch / 2
+      const textColor = P.chipText
+      if (chips[i]!.kind === 'title') drawSparkle(ctx, iconCx, iconCy, 19, textColor)
+      else drawMedal(ctx, iconCx, iconCy, 15, textColor)
       ctx.fillStyle = P.chipText
-      ctx.textAlign = 'center'
-      ctx.fillText(chips[i]!, cx + widths[i]! / 2, cy + 40)
+      ctx.textAlign = 'left'
+      ctx.font = `700 ${chipText}px ${FONT}`
+      ctx.fillText(chips[i]!.label, cx + padX + iconSlot, cy + ch / 2 + chipText * 0.36)
       cx += widths[i]! + gap
     }
   }

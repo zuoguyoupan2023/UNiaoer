@@ -11,6 +11,7 @@ import {
   Crosshair,
   Ear,
   Egg,
+  Feather,
   Flame,
   Footprints,
   Headphones,
@@ -34,6 +35,7 @@ const props = defineProps<{ name: string; size?: number }>()
 
 const MAP: Record<string, Component> = {
   egg: Egg,
+  feather: Feather,
   'badge-check': BadgeCheck,
   target: Target,
   headphones: Headphones,
