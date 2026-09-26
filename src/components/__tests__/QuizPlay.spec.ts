@@ -3,9 +3,11 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import type { Manifest, BankSpecies } from '@/core/bank'
 
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn<() => Promise<void>>() }))
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    push: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    push: pushMock,
     replace: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   }),
   RouterLink: { template: '<a><slot /></a>' },
@@ -84,7 +86,10 @@ async function startRevealed(wrapper: VueWrapper, label: string, advanceMs: numb
 }
 
 describe('QuizPlay', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    pushMock.mockClear()
+  })
 
   it('切到下一题后，图片 src 会变化', async () => {
     useQuizFakeTimers()
@@ -219,6 +224,70 @@ describe('QuizPlay', () => {
       vi.advanceTimersByTime(2000)
       await flushPromises()
       expect(store.index).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('退出本轮：已作答 1 题时确认后截断到 1 题并跳结果页', async () => {
+    useQuizFakeTimers()
+    try {
+      window.confirm = vi.fn<() => boolean>(() => true)
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      await wrapper.findAll('.option')[0]!.trigger('click')
+
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出本轮'))
+      expect(quitBtn).toBeTruthy()
+      await quitBtn!.trigger('click')
+      await flushPromises()
+
+      expect(store.questions.length).toBe(1)
+      expect(store.chosen.length).toBe(1)
+      expect(store.answeredCount).toBe(1)
+      expect(pushMock).toHaveBeenCalledWith('/result')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('退出本轮：未作答时确认后不留记录并回首页', async () => {
+    useQuizFakeTimers()
+    try {
+      window.confirm = vi.fn<() => boolean>(() => true)
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      expect(store.answeredCount).toBe(0)
+
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出本轮'))
+      await quitBtn!.trigger('click')
+      await flushPromises()
+
+      expect(store.questions.length).toBe(0)
+      expect(pushMock).toHaveBeenCalledWith('/')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('退出本轮：确认框取消则继续答题', async () => {
+    useQuizFakeTimers()
+    try {
+      window.confirm = vi.fn<() => boolean>(() => false)
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      await wrapper.findAll('.option')[0]!.trigger('click')
+
+      const quitBtn = wrapper.findAll('button').find((b) => b.text().includes('退出本轮'))
+      await quitBtn!.trigger('click')
+      await flushPromises()
+
+      expect(store.questions.length).toBe(3) // mock 题库只有 3 种
+      expect(pushMock).not.toHaveBeenCalledWith('/result')
+      expect(pushMock).not.toHaveBeenCalledWith('/')
     } finally {
       vi.useRealTimers()
     }

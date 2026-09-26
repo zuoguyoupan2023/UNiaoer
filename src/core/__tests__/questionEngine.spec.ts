@@ -79,6 +79,21 @@ describe('buildQuestions', () => {
     const qs = buildQuestions(bank, { type: 'image', count: 2 })
     expect(qs.length).toBe(2)
   })
+
+  it('E1 speciesIds：只从指定集合出题，干扰项仍可来自全库', () => {
+    const ids = new Set(['a', 'c'])
+    const qs = buildQuestions(bank, { type: 'image', count: 10, speciesIds: ids })
+    expect(qs.length).toBe(2)
+    expect(qs.every((q) => ['a', 'c'].includes(q.media.speciesId))).toBe(true)
+    // 干扰项不限于错题池（否则选项太少）
+    const allOpts = qs.flatMap((q) => q.options)
+    expect(allOpts.length).toBeGreaterThan(new Set(qs.map((q) => q.answer)).size)
+  })
+
+  it('E1 speciesIds 命中无素材物种时被过滤，可能为空', () => {
+    const qs = buildQuestions(bank, { type: 'image', count: 10, speciesIds: new Set(['noimg']) })
+    expect(qs.length).toBe(0)
+  })
 })
 
 describe('难度梯度', () => {

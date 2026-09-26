@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { MediaType, Question, Tier } from '@/types'
 import { loadBank } from '@/core/bank'
 import { buildQuestions } from '@/core/questionEngine'
+import { getWrongBook } from '@/core/historyDb'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
@@ -25,6 +26,9 @@ export const useQuizStore = defineStore('quiz', () => {
   /** 标记"从结果页继续下一轮"，供 QuizPlay 跳过介绍页直接开始 */
   const pendingContinue = ref(false)
 
+  // ---- E1 错题重练：下一轮 start() 只出错误本中的物种；开轮后自动复原 ----
+  const wrongPoolOnly = ref(false)
+
   const current = computed<Question | null>(() => questions.value[index.value] ?? null)
   const currentChoice = computed<string | null>(() => chosen.value[index.value] ?? null)
   const answered = computed(() => currentChoice.value !== null)
@@ -36,6 +40,11 @@ export const useQuizStore = defineStore('quiz', () => {
     total.value ? Math.round((correctCount.value / total.value) * 100) : 0,
   )
   const finished = computed(() => total.value > 0 && index.value >= total.value)
+  /** 已作答题数（超时计为已作答；中途退出按此数截断落库） */
+  const answeredCount = computed(() => {
+    const i = chosen.value.findIndex((c) => c == null)
+    return i === -1 ? questions.value.length : i
+  })
   /** 本次 session 的整体正确率（含当前轮） */
   const overallAccuracy = computed(() => {
     const t = sessionTotal.value + total.value
@@ -57,9 +66,23 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = ''
     try {
       const bank = await loadBank()
-      const qs = buildQuestions(bank.species, { type, count: opts.count ?? 10, tier: tier.value })
+      let ids: Set<string> | undefined
+      if (wrongPoolOnly.value) {
+        ids = new Set((await getWrongBook()).map((w) => w.speciesId))
+        wrongPoolOnly.value = false // 只影响即将开始的这一轮
+      }
+      const qs = buildQuestions(bank.species, {
+        type,
+        count: opts.count ?? 10,
+        tier: tier.value,
+        speciesIds: ids,
+      })
       if (!qs.length) {
-        throw new Error(`题库中没有可用的${type === 'image' ? '图片' : '音频'}素材`)
+        throw new Error(
+          ids
+            ? '错题本里没有可用的这类素材（可能缺图/缺音），换个模式或先去答题'
+            : `题库中没有可用的${type === 'image' ? '图片' : '音频'}素材`,
+        )
       }
       questions.value = qs
       chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
@@ -108,6 +131,28 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   }
 
+  /** E1：标记下一轮为"错题重练"并进入对应答题页（难度仍在介绍页选） */
+  function startWrongBook(type: MediaType) {
+    wrongPoolOnly.value = true
+    mode.value = type
+    tier.value = 2
+    sessionRound.value = 1
+    sessionCorrect.value = 0
+    sessionTotal.value = 0
+    pendingContinue.value = false
+    error.value = ''
+  }
+
+  /** 中途退出：把本轮截断为前 n 题已作答部分，供结果页按"截至成绩"落库（错题本/统计同步） */
+  function truncateTo(n: number) {
+    const len = Math.max(0, Math.min(n, questions.value.length))
+    questions.value = questions.value.slice(0, len)
+    chosen.value = chosen.value.slice(0, len)
+    index.value = len
+    pendingContinue.value = false
+    wrongPoolOnly.value = false
+  }
+
   function reset() {
     questions.value = []
     chosen.value = []
@@ -117,6 +162,7 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionCorrect.value = 0
     sessionTotal.value = 0
     pendingContinue.value = false
+    wrongPoolOnly.value = false
   }
 
   return {
@@ -132,6 +178,7 @@ export const useQuizStore = defineStore('quiz', () => {
     current,
     currentChoice,
     answered,
+    answeredCount,
     total,
     correctCount,
     accuracy,
@@ -140,12 +187,15 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionCorrect,
     sessionTotal,
     pendingContinue,
+    wrongPoolOnly,
     overallAccuracy,
     start,
     answer,
     timeUp,
     next,
     nextRound,
+    startWrongBook,
+    truncateTo,
     reset,
   }
 })

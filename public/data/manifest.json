@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-24T15:46:39.855Z",
+  "generatedAt": "2026-09-26T01:50:21.713Z",
   "policy": "relaxed",
   "mediaMode": "stage",
   "total": 100,
   "stats": {
     "withImage": 100,
-    "withAudio": 100
+    "withAudio": 93
   },
   "species": [
     {
@@ -18,7 +18,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/passer-montanus/image.webp",
+        "url": "https://bird.wewalk.world/media/passer-montanus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) joyful-islander, some rights reserved (CC BY-NC)",
@@ -26,17 +26,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/1535882",
         "transcode": true,
         "speciesId": "passer-montanus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/passer-montanus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/passer-montanus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/passer-montanus/image.full.avif",
+        "thumbhash": "WvgJDwILe3mLeneXeWeIp4iHOftpCpgG"
       },
       "audio": {
-        "url": "https://xeno-canto.org/964945/download",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "András Schmidt",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/964945",
+        "url": "https://bird.wewalk.world/media/passer-montanus/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Tate Putman, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/176870358",
         "transcode": true,
-        "quality": "A",
         "speciesId": "passer-montanus",
         "type": "audio"
       }
@@ -51,7 +54,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/parus-minor/image.webp",
+        "url": "https://bird.wewalk.world/media/parus-minor/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) guyincognito, some rights reserved (CC BY-NC)",
@@ -59,17 +62,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/39633296",
         "transcode": true,
         "speciesId": "parus-minor",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/parus-minor/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/parus-minor/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/parus-minor/image.full.avif",
+        "thumbhash": "JggKD4DKA6yMqGeolHmJZoV2mQXVYLwD"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/parus-minor/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Ding Li Yong",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1147321",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/parus-minor/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Rob Macfie, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/200713659",
+        "transcode": true,
         "speciesId": "parus-minor",
         "type": "audio"
       }
@@ -84,7 +90,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/pycnonotus-sinensis/image.webp",
+        "url": "https://bird.wewalk.world/media/pycnonotus-sinensis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Chen Shu, some rights reserved (CC BY-NC)",
@@ -92,17 +98,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/69199327",
         "transcode": true,
         "speciesId": "pycnonotus-sinensis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/pycnonotus-sinensis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/pycnonotus-sinensis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/pycnonotus-sinensis/image.full.avif",
+        "thumbhash": "3OgFDYJwRGltZZd1lolod9kvCJZo"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pycnonotus-sinensis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Geoff Carey",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/882595",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/146180271",
         "transcode": true,
-        "quality": "A",
         "speciesId": "pycnonotus-sinensis",
         "type": "audio"
       }
@@ -117,7 +126,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/turdus-merula/image.webp",
+        "url": "https://bird.wewalk.world/media/turdus-merula/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) toki999, some rights reserved (CC BY-NC)",
@@ -125,17 +134,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/172578277",
         "transcode": true,
         "speciesId": "turdus-merula",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/turdus-merula/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/turdus-merula/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/turdus-merula/image.full.avif",
+        "thumbhash": "nxiGEgIPoJ72zsmzQDbEBw8PiIiId4c="
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/turdus-merula/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Ulf Elman",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1175419",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/turdus-merula/audio.mp3",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Codrin Bucur, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/110684075",
+        "transcode": true,
         "speciesId": "turdus-merula",
         "type": "audio"
       }
@@ -150,7 +162,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/spilopelia-chinensis/image.src",
+        "url": "https://bird.wewalk.world/media/spilopelia-chinensis/image.jpeg",
         "license": "CC-BY-NC-ND",
         "licenseRaw": "cc-by-nc-nd",
         "author": "(c) Nature Ali, some rights reserved (CC BY-NC-ND)",
@@ -162,13 +174,12 @@
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spilopelia-chinensis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "小菜鸟",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/877988",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Pin-Tsen JIN, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/188957738",
         "transcode": true,
-        "quality": "A",
         "speciesId": "spilopelia-chinensis",
         "type": "audio"
       }
@@ -183,7 +194,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/pica-pica/image.webp",
+        "url": "https://bird.wewalk.world/media/pica-pica/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
@@ -191,17 +202,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/41592036",
         "transcode": true,
         "speciesId": "pica-pica",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/pica-pica/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/pica-pica/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/pica-pica/image.full.avif",
+        "thumbhash": "YvmFFAIP9utIaXl5iZ+HcMjw8ICHeHiHBw=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pica-pica/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Johannes Worona",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1166972",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Gianni Del Bufalo bygdb, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/144979476",
         "transcode": true,
-        "quality": "A",
         "speciesId": "pica-pica",
         "type": "audio"
       }
@@ -216,7 +230,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cyanopica-cyanus/image.webp",
+        "url": "https://bird.wewalk.world/media/cyanopica-cyanus/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Andrew Bazdyrev, some rights reserved (CC BY)",
@@ -224,17 +238,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/71373412",
         "transcode": true,
         "speciesId": "cyanopica-cyanus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cyanopica-cyanus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cyanopica-cyanus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cyanopica-cyanus/image.full.avif",
+        "thumbhash": "2jkGDYI/l4Z5aXloeWhqeB+a/Eml"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cyanopica-cyanus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Lucas-Chen",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/971204",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) onidiras-iNaturalist, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/108493328",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cyanopica-cyanus",
         "type": "audio"
       }
@@ -249,7 +266,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/urocissa-erythroryncha/image.webp",
+        "url": "https://bird.wewalk.world/media/urocissa-erythroryncha/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Kevin Chen, some rights reserved (CC BY-NC)",
@@ -257,17 +274,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/227325365",
         "transcode": true,
         "speciesId": "urocissa-erythroryncha",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/urocissa-erythroryncha/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/urocissa-erythroryncha/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/urocissa-erythroryncha/image.full.avif",
+        "thumbhash": "T5kFDYQIq1V6iYZpd1d5l/yMPRB1"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/urocissa-erythroryncha/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Zhou Zhe 周哲",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/793898",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) 管牧山, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/359219119",
         "transcode": true,
-        "quality": "A",
         "speciesId": "urocissa-erythroryncha",
         "type": "audio"
       }
@@ -282,7 +302,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/motacilla-alba/image.webp",
+        "url": "https://bird.wewalk.world/media/motacilla-alba/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Peter, some rights reserved (CC BY-NC)",
@@ -290,17 +310,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/36526661",
         "transcode": true,
         "speciesId": "motacilla-alba",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/motacilla-alba/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/motacilla-alba/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/motacilla-alba/image.full.avif",
+        "thumbhash": "28gFDYSHeHeAiId5d2eIicilfwZn"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/motacilla-alba/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Lucas-Chen",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/979151",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Марина Горбунова-Ëлкина, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/87710855",
         "transcode": true,
-        "quality": "A",
         "speciesId": "motacilla-alba",
         "type": "audio"
       }
@@ -315,7 +338,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/copsychus-saularis/image.webp",
+        "url": "https://bird.wewalk.world/media/copsychus-saularis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Sam Hambly, some rights reserved (CC BY-NC)",
@@ -323,7 +346,11 @@
         "sourceUrl": "https://www.inaturalist.org/observations/228856718",
         "transcode": true,
         "speciesId": "copsychus-saularis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/copsychus-saularis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/copsychus-saularis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/copsychus-saularis/image.full.avif",
+        "thumbhash": "WukFDYD6lXhIiKZvtWWKlqdx/7Ql"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/copsychus-saularis/audio.mp3",
@@ -347,7 +374,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/upupa-epops/image.webp",
+        "url": "https://bird.wewalk.world/media/upupa-epops/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) adiashkenazi, some rights reserved (CC BY-NC)",
@@ -355,17 +382,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/1487250",
         "transcode": true,
         "speciesId": "upupa-epops",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/upupa-epops/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/upupa-epops/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/upupa-epops/image.full.avif",
+        "thumbhash": "nPgJJYKnh3efhnhviJeIeJdwcwg4"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/upupa-epops/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "João Tomás",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/891007",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Марина Горбунова-Ëлкина, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/101705252",
         "transcode": true,
-        "quality": "A",
         "speciesId": "upupa-epops",
         "type": "audio"
       }
@@ -380,7 +410,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/alcedo-atthis/image.webp",
+        "url": "https://bird.wewalk.world/media/alcedo-atthis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Maurizio Bonora, some rights reserved (CC BY-NC)",
@@ -388,17 +418,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/9284651",
         "transcode": true,
         "speciesId": "alcedo-atthis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/alcedo-atthis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/alcedo-atthis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/alcedo-atthis/image.full.avif",
+        "thumbhash": "pPgJHYJ1homAeHeIh4doh5x/94t2"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/alcedo-atthis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Xavier Riera",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1180890",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Svetlana Akulova, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/204976561",
         "transcode": true,
-        "quality": "A",
         "speciesId": "alcedo-atthis",
         "type": "audio"
       }
@@ -413,7 +446,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cuculus-canorus/image.webp",
+        "url": "https://bird.wewalk.world/media/cuculus-canorus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Brian Vigorito, some rights reserved (CC BY-NC)",
@@ -421,17 +454,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/63981654",
         "transcode": true,
         "speciesId": "cuculus-canorus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cuculus-canorus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cuculus-canorus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cuculus-canorus/image.full.avif",
+        "thumbhash": "4+gJDYKAd3nkimfOorames8OIwGe"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cuculus-canorus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Stanislas Wroza",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/371124",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) felixpirwitz, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/46610159",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cuculus-canorus",
         "type": "audio"
       }
@@ -446,7 +482,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cuculus-micropterus/image.webp",
+        "url": "https://bird.wewalk.world/media/cuculus-micropterus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Ujjal Kishor De, some rights reserved (CC BY-NC)",
@@ -454,17 +490,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/289906454",
         "transcode": true,
         "speciesId": "cuculus-micropterus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cuculus-micropterus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cuculus-micropterus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cuculus-micropterus/image.full.avif",
+        "thumbhash": "HfkFFwIgB4tZ5WdtYy1qCWepo094UMMB"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cuculus-micropterus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Geoff Carey",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/822364",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Ujjal Kishor De, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/315530266",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cuculus-micropterus",
         "type": "audio"
       }
@@ -479,7 +518,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/hirundo-rustica/image.webp",
+        "url": "https://bird.wewalk.world/media/hirundo-rustica/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Chia⚡aka Cory Chiappone, some rights reserved (CC BY-NC)",
@@ -487,17 +526,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/10006129",
         "transcode": true,
         "speciesId": "hirundo-rustica",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/hirundo-rustica/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/hirundo-rustica/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/hirundo-rustica/image.full.avif",
+        "thumbhash": "2cYFDYKvgWqSR6pGusV1iglYgYAl"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/hirundo-rustica/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "João Ferreira Tomás",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1102130",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Phil Kahler, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/92060784",
         "transcode": true,
-        "quality": "A",
         "speciesId": "hirundo-rustica",
         "type": "audio"
       }
@@ -512,7 +554,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cecropis-daurica/image.webp",
+        "url": "https://bird.wewalk.world/media/cecropis-daurica/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Dhruva Punde, some rights reserved (CC BY-NC)",
@@ -520,17 +562,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/341347177",
         "transcode": true,
         "speciesId": "cecropis-daurica",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cecropis-daurica/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cecropis-daurica/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cecropis-daurica/image.full.avif",
+        "thumbhash": "GOgBDYL+l3WAaaZ9hHdneU+k5AQn"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cecropis-daurica/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Benjamin Bechgaard Lisse",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1142064",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Cédric DEL RIO, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/240742862",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cecropis-daurica",
         "type": "audio"
       }
@@ -545,7 +590,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/phoenicurus-auroreus/image.webp",
+        "url": "https://bird.wewalk.world/media/phoenicurus-auroreus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) earthquest_canada, some rights reserved (CC BY-NC)",
@@ -553,17 +598,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/196603525",
         "transcode": true,
         "speciesId": "phoenicurus-auroreus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/phoenicurus-auroreus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/phoenicurus-auroreus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/phoenicurus-auroreus/image.full.avif",
+        "thumbhash": "3CgGDILfq5vRNplbpY1a0Kckjw=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phoenicurus-auroreus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "小菜鸟",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/943173",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) 淨檀shi, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/198619194",
         "transcode": true,
-        "quality": "A",
         "speciesId": "phoenicurus-auroreus",
         "type": "audio"
       }
@@ -578,7 +626,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/tarsiger-cyanurus/image.webp",
+        "url": "https://bird.wewalk.world/media/tarsiger-cyanurus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Shumik A, some rights reserved (CC BY-NC)",
@@ -586,17 +634,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/256005415",
         "transcode": true,
         "speciesId": "tarsiger-cyanurus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/tarsiger-cyanurus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/tarsiger-cyanurus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/tarsiger-cyanurus/image.full.avif",
+        "thumbhash": "0PcFDQB5eWBo14pHhoxmmIWfUfkZ"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/tarsiger-cyanurus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Feather V",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/992675",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Chengqian Zheng, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/254074970",
         "transcode": true,
-        "quality": "A",
         "speciesId": "tarsiger-cyanurus",
         "type": "audio"
       }
@@ -611,7 +662,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/spodiopsar-cineraceus/image.webp",
+        "url": "https://bird.wewalk.world/media/spodiopsar-cineraceus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) gg_copen, some rights reserved (CC BY-NC)",
@@ -619,17 +670,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/337779487",
         "transcode": true,
         "speciesId": "spodiopsar-cineraceus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/spodiopsar-cineraceus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/spodiopsar-cineraceus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/spodiopsar-cineraceus/image.full.avif",
+        "thumbhash": "OQgKBYD4SaZ6lmibZZhndQVmVEBp"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spodiopsar-cineraceus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Geoff Carey",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/820836",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) belvedere04, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/171661610",
         "transcode": true,
-        "quality": "A",
         "speciesId": "spodiopsar-cineraceus",
         "type": "audio"
       }
@@ -644,7 +698,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/acridotheres-cristatellus/image.webp",
+        "url": "https://bird.wewalk.world/media/acridotheres-cristatellus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) graeme45, some rights reserved (CC BY-NC)",
@@ -652,17 +706,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/98303086",
         "transcode": true,
         "speciesId": "acridotheres-cristatellus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/acridotheres-cristatellus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/acridotheres-cristatellus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/acridotheres-cristatellus/image.full.avif",
+        "thumbhash": "6dcFDYJGeodKp3dgh1l1ZDnPm/Wb"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/acridotheres-cristatellus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Carlos Pereira",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/900187",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/146510966",
         "transcode": true,
-        "quality": "A",
         "speciesId": "acridotheres-cristatellus",
         "type": "audio"
       }
@@ -677,7 +734,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/spodiopsar-sericeus/image.webp",
+        "url": "https://bird.wewalk.world/media/spodiopsar-sericeus/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Kalvin Chan, some rights reserved (CC BY)",
@@ -685,20 +742,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/188259006",
         "transcode": true,
         "speciesId": "spodiopsar-sericeus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/spodiopsar-sericeus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/spodiopsar-sericeus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/spodiopsar-sericeus/image.full.avif",
+        "thumbhash": "ofgJFYJvRUGRV6mXaGmoi5Bd+SRa"
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/spodiopsar-sericeus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Bo Shunqi 薄顺奇",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1173175",
-        "transcode": true,
-        "quality": "A",
-        "speciesId": "spodiopsar-sericeus",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "garrulax-canorus",
@@ -710,7 +760,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/garrulax-canorus/image.webp",
+        "url": "https://bird.wewalk.world/media/garrulax-canorus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) joshshuman, some rights reserved (CC BY-NC)",
@@ -718,7 +768,11 @@
         "sourceUrl": "https://www.inaturalist.org/observations/264898773",
         "transcode": true,
         "speciesId": "garrulax-canorus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/garrulax-canorus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/garrulax-canorus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/garrulax-canorus/image.full.avif",
+        "thumbhash": "HfkFDgD3iRaRdrlYmWp3eHiHM+/lYmA="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/garrulax-canorus/audio.mp3",
@@ -742,7 +796,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/leiothrix-lutea/image.webp",
+        "url": "https://bird.wewalk.world/media/leiothrix-lutea/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) madeleineosherman, some rights reserved (CC BY-NC)",
@@ -750,10 +804,14 @@
         "sourceUrl": "https://www.inaturalist.org/observations/57903170",
         "transcode": true,
         "speciesId": "leiothrix-lutea",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/leiothrix-lutea/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/leiothrix-lutea/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/leiothrix-lutea/image.full.avif",
+        "thumbhash": "pRgGDYD8h3mNdodvlCe3lyh58Iho"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/leiothrix-lutea/audio.src",
+        "url": "https://bird.wewalk.world/media/leiothrix-lutea/audio.mp3",
         "license": "CC-BY-NC-ND",
         "licenseRaw": "cc-by-nc-nd",
         "author": "(c) Jessica Peruzzo, some rights reserved (CC BY-NC-ND)",
@@ -774,7 +832,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/sinosuthora-webbiana/image.webp",
+        "url": "https://bird.wewalk.world/media/sinosuthora-webbiana/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) 小铖/Smalltown, some rights reserved (CC BY-NC)",
@@ -782,17 +840,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/148501757",
         "transcode": true,
         "speciesId": "sinosuthora-webbiana",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/sinosuthora-webbiana/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/sinosuthora-webbiana/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/sinosuthora-webbiana/image.full.avif",
+        "thumbhash": "XhgODYKGmWifdXaOZ7d2dwuRoEMI"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/sinosuthora-webbiana/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Feather V",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/992708",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Seongwoon_Lee, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/189187420",
         "transcode": true,
-        "quality": "A",
         "speciesId": "sinosuthora-webbiana",
         "type": "audio"
       }
@@ -807,7 +868,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/aegithalos-glaucogularis/image.webp",
+        "url": "https://bird.wewalk.world/media/aegithalos-glaucogularis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) fangchen, some rights reserved (CC BY-NC)",
@@ -815,17 +876,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/169124828",
         "transcode": true,
         "speciesId": "aegithalos-glaucogularis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/aegithalos-glaucogularis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/aegithalos-glaucogularis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/aegithalos-glaucogularis/image.full.avif",
+        "thumbhash": "E/gRBYB18qZ6ZYmJhniHiAhoBytU"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/aegithalos-glaucogularis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Feather V",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/992720",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) 莲子, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/328177101",
         "transcode": true,
-        "quality": "A",
         "speciesId": "aegithalos-glaucogularis",
         "type": "audio"
       }
@@ -840,7 +904,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/pardaliparus-venustulus/image.webp",
+        "url": "https://bird.wewalk.world/media/pardaliparus-venustulus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) night-heron, some rights reserved (CC BY-NC)",
@@ -848,17 +912,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/259035308",
         "transcode": true,
         "speciesId": "pardaliparus-venustulus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/pardaliparus-venustulus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/pardaliparus-venustulus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/pardaliparus-venustulus/image.full.avif",
+        "thumbhash": "bPgJDYC/aaiIVomshph4dFBIU7H4"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pardaliparus-venustulus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Shuangqi Liu",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/957204",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) campbellfmh, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/262781740",
         "transcode": true,
-        "quality": "A",
         "speciesId": "pardaliparus-venustulus",
         "type": "audio"
       }
@@ -873,7 +940,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/poecile-palustris/image.webp",
+        "url": "https://bird.wewalk.world/media/poecile-palustris/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Андрей Деев, some rights reserved (CC BY-NC)",
@@ -881,17 +948,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/66520992",
         "transcode": true,
         "speciesId": "poecile-palustris",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/poecile-palustris/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/poecile-palustris/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/poecile-palustris/image.full.avif",
+        "thumbhash": "j/gFDYAbZliaV4fAeopoa4CBJ3oF"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/poecile-palustris/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Niels Van Doninck",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/627495",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/poecile-palustris/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) William Hull, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/196021129",
+        "transcode": true,
         "speciesId": "poecile-palustris",
         "type": "audio"
       }
@@ -906,7 +976,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/aegithalos-concinnus/image.webp",
+        "url": "https://bird.wewalk.world/media/aegithalos-concinnus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Avinash Bhagat, some rights reserved (CC BY-NC)",
@@ -914,17 +984,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/171545315",
         "transcode": true,
         "speciesId": "aegithalos-concinnus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/aegithalos-concinnus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/aegithalos-concinnus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/aegithalos-concinnus/image.full.avif",
+        "thumbhash": "XxgKDYJ2h3h8iHdfdod4ZGJkUKcI"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/aegithalos-concinnus/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Albert Lastukhin",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1138394",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/aegithalos-concinnus/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/146511335",
+        "transcode": true,
         "speciesId": "aegithalos-concinnus",
         "type": "audio"
       }
@@ -939,7 +1012,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/pterorhinus-sannio/image.webp",
+        "url": "https://bird.wewalk.world/media/pterorhinus-sannio/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) llareta, some rights reserved (CC BY-NC)",
@@ -947,17 +1020,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/167668829",
         "transcode": true,
         "speciesId": "pterorhinus-sannio",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/pterorhinus-sannio/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/pterorhinus-sannio/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/pterorhinus-sannio/image.full.avif",
+        "thumbhash": "2NkFDYQ9YJuwh3k5VWd3dfzNAxKr"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/pterorhinus-sannio/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Bo Shunqi薄顺奇",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/911381",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Jianstargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/154079136",
         "transcode": true,
-        "quality": "A",
         "speciesId": "pterorhinus-sannio",
         "type": "audio"
       }
@@ -972,7 +1048,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/image.webp",
+        "url": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) yangyunwu10, some rights reserved (CC BY-NC)",
@@ -980,17 +1056,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/253894405",
         "transcode": true,
         "speciesId": "pterorhinus-perspicillatus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/image.full.avif",
+        "thumbhash": "nggGFYINq1krhWd3qIZnVaCn9NQJ"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Frank Lambert",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/209674",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/pterorhinus-perspicillatus/audio.mp3",
+        "license": "CC0",
+        "licenseRaw": "cc0",
+        "author": "no rights reserved",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/188251973",
+        "transcode": true,
         "speciesId": "pterorhinus-perspicillatus",
         "type": "audio"
       }
@@ -1005,7 +1084,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/streptopelia-orientalis/image.webp",
+        "url": "https://bird.wewalk.world/media/streptopelia-orientalis/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) egorbirder, some rights reserved (CC BY)",
@@ -1013,17 +1092,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/87511281",
         "transcode": true,
         "speciesId": "streptopelia-orientalis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/streptopelia-orientalis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/streptopelia-orientalis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/streptopelia-orientalis/image.full.avif",
+        "thumbhash": "cAgGDwL3aVaoSIiKc5plu2djJg/po3AH"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/streptopelia-orientalis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Guy Kirwan",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/409198",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) IMORI MIHO, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/257186985",
         "transcode": true,
-        "quality": "A",
         "speciesId": "streptopelia-orientalis",
         "type": "audio"
       }
@@ -1038,7 +1120,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/streptopelia-decaocto/image.webp",
+        "url": "https://bird.wewalk.world/media/streptopelia-decaocto/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Jorge A. Pérez Torres, some rights reserved (CC BY-NC)",
@@ -1046,17 +1128,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/110911263",
         "transcode": true,
         "speciesId": "streptopelia-decaocto",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/streptopelia-decaocto/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/streptopelia-decaocto/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/streptopelia-decaocto/image.full.avif",
+        "thumbhash": "pfcNFYa5hoiPd4h4hneHeIOAVwZn"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/streptopelia-decaocto/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Timo Schnabel",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/379502",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) bsteer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/192345981",
         "transcode": true,
-        "quality": "A",
         "speciesId": "streptopelia-decaocto",
         "type": "audio"
       }
@@ -1071,7 +1156,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/columba-rupestris/image.webp",
+        "url": "https://bird.wewalk.world/media/columba-rupestris/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Нурхайдарова Татьяна, some rights reserved (CC BY)",
@@ -1079,20 +1164,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/72618157",
         "transcode": true,
         "speciesId": "columba-rupestris",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/columba-rupestris/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/columba-rupestris/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/columba-rupestris/image.full.avif",
+        "thumbhash": "LPgFDYBsd3ZaeHiAh5mXhZalX0z6"
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/columba-rupestris/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Albert Lastukhin",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/263292",
-        "transcode": true,
-        "quality": "A",
-        "speciesId": "columba-rupestris",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "columba-livia",
@@ -1104,7 +1182,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/columba-livia/image.webp",
+        "url": "https://bird.wewalk.world/media/columba-livia/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Susan J. Hewitt, some rights reserved (CC BY-NC)",
@@ -1112,17 +1190,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/19807660",
         "transcode": true,
         "speciesId": "columba-livia",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/columba-livia/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/columba-livia/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/columba-livia/image.full.avif",
+        "thumbhash": "2weKDAIPffRIN3iThPRYOp/28ICHeHiHBw=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/columba-livia/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/3.0/",
-        "author": "Jarek Matusiak",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/121677",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Misha Zitser, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/393356385",
         "transcode": true,
-        "quality": "A",
         "speciesId": "columba-livia",
         "type": "audio"
       }
@@ -1137,7 +1218,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/egretta-garzetta/image.webp",
+        "url": "https://bird.wewalk.world/media/egretta-garzetta/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) tjeerd, some rights reserved (CC BY-NC)",
@@ -1145,17 +1226,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/19656152",
         "transcode": true,
         "speciesId": "egretta-garzetta",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/egretta-garzetta/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/egretta-garzetta/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/egretta-garzetta/image.full.avif",
+        "thumbhash": "BvgJBYAKtFmId4hjqmiXmQiE8+Ro"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/egretta-garzetta/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Jorge Leitão",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/827349",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Sam Hambly, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/262104165",
         "transcode": true,
-        "quality": "A",
         "speciesId": "egretta-garzetta",
         "type": "audio"
       }
@@ -1170,7 +1254,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/ardea-cinerea/image.webp",
+        "url": "https://bird.wewalk.world/media/ardea-cinerea/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Skyler Kardell, some rights reserved (CC BY-NC)",
@@ -1178,17 +1262,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/58985088",
         "transcode": true,
         "speciesId": "ardea-cinerea",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/ardea-cinerea/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/ardea-cinerea/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/ardea-cinerea/image.full.avif",
+        "thumbhash": "nRgOLYR3eHd/d3eJdziIeXhwiAeX"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/ardea-cinerea/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Valentin Toussaert",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1083537",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Igor Kim, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/332464223",
         "transcode": true,
-        "quality": "A",
         "speciesId": "ardea-cinerea",
         "type": "audio"
       }
@@ -1203,7 +1290,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/ardeola-bacchus/image.webp",
+        "url": "https://bird.wewalk.world/media/ardeola-bacchus/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Marco Chan, some rights reserved (CC BY)",
@@ -1211,20 +1298,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/101600110",
         "transcode": true,
         "speciesId": "ardeola-bacchus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/ardeola-bacchus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/ardeola-bacchus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/ardeola-bacchus/image.full.avif",
+        "thumbhash": "H+mFLQIPpgeLimNEZ3lTgLr5Dw+IeHh4hw=="
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/ardeola-bacchus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "David Darrell-Lambert",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1069291",
-        "transcode": true,
-        "quality": "A",
-        "speciesId": "ardeola-bacchus",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "nycticorax-nycticorax",
@@ -1236,7 +1316,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/nycticorax-nycticorax/image.webp",
+        "url": "https://bird.wewalk.world/media/nycticorax-nycticorax/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) eleggua, some rights reserved (CC BY-NC)",
@@ -1244,17 +1324,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/278117134",
         "transcode": true,
         "speciesId": "nycticorax-nycticorax",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/nycticorax-nycticorax/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/nycticorax-nycticorax/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/nycticorax-nycticorax/image.full.avif",
+        "thumbhash": "JwiSDAAPiPh3qHh2twhYr3Py8ICHeHiHBw=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/nycticorax-nycticorax/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Théo Treels",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/997269",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Nelson Conceição, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/36862413",
         "transcode": true,
-        "quality": "A",
         "speciesId": "nycticorax-nycticorax",
         "type": "audio"
       }
@@ -1269,7 +1352,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/tachybaptus-ruficollis/image.src",
+        "url": "https://bird.wewalk.world/media/tachybaptus-ruficollis/image.jpg",
         "license": "CC-BY-NC-ND",
         "licenseRaw": "cc-by-nc-nd",
         "author": "(c) Nick Hobgood, some rights reserved (CC BY-NC-ND)",
@@ -1280,14 +1363,13 @@
         "type": "image"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/tachybaptus-ruficollis/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Marco Dragonetti",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/510719",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/tachybaptus-ruficollis/audio.mp3",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Zinogre, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/74320952",
+        "transcode": true,
         "speciesId": "tachybaptus-ruficollis",
         "type": "audio"
       }
@@ -1302,7 +1384,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/anas-platyrhynchos/image.webp",
+        "url": "https://bird.wewalk.world/media/anas-platyrhynchos/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Greg Lasley, some rights reserved (CC BY-NC)",
@@ -1310,17 +1392,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/8174772",
         "transcode": true,
         "speciesId": "anas-platyrhynchos",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image.full.avif",
+        "thumbhash": "3wgGFYKHeXegHtd+tuQ1ivh52EBn"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/anas-platyrhynchos/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Tanguy Loïs",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/528945",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Maksymilian Wojtkiewicz, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/197130837",
         "transcode": true,
-        "quality": "A",
         "speciesId": "anas-platyrhynchos",
         "type": "audio"
       }
@@ -1335,7 +1420,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/anas-zonorhyncha/image.webp",
+        "url": "https://bird.wewalk.world/media/anas-zonorhyncha/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) 小铖/Smalltown, some rights reserved (CC BY-NC)",
@@ -1343,17 +1428,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/136209009",
         "transcode": true,
         "speciesId": "anas-zonorhyncha",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/anas-zonorhyncha/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/anas-zonorhyncha/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/anas-zonorhyncha/image.full.avif",
+        "thumbhash": "lskJHYSGVpeTdndQmZp4lmdhgPaX"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/anas-zonorhyncha/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/2.5/",
-        "author": "Mathias Ritschard",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/21569",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/anas-zonorhyncha/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Rob Macfie, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/151173416",
+        "transcode": true,
         "speciesId": "anas-zonorhyncha",
         "type": "audio"
       }
@@ -1368,7 +1456,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/aix-galericulata/image.webp",
+        "url": "https://bird.wewalk.world/media/aix-galericulata/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Blake Ross, some rights reserved (CC BY)",
@@ -1376,17 +1464,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/102309745",
         "transcode": true,
         "speciesId": "aix-galericulata",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/aix-galericulata/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/aix-galericulata/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/aix-galericulata/image.full.avif",
+        "thumbhash": "3RgGFYR1e5bjNpheuQnIevLK0eUE"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/aix-galericulata/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Cai0320",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1062516",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) mobbini, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/325507727",
         "transcode": true,
-        "quality": "A",
         "speciesId": "aix-galericulata",
         "type": "audio"
       }
@@ -1401,7 +1492,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/tadorna-ferruginea/image.webp",
+        "url": "https://bird.wewalk.world/media/tadorna-ferruginea/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) vm_ovchinnikov, some rights reserved (CC BY-NC)",
@@ -1409,17 +1500,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/198239528",
         "transcode": true,
         "speciesId": "tadorna-ferruginea",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/tadorna-ferruginea/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/tadorna-ferruginea/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/tadorna-ferruginea/image.full.avif",
+        "thumbhash": "HvgRDoCGiHeAd4eGiJh4eIeHmlzww0g="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/tadorna-ferruginea/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Richard E. Webster",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1027627",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) birdnet_pi_station, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/267241537",
         "transcode": true,
-        "quality": "A",
         "speciesId": "tadorna-ferruginea",
         "type": "audio"
       }
@@ -1434,7 +1528,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/mergus-merganser/image.webp",
+        "url": "https://bird.wewalk.world/media/mergus-merganser/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Andrea Kreuzhage, some rights reserved (CC BY-NC)",
@@ -1442,17 +1536,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/34861833",
         "transcode": true,
         "speciesId": "mergus-merganser",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/mergus-merganser/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/mergus-merganser/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/mergus-merganser/image.full.avif",
+        "thumbhash": "HwgGDYLFS6dviFeFercKawyGuYB4"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/mergus-merganser/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/2.5/",
-        "author": "Jarek Matusiak",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/94638",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/mergus-merganser/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) little_blue_heron, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/223132703",
+        "transcode": true,
         "speciesId": "mergus-merganser",
         "type": "audio"
       }
@@ -1467,7 +1564,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cygnus-columbianus/image.webp",
+        "url": "https://bird.wewalk.world/media/cygnus-columbianus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) brian stahls, some rights reserved (CC BY-NC)",
@@ -1475,17 +1572,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/148625683",
         "transcode": true,
         "speciesId": "cygnus-columbianus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cygnus-columbianus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cygnus-columbianus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cygnus-columbianus/image.full.avif",
+        "thumbhash": "6ucFDYJgTIqEaniKhHp3eDCIC5LI"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cygnus-columbianus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Jeff Stewart",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/802347",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) postingtolearn, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/71095683",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cygnus-columbianus",
         "type": "audio"
       }
@@ -1500,7 +1600,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cygnus-olor/image.webp",
+        "url": "https://bird.wewalk.world/media/cygnus-olor/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) spinomaly, some rights reserved (CC BY-NC)",
@@ -1508,17 +1608,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/147346011",
         "transcode": true,
         "speciesId": "cygnus-olor",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cygnus-olor/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cygnus-olor/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cygnus-olor/image.full.avif",
+        "thumbhash": "qqUBHYStAN14qFlvo91JdQllmFCG"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cygnus-olor/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Dominique Guillerme",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/705255",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Misha Zitser, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/107602067",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cygnus-olor",
         "type": "audio"
       }
@@ -1533,7 +1636,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/gallinula-chloropus/image.webp",
+        "url": "https://bird.wewalk.world/media/gallinula-chloropus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Данилова Валерия, some rights reserved (CC BY-NC)",
@@ -1541,17 +1644,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/19031323",
         "transcode": true,
         "speciesId": "gallinula-chloropus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/gallinula-chloropus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/gallinula-chloropus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/gallinula-chloropus/image.full.avif",
+        "thumbhash": "2fgFDYKIeYZvd4i4V0dneNQSD0qV"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/gallinula-chloropus/audio.mp3",
-        "license": "CC0",
-        "licenseRaw": "https://creativecommons.org/publicdomain/zero/1.0/",
-        "author": "Philippe Grange",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1180739",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Чаусова Елена, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/212393882",
         "transcode": true,
-        "quality": "A",
         "speciesId": "gallinula-chloropus",
         "type": "audio"
       }
@@ -1566,7 +1672,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/fulica-atra/image.webp",
+        "url": "https://bird.wewalk.world/media/fulica-atra/image.full.webp",
         "license": "CC-BY-NC-SA",
         "licenseRaw": "cc-by-nc-sa",
         "author": "(c) clara_g, some rights reserved (CC BY-NC-SA)",
@@ -1574,17 +1680,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/90178562",
         "transcode": true,
         "speciesId": "fulica-atra",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/fulica-atra/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/fulica-atra/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/fulica-atra/image.full.avif",
+        "thumbhash": "5wcGBYD2SJeaZ4ZelIlopgZ1Y5AW"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/fulica-atra/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Dominique Muller",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1178826",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) roby, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/260878541",
         "transcode": true,
-        "quality": "A",
         "speciesId": "fulica-atra",
         "type": "audio"
       }
@@ -1599,7 +1708,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/amaurornis-phoenicurus/image.webp",
+        "url": "https://bird.wewalk.world/media/amaurornis-phoenicurus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Carmelo López Abad, some rights reserved (CC BY-NC)",
@@ -1607,17 +1716,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/1720479",
         "transcode": true,
         "speciesId": "amaurornis-phoenicurus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/amaurornis-phoenicurus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/amaurornis-phoenicurus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/amaurornis-phoenicurus/image.full.avif",
+        "thumbhash": "WAiGDAIPQFl3KnaJLWn5f1jz8IB4d3iHCA=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/amaurornis-phoenicurus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "David Darrell-Lambert",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1006537",
+        "license": "CC0",
+        "licenseRaw": "cc0",
+        "author": "no rights reserved",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/110147867",
         "transcode": true,
-        "quality": "A",
         "speciesId": "amaurornis-phoenicurus",
         "type": "audio"
       }
@@ -1632,7 +1744,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/image.webp",
+        "url": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) sbbon26, some rights reserved (CC BY-NC)",
@@ -1640,17 +1752,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/35052948",
         "transcode": true,
         "speciesId": "chroicocephalus-ridibundus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/image.full.avif",
+        "thumbhash": "GfkFDYIGZWSrhpdzbHWJuYWZPygG"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Simon Elliott",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/792494",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/chroicocephalus-ridibundus/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) retryu, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/84156862",
+        "transcode": true,
         "speciesId": "chroicocephalus-ridibundus",
         "type": "audio"
       }
@@ -1665,7 +1780,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/larus-argentatus/image.webp",
+        "url": "https://bird.wewalk.world/media/larus-argentatus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Africa Gomez, some rights reserved (CC BY-NC)",
@@ -1673,17 +1788,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/270381676",
         "transcode": true,
         "speciesId": "larus-argentatus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/larus-argentatus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/larus-argentatus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/larus-argentatus/image.full.avif",
+        "thumbhash": "IwgGDYJClXhfh3hTm0aWp3+neiBo"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/larus-argentatus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Molly Bell",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/924449",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Alexander Baransky, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/202993556",
         "transcode": true,
-        "quality": "A",
         "speciesId": "larus-argentatus",
         "type": "audio"
       }
@@ -1698,7 +1816,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/podiceps-cristatus/image.webp",
+        "url": "https://bird.wewalk.world/media/podiceps-cristatus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Mikhail Ezdakov, some rights reserved (CC BY-NC)",
@@ -1706,17 +1824,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/112083082",
         "transcode": true,
         "speciesId": "podiceps-cristatus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/podiceps-cristatus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/podiceps-cristatus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/podiceps-cristatus/image.full.avif",
+        "thumbhash": "HwiSHQIPd4dwiHmYaGePZvZ3Dw+Id3h4iA=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/podiceps-cristatus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Jarek Matusiak",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/592118",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stefan, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/354734886",
         "transcode": true,
-        "quality": "A",
         "speciesId": "podiceps-cristatus",
         "type": "audio"
       }
@@ -1731,7 +1852,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/phalacrocorax-carbo/image.webp",
+        "url": "https://bird.wewalk.world/media/phalacrocorax-carbo/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Dr Caesar Sengupta, some rights reserved (CC BY-NC)",
@@ -1739,17 +1860,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/1464592",
         "transcode": true,
         "speciesId": "phalacrocorax-carbo",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/phalacrocorax-carbo/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/phalacrocorax-carbo/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/phalacrocorax-carbo/image.full.avif",
+        "thumbhash": "l/oBDIDVrRSYd5efQmHVmY+gNw=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phalacrocorax-carbo/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Jorge Leitão",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1087149",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Donald Davesne, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/204003248",
         "transcode": true,
-        "quality": "A",
         "speciesId": "phalacrocorax-carbo",
         "type": "audio"
       }
@@ -1764,7 +1888,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/sterna-hirundo/image.webp",
+        "url": "https://bird.wewalk.world/media/sterna-hirundo/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Jonathan Layman, some rights reserved (CC BY)",
@@ -1772,17 +1896,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/14902467",
         "transcode": true,
         "speciesId": "sterna-hirundo",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/sterna-hirundo/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/sterna-hirundo/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/sterna-hirundo/image.full.avif",
+        "thumbhash": "qUgKDwT1e4iRhoiqZXileZiI+EeZn6IH"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/sterna-hirundo/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Niels Van Doninck",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/696914",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/sterna-hirundo/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Дина Хромова, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/159153826",
+        "transcode": true,
         "speciesId": "sterna-hirundo",
         "type": "audio"
       }
@@ -1797,7 +1924,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/grus-japonensis/image.webp",
+        "url": "https://bird.wewalk.world/media/grus-japonensis/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Austin 0201, some rights reserved (CC BY)",
@@ -1805,17 +1932,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/9600943",
         "transcode": true,
         "speciesId": "grus-japonensis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/grus-japonensis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/grus-japonensis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/grus-japonensis/image.full.avif",
+        "thumbhash": "IggSDYKIeHdwd3h0eGd4h5mPhvh4"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/grus-japonensis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Maria Goncharova",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/217342",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Simone, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/258010379",
         "transcode": true,
-        "quality": "A",
         "speciesId": "grus-japonensis",
         "type": "audio"
       }
@@ -1830,7 +1960,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/grus-grus/image.webp",
+        "url": "https://bird.wewalk.world/media/grus-grus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Hinrich Matthes, some rights reserved (CC BY-NC)",
@@ -1838,17 +1968,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/190005602",
         "transcode": true,
         "speciesId": "grus-grus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/grus-grus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/grus-grus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/grus-grus/image.full.avif",
+        "thumbhash": "k/gFDYKDZ4h/h3esiLh4iaKQxHUG"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/grus-grus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Marketa Rusarova",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1036362",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Анатолий Стрила, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/318572555",
         "transcode": true,
-        "quality": "A",
         "speciesId": "grus-grus",
         "type": "audio"
       }
@@ -1863,7 +1996,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/image.webp",
+        "url": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) emskakoon, some rights reserved (CC BY-NC)",
@@ -1871,20 +2004,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/121691669",
         "transcode": true,
         "speciesId": "leucogeranus-leucogeranus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/image.full.avif",
+        "thumbhash": "qqUBDoK79mMI2raThX6UXJWFBMc3cHw="
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/leucogeranus-leucogeranus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Maria Goncharova",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/217348",
-        "transcode": true,
-        "quality": "A",
-        "speciesId": "leucogeranus-leucogeranus",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "ciconia-nigra",
@@ -1896,7 +2022,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/ciconia-nigra/image.webp",
+        "url": "https://bird.wewalk.world/media/ciconia-nigra/image.full.webp",
         "license": "CC-BY-SA",
         "licenseRaw": "cc-by-sa",
         "author": "(c) Zinogre, some rights reserved (CC BY-SA)",
@@ -1904,20 +2030,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/258658098",
         "transcode": true,
         "speciesId": "ciconia-nigra",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/ciconia-nigra/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/ciconia-nigra/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/ciconia-nigra/image.full.avif",
+        "thumbhash": "3jgGFIKBfJhxeojMZq+pj3v95w=="
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/ciconia-nigra/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Francesco Sottile",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/999435",
-        "transcode": true,
-        "quality": "A",
-        "speciesId": "ciconia-nigra",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "ciconia-boyciana",
@@ -1929,7 +2048,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/ciconia-boyciana/image.webp",
+        "url": "https://bird.wewalk.world/media/ciconia-boyciana/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) 祐, some rights reserved (CC BY)",
@@ -1937,20 +2056,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/339543675",
         "transcode": true,
         "speciesId": "ciconia-boyciana",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/ciconia-boyciana/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/ciconia-boyciana/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/ciconia-boyciana/image.full.avif",
+        "thumbhash": "XcYBFYKeNbiNcGxmzAXWi2xQxwZ1"
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/ciconia-boyciana/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Oscar Campbell",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/401954",
-        "transcode": true,
-        "quality": "C",
-        "speciesId": "ciconia-boyciana",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "platalea-leucorodia",
@@ -1962,7 +2074,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/platalea-leucorodia/image.webp",
+        "url": "https://bird.wewalk.world/media/platalea-leucorodia/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Vitalii Kolomiichuk, some rights reserved (CC BY-NC)",
@@ -1970,17 +2082,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/67533336",
         "transcode": true,
         "speciesId": "platalea-leucorodia",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/platalea-leucorodia/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/platalea-leucorodia/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/platalea-leucorodia/image.full.avif",
+        "thumbhash": "l/gFFYI6docgpohQmrd6h6N/iQRp"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/platalea-leucorodia/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "José Carlos Sires",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/333853",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Christoph Moning, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/273111633",
         "transcode": true,
-        "quality": "A",
         "speciesId": "platalea-leucorodia",
         "type": "audio"
       }
@@ -1995,7 +2110,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/buteo-japonicus/image.webp",
+        "url": "https://bird.wewalk.world/media/buteo-japonicus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Paul Ha, some rights reserved (CC BY-NC)",
@@ -2003,17 +2118,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/332311718",
         "transcode": true,
         "speciesId": "buteo-japonicus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/buteo-japonicus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/buteo-japonicus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/buteo-japonicus/image.full.avif",
+        "thumbhash": "3nQBBYCwaaWEeIeLZZpndgd4YaAY"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/buteo-japonicus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Joshua Chong",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/858003",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Gerben ter Haar, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/19221453",
         "transcode": true,
-        "quality": "A",
         "speciesId": "buteo-japonicus",
         "type": "audio"
       }
@@ -2028,7 +2146,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/milvus-migrans/image.webp",
+        "url": "https://bird.wewalk.world/media/milvus-migrans/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) entomor, some rights reserved (CC BY-NC)",
@@ -2036,17 +2154,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/120553164",
         "transcode": true,
         "speciesId": "milvus-migrans",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/milvus-migrans/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/milvus-migrans/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/milvus-migrans/image.full.avif",
+        "thumbhash": "5/cJHIJpd4h/eHeFeHWJcJsJtw=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/milvus-migrans/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Beatrix Saadi-Varchmin",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1106027",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Svetlana Akulova, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/212649783",
         "transcode": true,
-        "quality": "A",
         "speciesId": "milvus-migrans",
         "type": "audio"
       }
@@ -2061,7 +2182,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/falco-tinnunculus/image.webp",
+        "url": "https://bird.wewalk.world/media/falco-tinnunculus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Manuel Raab, some rights reserved (CC BY-NC)",
@@ -2069,17 +2190,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/258762312",
         "transcode": true,
         "speciesId": "falco-tinnunculus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/falco-tinnunculus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/falco-tinnunculus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/falco-tinnunculus/image.full.avif",
+        "thumbhash": "JxgSDYCIdnl/h3iKeHh4hzZznxHy"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/falco-tinnunculus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "David Darrell-Lambert",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1012113",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Татьяна, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/176943226",
         "transcode": true,
-        "quality": "A",
         "speciesId": "falco-tinnunculus",
         "type": "audio"
       }
@@ -2094,7 +2218,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/falco-peregrinus/image.webp",
+        "url": "https://bird.wewalk.world/media/falco-peregrinus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) nautiboy, some rights reserved (CC BY-NC)",
@@ -2102,17 +2226,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/125312057",
         "transcode": true,
         "speciesId": "falco-peregrinus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/falco-peregrinus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/falco-peregrinus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/falco-peregrinus/image.full.avif",
+        "thumbhash": "GAgKDYJ4d3eAd3hpd3h4dlVvVfdn"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/falco-peregrinus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "David Darrell-Lambert",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1013450",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Ian Goddard, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/392737168",
         "transcode": true,
-        "quality": "A",
         "speciesId": "falco-peregrinus",
         "type": "audio"
       }
@@ -2127,7 +2254,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/accipiter-nisus/image.webp",
+        "url": "https://bird.wewalk.world/media/accipiter-nisus/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) egorbirder, some rights reserved (CC BY)",
@@ -2135,17 +2262,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/71955281",
         "transcode": true,
         "speciesId": "accipiter-nisus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/accipiter-nisus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/accipiter-nisus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/accipiter-nisus/image.full.avif",
+        "thumbhash": "NAgKDwDqdodth4d/kyeod4h6BhR/EPAC"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/accipiter-nisus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Alain Malengreau",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/282604",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Julia Moning, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/97791334",
         "transcode": true,
-        "quality": "A",
         "speciesId": "accipiter-nisus",
         "type": "audio"
       }
@@ -2160,7 +2290,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/asio-flammeus/image.webp",
+        "url": "https://bird.wewalk.world/media/asio-flammeus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Anneliese Mak, some rights reserved (CC BY-NC)",
@@ -2168,17 +2298,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/193552701",
         "transcode": true,
         "speciesId": "asio-flammeus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/asio-flammeus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/asio-flammeus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/asio-flammeus/image.full.avif",
+        "thumbhash": "JggCBwCHbnWKqnpjR/l5qDbFxgAkHjAE"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/asio-flammeus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Romuald Mikusek",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/698070",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Nick Tepper, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/68070981",
         "transcode": true,
-        "quality": "A",
         "speciesId": "asio-flammeus",
         "type": "audio"
       }
@@ -2193,7 +2326,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/athene-noctua/image.webp",
+        "url": "https://bird.wewalk.world/media/athene-noctua/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
@@ -2201,17 +2334,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/337369795",
         "transcode": true,
         "speciesId": "athene-noctua",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/athene-noctua/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/athene-noctua/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/athene-noctua/image.full.avif",
+        "thumbhash": "DQgSDYIIl4djqneGaYiIdwljphCG"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/athene-noctua/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Tony Rinaud",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1063547",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Сергей Красноперов, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/200981037",
         "transcode": true,
-        "quality": "A",
         "speciesId": "athene-noctua",
         "type": "audio"
       }
@@ -2226,7 +2362,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/otus-lettia/image.webp",
+        "url": "https://bird.wewalk.world/media/otus-lettia/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) muangpaisuetrong, some rights reserved (CC BY-NC)",
@@ -2234,17 +2370,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/217807987",
         "transcode": true,
         "speciesId": "otus-lettia",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/otus-lettia/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/otus-lettia/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/otus-lettia/image.full.avif",
+        "thumbhash": "kQgGDYJdeYyQcndZmLiZt2qQmLBH"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/otus-lettia/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Geoff Carey",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/823360",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) 謝忠良, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/61537078",
         "transcode": true,
-        "quality": "A",
         "speciesId": "otus-lettia",
         "type": "audio"
       }
@@ -2259,7 +2398,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/bubo-bubo/image.webp",
+        "url": "https://bird.wewalk.world/media/bubo-bubo/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Mikhail Ezdakov, some rights reserved (CC BY-NC)",
@@ -2267,17 +2406,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/112083082",
         "transcode": true,
         "speciesId": "bubo-bubo",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/bubo-bubo/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/bubo-bubo/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/bubo-bubo/image.full.avif",
+        "thumbhash": "HwiSHQIPd4dwiHmYaGePZvZ3Dw+Id3h4iA=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/bubo-bubo/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Cedric Mroczko",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/761678",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stefan, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/354734886",
         "transcode": true,
-        "quality": "A",
         "speciesId": "bubo-bubo",
         "type": "audio"
       }
@@ -2292,7 +2434,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/eurystomus-orientalis/image.src",
+        "url": "https://bird.wewalk.world/media/eurystomus-orientalis/image.jpg",
         "license": "CC-BY-NC-ND",
         "licenseRaw": "cc-by-nc-nd",
         "author": "(c) photokeen, some rights reserved (CC BY-NC-ND)",
@@ -2304,13 +2446,12 @@
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/eurystomus-orientalis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Amar-Singh HSS",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/461027",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) mysteryann, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/258315193",
         "transcode": true,
-        "quality": "A",
         "speciesId": "eurystomus-orientalis",
         "type": "audio"
       }
@@ -2325,7 +2466,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/halcyon-smyrnensis/image.webp",
+        "url": "https://bird.wewalk.world/media/halcyon-smyrnensis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Patricia, some rights reserved (CC BY-NC)",
@@ -2333,17 +2474,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/50540962",
         "transcode": true,
         "speciesId": "halcyon-smyrnensis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/halcyon-smyrnensis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/halcyon-smyrnensis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/halcyon-smyrnensis/image.full.avif",
+        "thumbhash": "LNcJDwRHiTiAaHdwiYl5x2Z69yQhTyAE"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/halcyon-smyrnensis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Feather V",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/986143",
+        "license": "CC-BY-SA",
+        "licenseRaw": "cc-by-sa",
+        "author": "(c) Vihansith Kulatunga, some rights reserved (CC BY-SA)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/86810478",
         "transcode": true,
-        "quality": "A",
         "speciesId": "halcyon-smyrnensis",
         "type": "audio"
       }
@@ -2358,7 +2502,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/halcyon-pileata/image.webp",
+        "url": "https://bird.wewalk.world/media/halcyon-pileata/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Sam Hambly, some rights reserved (CC BY-NC)",
@@ -2366,17 +2510,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/108852285",
         "transcode": true,
         "speciesId": "halcyon-pileata",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/halcyon-pileata/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/halcyon-pileata/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/halcyon-pileata/image.full.avif",
+        "thumbhash": "WNgFDIA2N2mQeIl6ZnaBeA8dHg=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/halcyon-pileata/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Ray Tsu 诸仁",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/902043",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Terry Townshend, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/312122589",
         "transcode": true,
-        "quality": "A",
         "speciesId": "halcyon-pileata",
         "type": "audio"
       }
@@ -2391,7 +2538,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/megaceryle-lugubris/image.webp",
+        "url": "https://bird.wewalk.world/media/megaceryle-lugubris/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) balwantnegi, some rights reserved (CC BY-NC)",
@@ -2399,17 +2546,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/9768226",
         "transcode": true,
         "speciesId": "megaceryle-lugubris",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/megaceryle-lugubris/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/megaceryle-lugubris/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/megaceryle-lugubris/image.full.avif",
+        "thumbhash": "HfgJFYJjh3afeHeJeNaEiWavmvjL"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/megaceryle-lugubris/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "王自堃",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/864418",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) Wich'yanan L, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/144483511",
         "transcode": true,
-        "quality": "A",
         "speciesId": "megaceryle-lugubris",
         "type": "audio"
       }
@@ -2424,7 +2574,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/picus-canus/image.src",
+        "url": "https://bird.wewalk.world/media/picus-canus/image.jpg",
         "license": "CC-BY-NC-ND",
         "licenseRaw": "cc-by-nc-nd",
         "author": "(c) Александр, some rights reserved (CC BY-NC-ND)",
@@ -2436,13 +2586,12 @@
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/picus-canus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "András Schmidt",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1067928",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) hercynia, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/201472450",
         "transcode": true,
-        "quality": "A",
         "speciesId": "picus-canus",
         "type": "audio"
       }
@@ -2457,7 +2606,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/dendrocopos-major/image.webp",
+        "url": "https://bird.wewalk.world/media/dendrocopos-major/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Дмитрий Ерохин ( Dmitri Erokhin), some rights reserved (CC BY-NC)",
@@ -2465,17 +2614,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/137979249",
         "transcode": true,
         "speciesId": "dendrocopos-major",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/dendrocopos-major/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/dendrocopos-major/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/dendrocopos-major/image.full.avif",
+        "thumbhash": "oNkFFYKwvXSyeoecplU2lrCWqYB2"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dendrocopos-major/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Lucien Hueber",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1180584",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) lauraluongo47, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/168890120",
         "transcode": true,
-        "quality": "A",
         "speciesId": "dendrocopos-major",
         "type": "audio"
       }
@@ -2490,7 +2642,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/dendrocopos-canicapillus/image.webp",
+        "url": "https://bird.wewalk.world/media/dendrocopos-canicapillus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Геннадий, some rights reserved (CC BY-NC)",
@@ -2498,7 +2650,11 @@
         "sourceUrl": "https://www.inaturalist.org/observations/342457579",
         "transcode": true,
         "speciesId": "dendrocopos-canicapillus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/dendrocopos-canicapillus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/dendrocopos-canicapillus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/dendrocopos-canicapillus/image.full.avif",
+        "thumbhash": "ZQgGDYKzOG9MeKaLZoh5h23ydyCI"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dendrocopos-canicapillus/audio.mp3",
@@ -2522,7 +2678,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/jynx-torquilla/image.webp",
+        "url": "https://bird.wewalk.world/media/jynx-torquilla/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) abcdefgewing, some rights reserved (CC BY-NC)",
@@ -2530,17 +2686,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/29687940",
         "transcode": true,
         "speciesId": "jynx-torquilla",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/jynx-torquilla/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/jynx-torquilla/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/jynx-torquilla/image.full.avif",
+        "thumbhash": "3RcKDYJoeGlUmZf7e+dYVmKPGPO2"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/jynx-torquilla/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "David Nayer",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/571813",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) jansson, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/113966440",
         "transcode": true,
-        "quality": "A",
         "speciesId": "jynx-torquilla",
         "type": "audio"
       }
@@ -2555,7 +2714,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/oriolus-chinensis/image.src",
+        "url": "https://bird.wewalk.world/media/oriolus-chinensis/image.jpg",
         "license": "CC-BY-NC-ND",
         "licenseRaw": "cc-by-nc-nd",
         "author": "(c) Анна Голубева, some rights reserved (CC BY-NC-ND)",
@@ -2587,7 +2746,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/dicrurus-leucophaeus/image.webp",
+        "url": "https://bird.wewalk.world/media/dicrurus-leucophaeus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Anil Kumar Verma, some rights reserved (CC BY-NC)",
@@ -2595,17 +2754,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/107098865",
         "transcode": true,
         "speciesId": "dicrurus-leucophaeus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/dicrurus-leucophaeus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/dicrurus-leucophaeus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/dicrurus-leucophaeus/image.full.avif",
+        "thumbhash": "4AgKDYK3aIhvaJiGp4h1d/ubpxwH"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/dicrurus-leucophaeus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Feather V",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1000899",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) benjamynweil, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/190743080",
         "transcode": true,
-        "quality": "A",
         "speciesId": "dicrurus-leucophaeus",
         "type": "audio"
       }
@@ -2620,7 +2782,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/dicrurus-macrocercus/image.webp",
+        "url": "https://bird.wewalk.world/media/dicrurus-macrocercus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Игорь Двуреков, some rights reserved (CC BY-NC)",
@@ -2628,17 +2790,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/367972761",
         "transcode": true,
         "speciesId": "dicrurus-macrocercus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/dicrurus-macrocercus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/dicrurus-macrocercus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/dicrurus-macrocercus/image.full.avif",
+        "thumbhash": "IrYBBYCC3kqIh4fPJnF4QnyI0IcH"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/dicrurus-macrocercus/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/3.0/",
-        "author": "Conrad Pinto",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/162829",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/dicrurus-macrocercus/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Rishit, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/296438301",
+        "transcode": true,
         "speciesId": "dicrurus-macrocercus",
         "type": "audio"
       }
@@ -2653,7 +2818,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/terpsiphone-incei/image.webp",
+        "url": "https://bird.wewalk.world/media/terpsiphone-incei/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) rupperrt78, some rights reserved (CC BY-NC)",
@@ -2661,20 +2826,13 @@
         "sourceUrl": "https://www.inaturalist.org/observations/90952926",
         "transcode": true,
         "speciesId": "terpsiphone-incei",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/terpsiphone-incei/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/terpsiphone-incei/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/terpsiphone-incei/image.full.avif",
+        "thumbhash": "V9kFDYJgqJSKeWiVaEeJibCqY/RL"
       },
-      "audio": {
-        "url": "https://bird.wewalk.world/media/terpsiphone-incei/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Okamoto Keita Sin",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/756447",
-        "transcode": true,
-        "quality": "A",
-        "speciesId": "terpsiphone-incei",
-        "type": "audio"
-      }
+      "audio": null
     },
     {
       "id": "lanius-cristatus",
@@ -2686,7 +2844,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/lanius-cristatus/image.webp",
+        "url": "https://bird.wewalk.world/media/lanius-cristatus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Ian Cruickshank, some rights reserved (CC BY-NC)",
@@ -2694,17 +2852,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/41066244",
         "transcode": true,
         "speciesId": "lanius-cristatus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/lanius-cristatus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/lanius-cristatus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/lanius-cristatus/image.full.avif",
+        "thumbhash": "2xgGFYISC0ileoi1uKlpc138RwVJ"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/lanius-cristatus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "James Lidster",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/526805",
+        "license": "CC0",
+        "licenseRaw": "cc0",
+        "author": "no rights reserved",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/348265644",
         "transcode": true,
-        "quality": "A",
         "speciesId": "lanius-cristatus",
         "type": "audio"
       }
@@ -2719,7 +2880,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/lanius-schach/image.webp",
+        "url": "https://bird.wewalk.world/media/lanius-schach/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Andrew Bazdyrev, some rights reserved (CC BY)",
@@ -2727,7 +2888,11 @@
         "sourceUrl": "https://www.inaturalist.org/observations/131584241",
         "transcode": true,
         "speciesId": "lanius-schach",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/lanius-schach/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/lanius-schach/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/lanius-schach/image.full.avif",
+        "thumbhash": "bucFDYK5W4WJh3ifVBqIVS6V8EIZ"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/lanius-schach/audio.mp3",
@@ -2751,7 +2916,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/passer-cinnamomeus/image.webp",
+        "url": "https://bird.wewalk.world/media/passer-cinnamomeus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) watermargin, some rights reserved (CC BY-NC)",
@@ -2759,17 +2924,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/91207669",
         "transcode": true,
         "speciesId": "passer-cinnamomeus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/passer-cinnamomeus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/passer-cinnamomeus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/passer-cinnamomeus/image.full.avif",
+        "thumbhash": "WgsGDYKQZ4ZiaId0iIaXh9ByGQhW"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/passer-cinnamomeus/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/2.5/",
-        "author": "vir joshi",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/105278",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/passer-cinnamomeus/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) wresy, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/213142049",
+        "transcode": true,
         "speciesId": "passer-cinnamomeus",
         "type": "audio"
       }
@@ -2784,7 +2952,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/spinus-spinus/image.webp",
+        "url": "https://bird.wewalk.world/media/spinus-spinus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Mikhail Ezdakov, some rights reserved (CC BY-NC)",
@@ -2792,17 +2960,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/105770575",
         "transcode": true,
         "speciesId": "spinus-spinus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/spinus-spinus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/spinus-spinus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/spinus-spinus/image.full.avif",
+        "thumbhash": "8PcJFYD3Z3qbVoh8g1mWiQd2AQy5"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/spinus-spinus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Domagoj Tomičić",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/666230",
+        "license": "CC-BY",
+        "licenseRaw": "cc-by",
+        "author": "(c) aga_l_, some rights reserved (CC BY)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/200628738",
         "transcode": true,
-        "quality": "A",
         "speciesId": "spinus-spinus",
         "type": "audio"
       }
@@ -2817,7 +2988,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/chloris-sinica/image.webp",
+        "url": "https://bird.wewalk.world/media/chloris-sinica/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) gg_copen, some rights reserved (CC BY-NC)",
@@ -2825,17 +2996,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/329037017",
         "transcode": true,
         "speciesId": "chloris-sinica",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/chloris-sinica/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/chloris-sinica/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/chloris-sinica/image.full.avif",
+        "thumbhash": "NggOBoD5Rpd6hnh6hZloVph5B5W0Abc="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/chloris-sinica/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Feather V",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/992333",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Stargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/146799223",
         "transcode": true,
-        "quality": "A",
         "speciesId": "chloris-sinica",
         "type": "audio"
       }
@@ -2850,7 +3024,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/fringilla-montifringilla/image.webp",
+        "url": "https://bird.wewalk.world/media/fringilla-montifringilla/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Александр Коробейников, some rights reserved (CC BY-NC)",
@@ -2858,17 +3032,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/142682696",
         "transcode": true,
         "speciesId": "fringilla-montifringilla",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/fringilla-montifringilla/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/fringilla-montifringilla/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/fringilla-montifringilla/image.full.avif",
+        "thumbhash": "rOcFDwCOsrVreYcfmsd4SIplJagJgokA"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/fringilla-montifringilla/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Lars Edenius",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/585153",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Serych, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/165050717",
         "transcode": true,
-        "quality": "A",
         "speciesId": "fringilla-montifringilla",
         "type": "audio"
       }
@@ -2883,7 +3060,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/eophona-migratoria/image.webp",
+        "url": "https://bird.wewalk.world/media/eophona-migratoria/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Kelvin Joshua Che, some rights reserved (CC BY-NC)",
@@ -2891,7 +3068,11 @@
         "sourceUrl": "https://www.inaturalist.org/observations/69851183",
         "transcode": true,
         "speciesId": "eophona-migratoria",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/eophona-migratoria/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/eophona-migratoria/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/eophona-migratoria/image.full.avif",
+        "thumbhash": "IAkGDYJGmYi/hVqKZHZlmkmeb/RL"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/eophona-migratoria/audio.mp3",
@@ -2915,7 +3096,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/emberiza-tristrami/image.webp",
+        "url": "https://bird.wewalk.world/media/emberiza-tristrami/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) egorbirder, some rights reserved (CC BY)",
@@ -2923,17 +3104,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/87510180",
         "transcode": true,
         "speciesId": "emberiza-tristrami",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/emberiza-tristrami/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/emberiza-tristrami/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/emberiza-tristrami/image.full.avif",
+        "thumbhash": "GskFHwYheXiQiIi0eXd3qHh4CDpXT2wE"
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/emberiza-tristrami/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Peter Boesman",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1147488",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/emberiza-tristrami/audio.mp3",
+        "license": "CC-BY-NC-SA",
+        "licenseRaw": "cc-by-nc-sa",
+        "author": "(c) Nat Panda, some rights reserved (CC BY-NC-SA)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/349272372",
+        "transcode": true,
         "speciesId": "emberiza-tristrami",
         "type": "audio"
       }
@@ -2948,7 +3132,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/emberiza-elegans/image.webp",
+        "url": "https://bird.wewalk.world/media/emberiza-elegans/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) verdit, some rights reserved (CC BY-NC)",
@@ -2956,17 +3140,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/82391072",
         "transcode": true,
         "speciesId": "emberiza-elegans",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/emberiza-elegans/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/emberiza-elegans/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/emberiza-elegans/image.full.avif",
+        "thumbhash": "ofgFBYKZRqh/eHmVdot4d/WineB2"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-elegans/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Dave Guo",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/769445",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Seongwoon_Lee, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/200863872",
         "transcode": true,
-        "quality": "A",
         "speciesId": "emberiza-elegans",
         "type": "audio"
       }
@@ -2981,7 +3168,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/emberiza-pusilla/image.webp",
+        "url": "https://bird.wewalk.world/media/emberiza-pusilla/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Viktor Björkert, some rights reserved (CC BY-NC)",
@@ -2989,17 +3176,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/336937579",
         "transcode": true,
         "speciesId": "emberiza-pusilla",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/emberiza-pusilla/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/emberiza-pusilla/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/emberiza-pusilla/image.full.avif",
+        "thumbhash": "5QcWFYR5h4iAh4h6h5h4h3iPhfZJ"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-pusilla/audio.mp3",
         "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Teet Sirotkin",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/899176",
+        "licenseRaw": "cc-by-nc-sa",
+        "author": "(c) Nat Panda, some rights reserved (CC BY-NC-SA)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/247327967",
         "transcode": true,
-        "quality": "A",
         "speciesId": "emberiza-pusilla",
         "type": "audio"
       }
@@ -3014,7 +3204,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/emberiza-cioides/image.webp",
+        "url": "https://bird.wewalk.world/media/emberiza-cioides/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Илья Уколов, some rights reserved (CC BY-NC)",
@@ -3022,17 +3212,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/262691120",
         "transcode": true,
         "speciesId": "emberiza-cioides",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/emberiza-cioides/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/emberiza-cioides/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/emberiza-cioides/image.full.avif",
+        "thumbhash": "JQkGFYRgpGdLd3iIh3d4eYlib/Yo"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-cioides/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Zhou Zhe 周哲",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/665056",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) K_Kawashima, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/149892245",
         "transcode": true,
-        "quality": "A",
         "speciesId": "emberiza-cioides",
         "type": "audio"
       }
@@ -3047,7 +3240,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/emberiza-rustica/image.webp",
+        "url": "https://bird.wewalk.world/media/emberiza-rustica/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Ian Cruickshank, some rights reserved (CC BY-NC)",
@@ -3055,17 +3248,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/324101313",
         "transcode": true,
         "speciesId": "emberiza-rustica",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/emberiza-rustica/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/emberiza-rustica/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/emberiza-rustica/image.full.avif",
+        "thumbhash": "HvmFDQIPW1n5dpZqg/i16LBXDw+Id3h4iA=="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/emberiza-rustica/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Andrew Harrop",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1142004",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Juha Kinnunen, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/83241185",
         "transcode": true,
-        "quality": "A",
         "speciesId": "emberiza-rustica",
         "type": "audio"
       }
@@ -3080,7 +3276,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/phylloscopus-inornatus/image.webp",
+        "url": "https://bird.wewalk.world/media/phylloscopus-inornatus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Steven Mlodinow, some rights reserved (CC BY-NC)",
@@ -3088,17 +3284,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/2712964",
         "transcode": true,
         "speciesId": "phylloscopus-inornatus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/phylloscopus-inornatus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/phylloscopus-inornatus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/phylloscopus-inornatus/image.full.avif",
+        "thumbhash": "odcNLoRwhoqGd4mHh3iJZ5iHf3n4hGY="
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phylloscopus-inornatus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Mark Newsome",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1077927",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Franciszek. K, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/247342702",
         "transcode": true,
-        "quality": "A",
         "speciesId": "phylloscopus-inornatus",
         "type": "audio"
       }
@@ -3113,7 +3312,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/phylloscopus-proregulus/image.webp",
+        "url": "https://bird.wewalk.world/media/phylloscopus-proregulus/image.full.webp",
         "license": "CC-BY",
         "licenseRaw": "cc-by",
         "author": "(c) Christoph Moning, some rights reserved (CC BY)",
@@ -3121,17 +3320,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/57106526",
         "transcode": true,
         "speciesId": "phylloscopus-proregulus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/phylloscopus-proregulus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/phylloscopus-proregulus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/phylloscopus-proregulus/image.full.avif",
+        "thumbhash": "2hgKDYLqpoigenpll5d3lNeAaA56"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phylloscopus-proregulus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Stanislas Wroza",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/795808",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Maksymilian Wojtkiewicz, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/245918621",
         "transcode": true,
-        "quality": "A",
         "speciesId": "phylloscopus-proregulus",
         "type": "audio"
       }
@@ -3146,7 +3348,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/phylloscopus-fuscatus/image.webp",
+        "url": "https://bird.wewalk.world/media/phylloscopus-fuscatus/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Олександр Гриб, some rights reserved (CC BY-NC)",
@@ -3154,17 +3356,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/130614413",
         "transcode": true,
         "speciesId": "phylloscopus-fuscatus",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/phylloscopus-fuscatus/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/phylloscopus-fuscatus/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/phylloscopus-fuscatus/image.full.avif",
+        "thumbhash": "I/gFBYBTx3pgd2iIaEiYeRA0tIpP"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/phylloscopus-fuscatus/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Stanislas Wroza",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/486663",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Олександр Гриб, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/130614413",
         "transcode": true,
-        "quality": "A",
         "speciesId": "phylloscopus-fuscatus",
         "type": "audio"
       }
@@ -3179,7 +3384,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/horornis-fortipes/image.webp",
+        "url": "https://bird.wewalk.world/media/horornis-fortipes/image.full.webp",
         "license": "CC-BY-NC-SA",
         "licenseRaw": "cc-by-nc-sa",
         "author": "(c) Nat Panda, some rights reserved (CC BY-NC-SA)",
@@ -3187,17 +3392,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/326430938",
         "transcode": true,
         "speciesId": "horornis-fortipes",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/horornis-fortipes/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/horornis-fortipes/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/horornis-fortipes/image.full.avif",
+        "thumbhash": "G/gFDYL4ZHeHdppnUaqcgYKA+tB3"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/horornis-fortipes/audio.mp3",
         "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Sandeep Ramz",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/1024792",
+        "licenseRaw": "cc-by-nc-sa",
+        "author": "(c) Nat Panda, some rights reserved (CC BY-NC-SA)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/326430938",
         "transcode": true,
-        "quality": "A",
         "speciesId": "horornis-fortipes",
         "type": "audio"
       }
@@ -3212,7 +3420,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/acrocephalus-orientalis/image.webp",
+        "url": "https://bird.wewalk.world/media/acrocephalus-orientalis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) BlackFern, some rights reserved (CC BY-NC)",
@@ -3220,17 +3428,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/271702196",
         "transcode": true,
         "speciesId": "acrocephalus-orientalis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/acrocephalus-orientalis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/acrocephalus-orientalis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/acrocephalus-orientalis/image.full.avif",
+        "thumbhash": "a9gNJoCWaYafh5d1iYh3eHiISmB78hg="
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/acrocephalus-orientalis/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        "author": "Peter Boesman",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/285612",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/acrocephalus-orientalis/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) BlackFern, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/271702196",
+        "transcode": true,
         "speciesId": "acrocephalus-orientalis",
         "type": "audio"
       }
@@ -3245,7 +3456,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/cisticola-juncidis/image.webp",
+        "url": "https://bird.wewalk.world/media/cisticola-juncidis/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) Helen Badenhorst, some rights reserved (CC BY-NC)",
@@ -3253,17 +3464,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/187642286",
         "transcode": true,
         "speciesId": "cisticola-juncidis",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/cisticola-juncidis/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/cisticola-juncidis/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/cisticola-juncidis/image.full.avif",
+        "thumbhash": "XTkGBYClmpdwmIeHZnh3efTSCUyF"
       },
       "audio": {
         "url": "https://bird.wewalk.world/media/cisticola-juncidis/audio.mp3",
-        "license": "CC-BY-NC-SA",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "author": "Tanguy Loïs",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/650391",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) yoursilverybeefly, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/305463209",
         "transcode": true,
-        "quality": "A",
         "speciesId": "cisticola-juncidis",
         "type": "audio"
       }
@@ -3278,7 +3492,7 @@
       "location": "",
       "habit": "",
       "image": {
-        "url": "https://bird.wewalk.world/media/caprimulgus-jotaka/image.webp",
+        "url": "https://bird.wewalk.world/media/caprimulgus-jotaka/image.full.webp",
         "license": "CC-BY-NC",
         "licenseRaw": "cc-by-nc",
         "author": "(c) 莲子, some rights reserved (CC BY-NC)",
@@ -3286,17 +3500,20 @@
         "sourceUrl": "https://www.inaturalist.org/observations/288758693",
         "transcode": true,
         "speciesId": "caprimulgus-jotaka",
-        "type": "image"
+        "type": "image",
+        "thumbUrl": "https://bird.wewalk.world/media/caprimulgus-jotaka/image.thumb.webp",
+        "xlUrl": "https://bird.wewalk.world/media/caprimulgus-jotaka/image.xl.webp",
+        "avifUrl": "https://bird.wewalk.world/media/caprimulgus-jotaka/image.full.avif",
+        "thumbhash": "CvgBBoBL2CiMY3iGjAbnR6iPZo+2CNo="
       },
       "audio": {
-        "url": "https://bird.wewalk.world/media/caprimulgus-jotaka/audio.src",
-        "license": "CC-BY-NC-ND",
-        "licenseRaw": "https://creativecommons.org/licenses/by-nc-nd/2.5/",
-        "author": "vir joshi",
-        "source": "Xeno-canto",
-        "sourceUrl": "https://xeno-canto.org/107108",
-        "transcode": false,
-        "quality": "A",
+        "url": "https://bird.wewalk.world/media/caprimulgus-jotaka/audio.mp3",
+        "license": "CC-BY-NC",
+        "licenseRaw": "cc-by-nc",
+        "author": "(c) Jianstargazer, some rights reserved (CC BY-NC)",
+        "source": "iNaturalist",
+        "sourceUrl": "https://www.inaturalist.org/observations/152891546",
+        "transcode": true,
         "speciesId": "caprimulgus-jotaka",
         "type": "audio"
       }

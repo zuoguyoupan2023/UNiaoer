@@ -33,6 +33,8 @@
 | 抓题库 + 转码暂存 | `npm run bank:stage` |
 | 抓题库 + 直传 R2（S3 凭证，带远端） | `npm run bank:r2` |
 | 把 `public/media` 传到 R2（wrangler，已内置 `--remote`） | `npm run r2:push` |
+| 题库一致性校验（CI 已接入；`--no-net` 跳过抽查） | `npm run check:bank` |
+| 媒体完整性全量检查（`--fix` 从本地重传缺失文件） | `npm run check:media` |
 | 生成 D1 seed | `npm run d1:seed` |
 | D1 建表 / 灌数据（务必 `--remote`） | `wrangler d1 execute uniaoer --file=worker/schema.sql --remote` |
 

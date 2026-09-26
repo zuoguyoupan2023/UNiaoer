@@ -84,7 +84,7 @@ function clampOffset(next: { x: number; y: number }) {
   return { x, y }
 }
 
-async function selectImage(url: string | null) {
+async function selectImage(url: string | null, loadUrl: string | null = url) {
   if (locked.value) return
   error.value = ''
   if (!url) {
@@ -95,7 +95,8 @@ async function selectImage(url: string | null) {
   }
   loadingBg.value = true
   try {
-    const img = await loadImage(url)
+    // url 是候选项身份（full）；loadUrl 实际加载（xl 原图，成图更清晰，C2）
+    const img = await loadImage(loadUrl ?? url)
     bgUrl.value = url
     bgImage.value = img
     offset.value = { x: 0, y: 0 }
@@ -243,9 +244,9 @@ function openImage() {
                     class="thumb"
                     :class="{ on: bgUrl === img.url, disabled: locked, wrong: img.wrong }"
                     :title="thumbTitle(img)"
-                    @click="selectImage(img.url)"
+                    @click="selectImage(img.url, img.xlUrl ?? img.url)"
                   >
-                    <img :src="img.url" alt="背景候选" loading="lazy" />
+                    <img :src="img.thumbUrl ?? img.url" alt="背景候选" loading="lazy" />
                   </button>
                   <span
                     v-if="img.wrong"

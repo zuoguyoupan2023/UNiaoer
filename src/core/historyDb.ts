@@ -269,6 +269,86 @@ export async function clearAll(): Promise<void> {
   await Promise.all([clearStore(STORE_ROUNDS), clearStore(STORE_WRONG), clearStore(STORE_BADGES)])
 }
 
+// ---- E2 导出 / 导入（JSON 备份，仍只在用户设备间手动迁移） ----
+
+export interface BackupFile {
+  app: 'uniaoer'
+  version: 1
+  exportedAt: string
+  rounds: RoundRecord[]
+  wrong: WrongEntry[]
+  badges: EarnedBadge[]
+}
+
+export interface ImportResult {
+  rounds: number
+  wrong: number
+  badges: number
+}
+
+export function isBackupFile(value: unknown): value is BackupFile {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as BackupFile).app === 'uniaoer' &&
+    (value as BackupFile).version === 1 &&
+    Array.isArray((value as BackupFile).rounds)
+  )
+}
+
+/** 导出全部本地数据（记录 / 错题本 / 徽章） */
+export async function exportAll(): Promise<BackupFile> {
+  const [rounds, wrong, badges] = await Promise.all([
+    listRounds(),
+    getWrongBook(),
+    getBadges(),
+  ])
+  return {
+    app: 'uniaoer',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    rounds,
+    wrong,
+    badges,
+  }
+}
+
+/**
+ * 导入备份：按 id 合并（不删除现有数据）。
+ * - 轮次：同 id 覆盖（视为同一轮），新轮次追加
+ * - 错题：同物种保留 wrongCount 更大的那个
+ * - 徽章：并集
+ */
+export async function importBackup(data: BackupFile): Promise<ImportResult> {
+  let rounds = 0
+  let wrong = 0
+  let badges = 0
+
+  for (const r of data.rounds ?? []) {
+    if (!r?.id) continue
+    await put(STORE_ROUNDS, r)
+    rounds++
+  }
+
+  for (const w of data.wrong ?? []) {
+    if (!w?.speciesId) continue
+    const existing = (await run<WrongEntry | undefined>(STORE_WRONG, 'readonly', (s) =>
+      s.get(w.speciesId) as IDBRequest<WrongEntry | undefined>,
+    )) as WrongEntry | undefined
+    if (existing && (existing.wrongCount ?? 0) >= (w.wrongCount ?? 0)) continue
+    await put(STORE_WRONG, w)
+    wrong++
+  }
+
+  for (const b of data.badges ?? []) {
+    if (!b?.id) continue
+    await put(STORE_BADGES, b)
+    badges++
+  }
+
+  return { rounds, wrong, badges }
+}
+
 /** 测试用：重置连接 */
 export function _resetDb() {
   dbPromise = null

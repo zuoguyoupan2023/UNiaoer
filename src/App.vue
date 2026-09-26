@@ -2,10 +2,18 @@
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { Bird } from 'lucide-vue-next'
+import { useQuizStore } from '@/stores/quiz'
 
 const route = useRoute()
-/** 答题模式沉浸式：隐藏顶部标题与导航（页脚保留） */
-const immersive = computed(() => String(route.name ?? '').startsWith('quiz'))
+const quiz = useQuizStore()
+/**
+ * 答题模式沉浸式：仅在"正式答题中"（本轮题目已就绪或加载中；介绍页/选难度除外）
+ * 隐藏顶部标题与导航。介绍页 questions 为空且未在加载，顶部正常显示。
+ */
+const immersive = computed(
+  () =>
+    String(route.name ?? '').startsWith('quiz') && (quiz.questions.length > 0 || quiz.loading),
+)
 </script>
 
 <template>

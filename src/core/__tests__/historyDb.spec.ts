@@ -2,8 +2,11 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   clearAll,
+  exportAll,
   getStats,
   getWrongBook,
+  importBackup,
+  isBackupFile,
   listRounds,
   listWrongHistory,
   removeWrong,
@@ -102,5 +105,56 @@ describe('historyDb', () => {
     expect(s.distinctSpecies).toBe(3)
     expect(s.wrongCount).toBe(1)
     expect(s.bestStreak).toBe(2)
+  })
+
+  it('E2 导出包含全部仓库且带版本标记', async () => {
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    const data = await exportAll()
+    expect(isBackupFile(data)).toBe(true)
+    expect(data.rounds).toHaveLength(1)
+    expect(data.wrong).toHaveLength(1)
+    expect(data.badges).toEqual([])
+  })
+
+  it('E2 导出后清空再导入，数据完整恢复', async () => {
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    const backup = await exportAll()
+    await clearAll()
+    expect(await listRounds()).toHaveLength(0)
+
+    const r = await importBackup(backup)
+    expect(r.rounds).toBe(1)
+    expect(r.wrong).toBe(1)
+    expect((await listRounds())[0]!.id).toBe('r1')
+    expect((await getWrongBook())[0]!.speciesId).toBe('a')
+  })
+
+  it('E2 导入按 id 合并：同轮覆盖，错题保留更大 wrongCount，徽章取并集', async () => {
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }])) // 同 id 再存（wrongCount=2）
+
+    const backup = await exportAll()
+    await clearAll()
+    // 设备上先有：同 id 轮次 + wrongCount 更小的错题 + 一枚徽章
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '丙' }]))
+    await saveRound(round('other', [{ sid: 'b', answer: '乙', chosen: '乙' }]))
+    await importBackup({
+      ...backup,
+      badges: [{ id: 'badge-1', at: 1 }],
+    })
+
+    const rounds = await listRounds()
+    expect(rounds).toHaveLength(2) // r1（被覆盖）+ other（保留）
+    expect(rounds.find((r) => r.id === 'r1')!.items[0]!.chosen).toBe('乙') // 备份版本覆盖
+    const wrong = await getWrongBook()
+    expect(wrong.find((w) => w.speciesId === 'a')!.wrongCount).toBe(2) // 保留更大的计数
+    expect(rounds.find((r) => r.id === 'other')).toBeTruthy()
+  })
+
+  it('E2 isBackupFile 拒绝非备份结构', () => {
+    expect(isBackupFile({ app: 'uniaoer', version: 1, rounds: [] })).toBe(true)
+    expect(isBackupFile({ app: 'other', version: 1, rounds: [] })).toBe(false)
+    expect(isBackupFile(null)).toBe(false)
+    expect(isBackupFile('json')).toBe(false)
   })
 })

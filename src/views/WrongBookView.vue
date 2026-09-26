@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Bird, BookX } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Bird, BookX, Eye, Headphones } from 'lucide-vue-next'
+import { useQuizStore } from '@/stores/quiz'
 import {
   clearWrong,
   getWrongBook,
@@ -9,6 +11,10 @@ import {
   type WrongEntry,
   type WrongHistoryItem,
 } from '@/core/historyDb'
+import type { MediaType } from '@/types'
+
+const router = useRouter()
+const quiz = useQuizStore()
 
 type Tab = 'current' | 'history'
 const tab = ref<Tab>('current')
@@ -36,6 +42,13 @@ async function clearAll() {
   if (!confirm('确定清空“当前错题本”吗？（历史记录会保留）')) return
   await clearWrong()
   await refresh()
+}
+
+/** E1 错题重练：只用错题本里的物种出一轮 */
+function practice(type: MediaType) {
+  if (!current.value.length) return
+  quiz.startWrongBook(type)
+  router.push(type === 'audio' ? '/quiz/audio' : '/quiz/image')
 }
 
 function fmt(at: number) {
@@ -86,6 +99,12 @@ function fmt(at: number) {
         </li>
       </ul>
       <div v-if="current.length" class="actions">
+        <button class="btn btn-primary" @click="practice('image')">
+          <Eye class="ic" :size="16" /> 错题重练 · 看图
+        </button>
+        <button class="btn btn-primary" @click="practice('audio')">
+          <Headphones class="ic" :size="16" /> 错题重练 · 听音
+        </button>
         <button class="btn btn-secondary" @click="clearAll">清空当前错题本</button>
       </div>
     </template>
@@ -165,5 +184,8 @@ function fmt(at: number) {
 }
 .actions {
   margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 </style>

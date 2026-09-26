@@ -12,7 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { loadEnv } from './lib/util.mjs'
+import { loadEnv, mapPool } from './lib/util.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -42,11 +42,12 @@ if (!files.length) {
   process.exit(1)
 }
 
-console.log(`⬆️  上传 ${files.length} 个文件到 R2 桶「${bucket}」的 media/ 下…\n`)
+console.log(`⬆️  上传 ${files.length} 个文件到 R2 桶「${bucket}」的 media/ 下（并发 4）…\n`)
 
 let ok = 0
+let done = 0
 const failures = []
-for (const file of files) {
+await mapPool(files, 4, async (file) => {
   const rel = 'media/' + path.relative(MEDIA_DIR, file).split(path.sep).join('/')
   try {
     // 关键：--remote 才会写进真实的 R2 桶；不加则默认写本地模拟存储
@@ -56,13 +57,15 @@ for (const file of files) {
       { cwd: ROOT },
     )
     ok++
-    console.log('   ↑', rel)
+    done++
+    console.log(`   ↑ [${String(done).padStart(4)}/${files.length}]`, rel)
   } catch (e) {
     const msg = (e.stderr?.toString?.() || e.stdout?.toString?.() || e.message || '').trim()
     failures.push({ rel, msg })
+    done++
     console.error('   ✗', rel, msg.split('\n')[0])
   }
-}
+})
 
 console.log(`\n${failures.length ? '❌' : '✅'} 成功 ${ok} / ${files.length}`)
 if (failures.length) {

@@ -25,6 +25,10 @@ export interface PosterData {
 /** 可选作背景的鸟图（携带该题答案，供缩略图标注；wrong 为 F6 预留） */
 export interface PosterImage {
   url: string
+  /** 缩略图（C2）：候选列表小图用，缺省回退 url */
+  thumbUrl?: string
+  /** 母版原分辨率（C2）：海报背景用它保证成图质量，缺省回退 url */
+  xlUrl?: string
   answer: string
   sci?: string
   wrong?: boolean

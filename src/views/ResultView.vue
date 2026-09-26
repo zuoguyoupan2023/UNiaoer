@@ -67,8 +67,15 @@ const posterImages = computed<PosterImage[]>(() => {
   quiz.questions.forEach((q, i) => {
     if (q.type !== 'image' || !q.media.url || seen.has(q.media.url)) return
     seen.add(q.media.url)
-    // F6：答错题所用的图打标记，引导用户优先选它做背景
-    out.push({ url: q.media.url, answer: q.answer, sci: q.sci, wrong: quiz.chosen[i] !== q.answer })
+    // F6：答错题所用的图打标记，引导用户优先选它做背景；xl 供海报背景用原图（C2）
+    out.push({
+      url: q.media.url,
+      thumbUrl: q.media.thumbUrl,
+      xlUrl: q.media.xlUrl,
+      answer: q.answer,
+      sci: q.sci,
+      wrong: quiz.chosen[i] !== q.answer,
+    })
   })
   return out
 })

@@ -16,6 +16,7 @@ import {
   Hourglass,
   Image as ImageIcon,
   Keyboard,
+  LogOut,
   Smartphone,
   Timer,
 } from 'lucide-vue-next'
@@ -113,6 +114,25 @@ function goNext() {
   quiz.next()
 }
 
+/** 中途退出本轮：已作答部分按"截至成绩"落库（错题本/统计同步），未答题目不计 */
+function quitRound() {
+  const n = quiz.answeredCount
+  const msg =
+    n > 0
+      ? `确定退出本轮吗？已完成 ${n}/${quiz.total} 题，已答部分将按当前成绩记录（计入错题本与统计），未答题目不计入。`
+      : '确定退出本轮吗？本轮尚未作答，不会留下任何记录。'
+  if (!confirm(msg)) return
+  stopTimer()
+  clearAutoNext()
+  if (n === 0) {
+    quiz.reset()
+    router.push('/')
+    return
+  }
+  quiz.truncateTo(n)
+  router.push('/result') // ResultView 落库：截断后的轮次 + 错题本 + 徽章
+}
+
 async function begin() {
   started.value = true
   await quiz.start(props.type, { tier: tier.value })
@@ -126,6 +146,11 @@ onMounted(() => {
     quiz.pendingContinue = false
     preloadQuestions(quiz.questions, 0, 4)
     startTimer()
+  } else {
+    // 清掉上一轮残留（结果页/切模式后再进入时），让介绍页回到"非答题中"状态
+    quiz.questions = []
+    quiz.chosen = []
+    quiz.index = 0
   }
 })
 onUnmounted(() => {
@@ -208,6 +233,10 @@ function onTouchEnd(e: TouchEvent) {
     </div>
     <h2>{{ intro.title }}</h2>
     <p class="lead muted">{{ intro.lead }}</p>
+
+    <p v-if="quiz.wrongPoolOnly" class="wrong-hint">
+      <CircleX class="ic" :size="15" /> 错题重练：本轮只出你答错过的鸟
+    </p>
 
     <h3 class="tier-title">选择难度</h3>
     <div class="tiers">
@@ -296,6 +325,12 @@ function onTouchEnd(e: TouchEvent) {
       <p v-if="autoPending" class="auto-hint">
         <Hourglass class="ic" :size="14" /> 即将自动进入下一题…
       </p>
+
+      <div class="quit-row">
+        <button class="quit-btn" type="button" @click="quitRound">
+          <LogOut class="ic" :size="14" /> 退出本轮
+        </button>
+      </div>
     </div>
   </template>
 </template>
@@ -316,6 +351,18 @@ function onTouchEnd(e: TouchEvent) {
 }
 .intro .lead {
   margin-bottom: 18px;
+}
+.wrong-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  background: #fdecee;
+  color: var(--wrong);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 .tier-title {
   font-size: 0.9rem;
@@ -439,6 +486,30 @@ function onTouchEnd(e: TouchEvent) {
   text-align: center;
   font-size: 0.8rem;
   color: var(--text-light);
+}
+.quit-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.quit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.quit-btn:hover {
+  color: var(--wrong);
+  background: #fdecee;
 }
 .spinner {
   width: 46px;

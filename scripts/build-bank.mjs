@@ -33,6 +33,7 @@ import {
   normalizeLicense,
 } from './lib/license.mjs'
 import { makeR2 } from './lib/r2.mjs'
+import { rgbaToThumbHash } from 'thumbhash'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -57,6 +58,8 @@ const OPT = {
 /** R2 S3 客户端（仅 --media r2 用）；--media stage 只需 publicBase */
 let R2CLIENT = null
 let PUBLIC_BASE = ''
+/** 可用的 AV1 静图编码器（检测一次；null = 不产出 AVIF） */
+let AVIF_ENCODER = null
 
 function stub(sp) {
   return {
@@ -95,6 +98,7 @@ async function main() {
     console.error('❌ --media stage 需要 R2_PUBLIC_BASE（或 --public-base），用于改写 manifest 里的媒体地址')
     process.exit(1)
   }
+  AVIF_ENCODER = await detectAvifEncoder()
 
   const species = JSON.parse(await fs.readFile(path.join(ROOT, 'data/species.json'), 'utf8'))
   const list = species.slice(0, OPT.limit)
@@ -102,6 +106,7 @@ async function main() {
   console.log(`\n🐦 UNiaoer 题库构建`)
   console.log(`   物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
   console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : '（未提供 XC_API_KEY，仅 iNat）'}`)
+  console.log(`   图像: large 母版 → thumb/full/xl${AVIF_ENCODER ? ' + AVIF(' + AVIF_ENCODER + ')' : '（无 AV1 编码器，跳过 AVIF）'}`)
   console.log(`   时间预算: ${OPT.maxMinutes === Infinity ? '不限' : OPT.maxMinutes + ' 分钟'}`)
   if (R2) console.log(`   R2: ${R2.publicBase}/media/<species>/…`)
   console.log('')
@@ -243,9 +248,19 @@ function pickInatImage(results, policy) {
   for (const o of results) {
     for (const p of o.photos || []) {
       if (!licenseAllowed(p.license_code, policy)) continue
-      const url = (p.url || '').replace('/square.', '/medium.')
+      const url = p.url || ''
       if (!url) continue
-      return asset(url, p.license_code, p.attribution, 'iNaturalist', `https://www.inaturalist.org/observations/${o.id}`)
+      // C2 画质优先：母版抓 large（1024px）；medium（500px）作下载失败的回退
+      const a = asset(
+        url.replace('/square.', '/large.'),
+        p.license_code,
+        p.attribution,
+        'iNaturalist',
+        `https://www.inaturalist.org/observations/${o.id}`,
+      )
+      const medium = url.replace('/square.', '/medium.')
+      if (medium !== a.url) a.altUrl = medium
+      return a
     }
   }
   return null
@@ -300,13 +315,169 @@ function asset(url, rawLicense, author, source, sourceUrl) {
 
 /** 下载 →（可选）转码 → 落盘 public/media，或 stage（本地暂存+URL 指向 R2），或上传 R2 */
 async function materialize(rec, id) {
-  if (rec.image) rec.image = await persistOne(rec.image, id, 'image', 'webp')
+  if (rec.image) rec.image = await persistImage(rec.image, id)
   if (rec.audio) rec.audio = await persistOne(rec.audio, id, 'audio', 'mp3')
+}
+
+/**
+ * 图片（可转码）：生成派生图组 thumb/full/xl(+avif) + ThumbHash（C2，详 006 §8）。
+ * - ND 等不可转码的走 persistOne 原样保存（ThumbHash 亦属派生作品，ND 一律不做）
+ * - stage 模式下本地派生齐全则跳过下载，ThumbHash 从现有 thumb 重算（增量补抓）
+ */
+async function persistImage(a, id) {
+  if (!a.transcode) return persistOne(a, id, 'image', 'webp')
+
+  const outDir = path.join(PUBLIC_MEDIA, id)
+  await ensureDir(outDir)
+  const files = {
+    thumb: path.join(outDir, 'image.thumb.webp'),
+    full: path.join(outDir, 'image.full.webp'),
+    xl: path.join(outDir, 'image.xl.webp'),
+    avif: path.join(outDir, 'image.full.avif'),
+  }
+  const exists = (f) => fs.access(f).then(() => true, () => false)
+
+  if (OPT.media === 'stage' && (await exists(files.thumb)) && (await exists(files.full)) && (await exists(files.xl))) {
+    const thumbhash = await thumbHashFromFile(files.thumb).catch(() => '')
+    const out = await finalizeImage(a, id, { thumbhash, avif: await exists(files.avif) })
+    console.log('      ↳ image 派生图已存在，跳过下载')
+    return out
+  }
+
+  const tmpDir = path.join(TMP, id)
+  await ensureDir(tmpDir)
+
+  let raw
+  let masterUrl = a.url
+  try {
+    raw = await download(a.url, path.join(tmpDir, 'image.src'))
+  } catch (e1) {
+    if (a.altUrl) {
+      try {
+        raw = await download(a.altUrl, path.join(tmpDir, 'image.src'))
+        masterUrl = a.altUrl // large 缺失时以 medium 为母版，manifest 指向它保持一致
+      } catch (e2) {
+        console.warn(`      ↳ image 下载失败，保留源站地址：${e2.message}`)
+        await fs.rm(tmpDir, { recursive: true, force: true })
+        return a
+      }
+    } else {
+      console.warn(`      ↳ image 下载失败，保留源站地址：${e1.message}`)
+      await fs.rm(tmpDir, { recursive: true, force: true })
+      return a
+    }
+  }
+
+  try {
+    await runFfmpeg(['-y', '-i', raw, '-vf', "scale='min(320,iw)':-2", '-c:v', 'libwebp', '-quality', '72', files.thumb])
+    await runFfmpeg(['-y', '-i', raw, '-vf', "scale='min(1280,iw)':-2", '-c:v', 'libwebp', '-quality', '82', files.full])
+    await runFfmpeg(['-y', '-i', raw, '-c:v', 'libwebp', '-quality', '90', files.xl])
+    let avif = false
+    if (AVIF_ENCODER) {
+      try {
+        const encArgs = ['-y', '-i', raw, '-vf', "scale='min(1280,iw)':-2", '-c:v', AVIF_ENCODER, '-crf', '45', '-still-picture', '1', '-pix_fmt', 'yuv420p']
+        if (AVIF_ENCODER === 'libaom-av1') encArgs.push('-cpu-used', '6')
+        await runFfmpeg([...encArgs, files.avif])
+        avif = true
+      } catch {
+        avif = false
+        await fs.rm(files.avif, { force: true })
+      }
+    }
+    const thumbhash = await thumbHashFromFile(files.thumb)
+    await fs.rm(raw, { force: true })
+    await fs.rm(tmpDir, { recursive: true, force: true })
+    return finalizeImage({ ...a, url: masterUrl }, id, { thumbhash, avif })
+  } catch (e) {
+    // 转码失败：退回单文件（保留原始扩展名），与旧行为一致；raw 复用，不再重新下载
+    console.warn(`      ↳ image 转码失败，保留原文件：${e.message}`)
+    for (const f of [files.thumb, files.full, files.xl, files.avif]) await fs.rm(f, { force: true })
+    return persistLocalFile({ ...a, url: masterUrl }, id, 'image', raw, masterUrl, 'webp')
+  }
+}
+
+/** 派生图齐全后的 URL 组装；r2 模式再把 public/media 里的派生图逐个直传 */
+async function finalizeImage(a, id, { thumbhash, avif }) {
+  const rels = {
+    url: `media/${id}/image.full.webp`,
+    thumbUrl: `media/${id}/image.thumb.webp`,
+    xlUrl: `media/${id}/image.xl.webp`,
+    ...(avif ? { avifUrl: `media/${id}/image.full.avif` } : {}),
+  }
+  const out = { ...a }
+  delete out.altUrl
+  if (OPT.media === 'r2') {
+    for (const rel of Object.values(rels)) {
+      const body = await fs.readFile(path.join(PUBLIC_MEDIA, rel))
+      await R2CLIENT.put(rel, body, 'image/webp')
+    }
+  }
+  for (const [field, rel] of Object.entries(rels)) {
+    if (OPT.media === 'stage') out[field] = `${PUBLIC_BASE}/${rel}`
+    else out[field] = `/${rel}`
+  }
+  if (thumbhash) out.thumbhash = thumbhash
+  return out
+}
+
+/** 从一张 webp 读出 RGBA（缩到 ≤100px，thumbhash 包的输入上限）并编码 ThumbHash（base64） */
+async function thumbHashFromFile(webp) {
+  // 临时文件必须以 .webp 结尾，否则 ffmpeg 无法从扩展名推断封装格式
+  const mini = webp.replace(/([^/]+)\.webp$/, 'mini.$1.webp')
+  const scale = "scale='min(100,iw)':'min(100,ih)':force_original_aspect_ratio=decrease"
+  try {
+    await runFfmpeg(['-y', '-i', webp, '-vf', scale, '-c:v', 'libwebp', '-quality', '80', mini])
+    const { stdout: wh } = await execFileP('ffprobe', [
+      '-v', 'error', '-select_streams', 'v:0',
+      '-show_entries', 'stream=width,height', '-of', 'csv=p=0', mini,
+    ])
+    const [w, h] = wh.trim().split(',').map(Number)
+    if (!w || !h) throw new Error('ffprobe 尺寸解析失败')
+    const { stdout } = await execFileP(
+      'ffmpeg',
+      ['-v', 'error', '-i', mini, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-'],
+      { encoding: 'buffer', maxBuffer: 256 * 1024 * 1024 },
+    )
+    const hash = rgbaToThumbHash(w, h, new Uint8Array(stdout.buffer, stdout.byteOffset, stdout.byteLength))
+    return Buffer.from(hash).toString('base64')
+  } finally {
+    await fs.rm(mini, { force: true })
+  }
+}
+
+/** 检测可用的 AV1 静图编码器（libaom 体积更小优先；都没有则返回 null 跳过 AVIF） */
+async function detectAvifEncoder() {
+  try {
+    const { stdout } = await execFileP('ffmpeg', ['-hide_banner', '-encoders'])
+    if (/libaom-av1/.test(stdout)) return 'libaom-av1'
+    if (/libsvtav1/.test(stdout)) return 'libsvtav1'
+  } catch {
+    /* 无 ffmpeg */
+  }
+  return null
+}
+
+function runFfmpeg(args) {
+  return execFileP('ffmpeg', ['-hide_banner', '-loglevel', 'error', ...args])
 }
 
 async function persistOne(a, id, kind, ext) {
   const tmpDir = path.join(TMP, id)
   await ensureDir(tmpDir)
+
+  // 未转码（ND 或转码失败）时保留原始扩展名，避免出现 image.src 这种怪文件名
+  const outExt = a.transcode ? ext : extFromUrl(a.url) || (kind === 'image' ? 'jpg' : 'mp3')
+  const localPath = path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}`)
+
+  // stage 增量：目标文件已在本地则跳过下载（补抓只拉缺失的）
+  if (
+    OPT.media === 'stage' &&
+    (outExt === ext || !a.transcode) &&
+    (await fs.access(localPath).then(() => true, () => false))
+  ) {
+    console.log(`      ↳ ${kind} 已存在，跳过下载`)
+    return { ...a, url: `${PUBLIC_BASE}/media/${id}/${kind}.${outExt}` }
+  }
 
   let raw
   try {
@@ -317,10 +488,16 @@ async function persistOne(a, id, kind, ext) {
     await fs.rm(tmpDir, { recursive: true, force: true })
     return a
   }
+  return persistLocalFile(a, id, kind, raw, a.url, ext)
+}
 
+/** 把已下载的本地文件转码/落盘/上传（persistOne 与图片转码回退共用） */
+async function persistLocalFile(a, id, kind, raw, srcUrl, ext) {
+  const tmpDir = path.join(TMP, id)
+  await ensureDir(tmpDir)
+
+  let outExt = extFromUrl(srcUrl) || (kind === 'image' ? 'jpg' : 'mp3')
   let file = raw
-  // 未转码（ND 或转码失败）时保留原始扩展名，避免出现 image.src 这种怪文件名
-  let outExt = extFromUrl(a.url) || (kind === 'image' ? 'jpg' : 'mp3')
   if (a.transcode) {
     const out = path.join(tmpDir, `${kind}.${ext}`)
     try {
@@ -337,7 +514,7 @@ async function persistOne(a, id, kind, ext) {
   let url
   if (OPT.media === 'r2') {
     const body = await fs.readFile(file)
-    await R2CLIENT.put(rel, body, guessContentType(a.url, kind, outExt))
+    await R2CLIENT.put(rel, body, guessContentType(srcUrl, kind, outExt))
     url = `${R2CLIENT.publicBase}/${rel}`
   } else {
     const dir = path.join(PUBLIC_MEDIA, id)
@@ -347,7 +524,9 @@ async function persistOne(a, id, kind, ext) {
     url = OPT.media === 'stage' ? `${PUBLIC_BASE}/${rel}` : `/media/${id}/${kind}.${outExt}`
   }
   await fs.rm(tmpDir, { recursive: true, force: true })
-  return { ...a, url }
+  const out = { ...a, url }
+  delete out.altUrl
+  return out
 }
 
 /** 从 URL 猜原始扩展名 */

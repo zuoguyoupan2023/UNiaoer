@@ -27,3 +27,7 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # A3：manifest 结构/署名/媒体归属校验（不联网抽查，避免 CI 抖动）
+      - name: Check bank consistency
+        run: node scripts/check-bank.mjs --no-net

@@ -30,7 +30,16 @@ export interface MediaAsset {
   id: string
   speciesId: string
   type: MediaType
+  /** 图片=full（≤1280px，答题主图）；音频=mp3。不可转码/下载失败时为原始文件或源站地址 */
   url: string
+  /** 图片多分辨率（C2）：缩略图（320px），小尺寸展示用 */
+  thumbUrl?: string
+  /** 图片多分辨率（C2）：母版原分辨率，点击放大与海报背景用 */
+  xlUrl?: string
+  /** 图片多分辨率（C2）：AVIF 版 full，浏览器支持时优先 */
+  avifUrl?: string
+  /** 图片多分辨率（C2）：ThumbHash（base64），解码出模糊占位图 */
+  thumbhash?: string
   license: string
   licenseUrl: string
   author: string
