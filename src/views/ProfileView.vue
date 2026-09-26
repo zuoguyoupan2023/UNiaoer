@@ -96,9 +96,8 @@ const titleWall = computed(() => {
       earned: !!earned,
       label: earned?.label ?? track.name,
       level: earned?.level ?? 0,
-      nextText: next
-        ? `下一级「${next.label}」· 还差 ${Math.max(1, Math.ceil(next.threshold - value))}`
-        : '已满级',
+      /** 距离下一级还差多少；null = 已满级 */
+      remaining: next ? Math.max(1, Math.ceil(next.threshold - value)) : null,
     }
   })
 })
@@ -372,11 +371,15 @@ async function onFile(e: Event) {
       <div v-else class="badge-grid">
         <div v-for="t in titleWall" :key="t.id" class="badge" :class="{ locked: !t.earned }">
           <BadgeIcon class="badge-icon" :name="t.icon" :size="26" />
-          <span class="label">{{ t.label }}</span>
-          <template v-if="t.earned">
-            <span class="desc">{{ t.name }} · Lv.{{ t.level }}</span>
-            <span class="desc next">{{ t.nextText }}</span>
-          </template>
+          <span class="label">
+            {{ t.label }}<template v-if="t.earned"> {{ t.level }}级</template>
+          </span>
+          <span v-if="t.earned" class="desc next">
+            <template v-if="t.remaining !== null">
+              距离下一级还差:<b class="remain">{{ t.remaining }}</b>
+            </template>
+            <template v-else>已满级</template>
+          </span>
         </div>
       </div>
     </section>
@@ -696,6 +699,17 @@ h2.sec {
 }
 .badge .desc.next {
   color: var(--primary);
+}
+.badge .remain {
+  margin-left: 4px;
+  font-weight: 700;
+}
+/* 移动端：数字换到第三行 */
+@media (max-width: 480px) {
+  .badge .remain {
+    display: block;
+    margin-left: 0;
+  }
 }
 .badge.locked {
   opacity: 0.45;
