@@ -56,6 +56,15 @@ export const TIERS: Record<Tier, TierConfig> = {
     timeLimitSec: 8,
     commonness: [3, 4],
   },
+  5: {
+    tier: 5,
+    label: 'L5 地狱',
+    desc: 'L4 规格 · 限时 8s · 随机鸟鸣干扰',
+    optionCount: 6,
+    distractor: 'same',
+    timeLimitSec: 8,
+    commonness: [3, 4],
+  },
 }
 
-export const TIER_LIST: TierConfig[] = [TIERS[1], TIERS[2], TIERS[3], TIERS[4]]
+export const TIER_LIST: TierConfig[] = [TIERS[1], TIERS[2], TIERS[3], TIERS[4], TIERS[5]]

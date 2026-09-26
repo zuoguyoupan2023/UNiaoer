@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
+import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
@@ -136,17 +137,33 @@ function quitRound() {
 
 async function begin() {
   started.value = true
+  // 环境鸟鸣是全局功能，但测试开始后不播放（选难度阶段不算开始，见 R23）
+  ambiencePlayer.stop()
   await quiz.start(props.type, { tier: tier.value })
   preloadQuestions(quiz.questions, 0, 4) // 当前题 + 后 3 题
   startTimer()
+  updateInterference()
+}
+
+/** L5 地狱：每题随机鸟鸣干扰（看图 2 条 / 听音 1 条）；作答或非地狱难度即停止 */
+function updateInterference() {
+  const q = quiz.current
+  if (quiz.tier === 5 && q && !quiz.answered) {
+    void interferencePlayer.start(q.type === 'image' ? 2 : 1, q.type === 'image' ? 0.35 : 0.25)
+  } else {
+    interferencePlayer.stop()
+  }
 }
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
+    // 从结果页续轮也是"测试开始"：环境鸟鸣停播
+    ambiencePlayer.stop()
     preloadQuestions(quiz.questions, 0, 4)
     startTimer()
+    updateInterference()
   } else {
     // 清掉上一轮残留（结果页/切模式后再进入时），让介绍页回到"非答题中"状态
     quiz.questions = []
@@ -158,6 +175,7 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   stopTimer()
   clearAutoNext()
+  interferencePlayer.stop()
 })
 
 watch(
@@ -166,6 +184,7 @@ watch(
     clearAutoNext()
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
     startTimer()
+    updateInterference() // 地狱难度：新题换一批随机干扰
   },
 )
 watch(
@@ -177,6 +196,7 @@ watch(
     } else {
       clearAutoNext()
     }
+    updateInterference() // 作答后停止干扰；进入下一题（未作答）再开启
   },
 )
 watch(
@@ -395,6 +415,10 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
   text-align: left;
   transition: all 0.18s ease;
+}
+/* 5 个档位时最后一个奇数位横跨两列，避免孤行 */
+.tier:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 .tier:hover {
   border-color: var(--primary-light);

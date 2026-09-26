@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildShuffledQueue } from '../ambience'
+import { buildShuffledQueue, pickRandomTracks } from '../ambience'
 
 const CATALOG = {
   items: [
@@ -56,6 +56,30 @@ describe('buildShuffledQueue', () => {
     const ids = ['a', 'b', 'c']
     buildShuffledQueue(ids, 'a')
     expect(ids).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('pickRandomTracks（地狱难度干扰音选取）', () => {
+  const tracks = ['birds', 'crows', 'owl', 'seagulls', 'woodpecker']
+
+  it('取 n 条且不重复', () => {
+    for (let i = 0; i < 20; i++) {
+      const picked = pickRandomTracks(tracks, 2)
+      expect(picked).toHaveLength(2)
+      expect(new Set(picked).size).toBe(2)
+      expect(picked.every((t) => tracks.includes(t!))).toBe(true)
+    }
+  })
+
+  it('n 超过总数时返回全部且不重复', () => {
+    const picked = pickRandomTracks(tracks, 10)
+    expect(picked).toHaveLength(5)
+    expect(new Set(picked).size).toBe(5)
+  })
+
+  it('n 为 0 或负数返回空数组', () => {
+    expect(pickRandomTracks(tracks, 0)).toEqual([])
+    expect(pickRandomTracks(tracks, -1)).toEqual([])
   })
 })
 

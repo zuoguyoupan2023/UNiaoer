@@ -6,7 +6,7 @@ import type { RoundRecord } from '@/core/historyDb'
 
 const props = defineProps<{ rounds: RoundRecord[] }>()
 
-const TIERS: Record<Tier, string> = { 1: '入门', 2: '进阶', 3: '高手', 4: '专家' }
+const TIERS: Record<Tier, string> = { 1: '入门', 2: '进阶', 3: '高手', 4: '专家', 5: '地狱' }
 const MODES: Record<MediaType, string> = { image: '看图', audio: '听音' }
 
 /** 时间正序的趋势点（最近 20 轮） */
@@ -29,7 +29,7 @@ function agg(list: RoundRecord[]) {
 }
 
 const byTier = computed(() =>
-  ([1, 2, 3, 4] as Tier[])
+  ([1, 2, 3, 4, 5] as Tier[])
     .map((tier) => ({ key: tier, label: `L${tier} ${TIERS[tier]}`, ...agg(props.rounds.filter((r) => r.tier === tier)) }))
     .filter((x) => x.rounds > 0),
 )

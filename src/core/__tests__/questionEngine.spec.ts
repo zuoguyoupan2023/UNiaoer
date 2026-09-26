@@ -116,6 +116,17 @@ describe('难度梯度', () => {
     const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
     expect(qs.length).toBeGreaterThan(0)
   })
+
+  it('L5 地狱：L4 规格（6 选项、8s 限时），题目正常生成', () => {
+    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 5 })
+    expect(qs.length).toBeGreaterThan(0)
+    expect(qs[0]!.tier).toBe(5)
+    expect(qs[0]!.timeLimitSec).toBe(8)
+    for (const q of qs) {
+      expect(q.options.length).toBeLessThanOrEqual(TIERS[5].optionCount)
+      expect(q.options).toContain(q.answer)
+    }
+  })
 })
 
 describe('pickDistractors', () => {

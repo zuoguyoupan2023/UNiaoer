@@ -193,3 +193,58 @@ class AmbiencePlayer {
 }
 
 export const ambiencePlayer = new AmbiencePlayer()
+
+// ---------- 干扰音频（地狱难度，R23） ----------
+
+/** 随机挑 n 条不重复音轨 */
+export function pickRandomTracks<T>(tracks: T[], n: number): T[] {
+  const a = [...tracks]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = a[i]!
+    a[i] = a[j]!
+    a[j] = tmp
+  }
+  return a.slice(0, Math.max(0, n))
+}
+
+/**
+ * 地狱难度干扰播放器：每道题随机 N 条鸟叫循环播放（与顶栏环境鸟鸣相互独立）。
+ * 看图版 2 条、听音版 1 条（听音版音量更低，避免盖过考题鸟鸣）。
+ */
+class InterferencePlayer {
+  private audios: HTMLAudioElement[] = []
+
+  /** 当前正在播放的干扰音轨数（观测/测试用） */
+  get activeCount(): number {
+    return this.audios.length
+  }
+
+  /** 开始 N 条随机干扰音；volume 为干扰音量（听音版建议更低） */
+  async start(count: number, volume = 0.3) {
+    this.stop()
+    const all = await loadBirdTracks()
+    const picked = pickRandomTracks(all, count)
+    this.audios = picked.map((t) => {
+      const a = new Audio(t.url)
+      a.loop = true
+      a.volume = volume
+      return a
+    })
+    // 用户已有点击手势（开始答题），播放被拒时静默忽略
+    await Promise.allSettled(this.audios.map((a) => a.play()))
+  }
+
+  stop() {
+    for (const a of this.audios) a.pause()
+    this.audios = []
+  }
+}
+
+export const interferencePlayer = new InterferencePlayer()
+
+// 开发模式暴露实例，便于浏览器调试/验证播放状态（生产构建剔除）
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __uniaoer: object }).__uniaoer = { ambiencePlayer, interferencePlayer }
+}
+

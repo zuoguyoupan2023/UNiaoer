@@ -1,5 +1,5 @@
-/** 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 */
-export type Tier = 1 | 2 | 3 | 4
+/** 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 / 5 地狱（随机鸟鸣干扰，R23） */
+export type Tier = 1 | 2 | 3 | 4 | 5
 
 /** 题型 */
 export type MediaType = 'image' | 'audio'
