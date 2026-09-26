@@ -71,6 +71,36 @@
   color: #fff;
   box-shadow: 0 10px 20px -10px rgba(45, 106, 79, 0.85);
 }
+/* 环境鸟鸣一键开关（R22）：样式与导航胶囊一致 */
+.ambience-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ambience-btn:hover {
+  background: #eaf4ef;
+  color: var(--primary);
+}
+.ambience-btn.on {
+  color: var(--primary);
+  animation: ambience-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ambience-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
 /* 移动端：第一行 = 鸟图标 + 错题本/我的/设置；第二行 = 看图/听音 */
 @media (max-width: 640px) {
   .app-topbar {
@@ -99,11 +129,10 @@
 }
 
 .app-main {
-  flex: 1;
   width: 100%;
   max-width: 760px;
   margin: 0 auto;
-  padding: 0 16px 40px;
+  padding: 0 16px 12px;
 }
 
 .app-footer {

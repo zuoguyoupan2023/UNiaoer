@@ -10,6 +10,8 @@ interface Persisted {
   autoplayAudio: boolean
   autoplayDelayMs: number
   autoNext: AutoNextMode
+  /** 环境鸟鸣：被取消勾选的音轨 id（默认全部勾选，见 006 R22） */
+  ambienceExcluded: string[]
 }
 
 function load(): Partial<Persisted> {
@@ -32,9 +34,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const autoplayDelayMs = ref<number>(saved.autoplayDelayMs ?? 2000)
   /** 自动进入下一题：默认答对后等 2s（见 006 D2） */
   const autoNext = ref<AutoNextMode>(saved.autoNext ?? 'correct')
+  /** 环境鸟鸣：取消勾选的音轨（默认全部勾选；新增音轨默认生效） */
+  const ambienceExcluded = ref<string[]>(saved.ambienceExcluded ?? [])
 
   watch(
-    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext],
+    [licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded],
     () => {
       try {
         localStorage.setItem(
@@ -44,6 +48,7 @@ export const useSettingsStore = defineStore('settings', () => {
             autoplayAudio: autoplayAudio.value,
             autoplayDelayMs: autoplayDelayMs.value,
             autoNext: autoNext.value,
+            ambienceExcluded: ambienceExcluded.value,
           } satisfies Persisted),
         )
       } catch {
@@ -53,5 +58,5 @@ export const useSettingsStore = defineStore('settings', () => {
     { flush: 'post' },
   )
 
-  return { licensePolicy, autoplayAudio, autoplayDelayMs, autoNext }
+  return { licensePolicy, autoplayAudio, autoplayDelayMs, autoNext, ambienceExcluded }
 })

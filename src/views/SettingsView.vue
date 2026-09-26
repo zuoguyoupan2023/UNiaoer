@@ -1,11 +1,35 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
+import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
 import type { AutoNextMode, LicensePolicy } from '@/types'
 
 const settings = useSettingsStore()
 const cacheMsg = ref('')
+
+// 环境鸟鸣音轨目录（懒加载，默认全部勾选）
+const tracks = ref<AmbienceTrack[] | null>(null)
+const tracksError = ref('')
+
+onMounted(async () => {
+  try {
+    tracks.value = await loadBirdTracks()
+  } catch {
+    tracksError.value = '鸟鸣目录加载失败（需要网络），稍后重试'
+  }
+})
+
+function isTrackChecked(id: string): boolean {
+  return !settings.ambienceExcluded.includes(id)
+}
+
+function toggleTrack(id: string, checked: boolean) {
+  settings.ambienceExcluded = checked
+    ? settings.ambienceExcluded.filter((x) => x !== id)
+    : [...settings.ambienceExcluded, id]
+  ambiencePlayer.syncExclusions() // 正在播放的音轨被取消勾选时自动切下一首
+}
 
 async function clearMediaCache() {
   if (!('caches' in window)) {
@@ -101,6 +125,26 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
     </div>
 
     <div class="setting">
+      <h3>环境鸟鸣</h3>
+      <p class="muted">
+        顶栏的喇叭按钮可一键播放/停止：在你勾选的音轨中乱序轮流播放。默认全部勾选；取消勾选的音轨不会播放。勾选只保存在本地。
+      </p>
+      <p v-if="tracksError" class="muted">{{ tracksError }}</p>
+      <p v-else-if="!tracks" class="muted">音轨目录加载中…</p>
+      <div v-else class="track-list">
+        <label v-for="t in tracks" :key="t.id" class="track">
+          <input
+            type="checkbox"
+            :checked="isTrackChecked(t.id)"
+            @change="toggleTrack(t.id, ($event.target as HTMLInputElement).checked)"
+          />
+          <span class="zh">{{ t.labelZh }}</span>
+          <span class="en">{{ t.labelEn }}</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="setting">
       <h3>媒体缓存</h3>
       <p class="muted">
         图片与音频会缓存在本地（Service Worker），二次访问与离线可秒开。如占用过大可清除。
@@ -182,5 +226,38 @@ h2.sec {
   border: 2px solid var(--border);
   border-radius: 10px;
   font-family: inherit;
+}
+.track-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: all 0.18s ease;
+}
+.track:hover {
+  border-color: var(--primary-light);
+}
+.track input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.track .zh {
+  font-weight: 600;
+}
+.track .en {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--text-light);
 }
 </style>
