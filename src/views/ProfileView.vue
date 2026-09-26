@@ -77,7 +77,11 @@ function wearTitle(trackId: string | null) {
 /** 佩戴徽章（R31） */
 const wornBadgeLabel = computed(() => BADGES.find((b) => b.id === settings.wornBadge)?.label ?? '')
 
-/** 称号墙（R32）：全部轨道完整展示，未达成灰色显示并提示下一级 */
+/**
+ * 称号墙（R32/R39）：全部轨道完整展示。
+ * - 已达成：显示当前称号 + 轨道/Lv + 下一级进度；
+ * - 未达成：仅灰色展示轨道名，不显示进度信息。
+ */
 const titleWall = computed(() => {
   const s = stats.value ?? makeEmptyStats()
   const byId = new Map(evaluateTitles(s, rounds.value).map((t) => [t.trackId, t]))
@@ -369,7 +373,10 @@ async function onFile(e: Event) {
         <div v-for="t in titleWall" :key="t.id" class="badge" :class="{ locked: !t.earned }">
           <BadgeIcon class="badge-icon" :name="t.icon" :size="26" />
           <span class="label">{{ t.label }}</span>
-          <span class="desc">{{ t.earned ? `${t.name} · Lv.${t.level}` : t.nextText }}</span>
+          <template v-if="t.earned">
+            <span class="desc">{{ t.name }} · Lv.{{ t.level }}</span>
+            <span class="desc next">{{ t.nextText }}</span>
+          </template>
         </div>
       </div>
     </section>
@@ -686,6 +693,9 @@ h2.sec {
 .badge .desc {
   font-size: 0.68rem;
   color: var(--text-light);
+}
+.badge .desc.next {
+  color: var(--primary);
 }
 .badge.locked {
   opacity: 0.45;

@@ -17,12 +17,11 @@ onMounted(() => {
   subscribeAmbience((s) => {
     ambienceOn.value = s.playing
   })
-  // R30/R37：默认自动播放。被浏览器拦截（无手势/无痕模式）时，持续监听用户交互重试直到成功；
-  // 用户手动关闭过（ambienceEnabled=false）则不自动播
+  // R30/R37/R38：默认开启。以「静音待命」起步——所有浏览器都允许静音自动播放，
+  // 于是按钮立即显示为开；首个用户手势后取消静音正式出声。若目录加载失败则等手势重试。
   if (settings.ambienceEnabled) {
-    void tryStartAmbience().then((ok) => {
-      if (!ok) armGestureRetry()
-    })
+    void ambiencePlayer.start({ muted: true }).catch(() => {})
+    armFirstGesture()
   }
 })
 
@@ -36,18 +35,27 @@ async function tryStartAmbience() {
   }
 }
 
-/** 持续监听用户交互重试自动播放（R37）：移动端首次触屏可能仍未获播放授权，直到成功为止 */
-let gestureRetryArmed = false
-function armGestureRetry() {
-  if (gestureRetryArmed) return
-  gestureRetryArmed = true
+/**
+ * 首个用户手势：静音待命中则取消静音出声；若尚未播放（如目录加载失败）则重试启动（R37/R38）。
+ * 移动端首次触屏可能仍未获授权，失败则继续等下一次交互。
+ */
+let gestureArmed = false
+function armFirstGesture() {
+  if (gestureArmed) return
+  gestureArmed = true
   const events = ['pointerdown', 'touchend', 'keydown', 'click'] as const
   const once = () => {
     for (const e of events) document.removeEventListener(e, once)
-    gestureRetryArmed = false
-    if (settings.ambienceEnabled && !getAmbienceState().playing) {
+    gestureArmed = false
+    if (!settings.ambienceEnabled) return
+    const st = getAmbienceState()
+    if (st.playing && st.muted) {
+      ambiencePlayer.unmute() // 解除静音，环境音正式出声
+      return
+    }
+    if (!st.playing) {
       void tryStartAmbience().then((ok) => {
-        if (!ok) armGestureRetry() // 这次交互仍未获授权，等下一次
+        if (!ok) armFirstGesture() // 这次交互仍未获授权，等下一次
       })
     }
   }
