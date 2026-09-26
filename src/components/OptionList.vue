@@ -7,6 +7,8 @@ const props = defineProps<{
   answer: string
   chosen: string | null
   hidden?: boolean
+  /** 隐藏期间的倒计时：距选项显示的秒数（hidden 为 true 时必有） */
+  revealInSec?: number | null
   /** 鸟声版用「先倾听」，鸟图版用「先观察」 */
   mode?: MediaType
 }>()
@@ -27,7 +29,9 @@ function state(opt: string): string {
   <div v-if="hidden" class="options-hidden">
     <Ear v-if="mode === 'audio'" class="ic" :size="16" />
     <Eye v-else class="ic" :size="16" />
-    {{ mode === 'audio' ? '先倾听，选项稍后出现' : '先观察，选项稍后出现' }}
+    <span>{{ mode === 'audio' ? '先倾听' : '先观察' }} · 选项</span>
+    <b class="count">{{ revealInSec ?? '' }}</b>
+    <span>秒后出现</span>
   </div>
   <div v-else class="options">
     <button
@@ -49,13 +53,25 @@ function state(opt: string): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   padding: 26px 16px;
   border: 2px dashed var(--border);
   border-radius: 14px;
   background: #f5f8f6;
   color: var(--text-light);
   font-size: 0.86rem;
+}
+.options-hidden .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 2px 7px;
+  border-radius: 9px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
 }
 .options {
   display: grid;

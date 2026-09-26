@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { AUTO_NEXT_DELAY_MS, OPTION_REVEAL_RATIO, optionsHiddenFor } from '../pacing'
+import {
+  AUTO_NEXT_DELAY_MS,
+  OPTION_REVEAL_RATIO,
+  optionsHiddenFor,
+  secondsUntilReveal,
+} from '../pacing'
 import { TIERS } from '../difficulty'
 
 describe('pacing', () => {
@@ -36,5 +41,23 @@ describe('pacing', () => {
   it('比例常量为 1/3，自动延时为 2000ms', () => {
     expect(OPTION_REVEAL_RATIO).toBeCloseTo(1 / 3)
     expect(AUTO_NEXT_DELAY_MS).toBe(2000)
+  })
+
+  it('secondsUntilReveal：与 optionsHiddenFor 同步（null = 已显示），倒计时逐秒递减', () => {
+    // L1：25s 限时、前 5s 隐藏
+    expect(secondsUntilReveal(25, 25, 5)).toBe(5)
+    expect(secondsUntilReveal(25, 23, 5)).toBe(3)
+    expect(secondsUntilReveal(25, 21, 5)).toBe(1)
+    expect(secondsUntilReveal(25, 20, 5)).toBeNull()
+    // 与隐藏判定一致
+    for (const left of [25, 24, 23, 22, 21, 20, 19]) {
+      expect((secondsUntilReveal(25, left, 5) !== null)).toBe(optionsHiddenFor(25, left, 5))
+    }
+    // 比例隐藏：20s 限时 1/3 ≈ 6.67 → 7→…→1
+    expect(secondsUntilReveal(20, 20)).toBe(7)
+    expect(secondsUntilReveal(20, 15)).toBe(2)
+    expect(secondsUntilReveal(20, 13)).toBeNull()
+    // 不限时不显示倒计时
+    expect(secondsUntilReveal(undefined, null)).toBeNull()
   })
 })

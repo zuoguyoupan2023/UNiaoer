@@ -22,27 +22,25 @@ onMounted(async () => {
 
 <template>
   <section class="card center">
-    <h2 style="font-size: 1.2rem; margin-bottom: 8px">选择玩法</h2>
-    <p class="muted" style="margin-bottom: 20px">
-      用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。
-    </p>
+    <h2 class="pick-title">选择玩法</h2>
+    <p class="muted lead">用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。</p>
 
     <p v-if="stats" class="bank-stats">
-      <Library class="ic" :size="15" /> 题库：{{ stats.total }} 种 · 图片 {{ stats.image }} ·
+      <Library class="ic" :size="14" /> 题库：{{ stats.total }} 种 · 图片 {{ stats.image }} ·
       音频 {{ stats.audio }}
     </p>
     <p v-else-if="bankError" class="bank-error">
-      <AlertTriangle class="ic" :size="15" /> {{ bankError }}
+      <AlertTriangle class="ic" :size="14" /> {{ bankError }}
     </p>
 
     <div class="modes">
       <RouterLink to="/quiz/image" class="mode-card">
-        <ImageIcon class="mode-icon" :size="40" />
+        <ImageIcon class="mode-icon" :size="30" />
         <span class="mode-title">看图认鸟</span>
         <span class="mode-sub">来自 iNaturalist 的开放许可照片</span>
       </RouterLink>
       <RouterLink to="/quiz/audio" class="mode-card">
-        <AudioLines class="mode-icon" :size="40" />
+        <AudioLines class="mode-icon" :size="30" />
         <span class="mode-title">听音认鸟</span>
         <span class="mode-sub">来自 Xeno-canto 的真实鸟鸣</span>
       </RouterLink>
@@ -51,27 +49,35 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.pick-title {
+  font-size: 1.15rem;
+  margin-bottom: 6px;
+}
+.lead {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
 .bank-stats {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--primary);
   background: #eaf4ef;
   border-radius: 10px;
-  padding: 8px 12px;
-  margin-bottom: 16px;
+  padding: 5px 12px;
+  margin-bottom: 12px;
   display: inline-block;
 }
 .bank-error {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #8a6d00;
   background: #fdf3d8;
   border-radius: 10px;
-  padding: 8px 12px;
-  margin-bottom: 16px;
+  padding: 5px 12px;
+  margin-bottom: 12px;
 }
 .modes {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 @media (max-width: 520px) {
   .modes {
@@ -82,8 +88,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 26px 16px;
+  gap: 3px;
+  padding: 16px 12px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
@@ -102,11 +108,11 @@ onMounted(async () => {
   margin-bottom: 2px;
 }
 .mode-title {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 .mode-sub {
-  font-size: 0.76rem;
+  font-size: 0.73rem;
   color: var(--text-light);
 }
 </style>

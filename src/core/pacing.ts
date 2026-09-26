@@ -17,8 +17,22 @@ export function optionsHiddenFor(
   timeLeftSec: number | null,
   revealSec?: number,
 ): boolean {
-  if (!timeLimitSec) return false
+  return secondsUntilReveal(timeLimitSec, timeLeftSec, revealSec) !== null
+}
+
+/**
+ * 距离选项显示还剩几秒（向上取整，供倒计时文案）；不隐藏时返回 null。
+ * 隐藏规则与 optionsHiddenFor 完全一致。
+ */
+export function secondsUntilReveal(
+  timeLimitSec: number | undefined,
+  timeLeftSec: number | null,
+  revealSec?: number,
+): number | null {
+  if (!timeLimitSec) return null
   const left = timeLeftSec ?? timeLimitSec
   const hideFor = revealSec ?? timeLimitSec * OPTION_REVEAL_RATIO
-  return timeLimitSec - left < hideFor
+  const elapsed = timeLimitSec - left
+  if (elapsed >= hideFor) return null
+  return Math.max(1, Math.ceil(hideFor - elapsed))
 }

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import { AUTO_NEXT_DELAY_MS, optionsHiddenFor } from '@/core/pacing'
+import { AUTO_NEXT_DELAY_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
 import {
@@ -53,12 +53,13 @@ const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.cu
 const timeLeft = ref<number | null>(null)
 let tick: number | undefined
 
-/** D1：限时题前段隐藏选项（缺省 1/3；L1 固定前 5s） */
-const optionsHidden = computed(() => {
-  if (quiz.answered || !quiz.current) return false
-  const revealSec = TIERS[quiz.current.tier]?.optionRevealSec
-  return optionsHiddenFor(quiz.current.timeLimitSec, timeLeft.value, revealSec)
+/** D1：限时题前段隐藏选项（缺省 1/3；L1 固定前 5s），revealInSec 为出现前倒计时秒数 */
+const revealInSec = computed(() => {
+  if (quiz.answered || !quiz.current) return null
+  const q = quiz.current
+  return secondsUntilReveal(q.timeLimitSec, timeLeft.value, TIERS[q.tier]?.optionRevealSec)
 })
+const optionsHidden = computed(() => revealInSec.value !== null)
 
 function stopTimer() {
   if (tick !== undefined) {
@@ -300,6 +301,7 @@ function onTouchEnd(e: TouchEvent) {
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"
         :hidden="optionsHidden"
+        :reveal-in-sec="revealInSec"
         :mode="quiz.current.type"
         @select="quiz.answer($event)"
       />
@@ -318,17 +320,17 @@ function onTouchEnd(e: TouchEvent) {
           <ArrowRight class="ic" :size="16" />
         </button>
       </div>
-      <p v-if="quiz.answered && !autoPending" class="next-hint">
-        <Keyboard class="ic" :size="14" /> 按 <ArrowRight class="ic" :size="13" /> 或空格 ·
-        <Smartphone class="ic" :size="14" /> 左滑，也可进入下一题
-      </p>
-      <p v-if="autoPending" class="auto-hint">
-        <Hourglass class="ic" :size="14" /> 即将自动进入下一题…
-      </p>
-
-      <div class="quit-row">
-        <button class="quit-btn" type="button" @click="quitRound">
-          <LogOut class="ic" :size="14" /> 退出本轮
+      <!-- 底部提示与退出合并为一行，避免占高（R20） -->
+      <div class="quiz-foot">
+        <span v-if="quiz.answered && !autoPending" class="foot-hint">
+          <Keyboard class="ic" :size="13" /> 按 <ArrowRight class="ic" :size="12" /> 或空格 ·
+          <Smartphone class="ic" :size="13" /> 左滑进下一题
+        </span>
+        <span v-else-if="autoPending" class="foot-hint">
+          <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
+        </span>
+        <button class="quit-link" type="button" @click="quitRound">
+          <LogOut class="ic" :size="13" /> 退出本轮
         </button>
       </div>
     </div>
@@ -480,34 +482,34 @@ function onTouchEnd(e: TouchEvent) {
 .actions .btn {
   flex: 1;
 }
-.auto-hint,
-.next-hint {
+.quiz-foot {
   margin-top: 10px;
-  text-align: center;
-  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.75rem;
   color: var(--text-light);
 }
-.quit-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
-}
-.quit-btn {
+.foot-hint {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 16px;
+  gap: 4px;
+}
+.quit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   color: var(--text-light);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.quit-btn:hover {
+.quit-link:hover {
   color: var(--wrong);
   background: #fdecee;
 }
