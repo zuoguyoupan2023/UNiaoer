@@ -432,10 +432,12 @@ function onTouchEnd(e: TouchEvent) {
     <!-- 答对浮窗：正确信息 + 自动切换提示，切换前 500ms 自动消失 -->
     <Transition name="toast">
       <div v-if="showCorrectToast" class="correct-toast" role="status" aria-live="polite">
-        <CircleCheck class="ic" :size="20" />
-        <div class="ct-main">
-          <strong>回答正确！</strong>
-          <span>正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）</span>
+        <div class="ct-row">
+          <CircleCheck class="ic" :size="20" />
+          <div class="ct-main">
+            <strong>回答正确！</strong>
+            <span>正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）</span>
+          </div>
         </div>
         <span v-if="autoPending" class="ct-auto">
           <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
@@ -630,19 +632,26 @@ function onTouchEnd(e: TouchEvent) {
 .correct-toast {
   position: fixed;
   left: 50%;
-  bottom: 12vh;
+  bottom: 21vh;
   z-index: 80;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   max-width: min(92vw, 560px);
   padding: 12px 18px;
   border-radius: 14px;
   background: linear-gradient(135deg, #eafaf1, #d8f3dc);
   border: 1px solid var(--correct);
   box-shadow: 0 18px 40px -18px rgba(20, 52, 42, 0.6);
+  text-align: center;
   pointer-events: none;
+}
+.ct-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .correct-toast .ic {
   color: var(--correct);
@@ -662,6 +671,7 @@ function onTouchEnd(e: TouchEvent) {
   font-size: 0.8rem;
   color: var(--text-light);
 }
+/* 自动进入下一题提示另起一行（R42） */
 .ct-auto {
   display: inline-flex;
   align-items: center;
