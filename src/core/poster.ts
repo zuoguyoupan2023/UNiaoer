@@ -1,5 +1,6 @@
 /** 每轮成绩海报：背景（极简场景/照片）+ 每字段半透明白底框，导出 PNG */
 import qrcode from 'qrcode-generator'
+import { ICON_NODES, type IconNode } from './iconPaths'
 import { getBackground } from './posterScenes'
 
 export interface PosterWrong {
@@ -23,6 +24,10 @@ export interface PosterData {
   wornTitle?: string
   /** R31：佩戴的徽章（有则显示在日期旁） */
   wornBadge?: string
+  /** R38：佩戴称号的独特图标（lucide 名称，canvas 绘制用） */
+  wornTitleIcon?: string
+  /** R38：佩戴徽章的独特图标 */
+  wornBadgeIcon?: string
   /** R33：用户昵称（有则显示在日期前） */
   nickname?: string
   wrong: PosterWrong[]
@@ -284,6 +289,55 @@ function drawMedal(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: num
   ctx.fill()
 }
 
+/**
+ * 在 canvas 上绘制 lucide 图标（R38）：24 viewBox 缩放到 size，描边风格与组件一致。
+ * 返回 false 表示无该图标数据（调用方可走通用图形兜底）。
+ */
+function drawLucideIcon(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+): boolean {
+  const nodes: IconNode[] | undefined = ICON_NODES[name]
+  if (!nodes) return false
+  const scale = size / 24
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(scale, scale)
+  ctx.lineWidth = 2
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.strokeStyle = color
+  for (const [tag, attrs] of nodes) {
+    ctx.beginPath()
+    if (tag === 'path') {
+      ctx.stroke(new Path2D(attrs.d ?? ''))
+      continue
+    }
+    const num = (k: string) => Number(attrs[k] ?? 0)
+    if (tag === 'circle') ctx.arc(num('cx'), num('cy'), num('r'), 0, Math.PI * 2)
+    else if (tag === 'line') {
+      ctx.moveTo(num('x1'), num('y1'))
+      ctx.lineTo(num('x2'), num('y2'))
+    } else if (tag === 'polyline' || tag === 'polygon') {
+      const pts = String(attrs.points ?? '')
+        .trim()
+        .split(/\s+/)
+        .map((pair) => pair.split(',').map(Number))
+      pts.forEach(([px = 0, py = 0], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)))
+      if (tag === 'polygon') ctx.closePath()
+    } else if (tag === 'rect') {
+      ctx.rect(num('x'), num('y'), num('width'), num('height'))
+    }
+    ctx.stroke()
+  }
+  ctx.restore()
+  return true
+}
+
 export function drawPoster(
   canvas: HTMLCanvasElement,
   data: PosterData,
@@ -317,9 +371,11 @@ export function drawPoster(
   drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
   // 佩戴称号/徽章胶囊（R37 放大 + 图标）：无则不占位
-  const chips: { label: string; kind: 'title' | 'badge' }[] = []
-  if (data.wornTitle) chips.push({ label: data.wornTitle, kind: 'title' })
-  if (data.wornBadge) chips.push({ label: data.wornBadge, kind: 'badge' })
+  const chips: { label: string; icon: string; kind: 'title' | 'badge' }[] = []
+  if (data.wornTitle)
+    chips.push({ label: data.wornTitle, icon: data.wornTitleIcon ?? '', kind: 'title' })
+  if (data.wornBadge)
+    chips.push({ label: data.wornBadge, icon: data.wornBadgeIcon ?? '', kind: 'badge' })
   if (chips.length) {
     const chipText = 40
     const iconSlot = 52
@@ -337,11 +393,14 @@ export function drawPoster(
       ctx.fillStyle = P.chipBg
       roundRect(ctx, cx, cy, widths[i]!, ch, 42)
       ctx.fill()
-      const iconCx = cx + padX + 22
-      const iconCy = cy + ch / 2
+      const iconCx = cx + padX + 4
+      const iconCy = cy + ch / 2 - 20
       const textColor = P.chipText
-      if (chips[i]!.kind === 'title') drawSparkle(ctx, iconCx, iconCy, 19, textColor)
-      else drawMedal(ctx, iconCx, iconCy, 15, textColor)
+      // R38：绘制每枚称号/徽章的独特图标；无数据时退回通用图形
+      if (!drawLucideIcon(ctx, chips[i]!.icon, iconCx, iconCy, 40, textColor)) {
+        if (chips[i]!.kind === 'title') drawSparkle(ctx, iconCx + 20, iconCy + 20, 19, textColor)
+        else drawMedal(ctx, iconCx + 20, iconCy + 20, 15, textColor)
+      }
       ctx.fillStyle = P.chipText
       ctx.textAlign = 'left'
       ctx.font = `700 ${chipText}px ${FONT}`

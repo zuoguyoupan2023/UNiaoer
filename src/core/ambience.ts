@@ -111,9 +111,11 @@ export function buildStartQueue(
 export interface AmbienceState {
   playing: boolean
   currentId: string | null
+  /** 静音待命（R38）：浏览器拦截出声自动播放时，先静音播放（所有浏览器允许），首次交互取消静音 */
+  muted: boolean
 }
 
-let state: AmbienceState = { playing: false, currentId: null }
+let state: AmbienceState = { playing: false, currentId: null, muted: false }
 const listeners = new Set<(s: AmbienceState) => void>()
 
 function setState(patch: Partial<AmbienceState>) {
@@ -157,8 +159,8 @@ class AmbiencePlayer {
     return a
   }
 
-  /** 一键播放：加载目录 → 按勾选过滤 → 首发音打头 + 乱序队列 */
-  async start(): Promise<void> {
+  /** 一键播放：加载目录 → 按勾选过滤 → 首发音打头 + 乱序队列；muted=true 为静音待命（R38） */
+  async start(opts: { muted?: boolean } = {}): Promise<void> {
     const all = await loadBirdTracks()
     prewarmBirdTracks() // 后台预热其余音轨（R25）：之后切题/重播都是本地命中
     const checked = all.filter((t) => !this.getExcluded().includes(t.id))
@@ -170,13 +172,20 @@ class AmbiencePlayer {
       state.currentId ?? undefined,
     )
     this.ensureAudio()
-    setState({ playing: true })
+    if (this.audio) this.audio.muted = !!opts.muted
+    setState({ playing: true, muted: !!opts.muted })
     await this.playNext()
+  }
+
+  /** 取消静音（首次交互后调用，让静音待命的环境音出声） */
+  unmute() {
+    if (this.audio) this.audio.muted = false
+    setState({ muted: false })
   }
 
   /** 一键停止 */
   stop() {
-    setState({ playing: false, currentId: null })
+    setState({ playing: false, currentId: null, muted: false })
     this.queue = []
     this.failCount = 0
     this.audio?.pause()
@@ -213,6 +222,7 @@ class AmbiencePlayer {
     setState({ currentId: track.id })
     try {
       this.audio.src = track.url
+      if (this.audio) this.audio.muted = state.muted
       await this.audio.play()
       this.failCount = 0
     } catch {

@@ -18,7 +18,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
 import { getStats, listRounds } from '@/core/historyDb'
-import { evaluateTitles } from '@/core/titles'
+import { evaluateTitles, TITLE_TRACKS } from '@/core/titles'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { BADGES, type BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
@@ -35,6 +35,8 @@ const newBadges = ref<BadgeDef[]>([])
 const newTitleLabels = ref<string[]>([])
 const wornTitleLabel = ref('')
 const wornBadgeLabel = ref('')
+const wornTitleIcon = ref('')
+const wornBadgeIcon = ref('')
 const settings = useSettingsStore()
 const showPoster = ref(false)
 
@@ -66,7 +68,9 @@ const posterData = computed<PosterData>(() => {
     round: quiz.sessionRound,
     overallAccuracy: quiz.overallAccuracy,
     wornTitle: wornTitleLabel.value || undefined,
+    wornTitleIcon: wornTitleIcon.value || undefined,
     wornBadge: wornBadgeLabel.value || undefined,
+    wornBadgeIcon: wornBadgeIcon.value || undefined,
     nickname: settings.nickname || undefined,
     wrong,
   }
@@ -99,12 +103,14 @@ onMounted(async () => {
   const res = await persistRound(quiz)
   newBadges.value = res.badges
   newTitleLabels.value = res.newTitles.map((t) => t.label)
-  // 佩戴称号/徽章 → 海报（R30/R31）
+  // 佩戴称号/徽章 → 海报（R30/R31/R38：含独特图标）
   const [stats, rounds] = await Promise.all([getStats(), listRounds()])
-  wornTitleLabel.value =
-    evaluateTitles(stats, rounds).find((t) => t.trackId === settings.wornTitle)?.label ?? ''
-  wornBadgeLabel.value =
-    (settings.wornBadge && BADGES.find((b) => b.id === settings.wornBadge)?.label) || ''
+  const wornTitle = evaluateTitles(stats, rounds).find((t) => t.trackId === settings.wornTitle)
+  wornTitleLabel.value = wornTitle?.label ?? ''
+  wornTitleIcon.value = wornTitle ? (TITLE_TRACKS.find((x) => x.id === wornTitle.trackId)?.icon ?? '') : ''
+  const wornBadgeDef = settings.wornBadge ? BADGES.find((b) => b.id === settings.wornBadge) : undefined
+  wornBadgeLabel.value = wornBadgeDef?.label ?? ''
+  wornBadgeIcon.value = wornBadgeDef?.icon ?? ''
 })
 
 async function again() {
