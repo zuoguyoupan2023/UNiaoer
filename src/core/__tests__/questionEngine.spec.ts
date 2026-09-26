@@ -104,9 +104,9 @@ describe('难度梯度', () => {
     expect(qs[0]!.tier).toBe(1)
   })
 
-  it('L4 限时 8s，且选项数多于 L1', () => {
+  it('L4 限时 10s，且选项数多于 L1', () => {
     const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
-    expect(qs[0]!.timeLimitSec).toBe(8)
+    expect(qs[0]!.timeLimitSec).toBe(10)
     expect(qs[0]!.options.length).toBeGreaterThan(3)
     expect(qs[0]!.options.length).toBeLessThanOrEqual(TIERS[4].optionCount)
   })
@@ -121,7 +121,7 @@ describe('难度梯度', () => {
     const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 5 })
     expect(qs.length).toBeGreaterThan(0)
     expect(qs[0]!.tier).toBe(5)
-    expect(qs[0]!.timeLimitSec).toBe(8)
+    expect(qs[0]!.timeLimitSec).toBe(10)
     for (const q of qs) {
       expect(q.options.length).toBeLessThanOrEqual(TIERS[5].optionCount)
       expect(q.options).toContain(q.answer)

@@ -274,11 +274,13 @@ function onTouchEnd(e: TouchEvent) {
 <template>
   <!-- 介绍页 -->
   <section v-if="!started" class="card intro">
-    <div class="intro-icon">
-      <AudioLines v-if="type === 'audio'" :size="46" />
-      <ImageIcon v-else :size="46" />
+    <div class="intro-head">
+      <div class="intro-icon">
+        <AudioLines v-if="type === 'audio'" :size="30" />
+        <ImageIcon v-else :size="30" />
+      </div>
+      <h2>{{ intro.title }}</h2>
     </div>
-    <h2>{{ intro.title }}</h2>
     <p class="lead muted">{{ intro.lead }}</p>
 
     <p v-if="quiz.wrongPoolOnly" class="wrong-hint">
@@ -394,15 +396,22 @@ function onTouchEnd(e: TouchEvent) {
 .intro {
   text-align: center;
 }
+/* 图标与标题同行，压缩介绍页高度（R26） */
+.intro-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.intro-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
 .intro-icon {
   display: flex;
-  justify-content: center;
   color: var(--primary);
   animation: float 3s ease-in-out infinite;
-}
-.intro h2 {
-  font-size: 1.25rem;
-  margin: 14px 0 8px;
 }
 .intro .lead {
   margin-bottom: 18px;
