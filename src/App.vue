@@ -17,18 +17,24 @@ const immersive = computed(
 </script>
 
 <template>
-  <header v-if="!immersive" class="app-header">
-    <h1><Bird class="brand-icon" :size="30" /> UNiaoer</h1>
-  </header>
-
-  <nav v-if="!immersive" class="app-nav">
-    <RouterLink to="/">首页</RouterLink>
-    <RouterLink to="/quiz/image">看图认鸟</RouterLink>
-    <RouterLink to="/quiz/audio">听音认鸟</RouterLink>
-    <RouterLink to="/wrong">错题本</RouterLink>
-    <RouterLink to="/profile">我的</RouterLink>
-    <RouterLink to="/settings">设置</RouterLink>
-  </nav>
+  <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
+  <div v-if="!immersive" class="app-topbar">
+    <RouterLink to="/" class="brand" aria-label="UNiaoer 首页">
+      <Bird class="brand-icon" :size="26" />
+      <h1 class="brand-name">UNiaoer</h1>
+    </RouterLink>
+    <nav class="app-nav" aria-label="主导航">
+      <span class="nav-group nav-primary">
+        <RouterLink to="/quiz/image">看图认鸟</RouterLink>
+        <RouterLink to="/quiz/audio">听音认鸟</RouterLink>
+      </span>
+      <span class="nav-group nav-utility">
+        <RouterLink to="/wrong">错题本</RouterLink>
+        <RouterLink to="/profile">我的</RouterLink>
+        <RouterLink to="/settings">设置</RouterLink>
+      </span>
+    </nav>
+  </div>
 
   <main class="app-main">
     <RouterView />

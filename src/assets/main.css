@@ -6,16 +6,35 @@
   flex-direction: column;
 }
 
-/* ---------- 布局 ---------- */
-.app-header {
-  text-align: center;
-  padding: 16px 16px 10px;
+/* ---------- 顶部：品牌（=首页链接）+ 导航同一行（R21） ---------- */
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto 12px;
+  padding: 6px 8px 6px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
 }
-.app-header h1 {
+.brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  gap: 7px;
+}
+.brand:hover {
+  text-decoration: none;
+}
+.brand-icon {
+  color: var(--primary);
+}
+.brand-name {
+  font-size: 1.45rem;
   font-weight: 800;
   letter-spacing: 0.5px;
   background: linear-gradient(120deg, #14342a 0%, #2d6a4f 42%, #40916c 68%, #d4a017 100%);
@@ -23,29 +42,16 @@
   background-clip: text;
   color: transparent;
 }
-.app-header h1 .brand-icon {
-  color: var(--primary);
-}
-.app-header p {
-  color: var(--text-light);
-  font-size: 0.85rem;
-  margin-top: 6px;
-}
-
 .app-nav {
   display: flex;
-  gap: 6px;
-  justify-content: center;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
   flex-wrap: wrap;
-  margin: 0 auto 12px;
-  padding: 5px;
-  max-width: 720px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
+}
+.nav-group {
+  display: flex;
+  gap: 4px;
 }
 .app-nav a {
   padding: 6px 14px;
@@ -64,6 +70,32 @@
   background: var(--grad);
   color: #fff;
   box-shadow: 0 10px 20px -10px rgba(45, 106, 79, 0.85);
+}
+/* 移动端：第一行 = 鸟图标 + 错题本/我的/设置；第二行 = 看图/听音 */
+@media (max-width: 640px) {
+  .app-topbar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding-left: 10px;
+  }
+  .brand-name {
+    display: none;
+  }
+  .app-nav {
+    display: contents;
+  }
+  .brand {
+    order: 0;
+  }
+  .nav-utility {
+    order: 1;
+    margin-left: auto;
+  }
+  .nav-primary {
+    order: 2;
+    flex-basis: 100%;
+    justify-content: center;
+  }
 }
 
 .app-main {
