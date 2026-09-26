@@ -23,6 +23,8 @@ export interface PosterData {
   wornTitle?: string
   /** R31：佩戴的徽章（有则显示在日期旁） */
   wornBadge?: string
+  /** R33：用户昵称（有则显示在日期前） */
+  nickname?: string
   wrong: PosterWrong[]
 }
 
@@ -283,10 +285,32 @@ export function drawPoster(
 
   ctx.textBaseline = 'alphabetic'
 
-  // 顶部标题（无 emoji、无“鸟语识别”）；佩戴称号/徽章显示在日期旁（R30/R31）
-  const dateLine = [data.date, data.wornTitle, data.wornBadge].filter(Boolean).join(' · ')
+  // 顶部标题（无 emoji、无“鸟语识别”）；昵称前缀 + 佩戴称号/徽章胶囊（R30–R33）
+  const dateLine = [data.nickname ? `@${data.nickname}` : '', data.date].filter(Boolean).join(' · ')
   drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: 56 }], W / 2, 118, 'center', box)
   drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
+
+  // 佩戴称号/徽章胶囊（R33）：醒目横排，无则不占位
+  const chips = [data.wornTitle, data.wornBadge].filter(Boolean) as string[]
+  if (chips.length) {
+    ctx.font = `700 30px ${FONT}`
+    const padX = 30
+    const gap = 22
+    const widths = chips.map((c) => ctx.measureText(c).width + padX * 2)
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (chips.length - 1)
+    let cx = (W - total) / 2
+    const cy = 222
+    const ch = 58
+    for (let i = 0; i < chips.length; i++) {
+      ctx.fillStyle = P.chipBg
+      roundRect(ctx, cx, cy, widths[i]!, ch, 29)
+      ctx.fill()
+      ctx.fillStyle = P.chipText
+      ctx.textAlign = 'center'
+      ctx.fillText(chips[i]!, cx + widths[i]! / 2, cy + 40)
+      cx += widths[i]! + gap
+    }
+  }
 
   // 右上角模式标签
   ctx.font = `700 32px ${FONT}`

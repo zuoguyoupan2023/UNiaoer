@@ -140,6 +140,31 @@ onMounted(async () => {
 })
 onUnmounted(() => sectionObserver?.disconnect())
 
+// ---- 用户昵称（R33）：2–12 字符，存本地，用于「我的」页与海报 ----
+const editingNickname = ref(false)
+const nicknameDraft = ref('')
+const nicknameMsg = ref('')
+
+function startNickname() {
+  nicknameDraft.value = settings.nickname
+  nicknameMsg.value = ''
+  editingNickname.value = true
+}
+
+function saveNickname() {
+  const v = nicknameDraft.value.trim()
+  if (!v) {
+    nicknameMsg.value = '昵称不能为空'
+    return
+  }
+  if (v.length < 2) {
+    nicknameMsg.value = '昵称至少 2 个字符'
+    return
+  }
+  settings.nickname = v
+  editingNickname.value = false
+}
+
 async function reset() {
   if (!confirm('确定清空全部本地数据（记录 / 错题本 / 徽章）吗？此操作不可恢复。')) return
   await clearAll()
@@ -208,6 +233,29 @@ async function onFile(e: Event) {
     <!-- 数据 -->
     <section class="card" id="sec-data">
       <h2 class="sec"><User class="ic" :size="20" /> 我的</h2>
+      <div class="nickname-row">
+        <template v-if="editingNickname">
+          <input
+            v-model="nicknameDraft"
+            class="nickname-input"
+            maxlength="12"
+            placeholder="2–12 个字符"
+            @keyup.enter="saveNickname"
+          />
+          <button class="btn btn-primary btn-sm" @click="saveNickname">保存</button>
+          <button class="btn btn-secondary btn-sm" @click="editingNickname = false">取消</button>
+        </template>
+        <template v-else>
+          <span class="nickname-chip">
+            <User class="ic" :size="13" />
+            {{ settings.nickname || '未设置昵称' }}
+          </span>
+          <button class="btn btn-secondary btn-sm" @click="startNickname">
+            {{ settings.nickname ? '编辑' : '设置昵称' }}
+          </button>
+        </template>
+        <span v-if="nicknameMsg" class="nickname-msg">{{ nicknameMsg }}</span>
+      </div>
       <h3 class="block-title"><Activity class="ic" :size="17" /> 数据</h3>
       <p v-if="loading" class="muted">加载中…</p>
 
@@ -444,8 +492,43 @@ h2.sec {
   line-height: 1.3;
 }
 .wear-text strong {
-  font-size: 1rem;
+  font-size: 1.18rem;
   color: var(--primary-dark);
+}
+/* ---- 昵称（R33） ---- */
+.nickname-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.nickname-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 2px solid var(--primary-light);
+  border-radius: 16px;
+  background: #f3fbf7;
+  color: var(--primary-dark);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.nickname-chip .ic {
+  color: var(--primary);
+}
+.nickname-input {
+  width: 200px;
+  padding: 8px 12px;
+  border: 2px solid var(--primary-light);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.nickname-msg {
+  font-size: 0.78rem;
+  color: var(--wrong);
 }
 /* ---- 数据 ---- */
 .stat-grid {
@@ -495,7 +578,7 @@ h2.sec {
   line-height: 1.3;
 }
 .title-worn-text strong {
-  font-size: 1.02rem;
+  font-size: 1.15rem;
   color: var(--primary-dark);
 }
 .title-worn .btn-sm {

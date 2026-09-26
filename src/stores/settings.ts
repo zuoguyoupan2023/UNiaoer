@@ -22,6 +22,8 @@ interface Persisted {
   badgeAutoWorn: boolean
   /** 环境鸟鸣开关（R30）：默认开启，进入应用自动播放（被浏览器拦截则在首次手势后重试） */
   ambienceEnabled: boolean
+  /** 用户昵称（R33，2–12 字符；海报与「我的」页显示） */
+  nickname: string
 }
 
 function load(): Partial<Persisted> {
@@ -55,6 +57,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const badgeAutoWorn = ref<boolean>(saved.badgeAutoWorn ?? false)
   /** 环境鸟鸣开关（默认开；用户手动关闭后记住，不再自动播放） */
   const ambienceEnabled = ref<boolean>(saved.ambienceEnabled ?? true)
+  /** 用户昵称（R33：2–12 字符，可编辑） */
+  const nickname = ref<string>(saved.nickname ?? '')
 
   watch(
     [
@@ -68,6 +72,7 @@ export const useSettingsStore = defineStore('settings', () => {
       titleAutoWorn,
       badgeAutoWorn,
       ambienceEnabled,
+      nickname,
     ],
     () => {
       try {
@@ -84,6 +89,7 @@ export const useSettingsStore = defineStore('settings', () => {
             titleAutoWorn: titleAutoWorn.value,
             badgeAutoWorn: badgeAutoWorn.value,
             ambienceEnabled: ambienceEnabled.value,
+            nickname: nickname.value,
           } satisfies Persisted),
         )
       } catch {
@@ -104,5 +110,6 @@ export const useSettingsStore = defineStore('settings', () => {
     titleAutoWorn,
     badgeAutoWorn,
     ambienceEnabled,
+    nickname,
   }
 })

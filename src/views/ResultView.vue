@@ -67,6 +67,7 @@ const posterData = computed<PosterData>(() => {
     overallAccuracy: quiz.overallAccuracy,
     wornTitle: wornTitleLabel.value || undefined,
     wornBadge: wornBadgeLabel.value || undefined,
+    nickname: settings.nickname || undefined,
     wrong,
   }
 })
