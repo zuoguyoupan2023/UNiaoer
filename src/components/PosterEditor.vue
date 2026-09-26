@@ -107,9 +107,15 @@ async function selectImage(url: string | null, loadUrl: string | null = url) {
   }
 }
 
+/** 选系统背景：同时清除照片背景，使"上方系统背景"与"下方照片"可直接互切（R45） */
 function selectTheme(id: string) {
   if (locked.value) return
   themeId.value = id
+  if (bgImage.value || bgUrl.value) {
+    bgUrl.value = null
+    bgImage.value = null
+    offset.value = { x: 0, y: 0 }
+  }
 }
 
 /** F6：缩略图标题（带"答错"提示） */
@@ -155,6 +161,9 @@ function revokeResult() {
   resultBlob.value = null
 }
 
+/** 最终预览区：生成后滚动到可见，避免用户不知道下方已出结果（R44） */
+const resultRef = ref<HTMLElement | null>(null)
+
 async function generate() {
   if (generating.value) return
   generating.value = true
@@ -169,6 +178,8 @@ async function generate() {
     resultBlob.value = blob
     blobUrl.value = URL.createObjectURL(blob)
     stale.value = false
+    await nextTick()
+    resultRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   } finally {
     generating.value = false
   }
@@ -203,6 +214,10 @@ function openImage() {
             @pointerleave="onPointerUp"
           ></canvas>
           <p v-if="bgImage" class="drag-hint">拖拽画面平移背景</p>
+          <div v-if="loadingBg" class="loading-overlay">
+            <span class="spin"></span>
+            <span>正在加载原图…</span>
+          </div>
         </div>
 
         <div class="controls">
@@ -217,7 +232,7 @@ function openImage() {
                 v-for="t in POSTER_BACKGROUNDS"
                 :key="t.id"
                 class="swatch"
-                :class="{ on: themeId === t.id, disabled: locked, light: t.light }"
+                :class="{ on: themeId === t.id && !bgImage, disabled: locked, light: t.light }"
                 :style="{ background: t.swatch }"
                 :title="t.label"
                 @click="selectTheme(t.id)"
@@ -231,13 +246,6 @@ function openImage() {
           <div v-if="images.length" class="group">
             <div class="group-title">背景照片</div>
             <div class="thumbs">
-              <button
-                class="thumb none"
-                :class="{ on: !bgUrl, disabled: locked }"
-                @click="selectImage(null)"
-              >
-                纯场景
-              </button>
               <div v-for="img in images" :key="img.url" class="thumb-cell">
                 <div class="thumb-wrap">
                   <button
@@ -261,7 +269,9 @@ function openImage() {
                 <span v-if="img.sci" class="thumb-sci">{{ img.sci }}</span>
               </div>
             </div>
-            <p v-if="loadingBg" class="muted small">背景图加载中…</p>
+            <p v-if="loadingBg" class="loading-hint">
+              <span class="spin-sm"></span> 正在下载原图，请稍候…
+            </p>
             <p v-if="error" class="err small">{{ error }}</p>
           </div>
 
@@ -302,7 +312,7 @@ function openImage() {
               {{ generating ? '生成中…' : blobUrl ? '重新生成海报' : '生成海报' }}
             </button>
 
-            <div v-if="blobUrl" class="result" aria-live="polite">
+            <div v-if="blobUrl" ref="resultRef" class="result" aria-live="polite">
               <img class="result-img" :src="blobUrl" alt="海报预览" />
               <p v-if="stale" class="result-status stale">配置已修改，点「生成海报」更新预览</p>
               <p v-else class="result-status">
@@ -373,6 +383,7 @@ function openImage() {
   overflow: auto;
 }
 .preview-wrap {
+  position: relative;
   flex: 0 0 auto;
   width: 340px;
   max-width: 45vw;
@@ -396,6 +407,50 @@ function openImage() {
   color: var(--text-light);
   text-align: center;
   margin-top: 6px;
+}
+/* 加载原图提示（R45）：预览区遮罩 + 列表下文字，避免"无任何提示" */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(245, 248, 246, 0.82);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 0.84rem;
+}
+.loading-overlay .spin {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #dceee4;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+.loading-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--primary);
+}
+.loading-hint .spin-sm {
+  width: 13px;
+  height: 13px;
+  border: 2px solid #dceee4;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .controls {
   flex: 1;

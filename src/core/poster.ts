@@ -435,7 +435,7 @@ export function drawPoster(
   }
 
   // 正文
-  drawSegments(ctx, [{ text: '我在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
+  drawSegments(ctx, [{ text: '在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
   const perfect = data.total > 0 && data.correct === data.total
   drawSegments(
     ctx,
