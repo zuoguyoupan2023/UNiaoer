@@ -54,6 +54,7 @@ const OPT = {
   xcKey: args['xc-key'] || process.env.XC_API_KEY || '',
   publicBase: (args['public-base'] || process.env.R2_PUBLIC_BASE || '').replace(/\/$/, ''),
   taxa: !!args.taxa, // 以 data/taxa.json 为物种清单（M1+）
+  noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
   out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
 }
@@ -65,6 +66,16 @@ let PUBLIC_BASE = ''
 let OVERRIDES = {}
 /** 可用的 AV1 静图编码器（检测一次；null = 不产出 AVIF） */
 let AVIF_ENCODER = null
+
+/** 可用磁盘字节（statfs；失败返回 Infinity，视为充足） */
+async function freeBytes() {
+  try {
+    const s = await fs.statfs(ROOT)
+    return s.bsize * s.bavail
+  } catch {
+    return Infinity
+  }
+}
 
 function stub(sp) {
   return {
@@ -107,7 +118,7 @@ async function main() {
   if (OPT.publicBase && !/^https?:\/\//i.test(OPT.publicBase)) {
     OPT.publicBase = 'https://' + OPT.publicBase
   }
-  const useXc = !!OPT.xcKey
+  const useXc = !OPT.noXc && !!OPT.xcKey
   const deadline = OPT.maxMinutes === Infinity ? Infinity : Date.now() + OPT.maxMinutes * 60_000
 
   const R2 = OPT.media === 'r2' ? makeR2() : null
@@ -140,8 +151,20 @@ async function main() {
 
   let done = 0
   let skipped = 0
+  let lowDisk = false
   const records = await mapPool(list, OPT.concurrency, async (sp) => {
     if (Date.now() > deadline) {
+      skipped++
+      return stub(sp)
+    }
+    if (!lowDisk) {
+      const free = await freeBytes()
+      if (free < 500 * 1024 * 1024) {
+        lowDisk = true
+        console.warn('   ⚠️ 可用磁盘不足 500MB：停止继续下载（已完成部分已缓存，稍后可续跑）')
+      }
+    }
+    if (lowDisk) {
       skipped++
       return stub(sp)
     }
@@ -149,7 +172,7 @@ async function main() {
     done++
     const flags = [rec.image ? '图' : '·', rec.audio ? '音' : '·'].join('')
     console.log(`   [${String(done).padStart(3)}/${list.length}] ${flags} ${sp.nameZh} (${sp.nameSci})`)
-    await sleep(200)
+    await sleep(OPT.taxa ? 500 + Math.random() * 900 : 200)
     return rec
   })
 
@@ -267,9 +290,22 @@ async function fetchInat(taxonId, kind) {
       const flag = kind === 'photos' ? 'photos=true' : 'sounds=true'
       const url =
         `${INAT}/observations?taxon_id=${taxonId}&${licenseParam}=${inatLicenseQuery(OPT.policy)}` +
-        `&quality_grade=research&${flag}&order_by=votes&per_page=30&locale=zh-CN`
+        `&quality_grade=research&${flag}&order_by=votes&per_page=10&locale=zh-CN`
       const d = await fetchJson(url)
-      return d.results || []
+      // 只缓存选材所需字段，避免原始观察 JSON 撑爆磁盘（1299 种量级）
+      return (d.results || []).map((o) => ({
+        id: o.id,
+        photos: (o.photos || []).map((p) => ({
+          url: p.url,
+          license_code: p.license_code,
+          attribution: p.attribution,
+        })),
+        sounds: (o.sounds || []).map((s) => ({
+          file_url: s.file_url,
+          license_code: s.license_code,
+          attribution: s.attribution,
+        })),
+      }))
     },
     { force: OPT.force },
   )
@@ -671,12 +707,31 @@ function guessContentType(url, kind, ext) {
   return kind === 'image' ? 'image/jpeg' : 'audio/mpeg'
 }
 
-async function download(url, dest) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'UNiaoer-build/0.1' } })
-  if (!res.ok) throw new Error('download HTTP ' + res.status)
-  const buf = Buffer.from(await res.arrayBuffer())
-  await fs.writeFile(dest, buf)
-  return dest
+async function download(url, dest, tries = 5) {
+  let lastErr
+  for (let i = 0; i < tries; i++) {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 60000)
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'UNiaoer-build/0.1' } })
+      clearTimeout(timer)
+      if (!res.ok) {
+        const err = new Error('download HTTP ' + res.status)
+        // 4xx（除 429）不重试；网络错误/429/5xx 可重试
+        err.retryable = res.status === 429 || res.status >= 500
+        throw err
+      }
+      const buf = Buffer.from(await res.arrayBuffer())
+      await fs.writeFile(dest, buf)
+      return dest
+    } catch (e) {
+      clearTimeout(timer)
+      lastErr = e
+      if (e.retryable === false || i >= tries - 1) break
+      await sleep(1000 * (i + 1) + Math.random() * 800)
+    }
+  }
+  throw lastErr
 }
 
 main().catch((e) => {

@@ -13,6 +13,7 @@
     "taxa": "node scripts/build-taxa.mjs",
     "bank": "node scripts/build-bank.mjs",
     "bank:taxa": "node scripts/build-bank.mjs --taxa",
+    "xc:upgrade": "node scripts/xc-upgrade.mjs",
     "bank:dev": "node scripts/build-bank.mjs --limit 8",
     "bank:r2": "node scripts/build-bank.mjs --media r2",
     "bank:stage": "node scripts/build-bank.mjs --media stage",
