@@ -53,26 +53,49 @@ const OPT = {
   force: !!args.force,
   xcKey: args['xc-key'] || process.env.XC_API_KEY || '',
   publicBase: (args['public-base'] || process.env.R2_PUBLIC_BASE || '').replace(/\/$/, ''),
+  taxa: !!args.taxa, // 以 data/taxa.json 为物种清单（M1+）
+  per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
+  out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
 }
 
 /** R2 S3 客户端（仅 --media r2 用）；--media stage 只需 publicBase */
 let R2CLIENT = null
 let PUBLIC_BASE = ''
+/** 人工覆盖表（data/media-overrides.json） */
+let OVERRIDES = {}
 /** 可用的 AV1 静图编码器（检测一次；null = 不产出 AVIF） */
 let AVIF_ENCODER = null
 
 function stub(sp) {
   return {
-    id: slug(sp.nameSci),
+    id: sp.id || slug(sp.nameSci),
+    taxonId: sp.taxonId ?? null,
     nameZh: sp.nameZh,
     nameSci: sp.nameSci,
+    nameEn: sp.nameEn || '',
     family: sp.family,
     commonness: sp.commonness,
+    rankWorld: sp.rankWorld ?? null,
+    rankCN: sp.rankCN ?? null,
+    inCN: sp.inCN ?? null,
     desc: '',
     location: '',
     habit: '',
+    images: [],
+    audios: [],
+    // 兼容旧前端/旧 manifest
     image: null,
     audio: null,
+  }
+}
+
+/** 人工覆盖表 data/media-overrides.json（可选）：{ "<id 或学名>": { images:[], audios:[], excludeUrls:[] } } */
+async function loadOverrides() {
+  try {
+    const d = JSON.parse(await fs.readFile(path.join(ROOT, 'data/media-overrides.json'), 'utf8'))
+    return (d && d.overrides) || {}
+  } catch {
+    return {}
   }
 }
 
@@ -100,11 +123,15 @@ async function main() {
   }
   AVIF_ENCODER = await detectAvifEncoder()
 
-  const species = JSON.parse(await fs.readFile(path.join(ROOT, 'data/species.json'), 'utf8'))
+  const source = OPT.taxa ? 'data/taxa.json' : 'data/species.json'
+  const raw = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
+  const species = Array.isArray(raw) ? raw : raw.species || []
   const list = species.slice(0, OPT.limit)
+  OVERRIDES = await loadOverrides()
 
   console.log(`\n🐦 UNiaoer 题库构建`)
-  console.log(`   物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
+  console.log(`   清单: ${source}  物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
+  console.log(`   每物种: 图≤${OPT.per} 音≤${OPT.per}${OPT.taxa ? '（taxa 模式：default_photo 优先）' : ''}  覆盖表: ${Object.keys(OVERRIDES).length} 条`)
   console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : '（未提供 XC_API_KEY，仅 iNat）'}`)
   console.log(`   图像: large 母版 → thumb/full/xl${AVIF_ENCODER ? ' + AVIF(' + AVIF_ENCODER + ')' : '（无 AV1 编码器，跳过 AVIF）'}`)
   console.log(`   时间预算: ${OPT.maxMinutes === Infinity ? '不限' : OPT.maxMinutes + ' 分钟'}`)
@@ -129,20 +156,29 @@ async function main() {
   const withImage = records.filter((r) => r.image).length
   const withAudio = records.filter((r) => r.audio).length
   const manifest = {
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     policy: OPT.policy,
     mediaMode: OPT.media,
+    source,
+    perSpecies: OPT.per,
     total: records.length,
-    stats: { withImage, withAudio },
+    stats: {
+      withImage,
+      withAudio,
+      imageCount: records.reduce((n, r) => n + (r.images ? r.images.length : 0), 0),
+      audioCount: records.reduce((n, r) => n + (r.audios ? r.audios.length : 0), 0),
+    },
     species: records,
   }
 
-  await ensureDir(PUBLIC_DATA)
-  await fs.writeFile(path.join(PUBLIC_DATA, 'manifest.json'), JSON.stringify(manifest, null, 2))
+  const outFile = OPT.out ? path.resolve(ROOT, OPT.out) : path.join(PUBLIC_DATA, 'manifest.json')
+  await ensureDir(path.dirname(outFile))
+  await fs.writeFile(outFile, JSON.stringify(manifest, null, 2))
 
   console.log(`\n✅ 完成：${records.length} 种，图片 ${withImage}，音频 ${withAudio}`)
   if (skipped) console.log(`   ⏱️ 因时间预算跳过 ${skipped} 种（下次构建会补齐）`)
-  console.log(`   写入 public/data/manifest.json`)
+  console.log(`   写入 ${path.relative(ROOT, outFile)}`)
   const failed = records.filter((r) => !r.image && !r.audio && !skipped).map((r) => r.nameZh)
   if (failed.length) console.log(`   ⚠️ 无任何素材: ${failed.join('、')}`)
 }
@@ -155,28 +191,36 @@ async function buildSpecies(sp, useXc) {
     const taxon = await resolveTaxon(sp)
     if (!taxon) return base
 
-    const [photos, sounds] = await Promise.all([
+    const [photos, sounds, detail] = await Promise.all([
       fetchInat(taxon.id, 'photos'),
       fetchInat(taxon.id, 'sounds'),
+      fetchTaxon(taxon.id),
     ])
 
-    base.image = pickInatImage(photos, OPT.policy)
-    base.audio = pickInatAudio(sounds, OPT.policy)
+    // M1：每物种 ≤per 图/音；图以 iNat taxon.default_photo 为首选（011 §4.1）
+    base.images = pickInatImages(photos, OPT.policy, detail && detail.default_photo)
+    base.image = base.images[0] || null
 
+    let audios = pickInatAudios(sounds, OPT.policy)
     if (useXc) {
       const xc = await fetchXc(sp.nameSci)
       const xcAudio = pickXcAudio(xc, OPT.policy)
-      if (xcAudio) base.audio = xcAudio // XC 优先（质量更可控）
+      if (xcAudio) audios = [xcAudio, ...audios] // XC 优先（质量更可控）
     }
+    base.audios = audios.slice(0, OPT.per)
+    base.audio = base.audios[0] || null
+
+    applyOverrides(base)
 
     // 给媒体补上归属信息（前端错题本等依赖 speciesId）
-    for (const kind of ['image', 'audio']) {
-      const a = base[kind]
-      if (a) {
+    for (const kind of ['images', 'audios']) {
+      for (const a of base[kind]) {
         a.speciesId = base.id
-        a.type = kind
+        a.type = kind === 'images' ? 'image' : 'audio'
       }
     }
+    base.image = base.images[0] || null
+    base.audio = base.audios[0] || null
 
     if (OPT.media === 'download' || OPT.media === 'stage' || OPT.media === 'r2') {
       await materialize(base, id)
@@ -187,8 +231,9 @@ async function buildSpecies(sp, useXc) {
   return base
 }
 
-/** 解析 iNat 分类单元 id（先科学名，再中文名） */
+/** 解析 iNat 分类单元 id（taxa 模式直接用给定 id；否则先科学名，再中文名） */
 async function resolveTaxon(sp) {
+  if (sp.taxonId) return { id: sp.taxonId, name: sp.nameSci }
   const cacheFile = path.join(CACHE, 'inat/taxon', `${slug(sp.nameSci)}.json`)
   const data = await cachedJson(
     cacheFile,
@@ -230,6 +275,19 @@ async function fetchInat(taxonId, kind) {
   )
 }
 
+/** 抓取 iNat taxon 详情（default_photo 等，带缓存） */
+async function fetchTaxon(taxonId) {
+  const cacheFile = path.join(CACHE, 'inat/taxon-detail', `${taxonId}.json`)
+  return cachedJson(
+    cacheFile,
+    async () => {
+      const d = await fetchJson(`${INAT}/taxa/${taxonId}?locale=en`)
+      return (d.results && d.results[0]) || null
+    },
+    { force: OPT.force },
+  )
+}
+
 /** 抓取 Xeno-canto（带缓存） */
 async function fetchXc(sci) {
   const cacheFile = path.join(CACHE, 'xc', `${slug(sci)}.json`)
@@ -244,37 +302,86 @@ async function fetchXc(sci) {
   )
 }
 
-function pickInatImage(results, policy) {
-  for (const o of results) {
-    for (const p of o.photos || []) {
-      if (!licenseAllowed(p.license_code, policy)) continue
-      const url = p.url || ''
-      if (!url) continue
-      // C2 画质优先：母版抓 large（1024px）；medium（500px）作下载失败的回退
-      const a = asset(
-        url.replace('/square.', '/large.'),
-        p.license_code,
-        p.attribution,
-        'iNaturalist',
-        `https://www.inaturalist.org/observations/${o.id}`,
-      )
-      const medium = url.replace('/square.', '/medium.')
-      if (medium !== a.url) a.altUrl = medium
-      return a
-    }
-  }
-  return null
+/** 由 iNat photo 对象构造 asset（large 母版，medium 回退） */
+function inatPhotoAsset(p, sourceUrl) {
+  const url = p.url || ''
+  if (!url) return null
+  const a = asset(
+    url.replace('/square.', '/large.'),
+    p.license_code,
+    p.attribution,
+    'iNaturalist',
+    sourceUrl,
+  )
+  const medium = url.replace('/square.', '/medium.')
+  if (medium !== a.url) a.altUrl = medium
+  return a
 }
 
-function pickInatAudio(results, policy) {
+/** M1 取图：taxon.default_photo 优先，再按观察票数（每条观察最多 1 张），去重，≤per */
+function pickInatImages(results, policy, defaultPhoto) {
+  const out = []
+  const seen = new Set()
+  const push = (a) => {
+    if (!a || seen.has(a.url)) return
+    seen.add(a.url)
+    out.push(a)
+  }
+  if (defaultPhoto && licenseAllowed(defaultPhoto.license_code, policy)) {
+    push(
+      inatPhotoAsset(
+        defaultPhoto,
+        defaultPhoto.id ? `https://www.inaturalist.org/photos/${defaultPhoto.id}` : '',
+      ),
+    )
+  }
   for (const o of results) {
-    for (const s of o.sounds || []) {
-      if (!licenseAllowed(s.license_code, policy)) continue
-      if (!s.file_url) continue
-      return asset(s.file_url, s.license_code, s.attribution, 'iNaturalist', `https://www.inaturalist.org/observations/${o.id}`)
+    if (out.length >= OPT.per) break
+    for (const p of o.photos || []) {
+      if (!licenseAllowed(p.license_code, policy)) continue
+      push(inatPhotoAsset(p, `https://www.inaturalist.org/observations/${o.id}`))
+      break // 每条观察最多取 1 张
     }
   }
-  return null
+  return out.slice(0, OPT.per)
+}
+
+/** M1 取音：iNat sounds（去重，≤per） */
+function pickInatAudios(results, policy) {
+  const out = []
+  const seen = new Set()
+  for (const o of results) {
+    if (out.length >= OPT.per) break
+    for (const s of o.sounds || []) {
+      if (!licenseAllowed(s.license_code, policy)) continue
+      if (!s.file_url || seen.has(s.file_url)) continue
+      seen.add(s.file_url)
+      out.push(
+        asset(s.file_url, s.license_code, s.attribution, 'iNaturalist', `https://www.inaturalist.org/observations/${o.id}`),
+      )
+      break
+    }
+  }
+  return out
+}
+
+/** 应用人工覆盖表（011 §4.1/§4.4）：支持 images/audios 追加与 excludeUrls 排除 */
+function applyOverrides(base) {
+  const ov = OVERRIDES[base.id] || OVERRIDES[base.nameSci]
+  if (!ov) return
+  const excl = new Set(ov.excludeUrls || [])
+  const filter = (list) =>
+    list.filter((a) => !excl.has(a.url) && !excl.has(a.sourceUrl))
+  const toAssets = (list, kind) =>
+    (list || [])
+      .filter((o) => o && o.url && licenseAllowed(o.license, OPT.policy))
+      .map((o) =>
+        asset(o.url, o.license, o.author, o.source || 'override', o.sourceUrl || ''),
+      )
+      .map((a) => ({ ...a, overridden: true, type: kind, speciesId: base.id }))
+
+  base.images = [...toAssets(ov.images, 'image'), ...filter(base.images)].slice(0, OPT.per)
+  base.audios = [...toAssets(ov.audios, 'audio'), ...filter(base.audios)].slice(0, OPT.per)
 }
 
 function pickXcAudio(data, policy) {
@@ -317,6 +424,8 @@ function asset(url, rawLicense, author, source, sourceUrl) {
 async function materialize(rec, id) {
   if (rec.image) rec.image = await persistImage(rec.image, id)
   if (rec.audio) rec.audio = await persistOne(rec.audio, id, 'audio', 'mp3')
+  if (rec.images && rec.images.length) rec.images[0] = rec.image || rec.images[0]
+  if (rec.audios && rec.audios.length) rec.audios[0] = rec.audio || rec.audios[0]
 }
 
 /**

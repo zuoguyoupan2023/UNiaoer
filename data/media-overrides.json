@@ -1,0 +1,10 @@
+{
+  "_comment": "人工媒体覆盖表（011 §4.1/§4.4）。键为物种 id（学名 slug）或学名。",
+  "_format": {
+    "images": [{ "url": "https://…母版图", "license": "cc-by", "author": "作者", "source": "来源", "sourceUrl": "https://…" }],
+    "audios": [{ "url": "https://…音频", "license": "cc-by-nc", "author": "作者", "source": "来源", "sourceUrl": "https://…" }],
+    "excludeUrls": ["https://…要从自动结果里剔除的 url"]
+  },
+  "_note": "覆盖项会排在同物种自动结果之前；许可仍需通过 licenseAllowed（ND 不转码）。",
+  "overrides": {}
+}

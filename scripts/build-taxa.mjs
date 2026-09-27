@@ -50,16 +50,22 @@ const OPT = {
   maxMinutes: args['max-minutes'] ? Number(args['max-minutes']) : Infinity,
   force: !!args.force,
   skipDistribution: !!args['skip-distribution'],
+  retryMisses: !!args['retry-misses'],
+  fast: !!args.fast,
   gbifMin: args['gbif-min'] ? Number(args['gbif-min']) : 1,
 }
 
 let IUCN_KEY = ''
+let IUCN_SYNONYMS = {}
 const rand = (min, max) => min + Math.random() * (max - min)
+/** 随机延迟；--fast（缓存复用、离线重算）时跳过，便于快速重建产物 */
+const pause = (min = 0, max = 0) => (OPT.fast ? Promise.resolve() : sleep(rand(min, max)))
 
 async function main() {
   await loadEnv(path.join(ROOT, '.env'))
   IUCN_KEY = process.env.IUCN_API_KEY || ''
   if (process.env.IUCN_TOKEN && !IUCN_KEY) IUCN_KEY = process.env.IUCN_TOKEN
+  IUCN_SYNONYMS = await loadIucnSynonyms()
 
   const deadline = OPT.maxMinutes === Infinity ? Infinity : Date.now() + OPT.maxMinutes * 60_000
   const worldGoal = Math.min(OPT.world, OPT.limit)
@@ -267,7 +273,13 @@ async function buildDistribution(species, deadline) {
   let iucnOk = 0
   let gbifOk = 0
   let none = 0
+  let synonymResolved = 0
   const total = species.length
+
+  if (OPT.retryMisses) {
+    const removed = await clearFailedIucnCache()
+    console.log(`   ↻ --retry-misses：清理 ${removed} 条未命中的 IUCN / 同义词缓存，将重试`)
+  }
 
   await mapPool(species, OPT.concurrency, async (sp) => {
     const key = String(sp.taxonId)
@@ -277,25 +289,23 @@ async function buildDistribution(species, deadline) {
     }
     try {
       const iucn = await fetchIucn(sp)
-      await sleep(rand(700, 1800))
+      await pause(700, 1800)
       const gbif = await fetchGbif(sp)
 
       const ic = iucn && iucn.status === 'ok' ? iucn.countries : []
       const gc = (gbif && gbif.countries) || []
-      // IUCN 明显不全（只有 1 国且 GBIF 覆盖更广）→ 合并/兜底
-      const incomplete = ic.length > 0 && ic.length < 2 && gc.length > ic.length
+      // IUCN 为主；仅在其缺失时用 GBIF 兜底。不合并——GBIF 是观测点，
+      // 会把圈养/逃逸记录计入分布，从而污染特有种（如澳洲特有种只 1 国才是对的）。
       let countries = ic
       let source = ic.length ? 'IUCN' : 'none'
       if (!ic.length && gc.length) {
         countries = gc
         source = 'GBIF'
-      } else if (incomplete && gc.length) {
-        countries = [...new Set([...ic, ...gc])]
-        source = 'IUCN+GBIF'
       }
       if (source === 'IUCN' || source === 'IUCN+GBIF') iucnOk++
       else if (source === 'GBIF') gbifOk++
       else none++
+      if (iucn && iucn.resolvedVia === 'synonym') synonymResolved++
 
       results[key] = {
         countries,
@@ -307,6 +317,8 @@ async function buildDistribution(species, deadline) {
               year: iucn.year || null,
               category: iucn.category || null,
               url: iucn.url || null,
+              matchedName: iucn.matchedName || null,
+              resolvedVia: iucn.resolvedVia || null,
             }
           : null,
         gbif: gbif ? { usageKey: gbif.usageKey || null, countries: gc.length } : null,
@@ -319,7 +331,7 @@ async function buildDistribution(species, deadline) {
     if (done % 25 === 0 || done === total) {
       console.log(`   [${done}/${total}] IUCN ${iucnOk} · GBIF ${gbifOk} · 无 ${none}`)
     }
-    await sleep(rand(600, 1500))
+    await pause(600, 1500)
   })
 
   const labelled = Object.entries(results).map(([taxonId, v]) => ({ taxonId: Number(taxonId), ...v }))
@@ -349,6 +361,8 @@ async function buildDistribution(species, deadline) {
     gbifMin: OPT.gbifMin,
     note: 'countries 为 ISO 3166-1 alpha-2；IUCN 主，GBIF 补/合并；逐条保留 distributionSource',
     total: labelled.length,
+    synonymResolved,
+    needsReview: labelled.filter((v) => v.distributionSource === 'GBIF').map((v) => v.taxonId),
     bySource: dist,
     countriesBuckets: buckets,
     avgCountries: round1(labelled.reduce((a, v) => a + v.countries.length, 0) / Math.max(1, labelled.length)),
@@ -356,53 +370,214 @@ async function buildDistribution(species, deadline) {
   }
 }
 
+/** 清理未命中的 IUCN / 同义词缓存（--retry-misses），返回清理条数 */
+async function clearFailedIucnCache() {
+  let removed = 0
+  for (const [dir, keepOk] of [
+    ['iucn', true],
+    ['iucn-name', false],
+  ]) {
+    const d = path.join(CACHE, dir)
+    let files = []
+    try {
+      files = await fs.readdir(d)
+    } catch {
+      continue
+    }
+    for (const f of files) {
+      if (!f.endsWith('.json')) continue
+      const p = path.join(d, f)
+      if (keepOk) {
+        try {
+          const v = JSON.parse(await fs.readFile(p, 'utf8'))
+          if (v && v.status === 'ok') continue
+        } catch {
+          /* 解析失败也清理 */
+        }
+      }
+      await fs.rm(p, { force: true })
+      removed++
+    }
+  }
+  return removed
+}
+
+/** 读取人工覆盖表 data/iucn-synonyms.json（缺失则空） */
+async function loadIucnSynonyms() {
+  try {
+    const d = JSON.parse(await fs.readFile(path.join(DATA, 'iucn-synonyms.json'), 'utf8'))
+    return d.synonyms || {}
+  } catch {
+    return {}
+  }
+}
+
+/** IUCN 精确学名两段查询（scientific_name → assessment）；name 为 "Genus species" */
+async function iucnLookupByName(name) {
+  const [genusName, speciesName] = String(name).trim().split(/\s+/)
+  if (!genusName || !speciesName) return { status: 'bad_name', matchedName: null }
+  const headers = { Authorization: `Bearer ${IUCN_KEY}` }
+  const q = new URLSearchParams({ genus_name: genusName, species_name: speciesName })
+  let found
+  try {
+    found = await fetchJson(`${IUCN}/taxa/scientific_name?${q}`, { headers, retries: 5, timeout: 60000 })
+  } catch (e) {
+    if (/HTTP 404/.test(e.message)) return { status: 'not_found', matchedName: null }
+    if (/HTTP 40[13]/.test(e.message)) throw new Error(`IUCN 凭证/权限问题：${e.message}`)
+    throw e
+  }
+  const assessments = found.assessments || []
+  const global =
+    assessments.find((a) => a.latest && (a.scopes || []).some((s) => s.code === '1')) ||
+    assessments.find((a) => a.latest)
+  if (!global) return { status: 'no_assessment', matchedName: name }
+  const detail = await fetchJson(`${IUCN}/assessment/${global.assessment_id}`, {
+    headers,
+    retries: 5,
+    timeout: 60000,
+  })
+  const a = detail.assessments ? detail.assessments[0] : detail
+  const locations = a.locations || []
+  const countries = [
+    ...new Set(
+      locations
+        .filter((l) => l.presence !== 'Extinct')
+        .map((l) => l.code)
+        .filter((c) => /^[A-Z]{2}$/.test(c)),
+    ),
+  ]
+  return {
+    status: 'ok',
+    matchedName: name,
+    assessmentId: global.assessment_id,
+    year: global.year_published || null,
+    category: global.red_list_category_code || null,
+    url: global.url || null,
+    countries,
+  }
+}
+
+/**
+ * IUCN 精确名未命中时的同义词候选（缓存）。
+ * 顺序：人工覆盖表 → GBIF accepted usage → GBIF synonyms（旧名，IUCN 常仍沿用）→ Wikidata P225。
+ * 只取双名（属+种），排除与原名同属者优先旧属。
+ */
+async function resolveIucnCandidates(sp) {
+  const cacheFile = path.join(CACHE, 'iucn-name', `${sp.taxonId}.json`)
+  return cachedJson(
+    cacheFile,
+    async () => {
+      const out = []
+      const origGenus = String(sp.nameSci).split(/\s+/)[0].toLowerCase()
+      const add = (n) => {
+        const parts = String(n || '').trim().split(/\s+/)
+        if (parts.length < 2) return
+        const bin = `${parts[0]} ${parts[1]}`
+        if (bin.toLowerCase() === sp.nameSci.toLowerCase()) return
+        if (!out.includes(bin)) out.push(bin)
+      }
+
+      const ov = IUCN_SYNONYMS[sp.nameSci]
+      const ovArr = Array.isArray(ov) ? ov : ov ? [ov] : []
+      for (const v of ovArr) add(v)
+      if (ovArr.length) return out // 人工覆盖优先，不再联网
+
+      let usageKey = null
+      let family = null
+      try {
+        const m = await fetchJson(`${GBIF}/species/match?name=${encodeURIComponent(sp.nameSci)}`)
+        if (m && m.kingdom === 'Animalia') {
+          usageKey = m.acceptedUsageKey || m.usageKey || null
+          family = m.family || null
+          if (m.acceptedUsageKey && m.acceptedUsageKey !== m.usageKey) {
+            const acc = await fetchJson(`${GBIF}/species/${m.acceptedUsageKey}`)
+            if (acc && acc.canonicalName) add(acc.canonicalName)
+          }
+        }
+      } catch {
+        /* skip */
+      }
+      await sleep(rand(300, 700))
+
+      if (usageKey) {
+        try {
+          const syn = await fetchJson(`${GBIF}/species/${usageKey}/synonyms?limit=100`)
+          const cands = (syn.results || [])
+            .map((r) => r.canonicalName || r.scientificName)
+            .filter(Boolean)
+          const diffGenus = cands.filter((c) => c.split(/\s+/)[0]?.toLowerCase() !== origGenus)
+          for (const c of (diffGenus.length ? diffGenus : cands).slice(0, 12)) add(c)
+        } catch {
+          /* skip */
+        }
+        await sleep(rand(300, 700))
+      }
+
+      for (const n of await wikidataP225(sp.nameSci, family)) add(n)
+
+      return out.slice(0, 20)
+    },
+    { force: OPT.force },
+  )
+}
+
+/** Wikidata 的 P225（taxon name）；经 GBIF 确认与原名同科（family）才采纳，避免同名异物 */
+async function wikidataP225(sci, family) {
+  const WD = 'https://www.wikidata.org/w/api.php'
+  const epithet = String(sci).split(/\s+/)[1]
+  if (!epithet) return []
+  const search = await fetchJson(
+    `${WD}?action=wbsearchentities&search=${encodeURIComponent(sci)}&language=en&type=item&limit=5&format=json`,
+    { retries: 3, timeout: 20000 },
+  ).catch(() => null)
+  if (!search) return []
+  const names = []
+  for (const r of search.search || []) {
+    const ent = await fetchJson(
+      `${WD}?action=wbgetentities&ids=${r.id}&props=claims&format=json`,
+      { retries: 3, timeout: 20000 },
+    ).catch(() => null)
+    if (!ent || !ent.entities || !ent.entities[r.id]) continue
+    const p225 = (ent.entities[r.id].claims.P225 || [])
+      .map((c) => c.mainsnak.datavalue && c.mainsnak.datavalue.value)
+      .filter(Boolean)
+    if (p225.some((n) => n.split(/\s+/)[1] && n.split(/\s+/)[1].toLowerCase() === epithet.toLowerCase())) {
+      names.push(...p225)
+      break
+    }
+    await sleep(rand(400, 900))
+  }
+  const valid = []
+  for (const n of names) {
+    if (n.toLowerCase() === sci.toLowerCase()) continue
+    try {
+      const m = await fetchJson(`${GBIF}/species/match?name=${encodeURIComponent(n)}&strict=true`)
+      if (m && m.kingdom === 'Animalia' && (!family || !m.family || m.family === family)) valid.push(n)
+    } catch {
+      /* skip */
+    }
+    await sleep(rand(300, 700))
+  }
+  return valid
+}
+
+/** IUCN：精确 → 同义词回退 → 结果（缓存） */
 async function fetchIucn(sp) {
   if (!IUCN_KEY) return null
   const cacheFile = path.join(CACHE, 'iucn', `${sp.taxonId}.json`)
   return cachedJson(
     cacheFile,
     async () => {
-      const parts = String(sp.nameSci).trim().split(/\s+/)
-      const [genusName, speciesName] = parts
-      if (!genusName || !speciesName) return { status: 'bad_name' }
-      const headers = { Authorization: `Bearer ${IUCN_KEY}` }
-      const q = new URLSearchParams({ genus_name: genusName, species_name: speciesName })
-      let found
-      try {
-        found = await fetchJson(`${IUCN}/taxa/scientific_name?${q}`, { headers, retries: 5, timeout: 60000 })
-      } catch (e) {
-        if (/HTTP 404/.test(e.message)) return { status: 'not_found' }
-        if (/HTTP 40[13]/.test(e.message)) throw new Error(`IUCN 凭证/权限问题：${e.message}`)
-        throw e
+      const res = await iucnLookupByName(sp.nameSci)
+      if (res.status === 'ok' || res.status === 'no_assessment') return res
+
+      const candidates = await resolveIucnCandidates(sp)
+      for (const c of candidates) {
+        await sleep(rand(800, 1600))
+        const r = await iucnLookupByName(c)
+        if (r.status === 'ok') return { ...r, resolvedVia: 'synonym' }
       }
-      const assessments = found.assessments || []
-      const global =
-        assessments.find((a) => a.latest && (a.scopes || []).some((s) => s.code === '1')) ||
-        assessments.find((a) => a.latest)
-      if (!global) return { status: 'no_assessment' }
-      const detail = await fetchJson(`${IUCN}/assessment/${global.assessment_id}`, {
-        headers,
-        retries: 5,
-        timeout: 60000,
-      })
-      const a = detail.assessments ? detail.assessments[0] : detail
-      const locations = a.locations || []
-      const countries = [
-        ...new Set(
-          locations
-            .filter((l) => l.presence !== 'Extinct')
-            .map((l) => l.code)
-            .filter((c) => /^[A-Z]{2}$/.test(c)),
-        ),
-      ]
-      return {
-        status: 'ok',
-        assessmentId: global.assessment_id,
-        year: global.year_published || null,
-        category: global.red_list_category_code || null,
-        url: global.url || null,
-        countries,
-      }
+      return res
     },
     { force: OPT.force },
   )
@@ -438,6 +613,7 @@ async function fetchGbif(sp) {
 
 function printDistSummary(dist) {
   console.log(`   覆盖: IUCN ${dist.bySource.IUCN} · GBIF ${dist.bySource.GBIF} · 合并 ${dist.bySource['IUCN+GBIF']} · 无 ${dist.bySource.none} （错误 ${dist.bySource.error}，跳过 ${dist.bySource.skipped}）`)
+  if (dist.synonymResolved) console.log(`   同义词回退命中: ${dist.synonymResolved}`)
   const b = dist.countriesBuckets
   console.log(`   国家数分布: 0=${b['0']} 1=${b['1']} 2-5=${b['2-5']} 6-15=${b['6-15']} 16-40=${b['16-40']} 41+=${b['41+']}   平均 ${dist.avgCountries}`)
 }
