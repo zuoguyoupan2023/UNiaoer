@@ -20,13 +20,23 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { parseArgs, loadEnv, fetchJson, cachedJson, mapPool, sleep } from './lib/util.mjs'
-import { licenseAllowed, canTranscode, normalizeLicense } from './lib/license.mjs'
+import { licenseAllowed, canTranscode, normalizeLicense, inatLicenseQuery } from './lib/license.mjs'
+
+const INAT = 'https://api.inaturalist.org/v1'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PUB_MEDIA = path.join(ROOT, 'public/media')
 const CACHE = path.join(ROOT, 'data-cache')
 const TMP = path.join(os.tmpdir(), 'uniaoer-xc')
+const GBIF = 'https://api.gbif.org/v1'
+const IUCN_SYNONYMS = await (async () => {
+  try {
+    return (JSON.parse(await fs.readFile(path.join(ROOT, 'data/iucn-synonyms.json'), 'utf8')).synonyms) || {}
+  } catch {
+    return {}
+  }
+})()
 
 const args = parseArgs(process.argv.slice(2))
 const OPT = {
@@ -36,6 +46,7 @@ const OPT = {
   limit: args.limit ? Number(args.limit) : Infinity,
   maxMinutes: args['max-minutes'] ? Number(args['max-minutes']) : Infinity,
   retryNone: !!args['retry-none'],
+  onlyNoAudio: !!args['only-no-audio'],
   dryRun: !!args['dry-run'],
   force: !!args.force,
 }
@@ -66,6 +77,7 @@ async function main() {
 
   // 只处理：尚未是 XC、且未标记过（none 需 --retry-none 才重试）
   const todo = species.filter((s) => {
+    if (OPT.onlyNoAudio && s.audio) return false
     const st = state[s.id]
     if (st && st.status === 'ok') return false
     if (st && st.status === 'none' && !OPT.retryNone) return false
@@ -89,18 +101,34 @@ async function main() {
     }
     if (!OPT.dryRun && done > 0 && done % 20 === 0) await saveManifest(manifestPath, manifest)
     try {
-      const rec = await fetchXc(sp.nameSci)
-      const a = pickXcAudio(rec, OPT.policy)
-      if (!a) {
+      const list = await findXcCandidates(sp)
+      // XC 无候选且当前无音频 → 回退 iNat（含 casual 等非 research 级）
+      if (!list.length && !sp.audio) {
+        const ia = await findInatAudio(sp)
+        if (ia) list.push(ia)
+      }
+      if (!list.length) {
         state[sp.id] = { status: 'none', at: new Date().toISOString(), name: sp.nameSci }
         none++
         if (!OPT.dryRun) await saveState(state)
       } else {
-        const asset = OPT.dryRun ? a : await materializeAudio(sp, a)
+        // 逐条尝试：某条 404/下载失败就换下一条录音
+        let asset = null
+        let lastErr
+        for (const cand of list) {
+          try {
+            asset = OPT.dryRun ? cand : await materializeAudio(sp, cand)
+            break
+          } catch (e) {
+            lastErr = e
+            await sleepR(400, 900)
+          }
+        }
+        if (!asset) throw lastErr || new Error('所有 XC 候选均失败')
         sp.audios = [asset, ...(sp.audios || []).slice(1)]
         sp.audio = asset
         if (!OPT.dryRun) {
-          state[sp.id] = { status: 'ok', at: new Date().toISOString(), name: sp.nameSci, xc: a.sourceUrl }
+          state[sp.id] = { status: 'ok', at: new Date().toISOString(), name: sp.nameSci, xc: asset.sourceUrl }
           await saveState(state)
         }
         ok++
@@ -124,6 +152,86 @@ async function main() {
   console.log(`   下一步：npm run r2:push（重传音频）→ 部署`)
 }
 
+/**
+ * 在 XC 上找候选录音：先按 iNat 名，找不到再用同义词（GBIF accepted/synonyms + 覆盖表）。
+ * 返回 { assets, usedName }；name 级结果缓存于 data-cache/xc-syn/<slug>.json。
+ */
+async function findXcCandidates(sp) {
+  const names = await candidateNames(sp)
+  for (const nm of names) {
+    const rec = await fetchXc(nm)
+    const list = pickXcAudios(rec, OPT.policy)
+    if (list.length) return list
+    if (nm !== sp.nameSci) await sleepR(600, 1200)
+  }
+  return []
+}
+
+/** 回退：iNat sounds（先 research，再含 casual 等非 research 级） */
+async function findInatAudio(sp) {
+  if (!sp.taxonId) return null
+  for (const qg of ['research', '']) {
+    try {
+      const url =
+        `${INAT}/observations?taxon_id=${sp.taxonId}&sounds=true&sound_license=${inatLicenseQuery(OPT.policy)}` +
+        `&per_page=20${qg ? `&quality_grade=${qg}` : ''}`
+      const d = await fetchJson(url, { retries: 3, timeout: 60000 })
+      for (const o of d.results || []) {
+        for (const s of o.sounds || []) {
+          if (!licenseAllowed(s.license_code, OPT.policy) || !s.file_url) continue
+          return {
+            url: s.file_url,
+            license: normalizeLicense(s.license_code),
+            licenseRaw: s.license_code || '',
+            author: (s.attribution || '').trim() || '未知作者',
+            source: 'iNaturalist',
+            sourceUrl: `https://www.inaturalist.org/observations/${o.id}`,
+            transcode: canTranscode(s.license_code),
+          }
+        }
+      }
+    } catch {
+      /* skip */
+    }
+    await sleepR(500, 1000)
+  }
+  return null
+}
+
+/** 备选学名（含同义词），缓存；顺序：原名 → 覆盖表 → GBIF accepted → GBIF synonyms */
+async function candidateNames(sp) {
+  const cacheFile = path.join(CACHE, 'xc-syn', `${sp.id}.json`)
+  return cachedJson(
+    cacheFile,
+    async () => {
+      const out = [sp.nameSci]
+      const ov = IUCN_SYNONYMS[sp.nameSci]
+      for (const v of Array.isArray(ov) ? ov : ov ? [ov] : []) out.push(v)
+      try {
+        const m = await fetchJson(`${GBIF}/species/match?name=${encodeURIComponent(sp.nameSci)}`)
+        if (m && m.kingdom === 'Animalia') {
+          const key = m.acceptedUsageKey || m.usageKey
+          if (m.acceptedUsageKey && m.acceptedUsageKey !== m.usageKey) {
+            const acc = await fetchJson(`${GBIF}/species/${m.acceptedUsageKey}`)
+            if (acc && acc.canonicalName) out.push(acc.canonicalName)
+          }
+          if (key) {
+            const syn = await fetchJson(`${GBIF}/species/${key}/synonyms?limit=200`)
+            for (const r of syn.results || []) {
+              const c = r.canonicalName || r.scientificName
+              if (c) out.push(c.trim().split(/\s+/).slice(0, 2).join(' '))
+            }
+          }
+        }
+      } catch {
+        /* skip */
+      }
+      return [...new Set(out.map((s) => String(s).trim()).filter(Boolean))].slice(0, 25)
+    },
+    { force: OPT.force },
+  )
+}
+
 /** 抓取 XC（缓存） */
 async function fetchXc(sci) {
   const cacheFile = path.join(CACHE, 'xc', `${slug(sci)}.json`)
@@ -138,18 +246,22 @@ async function fetchXc(sci) {
   )
 }
 
-/** 质量 A→E 优先，同质量取短的；许可过滤 */
-function pickXcAudio(data, policy) {
+/** 质量 A→E 优先，同质量取短的；许可过滤。返回候选数组（供下载失败时换下一条） */
+function pickXcAudios(data, policy) {
   const order = { A: 0, B: 1, C: 2, D: 3, E: 4 }
   const recs = [...((data && data.recordings) || [])].sort(
     (a, b) => (order[a.q] ?? 9) - (order[b.q] ?? 9) || lengthSec(a.length) - lengthSec(b.length),
   )
+  const out = []
+  const seen = new Set()
   for (const r of recs) {
     if (!licenseAllowed(r.lic, policy)) continue
+    if (lengthSec(r.length) <= 0) continue // 跳过 0:00 之类的坏录音（下载会 404）
     let file = r.file || ''
     if (file.startsWith('//')) file = 'https:' + file
-    if (!file) continue
-    return {
+    if (!file || seen.has(file)) continue
+    seen.add(file)
+    out.push({
       url: file,
       license: normalizeLicense(r.lic),
       licenseRaw: r.lic || '',
@@ -158,9 +270,10 @@ function pickXcAudio(data, policy) {
       sourceUrl: r.url || '',
       transcode: canTranscode(r.lic),
       quality: r.q || '',
-    }
+    })
+    if (out.length >= 6) break
   }
-  return null
+  return out
 }
 
 function lengthSec(s) {

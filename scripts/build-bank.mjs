@@ -428,6 +428,7 @@ function pickXcAudio(data, policy) {
   )
   for (const r of recs) {
     if (!licenseAllowed(r.lic, policy)) continue
+    if (lengthSec(r.length) <= 0) continue // 跳过 0:00 之类的坏录音（下载会 404）
     let file = r.file || ''
     if (file.startsWith('//')) file = 'https:' + file
     if (!file) continue
