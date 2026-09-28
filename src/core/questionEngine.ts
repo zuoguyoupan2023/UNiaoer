@@ -1,4 +1,4 @@
-import type { MediaType, Question, Tier } from '@/types'
+import type { MediaAsset, MediaType, Question, Tier } from '@/types'
 import type { BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
 
@@ -57,8 +57,28 @@ export function pickDistractors(
   return picked
 }
 
+/** 某物种在指定题型下的素材数组（manifest v2 优先，兼容期回退到单张 image/audio） */
+export function assetsOf(sp: BankSpecies, type: MediaType): MediaAsset[] {
+  const arr = type === 'image' ? sp.images : sp.audios
+  if (arr && arr.length) return arr
+  const single = type === 'image' ? sp.image : sp.audio
+  return single ? [single] : []
+}
+
 function mediaPool(bank: BankSpecies[], type: MediaType): BankSpecies[] {
-  return bank.filter((s) => (type === 'image' ? s.image : s.audio))
+  return bank.filter((s) => assetsOf(s, type).length > 0)
+}
+
+/**
+ * 分档取材（011 §8）：取前 min(mediaPoolSize, 实际数) 个，L1 只用首选（最佳/标准照），
+ * 高档位在池内随机（多样姿态/环境）。素材不足按实际；数组缺省时回退单张。
+ */
+export function pickMedia(sp: BankSpecies, type: MediaType, poolSize: number): MediaAsset | undefined {
+  const assets = assetsOf(sp, type)
+  if (!assets.length) return undefined
+  const n = Math.max(1, Math.min(poolSize, assets.length))
+  if (poolSize <= 1 || n === 1) return assets[0]
+  return assets[Math.floor(Math.random() * n)]
 }
 
 /**
@@ -82,7 +102,7 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   const picked = shuffle(pool).slice(0, Math.min(count, pool.length))
 
   return picked.map((sp, i) => {
-    const media = (type === 'image' ? sp.image : sp.audio)!
+    const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractors(sp, full, Math.max(0, cfg.optionCount - 1), cfg.distractor)
     return {
       id: `${sp.id}-${type}-${i}`,

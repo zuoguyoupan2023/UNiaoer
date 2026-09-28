@@ -27,7 +27,7 @@ export interface Species {
 
 /** 媒体素材（必须携带署名信息） */
 export interface MediaAsset {
-  id: string
+  id?: string
   speciesId: string
   type: MediaType
   /** 图片=full（≤1280px，答题主图）；音频=mp3。不可转码/下载失败时为原始文件或源站地址 */
@@ -41,12 +41,18 @@ export interface MediaAsset {
   /** 图片多分辨率（C2）：ThumbHash（base64），解码出模糊占位图 */
   thumbhash?: string
   license: string
-  licenseUrl: string
+  licenseUrl?: string
+  /** 原始许可标识（XC 的完整 URL / iNat 短码） */
+  licenseRaw?: string
   author: string
   source: string // 'Xeno-canto' | 'iNaturalist' | ...
   sourceUrl: string
   quality?: 'A' | 'B' | 'C' | 'D' | 'E'
   durationSec?: number
+  /** ND 等不可转码的素材为 false（占位/派生均不做） */
+  transcode?: boolean
+  /** 来自人工覆盖表 */
+  overridden?: boolean
 }
 
 /** 题目 */

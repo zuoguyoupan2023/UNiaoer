@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildQuestions, pickDistractors, shuffle } from '../questionEngine'
+import { assetsOf, buildQuestions, pickDistractors, shuffle } from '../questionEngine'
 import { TIERS } from '../difficulty'
 import type { BankSpecies } from '../bank'
 import type { MediaAsset } from '@/types'
@@ -93,6 +93,42 @@ describe('buildQuestions', () => {
   it('E1 speciesIds 命中无素材物种时被过滤，可能为空', () => {
     const qs = buildQuestions(bank, { type: 'image', count: 10, speciesIds: new Set(['noimg']) })
     expect(qs.length).toBe(0)
+  })
+})
+
+describe('分档取材 (mediaPoolSize)', () => {
+  function multi(size: number): BankSpecies {
+    return {
+      ...sp('multi', '多材鸟', '甲科'),
+      image: null,
+      images: Array.from({ length: size }, (_, i) => asset(`multi-img-${i}`, 'image')),
+    }
+  }
+
+  it('assetsOf 优先多素材数组', () => {
+    expect(assetsOf(multi(5), 'image').length).toBe(5)
+  })
+
+  it('L1 只用首选素材（标准照）', () => {
+    const qsBank = [multi(5)]
+    for (let i = 0; i < 10; i++) {
+      const qs = buildQuestions(qsBank, { type: 'image', count: 1, tier: 1 })
+      expect(qs[0]!.media.id).toBe('multi-img-0')
+    }
+  })
+
+  it('L4 只在前 5 个素材内随机（不会用到第 6 个及以后）', () => {
+    const qsBank = [multi(8)]
+    const allowed = new Set(Array.from({ length: 5 }, (_, i) => `multi-img-${i}`))
+    for (let i = 0; i < 30; i++) {
+      const qs = buildQuestions(qsBank, { type: 'image', count: 1, tier: 4 })
+      expect(allowed.has(qs[0]!.media.id!)).toBe(true)
+    }
+  })
+
+  it('素材不足时按实际数量，不报错', () => {
+    const qs = buildQuestions([multi(2)], { type: 'image', count: 1, tier: 5 })
+    expect(qs[0]!.media).toBeTruthy()
   })
 })
 

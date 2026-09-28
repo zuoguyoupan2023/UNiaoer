@@ -5,13 +5,25 @@ export interface BankSpecies {
   id: string
   nameZh: string
   nameSci: string
+  /** 英文俗名（i18n，manifest v2 起） */
+  nameEn?: string
+  /** iNat taxon id（稳定主键，manifest v2 起） */
+  taxonId?: number
   family: string
   commonness: number
+  /** 榜单排名 / 是否中国榜（manifest v2 起） */
+  rankWorld?: number | null
+  rankCN?: number | null
+  inCN?: boolean | null
   desc: string
   location: string
   habit: string
+  /** 兼容期：首选素材（= images[0] / audios[0]） */
   image: MediaAsset | null
   audio: MediaAsset | null
+  /** manifest v2 多素材（best-first）；缺省时回退到 image/audio */
+  images?: MediaAsset[]
+  audios?: MediaAsset[]
 }
 
 export interface Manifest {

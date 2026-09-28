@@ -16,6 +16,12 @@ export interface TierConfig {
   optionRevealSec?: number
   /** 允许的物种常见度（1 最常见 → 4 最少见） */
   commonness: number[]
+  /**
+   * 每次取材最多可选的素材数（分档取材，011 §8）：
+   * L1 只用首选（标准照）；高档位在上限内随机，制造"多样姿态/环境"的难度梯度。
+   * 不足时按实际数量；素材数组缺省时回退到单张 image/audio。
+   */
+  mediaPoolSize: number
 }
 
 export const TIERS: Record<Tier, TierConfig> = {
@@ -28,6 +34,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     timeLimitSec: 25,
     optionRevealSec: 5,
     commonness: [1, 2],
+    mediaPoolSize: 1,
   },
   2: {
     tier: 2,
@@ -37,6 +44,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     distractor: 'mixed',
     timeLimitSec: 20,
     commonness: [1, 2, 3],
+    mediaPoolSize: 3,
   },
   3: {
     tier: 3,
@@ -46,6 +54,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     distractor: 'same',
     timeLimitSec: 15,
     commonness: [2, 3, 4],
+    mediaPoolSize: 3,
   },
   4: {
     tier: 4,
@@ -55,6 +64,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     distractor: 'same',
     timeLimitSec: 10,
     commonness: [3, 4],
+    mediaPoolSize: 5,
   },
   5: {
     tier: 5,
@@ -64,6 +74,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     distractor: 'same',
     timeLimitSec: 10,
     commonness: [3, 4],
+    mediaPoolSize: 5,
   },
 }
 
