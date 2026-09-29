@@ -30,7 +30,7 @@ import {
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, Tier } from '@/types'
 import { currentLocale } from '@/i18n'
-import { familyName } from '@/i18n/data/family'
+import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -42,8 +42,8 @@ const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
-/** 科名按 locale：en 用拉丁科名，缺失回退中文（015 §6.1） */
-const familyOf = (fam: string) => familyName(fam, currentLocale())
+/** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
+const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
@@ -141,6 +141,9 @@ const autoPending = ref(false)
 /** 本题是否被用户点了「取消切换」（只影响这一次） */
 const cancelledThisQuestion = ref(false)
 let autoNextTimer: number | undefined
+/** 浮窗倒计时（秒，015 #4：精确到 0.1s 实时递减） */
+const autoNextRemaining = ref<number | null>(null)
+let autoNextTicker: number | undefined
 
 /** 是否处于"会自动切换"的情形：「都自动」=任意；「答对自动」=仅答对 */
 const willAuto = computed(() => {
@@ -158,11 +161,20 @@ const showDisableBtn = computed(
 /** 彻底手动时出现「自动切换」 */
 const showEnableBtn = computed(() => quiz.answered && settings.autoNext === 'manual')
 
+function stopCountdown() {
+  if (autoNextTicker !== undefined) {
+    clearInterval(autoNextTicker)
+    autoNextTicker = undefined
+  }
+  autoNextRemaining.value = null
+}
+
 function clearAutoNext() {
   if (autoNextTimer !== undefined) {
     clearTimeout(autoNextTimer)
     autoNextTimer = undefined
   }
+  stopCountdown()
   autoPending.value = false
 }
 
@@ -172,6 +184,14 @@ function scheduleAutoNext() {
   autoPending.value = true
   // 答对 3s；「都自动」的错题/超时 4s
   const delay = isCorrect.value ? AUTO_NEXT_DELAY_CORRECT_MS : AUTO_NEXT_DELAY_WRONG_MS
+  // 浮窗实时倒计时（0.1s 步进，015 #4）
+  const deadline = Date.now() + delay
+  autoNextRemaining.value = delay / 1000
+  autoNextTicker = window.setInterval(() => {
+    const left = (deadline - Date.now()) / 1000
+    autoNextRemaining.value = left > 0 ? left : 0
+    if (left <= 0) stopCountdown()
+  }, 100)
   autoNextTimer = window.setTimeout(() => {
     autoNextTimer = undefined
     autoPending.value = false
@@ -493,10 +513,11 @@ function onTouchEnd(e: TouchEvent) {
           </div>
           <div class="ct-auto">
             <span class="ct-count">
-              <Hourglass class="ic" :size="13" /> {{ t('quiz.autoAdvancing') }}
+              <Hourglass class="ic" :size="13" />
+              {{ t('quiz.autoAdvancing', { sec: (autoNextRemaining ?? 0).toFixed(1) }) }}
             </span>
-            <button class="btn-mini ct-next" type="button" @click="goNext">{{ nextLabel }}</button>
             <button class="btn-mini" type="button" @click="cancelAutoOnce">{{ t('quiz.cancelAuto') }}</button>
+            <button class="btn-mini ct-next" type="button" @click="goNext">{{ nextLabel }}</button>
           </div>
         </div>
       </Transition>

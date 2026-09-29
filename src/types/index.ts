@@ -73,6 +73,8 @@ export interface Question {
   sci: string
   family: string
   options: string[]
+  /** 与 options 平行的物种 id（错选名按 locale 解析用，015 #1） */
+  optionIds: string[]
   answerMode: AnswerMode
   timeLimitSec?: number
 }

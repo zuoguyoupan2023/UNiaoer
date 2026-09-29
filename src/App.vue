@@ -120,6 +120,13 @@ const immersive = computed(
 
   <footer class="app-footer">
     <p>{{ t('footer.source') }}</p>
-    <p>{{ t('footer.tagline') }}</p>
+    <!-- 标语：左「有鸟儿」/ 右「友鸟儿」夹 UNiaoer（015 #6）；窄屏分三行、UNiaoer 居中 -->
+    <p class="tagline">
+      <span class="tag-side">{{ t('footer.taglineLeft') }}</span>
+      <span class="tag-sep" aria-hidden="true">·</span>
+      <strong class="tag-brand">UNiaoer</strong>
+      <span class="tag-sep" aria-hidden="true">·</span>
+      <span class="tag-side">{{ t('footer.taglineRight') }}</span>
+    </p>
   </footer>
 </template>

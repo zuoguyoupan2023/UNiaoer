@@ -28,7 +28,8 @@ const en: typeof zhMessages = {
   },
   footer: {
     source: 'Data: Xeno-canto · iNaturalist',
-    tagline: 'UNiaoer — with birds, for friends',
+    taglineLeft: 'Meet birds easy',
+    taglineRight: 'Meet birds friendly',
   },
   home: {
     title: 'Time for a challenge!',
@@ -63,7 +64,7 @@ const en: typeof zhMessages = {
     timeout: "Time's up!",
     correctAnswer: 'Correct answer: ',
     answerSci: ' ({sci})',
-    autoAdvancing: 'Advancing to the next question…',
+    autoAdvancing: 'Auto-advancing in {sec}s…',
     cancelAuto: 'Cancel auto',
     disableAuto: 'Stop auto-advance',
     enableAuto: 'Auto-advance',

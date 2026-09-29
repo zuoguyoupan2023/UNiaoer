@@ -208,6 +208,20 @@ describe('pickDistractors', () => {
   })
 })
 
+describe('options 与 optionIds 配对（015 #1）', () => {
+  it('optionIds 与 options 等长且一一对应物种', () => {
+    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 2 })
+    for (const q of qs) {
+      expect(q.optionIds).toHaveLength(q.options.length)
+      const ai = q.options.indexOf(q.answer)
+      expect(q.optionIds[ai]).toBe(bank.find((b) => b.nameZh === q.answer)?.id)
+      for (let i = 0; i < q.options.length; i++) {
+        expect(bank.find((b) => b.id === q.optionIds[i])).toBeDefined()
+      }
+    }
+  })
+})
+
 describe('shuffle', () => {
   it('不改变元素集合', () => {
     const src = [1, 2, 3, 4, 5]

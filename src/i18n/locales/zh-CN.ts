@@ -23,7 +23,8 @@ export const messages = {
   },
   footer: {
     source: '数据来源：Xeno-canto · iNaturalist',
-    tagline: '有鸟儿 · UNiaoer · 友鸟儿',
+    taglineLeft: '有鸟儿',
+    taglineRight: '友鸟儿',
   },
   home: {
     title: '是时候挑战一下自己了！',
@@ -58,7 +59,7 @@ export const messages = {
     timeout: '时间到！',
     correctAnswer: '正确答案：',
     answerSci: '（{sci}）',
-    autoAdvancing: '即将自动进入下一题…',
+    autoAdvancing: '{sec} 秒后自动进入下一题…',
     cancelAuto: '取消切换',
     disableAuto: '不再自动切换',
     enableAuto: '自动切换',

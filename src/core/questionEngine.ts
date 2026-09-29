@@ -1,5 +1,5 @@
 import type { MediaAsset, MediaType, Question, Tier } from '@/types'
-import type { BankSpecies } from './bank'
+import { speciesName, type BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
 
 export interface BuildOptions {
@@ -12,11 +12,6 @@ export interface BuildOptions {
   locale?: string
 }
 
-/** 物种显示名：数据驱动文案按 locale 取（manifest 的 nameEn 缺失时回退学名） */
-export function speciesName(sp: BankSpecies, locale?: string): string {
-  if (locale === 'en') return sp.nameEn || sp.nameSci
-  return sp.nameZh
-}
 
 export function shuffle<T>(arr: readonly T[]): T[] {
   const a = [...arr]
@@ -29,14 +24,20 @@ export function shuffle<T>(arr: readonly T[]): T[] {
   return a
 }
 
+/** 干扰项（名字 + 物种 id；id 供错选记录按 locale 解析，015 #1） */
+export interface DistractorPair {
+  id: string
+  name: string
+}
+
 /** 按策略选出干扰项（去重，不含答案；nameOf 决定选项语种，缺省中文名） */
-export function pickDistractors(
+export function pickDistractorPairs(
   target: BankSpecies,
   pool: BankSpecies[],
   n: number,
   strategy: DistractorStrategy = 'mixed',
   nameOf: (s: BankSpecies) => string = (s) => s.nameZh,
-): string[] {
+): DistractorPair[] {
   const others = pool.filter((s) => s.id !== target.id)
   const same = others.filter((s) => s.family && s.family === target.family)
   const diff = others.filter((s) => !same.includes(s))
@@ -55,16 +56,27 @@ export function pickDistractors(
     ordered = [...head, ...shuffledDiff, ...shuffledSame.slice(1)]
   }
 
-  const picked: string[] = []
+  const picked: DistractorPair[] = []
   const used = new Set<string>([nameOf(target)])
   for (const s of ordered) {
     if (picked.length >= n) break
     const name = nameOf(s)
     if (used.has(name)) continue
     used.add(name)
-    picked.push(name)
+    picked.push({ id: s.id, name })
   }
   return picked
+}
+
+/** 按策略选出干扰项名字（pickDistractorPairs 的便捷封装，兼容旧调用） */
+export function pickDistractors(
+  target: BankSpecies,
+  pool: BankSpecies[],
+  n: number,
+  strategy: DistractorStrategy = 'mixed',
+  nameOf: (s: BankSpecies) => string = (s) => s.nameZh,
+): string[] {
+  return pickDistractorPairs(target, pool, n, strategy, nameOf).map((p) => p.name)
 }
 
 /** 某物种在指定题型下的素材数组（manifest v2 优先，兼容期回退到单张 image/audio） */
@@ -114,13 +126,15 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
   return picked.map((sp, i) => {
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
-    const distractors = pickDistractors(
+    const distractors = pickDistractorPairs(
       sp,
       full,
       Math.max(0, cfg.optionCount - 1),
       cfg.distractor,
       (s) => speciesName(s, locale),
     )
+    // 名字与 id 成对洗牌，保证 optionIds 与 options 一一对应
+    const optionPairs = shuffle([{ id: sp.id, name: speciesName(sp, locale) }, ...distractors])
     // C3（R8）：携带同种两类全部素材，供答题/回顾查看其它图、音（不按档位裁剪——
     // 出题仍严格用第 1/前 3/前 5，画廊只是额外练习资源）
     return {
@@ -133,7 +147,8 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
       answer: speciesName(sp, locale),
       sci: sp.nameSci,
       family: sp.family,
-      options: shuffle([speciesName(sp, locale), ...distractors]),
+      options: optionPairs.map((p) => p.name),
+      optionIds: optionPairs.map((p) => p.id),
       answerMode: 'choice',
       timeLimitSec: cfg.timeLimitSec,
     }

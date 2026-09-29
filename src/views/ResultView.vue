@@ -21,9 +21,11 @@ import { persistRound } from '@/core/roundRecorder'
 import { getStats, listRounds } from '@/core/historyDb'
 import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
 import { ALL_SPECIES_TOTAL, BADGES, type BadgeDef } from '@/core/badges'
+import type { Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { currentLocale } from '@/i18n'
-import { familyName } from '@/i18n/data/family'
+import { familyDisplay } from '@/i18n/data/family'
+import { speciesNameById } from '@/core/bank'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -36,7 +38,20 @@ const { t } = useI18n()
 const hasResult = computed(() => quiz.total > 0)
 const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
-const familyOf = (fam: string) => familyName(fam, currentLocale())
+/** 科名「拉丁名+本地名」组合（015 #2） */
+const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
+/** 题目答案名按当前语言解析（015 #1）：speciesId 回查题库，回退作答时存储名 */
+const nameOf = (q: { media: { speciesId?: string }; answer: string }) =>
+  speciesNameById(q.media.speciesId, currentLocale()) ?? q.answer
+/** 错选名按当前语言解析：超时/未答 → 占位文案 */
+const choiceOf = (q: Question, chosen: string | null) => {
+  if (chosen === TIMEOUT || chosen === null) {
+    return chosen === TIMEOUT ? t('result.timedOut') : t('result.notAnswered')
+  }
+  const idx = q.options.indexOf(chosen)
+  const id = idx >= 0 ? q.optionIds[idx] : undefined
+  return speciesNameById(id, currentLocale()) ?? chosen
+}
 const newBadges = ref<BadgeDef[]>([])
 /** 新解锁称号的文本（key+params，渲染处 t()） */
 const newTitleTexts = ref<TitleText[]>([])
@@ -64,8 +79,8 @@ const posterData = computed<PosterData>(() => {
     .map((q, i) => ({ q, chosen: quiz.chosen[i] ?? null }))
     .filter(({ q, chosen }) => chosen !== q.answer)
     .map(({ q, chosen }) => ({
-      answer: q.answer,
-      chosen: chosen === TIMEOUT ? null : chosen,
+      answer: nameOf(q),
+      chosen: chosen === TIMEOUT || chosen === null ? null : choiceOf(q, chosen),
       timedOut: chosen === TIMEOUT,
     }))
   return {
@@ -97,7 +112,7 @@ const posterImages = computed<PosterImage[]>(() => {
       url: q.media.url,
       thumbUrl: q.media.thumbUrl,
       xlUrl: q.media.xlUrl,
-      answer: q.answer,
+      answer: nameOf(q),
       sci: q.sci,
       wrong: quiz.chosen[i] !== q.answer,
     })
@@ -173,18 +188,11 @@ async function again() {
         <div class="line">
           <CircleCheck v-if="quiz.chosen[i] === q.answer" class="mark ok" :size="16" />
           <CircleX v-else class="mark no" :size="16" />
-          <span class="ans">{{ q.answer }}</span>
+          <span class="ans">{{ nameOf(q) }}</span>
           <span class="muted">{{ q.sci }} · {{ familyOf(q.family) }}</span>
         </div>
         <div class="muted small">
-          {{
-            t('result.yourChoice', {
-              choice:
-                quiz.chosen[i] === TIMEOUT
-                  ? t('result.timedOut')
-                  : (quiz.chosen[i] ?? t('result.notAnswered')),
-            })
-          }}
+          {{ t('result.yourChoice', { choice: choiceOf(q, quiz.chosen[i] ?? null) }) }}
         </div>
         <AttributionLine :media="q.media" />
         <!-- C3：回顾该鸟的其它图/音（可放大、可试听） -->

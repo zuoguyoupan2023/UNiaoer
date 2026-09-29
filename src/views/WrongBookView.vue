@@ -12,12 +12,23 @@ import {
   type WrongEntry,
   type WrongHistoryItem,
 } from '@/core/historyDb'
+import { loadBank, speciesNameById } from '@/core/bank'
 import type { MediaType } from '@/types'
 import { currentLocale } from '@/i18n'
+import { familyDisplay } from '@/i18n/data/family'
 
 const router = useRouter()
 const quiz = useQuizStore()
 const { t } = useI18n()
+
+/** 记录里的鸟名按当前语言解析（015 #1）：speciesId 查题库，旧记录回退存储名 */
+const nameOf = (id: string | undefined, fallback: string) =>
+  speciesNameById(id, currentLocale()) ?? fallback
+/** 错选名：优先按 id 解析，超时/未答显示占位 */
+const choiceOf = (id: string | undefined, stored: string | null, noneKey: string) =>
+  speciesNameById(id, currentLocale()) ?? stored ?? t(noneKey)
+/** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
+const familyOf = (zhFamily: string) => familyDisplay(zhFamily, currentLocale())
 
 type Tab = 'current' | 'history'
 const tab = ref<Tab>('current')
@@ -34,7 +45,15 @@ async function refresh() {
   loading.value = false
 }
 
-onMounted(refresh)
+onMounted(async () => {
+  // 错题本的鸟名按 speciesId 回查题库解析当前语言（015 #1）；失败时回退存储名
+  try {
+    await loadBank()
+  } catch {
+    /* 题库加载失败不阻塞错题本展示（用存储名回退） */
+  }
+  await refresh()
+})
 
 async function remove(speciesId: string) {
   await removeWrong(speciesId)
@@ -95,12 +114,16 @@ function fmt(at: number) {
         <li v-for="e in current" :key="e.speciesId" class="item">
           <div class="info">
             <div class="name">
-              {{ e.answer }}
-              <span class="muted small">（{{ e.sci }} · {{ e.family }}）</span>
+              {{ nameOf(e.speciesId, e.answer) }}
+              <span class="muted small">（{{ e.sci }} · {{ familyOf(e.family) }}）</span>
             </div>
             <div class="muted small">
               {{ t('wrongBook.wrongTimes', e.wrongCount) }} ·
-              {{ t('wrongBook.lastWrongChoice', { choice: e.lastChosen || t('wrongBook.timedOutOrNone') }) }}
+              {{
+                t('wrongBook.lastWrongChoice', {
+                  choice: choiceOf(e.lastChosenId, e.lastChosen, 'wrongBook.timedOutOrNone'),
+                })
+              }}
             </div>
             <div class="muted tiny">{{ e.source }} · {{ e.author }} · {{ e.license }}</div>
           </div>
@@ -127,8 +150,8 @@ function fmt(at: number) {
         <li v-for="(e, i) in history" :key="`${e.speciesId}-${e.at}-${i}`" class="item">
           <div class="info">
             <div class="name">
-              {{ e.answer }}
-              <span class="muted small">（{{ e.sci }} · {{ e.family }}）</span>
+              {{ nameOf(e.speciesId, e.answer) }}
+              <span class="muted small">（{{ e.sci }} · {{ familyOf(e.family) }}）</span>
             </div>
             <div class="muted small">
               {{ fmt(e.at) }} ·
@@ -137,7 +160,7 @@ function fmt(at: number) {
                 t('wrongBook.wrongChoice', {
                   choice: e.timedOut
                     ? t('wrongBook.timedOut')
-                    : (e.chosen || t('wrongBook.notAnswered')),
+                    : choiceOf(e.chosenId, e.chosen, 'wrongBook.notAnswered'),
                 })
               }}
             </div>

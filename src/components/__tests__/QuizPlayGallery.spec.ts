@@ -56,7 +56,8 @@ const manifest: Manifest = {
   species: [sp('a', '甲鸟'), sp('b', '乙鸟'), sp('c', '丙鸟')],
 }
 
-vi.mock('@/core/bank', () => ({
+vi.mock('@/core/bank', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/core/bank')>()),
   loadBank: vi.fn<() => Promise<Manifest>>(async () => manifest),
 }))
 

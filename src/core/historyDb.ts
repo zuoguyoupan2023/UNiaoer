@@ -11,6 +11,8 @@ export interface RoundItem {
   family: string
   type: MediaType
   chosen: string | null
+  /** 错选物种的 id（错选名按 locale 解析用，015 #1；答对/超时缺省） */
+  chosenId?: string
   correct: boolean
   timedOut: boolean
   mediaUrl: string
@@ -48,6 +50,8 @@ export interface WrongEntry {
   license: string
   wrongCount: number
   lastChosen: string | null
+  /** 最近错选的物种 id（015 #1） */
+  lastChosenId?: string
   lastAt: number
 }
 
@@ -178,6 +182,7 @@ export async function saveRound(record: RoundRecord): Promise<void> {
         license: item.license,
         wrongCount: (existing?.wrongCount ?? 0) + 1,
         lastChosen: item.chosen,
+        lastChosenId: item.chosenId,
         lastAt: record.at,
       }
       await put(STORE_WRONG, entry)
@@ -199,6 +204,8 @@ export interface WrongHistoryItem {
   sci: string
   family: string
   chosen: string | null
+  /** 错选物种 id（015 #1） */
+  chosenId?: string
   timedOut: boolean
   at: number
   mode: MediaType
@@ -218,6 +225,7 @@ export async function listWrongHistory(): Promise<WrongHistoryItem[]> {
         sci: it.sci,
         family: it.family,
         chosen: it.chosen,
+        chosenId: it.chosenId,
         timedOut: it.timedOut,
         at: r.at,
         mode: r.mode,

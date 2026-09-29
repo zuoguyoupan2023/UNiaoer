@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Languages, Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
@@ -51,6 +51,9 @@ async function clearMediaCache() {
   await Promise.all(targets.map((k) => caches.delete(k)))
   cacheMsg.value = targets.length ? t('settings.cacheCleared', { n: targets.length }) : t('settings.cacheNone')
 }
+
+/** 音轨名主/副位随 locale 切换（015 #3） */
+const isEn = computed(() => settings.locale === 'en')
 
 const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string }[] = [
   { value: 'correct', labelKey: 'settings.autoNext.correct.label', hintKey: 'settings.autoNext.correct.hint' },
@@ -144,8 +147,9 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
             :checked="isTrackChecked(tr.id)"
             @change="toggleTrack(tr.id, ($event.target as HTMLInputElement).checked)"
           />
-          <span class="zh">{{ tr.labelZh }}</span>
-          <span class="en">{{ tr.labelEn }}</span>
+          <!-- 音轨名随 locale 切换（015 #3）：主位显示当前语言，副位灰色显示另一语言 -->
+          <span :class="isEn ? 'alt' : 'main'">{{ tr.labelZh }}</span>
+          <span :class="isEn ? 'main' : 'alt'">{{ tr.labelEn }}</span>
         </label>
       </div>
     </div>
@@ -268,10 +272,10 @@ h2.sec {
   height: 16px;
   accent-color: var(--primary);
 }
-.track .zh {
+.track .main {
   font-weight: 600;
 }
-.track .en {
+.track .alt {
   margin-left: auto;
   font-size: 0.74rem;
   color: var(--text-light);

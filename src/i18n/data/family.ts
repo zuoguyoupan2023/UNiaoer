@@ -1,6 +1,9 @@
 /**
- * 科名 zh → 拉丁学名映射（en 界面渲染 family 用，010 §6.1 前端映射表方案）。
- * 拉丁科名国际通用且无歧义；未收录的科回退显示中文原文。
+ * 科名本地化（015 §6.1 / #2）：
+ * - FAMILY_LATIN：zh → 拉丁学名（国际通用）
+ * - FAMILY_EN：zh → 英文俗名（IOC 风格，未收录回退只显示拉丁名）
+ * - familyDisplay()：按 locale 输出「拉丁名 + 本地名」组合
+ *   （zh：`Turdidae 鸫科`；en：`Turdidae Thrushes`），随语言切换。
  * 数据源：public/data/manifest.json 出现过的科（构建期 iNat 数据仅含中文名）。
  */
 export const FAMILY_LATIN: Record<string, string> = {
@@ -134,8 +137,148 @@ export const FAMILY_LATIN: Record<string, string> = {
   贼鸥科: 'Stercorariidae',
 }
 
-/** 按 locale 取科名：en 用拉丁学名（缺失回退中文），zh 原样 */
-export function familyName(zh: string, locale: string): string {
-  if (locale !== 'en') return zh
-  return FAMILY_LATIN[zh] ?? zh
+/** zh 科名 → 英文俗名（与 FAMILY_LATIN 同键；缺项时 en 只显示拉丁名） */
+export const FAMILY_EN: Record<string, string> = {
+  鹎科: 'Bulbuls',
+  雀科: 'Old World Sparrows',
+  鸠鸽科: 'Pigeons & Doves',
+  鸫科: 'Thrushes',
+  鸦科: 'Crows & Jays',
+  鹡鸰科: 'Wagtails & Pipits',
+  鹭科: 'Herons & Egrets',
+  鹟科: 'Old World Flycatchers',
+  䴙䴘科: 'Grebes',
+  秧鸡科: 'Rails & Allies',
+  伯劳科: 'Shrikes',
+  鸭科: 'Ducks & Geese',
+  山雀科: 'Tits & Chickadees',
+  椋鸟科: 'Starlings',
+  翠鸟科: 'Kingfishers',
+  燕科: 'Swallows & Martins',
+  燕雀科: 'Finches',
+  鹰科: 'Hawks & Eagles',
+  戴胜科: 'Hoopoes',
+  噪鹛科: 'Laughingthrushes',
+  鸦雀科: 'Parrotbills',
+  鸬鹚科: 'Cormorants & Shags',
+  长尾山雀科: 'Bushtits',
+  鸥科: 'Gulls & Terns',
+  绣眼鸟科: 'White-eyes',
+  反嘴鹬科: 'Stilts & Avocets',
+  隼科: 'Falcons & Caracaras',
+  鹀科: 'Buntings',
+  扇尾莺科: 'Cisticolas & Allies',
+  鹬科: 'Sandpipers & Allies',
+  啄木鸟科: 'Woodpeckers',
+  雉科: 'Pheasants & Allies',
+  梅花雀科: 'Waxbills & Allies',
+  柳莺科: 'Leaf Warblers',
+  鸻科: 'Plovers',
+  卷尾科: 'Drongos',
+  太阳鸟科: 'Sunbirds & Spiderhunters',
+  鹮科: 'Ibises & Spoonbills',
+  山椒鸟科: 'Cuckooshrikes',
+  叶鹎科: 'Leafbirds',
+  鹳科: 'Storks',
+  杜鹃科: 'Cuckoos',
+  苇莺科: 'Reed Warblers',
+  林鹛科: 'Ground Babblers & Allies',
+  须鴷科: 'Asian Barbets',
+  河乌科: 'Dippers',
+  䴓科: 'Nuthatches',
+  鸱鸮科: 'Typical Owls',
+  水雉科: 'Jacanas',
+  树莺科: 'Bush Warblers & Allies',
+  鹗科: 'Ospreys',
+  仙莺科: 'Fairy Flycatchers & Allies',
+  黄鹂科: 'Orioles',
+  鹤科: 'Cranes',
+  鹪鹩科: 'Wrens',
+  太平鸟科: 'Waxwings',
+  佛法僧科: 'Rollers',
+  攀雀科: 'Penduline Tits',
+  雨燕科: 'Swifts',
+  百灵科: 'Larks',
+  夜鹰科: 'Nightjars',
+  王鹟科: 'Monarch Flycatchers',
+  戴菊科: 'Goldcrests & Kinglets',
+  蛎鹬科: 'Oystercatchers',
+  啄花鸟科: 'Flowerpeckers',
+  燕鸻科: 'Coursers & Pratincoles',
+  莺雀科: 'Vireos',
+  岩鹨科: 'Accentors',
+  扇尾鹟科: 'Fantails',
+  咬鹃科: 'Trogons & Quetzals',
+  文须雀科: 'Bearded Reedling',
+  彩鹬科: 'Painted-Snipes',
+  蜂虎科: 'Bee-eaters',
+  长尾鹦鹉科: 'Old World Parrots',
+  美洲雀科: 'New World Sparrows',
+  雀鹀科: 'New World Sparrows',
+  嘲鸫科: 'Mockingbirds & Thrashers',
+  森莺科: 'New World Warblers',
+  鹈鹕科: 'Pelicans',
+  蜂鸟科: 'Hummingbirds',
+  霸鹟科: 'Tyrant Flycatchers',
+  蛇鹈科: 'Darters',
+  潜鸟科: 'Loons',
+  燕鵙科: 'Woodswallows & Allies',
+  蚋莺科: 'Gnatcatchers',
+  莺鹛科: 'Old World Warblers',
+  齿鹑科: 'New World Quails',
+  裸鼻雀科: 'Tanagers',
+  鹦鹉科: 'Parrots',
+  细尾鹩莺科: 'Fairywrens',
+  军舰鸟科: 'Frigatebirds',
+  旋木雀科: 'Treecreepers',
+  红鹳科: 'Flamingos',
+  吸蜜鸟科: 'Honeyeaters',
+  凤头鹦鹉科: 'Cockatoos',
+  秧鹤科: 'Limpkin',
+  蟆口鸱科: 'Frogmouths',
+  海雀科: 'Auks & Puffins',
+  灶鸟科: 'Ovenbirds & Woodcreepers',
+  鲣鸟科: 'Boobies & Gannets',
+  冢雉科: 'Megapodes',
+  丝鹟科: 'Silky-flycatchers',
+  珠鸡科: 'Guineafowl',
+  鸲鹟科: 'Australasian Robins',
+  铁爪鹀科: 'Longspurs & Snow Buntings',
+  草鸮科: 'Barn Owls',
+  啸鹟科: 'Whistlers',
+  鹱科: 'Petrels & Shearwaters',
+  凤冠雉科: 'Guans & Chachalacas',
+  刺嘴莺科: 'Australasian Warblers',
+  鸵鸟科: 'Ostriches',
+  石鸻科: 'Thick-knees',
+  巨嘴鸟科: 'Toucans',
+  园丁鸟科: 'Bowerbirds',
+  翠鴗科: 'Motmots',
+  织雀科: 'Weavers',
+  犀鸟科: 'Hornbills',
+  鹤鸵科: 'Cassowaries',
+  斑食蜜鸟科: 'Berrypeckers & Longbills',
+  维达鸟科: 'Indigobirds & Whydahs',
+  蒂泰霸鹟科: 'Tityras & Allies',
+  企鹅科: 'Penguins',
+  鼠鸟科: 'Mousebirds',
+  锤头鹳科: 'Hamerkop',
+  短嘴旋木雀科: 'Australian Treecreepers',
+  雀鹎科: 'Ioras',
+  鹟䴕科: 'Jacamars',
+  贼鸥科: 'Skuas',
+}
+
+/**
+ * 科名显示（015 #2）：「拉丁名 + 本地名」组合，随 locale 切换。
+ * - zh：`Turdidae 鸫科`（拉丁名+中文）
+ * - en：`Turdidae Thrushes`（拉丁名+英文）
+ * 未收录的科回退中文原文；en 缺英文俗名时只显示拉丁名。
+ */
+export function familyDisplay(zhFamily: string, locale: string): string {
+  const latin = FAMILY_LATIN[zhFamily]
+  if (!latin) return zhFamily
+  if (locale !== 'en') return `${latin} ${zhFamily}`
+  const en = FAMILY_EN[zhFamily]
+  return en ? `${latin} ${en}` : latin
 }

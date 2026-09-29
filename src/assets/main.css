@@ -144,6 +144,27 @@
   color: var(--text-light);
   line-height: 1.6;
 }
+/* 标语：左「有鸟儿」/ 右「友鸟儿」夹 UNiaoer；窄屏分三行、UNiaoer 居中（015 #6） */
+.app-footer .tagline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.app-footer .tag-brand {
+  font-weight: 700;
+  color: var(--text);
+}
+@media (max-width: 420px) {
+  .app-footer .tagline {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .app-footer .tagline .tag-sep {
+    display: none;
+  }
+}
 
 /* ---------- 通用组件类 ---------- */
 .card {

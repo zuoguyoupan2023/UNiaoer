@@ -55,7 +55,8 @@ const manifest: Manifest = {
   ],
 }
 
-vi.mock('@/core/bank', () => ({
+vi.mock('@/core/bank', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/core/bank')>()),
   loadBank: vi.fn<() => Promise<Manifest>>(async () => manifest),
 }))
 

@@ -36,6 +36,9 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
     const timedOut = raw === TIMEOUT
     // 旧题库的媒体可能没有 speciesId，退化为用 url 作为唯一键
     const speciesId = q.media.speciesId || q.media.url
+    // 错选的物种 id：错选名按 locale 解析用（015 #1）
+    const chosenIdx = raw !== null && !timedOut ? q.options.indexOf(raw) : -1
+    const chosenId = chosenIdx >= 0 ? q.optionIds[chosenIdx] : undefined
     return {
       speciesId,
       answer: q.answer,
@@ -43,6 +46,7 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
       family: q.family,
       type: q.type,
       chosen: timedOut ? null : raw,
+      chosenId,
       correct: raw === q.answer,
       timedOut,
       mediaUrl: q.media.url,
