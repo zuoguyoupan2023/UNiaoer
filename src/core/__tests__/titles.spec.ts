@@ -114,14 +114,14 @@ describe('evaluateTitles（称号轨道）', () => {
   it('新用户只有段位起步身份「见习鸟人」', () => {
     const titles = evaluateTitles(makeStats(), [])
     expect(titles.map((t) => t.trackId)).toEqual(['rank'])
-    expect(titles[0]!.label).toBe('见习鸟人')
+    expect(titles[0]!.text.key).toBe('titles.track.rank.l1')
   })
 
   it('题量阶梯按阈值升级', () => {
     const s = makeStats({ totalQuestions: 1000 })
     const t = evaluateTitles(s, []).find((x) => x.trackId === 'volume')!
     expect(t.level).toBe(2)
-    expect(t.label).toBe('林间漫步者')
+    expect(t.text.key).toBe('titles.track.volume.l2')
   })
 
   it('T7 物种之友带物种名', () => {
@@ -131,7 +131,8 @@ describe('evaluateTitles（称号轨道）', () => {
     )
     const t = evaluateTitles(makeStats(), rounds).find((x) => x.trackId === 'species-friend')!
     expect(t.level).toBe(1)
-    expect(t.label).toBe('甲鸟之友')
+    expect(t.text.key).toBe('titles.track.speciesFriend.friend')
+    expect(t.text.params).toEqual({ name: '甲鸟' })
   })
 
   it('T0 段位跟随分数可降（old 低分记录拉低段位）', () => {

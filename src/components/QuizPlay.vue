@@ -29,6 +29,8 @@ import {
   X,
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, Tier } from '@/types'
+import { currentLocale } from '@/i18n'
+import { familyName } from '@/i18n/data/family'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -40,6 +42,8 @@ const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
+/** 科名按 locale：en 用拉丁科名，缺失回退中文（015 §6.1） */
+const familyOf = (fam: string) => familyName(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
@@ -47,14 +51,8 @@ const tier = ref<Tier>(quiz.tier)
 
 const intro = computed(() =>
   props.type === 'audio'
-    ? {
-        title: '听音认鸟',
-        lead: '聆听一段真实鸟鸣，判断是哪一种鸟。',
-      }
-    : {
-        title: '看图认鸟',
-        lead: '观察一张真实鸟类照片，判断是哪一种鸟。',
-      },
+    ? { title: t('nav.audioQuiz'), lead: t('quiz.introAudioLead') }
+    : { title: t('nav.imageQuiz'), lead: t('quiz.introImageLead') },
 )
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
@@ -213,8 +211,8 @@ function quitRound() {
   const n = quiz.answeredCount
   const msg =
     n > 0
-      ? `确定退出测试吗？已完成 ${n}/${quiz.total} 题，已答部分将按当前成绩记录（计入错题本与统计），未答题目不计入。`
-      : '确定退出测试吗？本轮尚未作答，不会留下任何记录。'
+      ? t('quiz.quitConfirmDetail', { n, total: quiz.total })
+      : t('quiz.quitConfirmEmpty')
   if (!confirm(msg)) {
     // 隐藏徽章"浪子回头"：点了取消留下来继续答（R28）
     quiz.escapedQuit = true
@@ -376,39 +374,39 @@ function onTouchEnd(e: TouchEvent) {
     <p class="lead muted">{{ intro.lead }}</p>
 
     <p v-if="quiz.wrongPoolOnly" class="wrong-hint">
-      <CircleX class="ic" :size="15" /> 错题重练：本轮只出你答错过的鸟
+      <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
 
     <div class="tiers">
       <button
-        v-for="t in TIER_LIST"
-        :key="t.tier"
+        v-for="cfg in TIER_LIST"
+        :key="cfg.tier"
         class="tier"
-        :class="{ on: tier === t.tier }"
-        @click="tier = t.tier"
+        :class="{ on: tier === cfg.tier }"
+        @click="tier = cfg.tier"
       >
-        <strong>{{ t.label }}</strong>
-        <span>{{ t.desc }}</span>
+        <strong>{{ t(cfg.labelKey) }}</strong>
+        <span>{{ t(cfg.descKey) }}</span>
       </button>
     </div>
 
-    <button class="btn btn-primary" @click="begin">开始答题</button>
+    <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
   <!-- 加载中 -->
   <section v-else-if="quiz.loading" class="card center placeholder">
     <div class="spinner"></div>
-    <h2>正在准备题目…</h2>
-    <p class="muted">正在加载第 1 题，并预取接下来 3 题</p>
+    <h2>{{ t('quiz.preparing') }}</h2>
+    <p class="muted">{{ t('quiz.preparingSub') }}</p>
   </section>
 
   <!-- 出错 -->
   <section v-else-if="quiz.error" class="card center placeholder">
     <div class="emoji">🗂️</div>
-    <h2>无法开始</h2>
-    <p class="muted">{{ quiz.error }}</p>
+    <h2>{{ t('quiz.cannotStart') }}</h2>
+    <p class="muted">{{ t(`errors.${quiz.error}`) }}</p>
     <p style="margin-top: 18px">
-      <RouterLink class="btn btn-secondary" to="/">返回首页</RouterLink>
+      <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
     </p>
   </section>
 
@@ -418,14 +416,18 @@ function onTouchEnd(e: TouchEvent) {
     <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
       <span class="sb-left">
-        <span class="tier-tag">{{ TIERS[quiz.current.tier].label }}</span>
+        <span class="tier-tag">{{ t(TIERS[quiz.current.tier].labelKey) }}</span>
       </span>
-      <span class="sb-mid">第 {{ quiz.index + 1 }} / {{ quiz.total }} 题</span>
+      <span class="sb-mid">{{ t('quiz.progress', { n: quiz.index + 1, total: quiz.total }) }}</span>
       <span class="sb-right">
         <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
-        <span v-else>正确率 {{ quiz.answered || quiz.index > 0 ? quiz.accuracy + '%' : '--' }}</span>
+        <span v-else>{{
+          quiz.answered || quiz.index > 0
+            ? t('quiz.accuracyLabel', { acc: quiz.accuracy })
+            : '--'
+        }}</span>
       </span>
     </div>
 
@@ -441,7 +443,7 @@ function onTouchEnd(e: TouchEvent) {
       >
         <template #media-corner>
           <button class="quit-corner" type="button" @click="quitRound">
-            <LogOut class="ic" :size="13" /> 退出
+            <LogOut class="ic" :size="13" /> {{ t('quiz.quit') }}
           </button>
         </template>
       </MediaCard>
@@ -479,38 +481,44 @@ function onTouchEnd(e: TouchEvent) {
             <CircleCheck v-if="isCorrect" class="ic" :size="20" />
             <CircleX v-else class="ic" :size="20" />
             <div class="ct-main">
-              <strong v-if="isCorrect">回答正确！</strong>
-              <strong v-else-if="timedOut">时间到！</strong>
-              <strong v-else>回答错误</strong>
-              <span>正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）</span>
+              <strong v-if="isCorrect">{{ t('quiz.correct') }}</strong>
+              <strong v-else-if="timedOut">{{ t('quiz.timeout') }}</strong>
+              <strong v-else>{{ t('quiz.wrong') }}</strong>
+              <span>
+                {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
+                  t('quiz.answerSci', { sci: quiz.current.sci })
+                }}
+              </span>
             </div>
           </div>
           <div class="ct-auto">
             <span class="ct-count">
-              <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
+              <Hourglass class="ic" :size="13" /> {{ t('quiz.autoAdvancing') }}
             </span>
             <button class="btn-mini ct-next" type="button" @click="goNext">{{ nextLabel }}</button>
-            <button class="btn-mini" type="button" @click="cancelAutoOnce">取消切换</button>
+            <button class="btn-mini" type="button" @click="cancelAutoOnce">{{ t('quiz.cancelAuto') }}</button>
           </div>
         </div>
       </Transition>
 
       <!-- 下方常驻反馈：手动 / 不触发自动 / 取消了本次自动 时显示 -->
       <div v-if="showInline" class="feedback" :class="isCorrect ? 'ok' : 'no'">
-        <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> 时间到！</strong>
-        <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> 回答正确！</strong>
-        <strong v-else><CircleX class="ic" :size="16" /> 回答错误</strong>
-        正确答案：<b>{{ quiz.current.answer }}</b>（{{ quiz.current.sci }}）
-        <span class="muted"> · {{ quiz.current.family }}</span>
+        <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> {{ t('quiz.timeout') }}</strong>
+        <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> {{ t('quiz.correct') }}</strong>
+        <strong v-else><CircleX class="ic" :size="16" /> {{ t('quiz.wrong') }}</strong>
+        {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
+          t('quiz.answerSci', { sci: quiz.current.sci })
+        }}
+        <span class="muted"> · {{ familyOf(quiz.current.family) }}</span>
       </div>
 
       <!-- 「不再自动切换」仅在取消本次后出现；彻底手动时出现「自动切换」 -->
       <div v-if="showDisableBtn || showEnableBtn" class="auto-ctrl">
         <button v-if="showDisableBtn" class="btn-mini" type="button" @click="disableAuto">
-          <X class="ic" :size="12" /> 不再自动切换
+          <X class="ic" :size="12" /> {{ t('quiz.disableAuto') }}
         </button>
         <button v-else-if="showEnableBtn" class="btn-mini" type="button" @click="enableAuto">
-          <Play class="ic" :size="12" /> 自动切换
+          <Play class="ic" :size="12" /> {{ t('quiz.enableAuto') }}
         </button>
       </div>
 
@@ -523,8 +531,9 @@ function onTouchEnd(e: TouchEvent) {
       </div>
       <div v-if="quiz.answered && !autoPending" class="quiz-foot">
         <span class="foot-hint">
-          <Keyboard class="ic" :size="13" /> 按 <ArrowRight class="ic" :size="12" /> 或空格 ·
-          <Smartphone class="ic" :size="13" /> 左滑进下一题
+          <Keyboard class="ic" :size="13" /> {{ t('quiz.footPress') }}
+          <ArrowRight class="ic" :size="12" /> {{ t('quiz.footOrSpace') }} ·
+          <Smartphone class="ic" :size="13" /> {{ t('quiz.footSwipe') }}
         </span>
       </div>
 

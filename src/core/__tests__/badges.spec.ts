@@ -79,18 +79,18 @@ describe('evaluateBadges（基础）', () => {
   it('徽章定义唯一且都有系列', () => {
     expect(new Set(BADGES.map((b) => b.id)).size).toBe(BADGES.length)
     const series = new Set(BADGES.map((b) => b.series))
-    expect(series.has('入门')).toBe(true)
-    expect(series.has('进阶')).toBe(true)
-    expect(series.has('大师')).toBe(true)
-    expect(series.has('隐藏')).toBe(true)
+    expect(series.has('starter')).toBe(true)
+    expect(series.has('advanced')).toBe(true)
+    expect(series.has('master')).toBe(true)
+    expect(series.has('hidden')).toBe(true)
   })
 
   it('系列分组：入门 11 / 进阶 12 / 大师 6 / 隐藏 5', () => {
     const count = (s: BadgeSeries) => BADGES.filter((b) => b.series === s).length
-    expect(count('入门')).toBe(11)
-    expect(count('进阶')).toBe(12)
-    expect(count('大师')).toBe(6)
-    expect(count('隐藏')).toBe(5)
+    expect(count('starter')).toBe(11)
+    expect(count('advanced')).toBe(12)
+    expect(count('master')).toBe(6)
+    expect(count('hidden')).toBe(5)
   })
 })
 
@@ -210,6 +210,6 @@ describe('evaluateBadges（rounds 派生规则，R28）', () => {
   it('隐藏徽章默认不可见：未解锁显示 ???，解锁后显示真名', () => {
     const hidden = BADGES.filter((b) => b.hidden)
     expect(hidden.length).toBe(5)
-    expect(hidden.every((b) => b.series === '隐藏')).toBe(true)
+    expect(hidden.every((b) => b.series === 'hidden')).toBe(true)
   })
 })

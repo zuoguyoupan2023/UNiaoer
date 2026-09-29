@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ImageOff, VolumeX, X, ZoomIn } from 'lucide-vue-next'
 import { thumbHashToDataURL } from 'thumbhash'
 import type { MediaAsset, MediaType } from '@/types'
 import { preferredImageUrl } from '@/core/mediaLoader'
 import AttributionLine from './AttributionLine.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   type: MediaType
@@ -100,7 +103,7 @@ function closeZoom() {
       <img
         :key="src"
         :src="src"
-        alt="待识别的鸟类"
+        :alt="t('media.birdAlt')"
         decoding="async"
         fetchpriority="high"
         :class="{ loaded: imageLoaded }"
@@ -111,18 +114,18 @@ function closeZoom() {
         v-if="media.xlUrl && imageLoaded && !imageFailed"
         class="zoom-btn"
         type="button"
-        title="查看原图"
-        aria-label="查看原图"
+        :title="t('media.viewOriginal')"
+        :aria-label="t('media.viewOriginal')"
         @click="openZoom"
       >
         <ZoomIn class="ic" :size="16" />
       </button>
       <span class="corner-left"><slot name="media-corner" /></span>
       <div v-if="!imageLoaded && !imageFailed && !placeholder" class="skeleton">
-        <span class="spin"></span> 图片加载中…
+        <span class="spin"></span> {{ t('media.loadingImage') }}
       </div>
       <div v-else-if="imageFailed" class="failed-msg">
-        <ImageOff class="ic" :size="18" /> 图片加载失败
+        <ImageOff class="ic" :size="18" /> {{ t('media.imageFailed') }}
       </div>
     </div>
 
@@ -133,7 +136,7 @@ function closeZoom() {
       <div class="audio-under">
         <slot name="media-corner" />
         <p v-if="playBlocked" class="hint">
-          <VolumeX class="ic" :size="15" /> 浏览器拦截了自动播放，请点击播放按钮
+          <VolumeX class="ic" :size="15" /> {{ t('media.autoplayBlocked') }}
         </p>
       </div>
     </template>
@@ -143,9 +146,15 @@ function closeZoom() {
 
   <!-- 原图弹层（xl） -->
   <Teleport to="body">
-    <div v-if="zoomed" class="lightbox" role="dialog" aria-label="原图查看" @click="closeZoom">
-      <img :src="media.xlUrl" alt="原图" @click.stop />
-      <button class="close" type="button" aria-label="关闭" @click="closeZoom">
+    <div
+      v-if="zoomed"
+      class="lightbox"
+      role="dialog"
+      :aria-label="t('media.originalView')"
+      @click="closeZoom"
+    >
+      <img :src="media.xlUrl" :alt="t('media.originalImage')" @click.stop />
+      <button class="close" type="button" :aria-label="t('common.close')" @click="closeZoom">
         <X :size="20" />
       </button>
     </div>

@@ -4,8 +4,10 @@ export type DistractorStrategy = 'cross' | 'mixed' | 'same'
 
 export interface TierConfig {
   tier: Tier
-  label: string
-  desc: string
+  /** 难度名语言包 key（渲染处 t(cfg.labelKey)，core 不依赖 i18n，015 §6.2） */
+  labelKey: string
+  /** 难度描述语言包 key */
+  descKey: string
   /** 选项数量 */
   optionCount: number
   /** 干扰项策略：cross 跨科（易）/ mixed 含同科 / same 同科为主（难） */
@@ -27,8 +29,8 @@ export interface TierConfig {
 export const TIERS: Record<Tier, TierConfig> = {
   1: {
     tier: 1,
-    label: 'L1 入门',
-    desc: '3 个选项 · 干扰项跨科 · 限时 25s（前 5s 隐藏选项）',
+    labelKey: 'difficulty.l1.label',
+    descKey: 'difficulty.l1.desc',
     optionCount: 3,
     distractor: 'cross',
     timeLimitSec: 25,
@@ -38,8 +40,8 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   2: {
     tier: 2,
-    label: 'L2 进阶',
-    desc: '4 个选项 · 含 1 个同科 · 限时 20s',
+    labelKey: 'difficulty.l2.label',
+    descKey: 'difficulty.l2.desc',
     optionCount: 4,
     distractor: 'mixed',
     timeLimitSec: 20,
@@ -48,8 +50,8 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   3: {
     tier: 3,
-    label: 'L3 高手',
-    desc: '4 个选项 · 同科为主 · 限时 15s',
+    labelKey: 'difficulty.l3.label',
+    descKey: 'difficulty.l3.desc',
     optionCount: 4,
     distractor: 'same',
     timeLimitSec: 15,
@@ -58,8 +60,8 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   4: {
     tier: 4,
-    label: 'L4 专家',
-    desc: '6 个选项 · 同科近缘 · 限时 10s',
+    labelKey: 'difficulty.l4.label',
+    descKey: 'difficulty.l4.desc',
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 10,
@@ -68,8 +70,8 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   5: {
     tier: 5,
-    label: 'L5 地狱',
-    desc: 'L4 规格 · 限时 10s · 随机鸟鸣干扰',
+    labelKey: 'difficulty.l5.label',
+    descKey: 'difficulty.l5.desc',
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 10,

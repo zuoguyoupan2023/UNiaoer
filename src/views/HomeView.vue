@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, AudioLines, Image as ImageIcon, Library } from 'lucide-vue-next'
-import { loadBank } from '@/core/bank'
+import { loadBank, BankError } from '@/core/bank'
 
+const { t } = useI18n()
 const stats = ref<{ total: number; image: number; audio: number } | null>(null)
-const bankError = ref('')
+/** 题库错误码（errors.* 渲染，015 §6.5） */
+const bankErrorCode = ref<{ code: string; status?: number; url?: string } | null>(null)
 
 onMounted(async () => {
   try {
@@ -15,34 +18,36 @@ onMounted(async () => {
       audio: bank.stats.withAudio,
     }
   } catch (e) {
-    bankError.value = e instanceof Error ? e.message : String(e)
+    bankErrorCode.value =
+      e instanceof BankError ? { code: e.code, status: e.status, url: e.url } : { code: 'unknown' }
   }
 })
 </script>
 
 <template>
   <section class="card center">
-    <h2 class="pick-title">是时候挑战一下自己了！</h2>
-    <p class="muted lead">用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。</p>
+    <h2 class="pick-title">{{ t('home.title') }}</h2>
+    <p class="muted lead">{{ t('home.lead') }}</p>
 
     <p v-if="stats" class="bank-stats">
-      <Library class="ic" :size="14" /> 题库：{{ stats.total }} 种 · 图片 {{ stats.image }} ·
-      音频 {{ stats.audio }}
+      <Library class="ic" :size="14" />
+      {{ t('home.bankStats', { total: stats.total, image: stats.image, audio: stats.audio }) }}
     </p>
-    <p v-else-if="bankError" class="bank-error">
-      <AlertTriangle class="ic" :size="14" /> {{ bankError }}
+    <p v-else-if="bankErrorCode" class="bank-error">
+      <AlertTriangle class="ic" :size="14" />
+      {{ t(`errors.${bankErrorCode.code}`, { status: bankErrorCode.status, url: bankErrorCode.url }) }}
     </p>
 
     <div class="modes">
       <RouterLink to="/quiz/image" class="mode-card">
         <ImageIcon class="mode-icon" :size="30" />
-        <span class="mode-title">看图认鸟</span>
-        <span class="mode-sub">来自 iNaturalist 的开放许可照片</span>
+        <span class="mode-title">{{ t('nav.imageQuiz') }}</span>
+        <span class="mode-sub">{{ t('home.modeImageSub') }}</span>
       </RouterLink>
       <RouterLink to="/quiz/audio" class="mode-card">
         <AudioLines class="mode-icon" :size="30" />
-        <span class="mode-title">听音认鸟</span>
-        <span class="mode-sub">来自 Xeno-canto 的真实鸟鸣</span>
+        <span class="mode-title">{{ t('nav.audioQuiz') }}</span>
+        <span class="mode-sub">{{ t('home.modeAudioSub') }}</span>
       </RouterLink>
     </div>
   </section>

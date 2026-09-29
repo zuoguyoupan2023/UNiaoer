@@ -19,9 +19,11 @@ import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
 import { getStats, listRounds } from '@/core/historyDb'
-import { evaluateTitles, TITLE_TRACKS } from '@/core/titles'
+import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
+import { ALL_SPECIES_TOTAL, BADGES, type BadgeDef } from '@/core/badges'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
-import { BADGES, type BadgeDef } from '@/core/badges'
+import { currentLocale } from '@/i18n'
+import { familyName } from '@/i18n/data/family'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -32,11 +34,13 @@ const quiz = useQuizStore()
 const { t } = useI18n()
 
 const hasResult = computed(() => quiz.total > 0)
-const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音认鸟' : '看图认鸟'))
-const tierLabel = computed(() => TIERS[quiz.tier]?.label ?? '')
+const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
+const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
+const familyOf = (fam: string) => familyName(fam, currentLocale())
 const newBadges = ref<BadgeDef[]>([])
-const newTitleLabels = ref<string[]>([])
-const wornTitleLabel = ref('')
+/** 新解锁称号的文本（key+params，渲染处 t()） */
+const newTitleTexts = ref<TitleText[]>([])
+const wornTitleText = ref<TitleText | null>(null)
 const wornBadgeLabel = ref('')
 const wornTitleIcon = ref('')
 const wornBadgeIcon = ref('')
@@ -45,12 +49,15 @@ const showPoster = ref(false)
 
 const message = computed<{ icon: Component; text: string }>(() => {
   const p = quiz.accuracy
-  if (p === 100) return { icon: Trophy, text: '完美！你就是鸟语达人！' }
-  if (p >= 80) return { icon: Star, text: '非常棒！辨识能力很强！' }
-  if (p >= 60) return { icon: ThumbsUp, text: '不错，继续练习会更好。' }
-  if (p >= 40) return { icon: Flame, text: '加油，多听多看。' }
-  return { icon: BookOpen, text: '别灰心，从常见鸟开始慢慢学。' }
+  if (p === 100) return { icon: Trophy, text: t('result.msg100') }
+  if (p >= 80) return { icon: Star, text: t('result.msg80') }
+  if (p >= 60) return { icon: ThumbsUp, text: t('result.msg60') }
+  if (p >= 40) return { icon: Flame, text: t('result.msg40') }
+  return { icon: BookOpen, text: t('result.msg0') }
 })
+
+/** 称号文本 → 字符串（海报画布/徽章 chips 用） */
+const textOf = (x: TitleText) => t(x.key, x.params ?? {})
 
 const posterData = computed<PosterData>(() => {
   const wrong: PosterWrong[] = quiz.questions
@@ -62,15 +69,15 @@ const posterData = computed<PosterData>(() => {
       timedOut: chosen === TIMEOUT,
     }))
   return {
-    modeLabel: quiz.mode === 'audio' ? '鸟声版' : '鸟图版',
+    modeLabel: quiz.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
     tierLabel: tierLabel.value,
     correct: quiz.correctCount,
     total: quiz.total,
     accuracy: quiz.accuracy,
-    date: new Date().toLocaleDateString('zh-CN'),
+    date: new Intl.DateTimeFormat(currentLocale()).format(new Date()),
     round: quiz.sessionRound,
     overallAccuracy: quiz.overallAccuracy,
-    wornTitle: wornTitleLabel.value || undefined,
+    wornTitle: wornTitleText.value ? textOf(wornTitleText.value) : undefined,
     wornTitleIcon: wornTitleIcon.value || undefined,
     wornBadge: wornBadgeLabel.value || undefined,
     wornBadgeIcon: wornBadgeIcon.value || undefined,
@@ -105,14 +112,14 @@ onMounted(async () => {
   }
   const res = await persistRound(quiz)
   newBadges.value = res.badges
-  newTitleLabels.value = res.newTitles.map((t) => t.label)
+  newTitleTexts.value = res.newTitles.map((x) => x.text)
   // 佩戴称号/徽章 → 海报（R30/R31/R38：含独特图标）
   const [stats, rounds] = await Promise.all([getStats(), listRounds()])
-  const wornTitle = evaluateTitles(stats, rounds).find((t) => t.trackId === settings.wornTitle)
-  wornTitleLabel.value = wornTitle?.label ?? ''
+  const wornTitle = evaluateTitles(stats, rounds).find((x) => x.trackId === settings.wornTitle)
+  wornTitleText.value = wornTitle?.text ?? null
   wornTitleIcon.value = wornTitle ? (TITLE_TRACKS.find((x) => x.id === wornTitle.trackId)?.icon ?? '') : ''
   const wornBadgeDef = settings.wornBadge ? BADGES.find((b) => b.id === settings.wornBadge) : undefined
-  wornBadgeLabel.value = wornBadgeDef?.label ?? ''
+  wornBadgeLabel.value = wornBadgeDef ? t(wornBadgeDef.labelKey) : ''
   wornBadgeIcon.value = wornBadgeDef?.icon ?? ''
 })
 
@@ -124,31 +131,31 @@ async function again() {
 
 <template>
   <section v-if="hasResult" class="card result">
-    <h2><PartyPopper class="ic" :size="22" /> 答题完成</h2>
+    <h2><PartyPopper class="ic" :size="22" /> {{ t('result.doneTitle') }}</h2>
     <p class="muted">{{ modeLabel }} · {{ tierLabel }}</p>
     <div class="score">
       <span class="num">{{ quiz.correctCount }}</span>
       <span class="den">/ {{ quiz.total }}</span>
     </div>
-    <p class="muted">正确率 {{ quiz.accuracy }}%</p>
+    <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
     <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
 
-    <div v-if="newTitleLabels.length" class="badges-new">
-      <span class="muted"><Sparkles class="ic" :size="15" /> 获得新称号：</span>
-      <span v-for="t in newTitleLabels" :key="t" class="badge-chip">{{ t }}</span>
+    <div v-if="newTitleTexts.length" class="badges-new">
+      <span class="muted"><Sparkles class="ic" :size="15" /> {{ t('result.newTitles') }}</span>
+      <span v-for="(x, i) in newTitleTexts" :key="i" class="badge-chip">{{ textOf(x) }}</span>
     </div>
 
     <div v-if="newBadges.length" class="badges-new">
-      <span class="muted"><Award class="ic" :size="15" /> 获得新徽章：</span>
+      <span class="muted"><Award class="ic" :size="15" /> {{ t('result.newBadges') }}</span>
       <span v-for="b in newBadges" :key="b.id" class="badge-chip">
-        <BadgeIcon :name="b.icon" :size="15" /> {{ b.label }}
+        <BadgeIcon :name="b.icon" :size="15" /> {{ t(b.labelKey, { n: ALL_SPECIES_TOTAL }) }}
       </span>
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" @click="again">再来一轮</button>
-      <button class="btn btn-secondary" @click="showPoster = true">生成海报</button>
-      <RouterLink class="btn btn-secondary" to="/">返回首页</RouterLink>
+      <button class="btn btn-primary" @click="again">{{ t('result.again') }}</button>
+      <button class="btn btn-secondary" @click="showPoster = true">{{ t('result.makePoster') }}</button>
+      <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
     </div>
   </section>
 
@@ -160,17 +167,24 @@ async function again() {
   />
 
   <section v-if="hasResult" class="card review">
-    <h3>逐题回顾</h3>
+    <h3>{{ t('result.review') }}</h3>
     <ol>
       <li v-for="(q, i) in quiz.questions" :key="q.id" :class="{ ok: quiz.chosen[i] === q.answer }">
         <div class="line">
           <CircleCheck v-if="quiz.chosen[i] === q.answer" class="mark ok" :size="16" />
           <CircleX v-else class="mark no" :size="16" />
           <span class="ans">{{ q.answer }}</span>
-          <span class="muted">{{ q.sci }} · {{ q.family }}</span>
+          <span class="muted">{{ q.sci }} · {{ familyOf(q.family) }}</span>
         </div>
         <div class="muted small">
-          你的选择：{{ quiz.chosen[i] === TIMEOUT ? '超时未作答' : quiz.chosen[i] || '未作答' }}
+          {{
+            t('result.yourChoice', {
+              choice:
+                quiz.chosen[i] === TIMEOUT
+                  ? t('result.timedOut')
+                  : (quiz.chosen[i] ?? t('result.notAnswered')),
+            })
+          }}
         </div>
         <AttributionLine :media="q.media" />
         <!-- C3：回顾该鸟的其它图/音（可放大、可试听） -->

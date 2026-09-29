@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { BarChart3, TrendingUp } from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
 import type { RoundRecord } from '@/core/historyDb'
+import { TIERS } from '@/core/difficulty'
+import { currentLocale } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{ rounds: RoundRecord[] }>()
 
-const TIERS: Record<Tier, string> = { 1: '入门', 2: '进阶', 3: '高手', 4: '专家', 5: '地狱' }
-const MODES: Record<MediaType, string> = { image: '看图', audio: '听音' }
+const MODE_KEYS: Record<MediaType, string> = { image: 'charts.modeImage', audio: 'charts.modeAudio' }
+const modeOf = (m: MediaType) => t(MODE_KEYS[m])
 
 /** 时间正序的趋势点（最近 20 轮） */
 const trend = computed(() =>
@@ -30,13 +35,13 @@ function agg(list: RoundRecord[]) {
 
 const byTier = computed(() =>
   ([1, 2, 3, 4, 5] as Tier[])
-    .map((tier) => ({ key: tier, label: `L${tier} ${TIERS[tier]}`, ...agg(props.rounds.filter((r) => r.tier === tier)) }))
+    .map((tier) => ({ key: tier, label: t(TIERS[tier].labelKey), ...agg(props.rounds.filter((r) => r.tier === tier)) }))
     .filter((x) => x.rounds > 0),
 )
 
 const byMode = computed(() =>
   (['image', 'audio'] as MediaType[])
-    .map((mode) => ({ key: mode, label: MODES[mode], ...agg(props.rounds.filter((r) => r.mode === mode)) }))
+    .map((mode) => ({ key: mode, label: modeOf(mode), ...agg(props.rounds.filter((r) => r.mode === mode)) }))
     .filter((x) => x.rounds > 0),
 )
 
@@ -56,17 +61,19 @@ const trendPts = computed(() =>
   })),
 )
 
+/** 日期随 locale（015 i18n-4：统一 Intl） */
 function fmtDay(at: number) {
-  const d = new Date(at)
-  return `${d.getMonth() + 1}/${d.getDate()}`
+  return new Intl.DateTimeFormat(currentLocale(), { month: 'numeric', day: 'numeric' }).format(at)
 }
 </script>
 
 <template>
   <section v-if="rounds.length" class="charts">
-    <h3 class="sec"><TrendingUp class="ic" :size="18" /> 正确率趋势（最近 {{ trend.length }} 轮）</h3>
+    <h3 class="sec">
+      <TrendingUp class="ic" :size="18" /> {{ t('charts.trendTitle', { n: trend.length }) }}
+    </h3>
     <div class="chart-card">
-      <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" aria-label="每轮正确率趋势">
+      <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" :aria-label="t('charts.trendAria')">
         <line v-for="g in [0, 50, 100]" :key="g" :x1="PAD" :x2="W - PAD" :y1="PAD + ((100 - g) * (H - PAD * 2)) / 100" :y2="PAD + ((100 - g) * (H - PAD * 2)) / 100" class="grid" />
         <text v-for="g in [100, 50, 0]" :key="'t' + g" :x="PAD + 2" :y="PAD + ((100 - g) * (H - PAD * 2)) / 100 - 2" class="grid-text">{{ g }}</text>
         <polyline v-if="trendPts.length > 1" :points="trendPts.map((p) => `${p.x},${p.y}`).join(' ')" class="line" />
@@ -79,13 +86,15 @@ function fmtDay(at: number) {
           class="dot"
           :class="{ audio: p.mode === 'audio' }"
         >
-          <title>{{ fmtDay(p.at) }} · {{ MODES[p.mode] }} L{{ p.tier }} · {{ p.accuracy }}%</title>
+          <title>{{
+            t('charts.dotTitle', { day: fmtDay(p.at), mode: modeOf(p.mode), tier: p.tier, acc: p.accuracy })
+          }}</title>
         </circle>
       </svg>
-      <p class="legend muted">圆点：单轮正确率（悬停看详情） · 绿=看图 / 深绿=听音</p>
+      <p class="legend muted">{{ t('charts.legend') }}</p>
     </div>
 
-    <h3 class="sec"><BarChart3 class="ic" :size="18" /> 按难度 / 模式</h3>
+    <h3 class="sec"><BarChart3 class="ic" :size="18" /> {{ t('charts.byTierMode') }}</h3>
     <div class="chart-card">
       <div v-for="row in [...byTier, ...byMode]" :key="row.key" class="bar-row">
         <span class="bar-label">{{ row.label }}</span>
@@ -93,7 +102,7 @@ function fmtDay(at: number) {
           <div class="bar" :style="{ width: row.accuracy + '%' }"></div>
         </div>
         <span class="bar-val">{{ row.accuracy }}%</span>
-        <span class="bar-n muted">{{ row.correct }}/{{ row.questions }} 题</span>
+        <span class="bar-n muted">{{ t('charts.questionsCount', { correct: row.correct, total: row.questions }) }}</span>
       </div>
     </div>
   </section>

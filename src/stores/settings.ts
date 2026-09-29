@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { AutoNextMode, LicensePolicy } from '@/types'
+import { setLocale, currentLocale as i18nCurrentLocale, type AppLocale } from '@/i18n'
 
 // v2：音频自动播放默认由「关」改为「开」（见 006），旧键不复用以免沿用旧默认
 const STORAGE_KEY = 'uniaoer.settings.v2'
@@ -24,6 +25,8 @@ interface Persisted {
   ambienceEnabled: boolean
   /** 用户昵称（R33，2–12 字符；海报与「我的」页显示） */
   nickname: string
+  /** 界面语言（i18n-6；缺省由 i18n 模块的 savedLocale()/detectLocale() 决定） */
+  locale?: AppLocale
 }
 
 function load(): Partial<Persisted> {
@@ -59,6 +62,16 @@ export const useSettingsStore = defineStore('settings', () => {
   const ambienceEnabled = ref<boolean>(saved.ambienceEnabled ?? true)
   /** 用户昵称（R33：2–12 字符，可编辑） */
   const nickname = ref<string>(saved.nickname ?? '')
+  /**
+   * 界面语言（i18n-6）：初始值以 i18n 实例当前值为准（其创建时已按 savedLocale ?? detectLocale 决定），
+   * 本地持久化由下面的 watch 统一落盘；写入即同步 i18n 与 <html lang>。
+   */
+  const locale = ref<AppLocale>(i18nCurrentLocale())
+
+  // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
+  watch(locale, (v) => {
+    setLocale(v)
+  })
 
   watch(
     [
@@ -73,6 +86,7 @@ export const useSettingsStore = defineStore('settings', () => {
       badgeAutoWorn,
       ambienceEnabled,
       nickname,
+      locale,
     ],
     () => {
       try {
@@ -90,6 +104,7 @@ export const useSettingsStore = defineStore('settings', () => {
             badgeAutoWorn: badgeAutoWorn.value,
             ambienceEnabled: ambienceEnabled.value,
             nickname: nickname.value,
+            locale: locale.value,
           } satisfies Persisted),
         )
       } catch {
@@ -111,5 +126,6 @@ export const useSettingsStore = defineStore('settings', () => {
     badgeAutoWorn,
     ambienceEnabled,
     nickname,
+    locale,
   }
 })

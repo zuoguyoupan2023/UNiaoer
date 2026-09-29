@@ -47,7 +47,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
       :aria-expanded="open"
       @click="open = !open"
     >
-      <Images class="ic" :size="13" /> {{ label || t('gallery.title') }}（{{ total }}）
+      <Images class="ic" :size="13" />
+      {{ label || t('gallery.title') }}{{ t('gallery.count', { n: total }) }}
     </button>
 
     <div v-if="open" class="sg-body">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Bird, Volume2, VolumeX } from 'lucide-vue-next'
 import { useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
@@ -9,6 +10,7 @@ import { ambiencePlayer, getAmbienceState, subscribeAmbience } from '@/core/ambi
 const route = useRoute()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
+const { t } = useI18n()
 
 // 环境鸟鸣：播放范围来自设置页勾选（默认全部）
 ambiencePlayer.configure({ getExcluded: () => settings.ambienceExcluded })
@@ -84,30 +86,30 @@ const immersive = computed(
 <template>
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
   <div v-if="!immersive" class="app-topbar">
-    <RouterLink to="/" class="brand" aria-label="UNiaoer 首页">
+    <RouterLink to="/" class="brand" :aria-label="t('nav.brandHome')">
       <Bird class="brand-icon" :size="26" />
       <h1 class="brand-name">UNiaoer</h1>
     </RouterLink>
-    <nav class="app-nav" aria-label="主导航">
+    <nav class="app-nav" :aria-label="t('nav.mainNav')">
       <span class="nav-group nav-primary">
-        <RouterLink to="/quiz/image">看图认鸟</RouterLink>
-        <RouterLink to="/quiz/audio">听音认鸟</RouterLink>
+        <RouterLink to="/quiz/image">{{ t('nav.imageQuiz') }}</RouterLink>
+        <RouterLink to="/quiz/audio">{{ t('nav.audioQuiz') }}</RouterLink>
       </span>
       <span class="nav-group nav-utility">
-        <RouterLink to="/profile">我的</RouterLink>
+        <RouterLink to="/profile">{{ t('nav.profile') }}</RouterLink>
         <button
           class="ambience-btn"
           type="button"
           :class="{ on: ambienceOn }"
-          :title="ambienceOn ? '停止环境鸟鸣' : '播放环境鸟鸣'"
-          :aria-label="ambienceOn ? '停止环境鸟鸣' : '播放环境鸟鸣'"
+          :title="ambienceOn ? t('nav.ambienceStop') : t('nav.ambiencePlay')"
+          :aria-label="ambienceOn ? t('nav.ambienceStop') : t('nav.ambiencePlay')"
           :aria-pressed="ambienceOn"
           @click="toggleAmbience"
         >
           <Volume2 v-if="ambienceOn" :size="16" />
           <VolumeX v-else :size="16" />
         </button>
-        <RouterLink to="/settings">设置</RouterLink>
+        <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
       </span>
     </nav>
   </div>
@@ -117,7 +119,7 @@ const immersive = computed(
   </main>
 
   <footer class="app-footer">
-    <p>数据来源：Xeno-canto · iNaturalist</p>
-    <p>有鸟儿 · UNiaoer · 友鸟儿</p>
+    <p>{{ t('footer.source') }}</p>
+    <p>{{ t('footer.tagline') }}</p>
   </footer>
 </template>

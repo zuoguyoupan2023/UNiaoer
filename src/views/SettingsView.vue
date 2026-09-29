@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Settings } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { Languages, Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
 import type { AutoNextMode } from '@/types'
 
+const { t } = useI18n()
 const settings = useSettingsStore()
 const cacheMsg = ref('')
 
 // 环境鸟鸣音轨目录（懒加载，默认全部勾选）
 const tracks = ref<AmbienceTrack[] | null>(null)
-const tracksError = ref('')
+const tracksError = ref(false)
 
 onMounted(async () => {
   try {
     tracks.value = await loadBirdTracks()
   } catch {
-    tracksError.value = '鸟鸣目录加载失败（需要网络），稍后重试'
+    tracksError.value = true
   }
 })
 
@@ -41,35 +43,57 @@ function toggleTrack(id: string, checked: boolean) {
 
 async function clearMediaCache() {
   if (!('caches' in window)) {
-    cacheMsg.value = '当前浏览器不支持缓存管理'
+    cacheMsg.value = t('settings.cacheUnsupported')
     return
   }
   const keys = await caches.keys()
   const targets = keys.filter((k) => k.startsWith('uniaoer-'))
   await Promise.all(targets.map((k) => caches.delete(k)))
-  cacheMsg.value = targets.length ? `已清除 ${targets.length} 个缓存` : '没有可清除的缓存'
+  cacheMsg.value = targets.length ? t('settings.cacheCleared', { n: targets.length }) : t('settings.cacheNone')
 }
 
-const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = [
-  { value: 'correct', label: '答对自动', hint: '答对后等 2s 自动进入下一题（默认）' },
-  { value: 'all', label: '都自动', hint: '答对、答错、超时后都等 2s 自动进入下一题' },
-  { value: 'manual', label: '都手动', hint: '始终手动点击「下一题」' },
+const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string }[] = [
+  { value: 'correct', labelKey: 'settings.autoNext.correct.label', hintKey: 'settings.autoNext.correct.hint' },
+  { value: 'all', labelKey: 'settings.autoNext.all.label', hintKey: 'settings.autoNext.all.hint' },
+  { value: 'manual', labelKey: 'settings.autoNext.manual.label', hintKey: 'settings.autoNext.manual.hint' },
 ]
 </script>
 
 <template>
   <section class="card">
-    <h2 class="sec"><Settings class="ic" :size="20" /> 设置</h2>
+    <h2 class="sec"><Settings class="ic" :size="20" /> {{ t('settings.title') }}</h2>
 
     <div class="setting">
-      <h3>听音版测试 · 音频自动播放</h3>
+      <h3><Languages class="ic lang-ic" :size="17" /> {{ t('settings.languageTitle') }}</h3>
+      <div class="lang-choices">
+        <button
+          class="choice"
+          :class="{ on: settings.locale === 'zh-CN' }"
+          @click="settings.locale = 'zh-CN'"
+        >
+          <strong>中文</strong>
+          <span>简体中文</span>
+        </button>
+        <button
+          class="choice"
+          :class="{ on: settings.locale === 'en' }"
+          @click="settings.locale = 'en'"
+        >
+          <strong>English</strong>
+          <span>English (US)</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="setting">
+      <h3>{{ t('settings.autoplayTitle') }}</h3>
       <label class="switch">
         <input v-model="settings.autoplayAudio" type="checkbox" />
-        <span>开启后，从第 2 题起、切题后自动播放；关闭则每题都需手动点击</span>
+        <span>{{ t('settings.autoplaySwitch') }}</span>
       </label>
 
       <label class="delay">
-        延迟
+        {{ t('settings.delay') }}
         <input
           v-model.number="settings.autoplayDelayMs"
           type="number"
@@ -81,13 +105,11 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
       </label>
     </div>
 
-    <p class="muted" style="margin-top: 8px">
-      默认开启。第 1 题始终需手动播放一次以解锁浏览器策略，之后各题才会自动播放。
-    </p>
+    <p class="muted" style="margin-top: 8px">{{ t('settings.autoplayNote') }}</p>
 
     <div class="setting">
-      <h3>自动进入下一题</h3>
-      <p class="muted">作答后是否自动跳到下一题，以及触发的时机。</p>
+      <h3>{{ t('settings.autoNextTitle') }}</h3>
+      <p class="muted">{{ t('settings.autoNextDesc') }}</p>
       <div class="choices">
         <button
           v-for="o in autoNextOptions"
@@ -96,47 +118,43 @@ const autoNextOptions: { value: AutoNextMode; label: string; hint: string }[] = 
           :class="{ on: settings.autoNext === o.value }"
           @click="settings.autoNext = o.value"
         >
-          <strong>{{ o.label }}</strong>
-          <span>{{ o.hint }}</span>
+          <strong>{{ t(o.labelKey) }}</strong>
+          <span>{{ t(o.hintKey) }}</span>
         </button>
       </div>
     </div>
 
     <div class="setting">
-      <h3>环境鸟鸣</h3>
+      <h3>{{ t('settings.ambienceTitle') }}</h3>
       <label class="switch">
         <input
           type="checkbox"
           :checked="settings.ambienceEnabled"
           @change="toggleAmbienceEnabled"
         />
-        <span>进入应用时自动播放背景鸟鸣；关闭后顶栏喇叭也不再自动开启</span>
+        <span>{{ t('settings.ambienceSwitch') }}</span>
       </label>
-      <p class="muted" style="margin-top: 8px">
-        顶栏的喇叭按钮可一键播放/停止：在你勾选的音轨中乱序轮流播放。默认全部勾选；取消勾选的音轨不会播放。勾选只保存在本地。
-      </p>
-      <p v-if="tracksError" class="muted">{{ tracksError }}</p>
-      <p v-else-if="!tracks" class="muted">音轨目录加载中…</p>
+      <p class="muted" style="margin-top: 8px">{{ t('settings.ambienceHint') }}</p>
+      <p v-if="tracksError" class="muted">{{ t('settings.tracksError') }}</p>
+      <p v-else-if="!tracks" class="muted">{{ t('settings.tracksLoading') }}</p>
       <div v-else class="track-list">
-        <label v-for="t in tracks" :key="t.id" class="track">
+        <label v-for="tr in tracks" :key="tr.id" class="track">
           <input
             type="checkbox"
-            :checked="isTrackChecked(t.id)"
-            @change="toggleTrack(t.id, ($event.target as HTMLInputElement).checked)"
+            :checked="isTrackChecked(tr.id)"
+            @change="toggleTrack(tr.id, ($event.target as HTMLInputElement).checked)"
           />
-          <span class="zh">{{ t.labelZh }}</span>
-          <span class="en">{{ t.labelEn }}</span>
+          <span class="zh">{{ tr.labelZh }}</span>
+          <span class="en">{{ tr.labelEn }}</span>
         </label>
       </div>
     </div>
 
     <div class="setting">
-      <h3>媒体缓存</h3>
-      <p class="muted">
-        图片与音频会缓存在本地（Service Worker），二次访问与离线可秒开。如占用过大可清除。
-      </p>
+      <h3>{{ t('settings.cacheTitle') }}</h3>
+      <p class="muted">{{ t('settings.cacheDesc') }}</p>
       <button class="btn btn-secondary" style="margin-top: 10px" @click="clearMediaCache">
-        清除媒体缓存
+        {{ t('settings.clearCache') }}
       </button>
       <p v-if="cacheMsg" class="muted" style="margin-top: 8px">{{ cacheMsg }}</p>
     </div>
@@ -158,6 +176,18 @@ h2.sec {
 .setting h3 {
   font-size: 0.95rem;
   margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lang-ic {
+  color: var(--primary);
+}
+.lang-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
 }
 .choices {
   display: grid;

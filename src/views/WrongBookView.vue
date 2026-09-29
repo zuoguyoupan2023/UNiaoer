@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Bird, BookX, Eye, Headphones } from 'lucide-vue-next'
 import { useQuizStore } from '@/stores/quiz'
 import {
@@ -12,9 +13,11 @@ import {
   type WrongHistoryItem,
 } from '@/core/historyDb'
 import type { MediaType } from '@/types'
+import { currentLocale } from '@/i18n'
 
 const router = useRouter()
 const quiz = useQuizStore()
+const { t } = useI18n()
 
 type Tab = 'current' | 'history'
 const tab = ref<Tab>('current')
@@ -39,7 +42,7 @@ async function remove(speciesId: string) {
 }
 
 async function clearAll() {
-  if (!confirm('确定清空“当前错题本”吗？（历史记录会保留）')) return
+  if (!confirm(t('wrongBook.clearConfirm'))) return
   await clearWrong()
   await refresh()
 }
@@ -51,37 +54,42 @@ function practice(type: MediaType) {
   router.push(type === 'audio' ? '/quiz/audio' : '/quiz/image')
 }
 
+/** 日期随 locale（015 i18n-4：统一 Intl，禁止 toLocaleString('zh-CN')） */
 function fmt(at: number) {
-  return new Date(at).toLocaleString('zh-CN', { hour12: false })
+  return new Intl.DateTimeFormat(currentLocale(), {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+    hour12: false,
+  }).format(at)
 }
 </script>
 
 <template>
   <section class="card">
-    <h2 class="sec"><BookX class="ic" :size="20" /> 错题本</h2>
+    <h2 class="sec"><BookX class="ic" :size="20" /> {{ t('wrongBook.title') }}</h2>
 
     <div class="tabs">
       <button class="tab" :class="{ on: tab === 'current' }" @click="tab = 'current'">
-        当前错题本（{{ current.length }}）
+        {{ t('wrongBook.currentTab', { n: current.length }) }}
       </button>
       <button class="tab" :class="{ on: tab === 'history' }" @click="tab = 'history'">
-        历史记录（{{ history.length }}）
+        {{ t('wrongBook.historyTab', { n: history.length }) }}
       </button>
     </div>
 
     <p class="muted hint">
       <template v-if="tab === 'current'">
-        动态变化：答错加入、答对（视为掌握）移除。历史记录永久保留。
+        {{ t('wrongBook.currentHint') }}
       </template>
-      <template v-else> 每一次答错的完整留痕（只增不减）。 </template>
+      <template v-else> {{ t('wrongBook.historyHint') }} </template>
     </p>
 
-    <p v-if="loading" class="muted">加载中…</p>
+    <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
 
     <!-- 当前错题本 -->
     <template v-else-if="tab === 'current'">
       <p v-if="current.length === 0" class="muted">
-        当前没有错题，去答题吧 <Bird class="ic" :size="14" />
+        {{ t('wrongBook.empty') }} <Bird class="ic" :size="14" />
       </p>
       <ul v-else class="list">
         <li v-for="e in current" :key="e.speciesId" class="item">
@@ -91,27 +99,30 @@ function fmt(at: number) {
               <span class="muted small">（{{ e.sci }} · {{ e.family }}）</span>
             </div>
             <div class="muted small">
-              错 {{ e.wrongCount }} 次 · 最近错选「{{ e.lastChosen || '超时/未答' }}」
+              {{ t('wrongBook.wrongTimes', e.wrongCount) }} ·
+              {{ t('wrongBook.lastWrongChoice', { choice: e.lastChosen || t('wrongBook.timedOutOrNone') }) }}
             </div>
             <div class="muted tiny">{{ e.source }} · {{ e.author }} · {{ e.license }}</div>
           </div>
-          <button class="btn btn-secondary btn-sm" @click="remove(e.speciesId)">移除</button>
+          <button class="btn btn-secondary btn-sm" @click="remove(e.speciesId)">
+            {{ t('common.remove') }}
+          </button>
         </li>
       </ul>
       <div v-if="current.length" class="actions">
         <button class="btn btn-primary" @click="practice('image')">
-          <Eye class="ic" :size="16" /> 错题重练 · 看图
+          <Eye class="ic" :size="16" /> {{ t('wrongBook.practiceImage') }}
         </button>
         <button class="btn btn-primary" @click="practice('audio')">
-          <Headphones class="ic" :size="16" /> 错题重练 · 听音
+          <Headphones class="ic" :size="16" /> {{ t('wrongBook.practiceAudio') }}
         </button>
-        <button class="btn btn-secondary" @click="clearAll">清空当前错题本</button>
+        <button class="btn btn-secondary" @click="clearAll">{{ t('wrongBook.clearCurrent') }}</button>
       </div>
     </template>
 
     <!-- 历史记录 -->
     <template v-else>
-      <p v-if="history.length === 0" class="muted">暂无历史错题。</p>
+      <p v-if="history.length === 0" class="muted">{{ t('wrongBook.emptyHistory') }}</p>
       <ul v-else class="list">
         <li v-for="(e, i) in history" :key="`${e.speciesId}-${e.at}-${i}`" class="item">
           <div class="info">
@@ -120,8 +131,15 @@ function fmt(at: number) {
               <span class="muted small">（{{ e.sci }} · {{ e.family }}）</span>
             </div>
             <div class="muted small">
-              {{ fmt(e.at) }} · {{ e.mode === 'audio' ? '鸟声版' : '鸟图版' }} · L{{ e.tier }} ·
-              错选「{{ e.timedOut ? '超时未答' : e.chosen || '未作答' }}」
+              {{ fmt(e.at) }} ·
+              {{ e.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound') }} · L{{ e.tier }} ·
+              {{
+                t('wrongBook.wrongChoice', {
+                  choice: e.timedOut
+                    ? t('wrongBook.timedOut')
+                    : (e.chosen || t('wrongBook.notAnswered')),
+                })
+              }}
             </div>
           </div>
         </li>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Ear, Eye } from 'lucide-vue-next'
 import type { MediaType } from '@/types'
 
@@ -15,6 +16,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [value: string] }>()
 
+const { t } = useI18n()
+
 const letters = ['A', 'B', 'C', 'D', 'E', 'F']
 
 function state(opt: string): string {
@@ -29,9 +32,12 @@ function state(opt: string): string {
   <div v-if="hidden" class="options-hidden">
     <Ear v-if="mode === 'audio'" class="ic" :size="16" />
     <Eye v-else class="ic" :size="16" />
-    <span>{{ mode === 'audio' ? '先倾听' : '先观察' }} · 选项</span>
+    <span>
+      {{ mode === 'audio' ? t('option.listenFirst') : t('option.lookFirst') }} ·
+      {{ t('option.choices') }}
+    </span>
     <b class="count">{{ revealInSec ?? '' }}</b>
-    <span>秒后出现</span>
+    <span>{{ t('option.secondsLater') }}</span>
   </div>
   <div v-else class="options">
     <button

@@ -20,6 +20,6 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register(`${import.meta.env.BASE_URL}sw.js`)
-      .catch((err) => console.warn('SW 注册失败：', err))
+      .catch((err) => console.warn('service worker registration failed:', err))
   })
 }

@@ -20,6 +20,8 @@
     "r2:push": "node scripts/push-r2.mjs",
     "check:bank": "node scripts/check-bank.mjs",
     "check:media": "node scripts/check-media.mjs",
+    "i18n:scan": "node scripts/i18n-scan.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "gen:icons": "node scripts/gen-icon-paths.mjs",
     "d1:seed": "node scripts/gen-d1-seed.mjs",
     "build-only": "vite build",

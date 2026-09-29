@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Activity, Award, Download, Sparkles, Upload, User } from 'lucide-vue-next'
 import {
   clearAll,
@@ -13,13 +14,14 @@ import {
   type RoundRecord,
   type Stats,
 } from '@/core/historyDb'
-import { BADGES, type BadgeSeries } from '@/core/badges'
-import { evaluateTitles, TITLE_TRACKS, type EarnedTitle } from '@/core/titles'
+import { ALL_SPECIES_TOTAL, BADGES, type BadgeSeries } from '@/core/badges'
+import { evaluateTitles, TITLE_TRACKS, type EarnedTitle, type TitleText } from '@/core/titles'
 import { useSettingsStore } from '@/stores/settings'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import StatsCharts from '@/components/StatsCharts.vue'
 import WrongBookView from './WrongBookView.vue'
 
+const { t } = useI18n()
 const settings = useSettingsStore()
 const stats = ref<Stats | null>(null)
 const earned = ref<Set<string>>(new Set())
@@ -32,10 +34,10 @@ const badgePickerOpen = ref(false)
 
 // 锚点导航（R31）：sticky 标签，点击滚动 / 滚动高亮
 const SECTIONS = [
-  { id: 'data', label: '数据' },
-  { id: 'titles', label: '称号' },
-  { id: 'badges', label: '徽章' },
-  { id: 'wrong', label: '错题本' },
+  { id: 'data', labelKey: 'profile.tabData' },
+  { id: 'titles', labelKey: 'profile.tabTitles' },
+  { id: 'badges', labelKey: 'profile.tabBadges' },
+  { id: 'wrong', labelKey: 'profile.tabWrong' },
 ] as const
 const activeSection = ref<string>('data')
 let sectionObserver: IntersectionObserver | null = null
@@ -61,13 +63,17 @@ function scrollToSection(id: string) {
   activeSection.value = id
 }
 
+/** 称号文本 → 字符串（chips/选择器用） */
+const textOf = (x: TitleText) => t(x.key, x.params ?? {})
+
 // 称号（009）：由本地数据实时派生；佩戴位存 settings
 const titles = computed<EarnedTitle[]>(() =>
   stats.value ? evaluateTitles(stats.value, rounds.value) : [],
 )
-const wornLabel = computed(
-  () => titles.value.find((t) => t.trackId === settings.wornTitle)?.label ?? '',
-)
+const wornLabel = computed(() => {
+  const cur = titles.value.find((x) => x.trackId === settings.wornTitle)
+  return cur ? textOf(cur.text) : ''
+})
 /** 手动更换佩戴（R32 固定规则：仅首枚自动佩戴，之后手动） */
 function wearTitle(trackId: string | null) {
   settings.wornTitle = trackId
@@ -75,7 +81,10 @@ function wearTitle(trackId: string | null) {
 }
 
 /** 佩戴徽章（R31） */
-const wornBadgeLabel = computed(() => BADGES.find((b) => b.id === settings.wornBadge)?.label ?? '')
+const wornBadgeLabel = computed(() => {
+  const def = BADGES.find((b) => b.id === settings.wornBadge)
+  return def ? t(def.labelKey, { n: ALL_SPECIES_TOTAL }) : ''
+})
 
 /**
  * 称号墙（R32/R39）：全部轨道完整展示。
@@ -84,18 +93,18 @@ const wornBadgeLabel = computed(() => BADGES.find((b) => b.id === settings.wornB
  */
 const titleWall = computed(() => {
   const s = stats.value ?? makeEmptyStats()
-  const byId = new Map(evaluateTitles(s, rounds.value).map((t) => [t.trackId, t]))
+  const byId = new Map(evaluateTitles(s, rounds.value).map((x) => [x.trackId, x]))
   return TITLE_TRACKS.map((track) => {
     const value = track.metric(s, rounds.value)
     const next = track.levels.find((l) => l.threshold > value) ?? null
-    const earned = byId.get(track.id)
+    const got = byId.get(track.id)
     return {
       id: track.id,
-      name: track.name,
+      nameKey: track.nameKey,
       icon: track.icon,
-      earned: !!earned,
-      label: earned?.label ?? track.name,
-      level: earned?.level ?? 0,
+      earned: !!got,
+      text: got?.text ?? { key: track.nameKey },
+      level: got?.level ?? 0,
       /** 距离下一级还差多少；null = 已满级 */
       remaining: next ? Math.max(1, Math.ceil(next.threshold - value)) : null,
     }
@@ -118,7 +127,7 @@ function wearBadge(id: string | null) {
   badgePickerOpen.value = false
 }
 
-const SERIES_ORDER: BadgeSeries[] = ['入门', '进阶', '大师', '隐藏']
+const SERIES_ORDER: BadgeSeries[] = ['starter', 'advanced', 'master', 'hidden']
 function badgesOf(series: BadgeSeries) {
   return BADGES.filter((b) => b.series === series)
 }
@@ -158,11 +167,11 @@ function startNickname() {
 function saveNickname() {
   const v = nicknameDraft.value.trim()
   if (!v) {
-    nicknameMsg.value = '昵称不能为空'
+    nicknameMsg.value = t('profile.nicknameEmpty')
     return
   }
   if (v.length < 2) {
-    nicknameMsg.value = '昵称至少 2 个字符'
+    nicknameMsg.value = t('profile.nicknameShort')
     return
   }
   settings.nickname = v
@@ -170,7 +179,7 @@ function saveNickname() {
 }
 
 async function reset() {
-  if (!confirm('确定清空全部本地数据（记录 / 错题本 / 徽章）吗？此操作不可恢复。')) return
+  if (!confirm(t('profile.resetConfirm'))) return
   await clearAll()
   await refresh()
 }
@@ -187,7 +196,11 @@ async function exportJson() {
   a.download = `uniaoer-backup-${stamp}.json`
   a.click()
   URL.revokeObjectURL(url)
-  backupMsg.value = `已导出 ${data.rounds.length} 轮记录、${data.wrong.length} 条错题、${data.badges.length} 枚徽章。`
+  backupMsg.value = t('profile.exportDone', {
+    rounds: data.rounds.length,
+    wrong: data.wrong.length,
+    badges: data.badges.length,
+  })
 }
 
 function pickFile() {
@@ -204,18 +217,22 @@ async function onFile(e: Event) {
   try {
     const parsed: unknown = JSON.parse(await file.text())
     if (!isBackupFile(parsed)) {
-      backupMsg.value = '导入失败：不是有效的 UNiaoer 备份文件。'
+      backupMsg.value = t('profile.importInvalid')
       return
     }
     const ok = confirm(
-      `将合并导入 ${parsed.rounds.length} 轮记录、${parsed.wrong.length} 条错题、${parsed.badges.length} 枚徽章（相同记录以现有/更全的为准，不会删除现有数据）。继续吗？`,
+      t('profile.importConfirm', {
+        rounds: parsed.rounds.length,
+        wrong: parsed.wrong.length,
+        badges: parsed.badges.length,
+      }),
     )
     if (!ok) return
     const r = await importBackup(parsed)
-    backupMsg.value = `导入完成：新增/更新 ${r.rounds} 轮、${r.wrong} 条错题、${r.badges} 枚徽章。`
+    backupMsg.value = t('profile.importDone', { rounds: r.rounds, wrong: r.wrong, badges: r.badges })
     await refresh()
   } catch {
-    backupMsg.value = '导入失败：文件无法解析。'
+    backupMsg.value = t('profile.importParseFailed')
   }
 }
 </script>
@@ -230,59 +247,61 @@ async function onFile(e: Event) {
         :class="{ on: activeSection === s.id }"
         @click="scrollToSection(s.id)"
       >
-        {{ s.label }}
+        {{ t(s.labelKey) }}
       </button>
     </div>
 
     <!-- 数据 -->
     <section class="card" id="sec-data">
-      <h2 class="sec"><User class="ic" :size="20" /> 我的</h2>
+      <h2 class="sec"><User class="ic" :size="20" /> {{ t('nav.profile') }}</h2>
       <div class="nickname-row">
         <template v-if="editingNickname">
           <input
             v-model="nicknameDraft"
             class="nickname-input"
             maxlength="12"
-            placeholder="2–12 个字符"
+            :placeholder="t('profile.nicknamePlaceholder')"
             @keyup.enter="saveNickname"
           />
-          <button class="btn btn-primary btn-sm" @click="saveNickname">保存</button>
-          <button class="btn btn-secondary btn-sm" @click="editingNickname = false">取消</button>
+          <button class="btn btn-primary btn-sm" @click="saveNickname">{{ t('common.save') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="editingNickname = false">
+            {{ t('common.cancel') }}
+          </button>
         </template>
         <template v-else>
           <span class="nickname-chip">
             <User class="ic" :size="13" />
-            {{ settings.nickname || '未设置昵称' }}
+            {{ settings.nickname || t('profile.noNickname') }}
           </span>
           <button class="btn btn-secondary btn-sm" @click="startNickname">
-            {{ settings.nickname ? '编辑' : '设置昵称' }}
+            {{ settings.nickname ? t('common.edit') : t('profile.setNickname') }}
           </button>
         </template>
         <span v-if="nicknameMsg" class="nickname-msg">{{ nicknameMsg }}</span>
       </div>
-      <h3 class="block-title"><Activity class="ic" :size="17" /> 数据</h3>
-      <p v-if="loading" class="muted">加载中…</p>
+      <h3 class="block-title"><Activity class="ic" :size="17" /> {{ t('profile.tabData') }}</h3>
+      <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
 
       <template v-else-if="stats">
         <div class="stat-grid">
-          <div class="stat"><span class="n">{{ stats.rounds }}</span><span class="l">轮次</span></div>
-          <div class="stat"><span class="n">{{ stats.totalQuestions }}</span><span class="l">累计题数</span></div>
-          <div class="stat"><span class="n">{{ stats.bestAccuracy }}%</span><span class="l">最佳正确率</span></div>
-          <div class="stat"><span class="n">{{ stats.perfectRounds }}</span><span class="l">满分轮次</span></div>
-          <div class="stat"><span class="n">{{ stats.distinctSpecies }}</span><span class="l">认识物种</span></div>
-          <div class="stat"><span class="n">{{ stats.bestStreak }}</span><span class="l">最长连对</span></div>
+          <div class="stat"><span class="n">{{ stats.rounds }}</span><span class="l">{{ t('profile.statRounds') }}</span></div>
+          <div class="stat"><span class="n">{{ stats.totalQuestions }}</span><span class="l">{{ t('profile.statQuestions') }}</span></div>
+          <div class="stat"><span class="n">{{ stats.bestAccuracy }}%</span><span class="l">{{ t('profile.statBestAccuracy') }}</span></div>
+          <div class="stat"><span class="n">{{ stats.perfectRounds }}</span><span class="l">{{ t('profile.statPerfectRounds') }}</span></div>
+          <div class="stat"><span class="n">{{ stats.distinctSpecies }}</span><span class="l">{{ t('profile.statSpecies') }}</span></div>
+          <div class="stat"><span class="n">{{ stats.bestStreak }}</span><span class="l">{{ t('profile.statBestStreak') }}</span></div>
         </div>
 
         <StatsCharts :rounds="rounds" />
 
         <div class="actions">
           <button class="btn btn-secondary" @click="exportJson">
-            <Download class="ic" :size="16" /> 导出数据
+            <Download class="ic" :size="16" /> {{ t('profile.exportData') }}
           </button>
           <button class="btn btn-secondary" @click="pickFile">
-            <Upload class="ic" :size="16" /> 导入数据
+            <Upload class="ic" :size="16" /> {{ t('profile.importData') }}
           </button>
-          <button class="btn btn-secondary" @click="reset">清空我的数据</button>
+          <button class="btn btn-secondary" @click="reset">{{ t('profile.clearData') }}</button>
         </div>
         <p v-if="backupMsg" class="backup-msg">{{ backupMsg }}</p>
         <input
@@ -297,17 +316,17 @@ async function onFile(e: Event) {
 
     <!-- 佩戴区（R32）：当前佩戴的称号与徽章，各自更换 -->
     <section class="card wear-card">
-      <h3 class="block-title">佩戴</h3>
+      <h3 class="block-title">{{ t('profile.wearTitle') }}</h3>
       <div class="wear-grid">
         <div class="wear-item">
           <button class="btn btn-secondary wear-change" @click="pickerOpen = !pickerOpen">
-            {{ pickerOpen ? '收起' : '更换' }}
+            {{ pickerOpen ? t('common.collapse') : t('profile.change') }}
           </button>
           <div class="wear-line">
             <Sparkles class="ic" :size="26" />
             <div class="wear-text">
-              <span class="muted">称号</span>
-              <strong>{{ wornLabel || '未佩戴' }}</strong>
+              <span class="muted">{{ t('profile.titleLabel') }}</span>
+              <strong>{{ wornLabel || t('profile.notWorn') }}</strong>
             </div>
           </div>
           <div v-if="pickerOpen" class="title-options">
@@ -316,29 +335,29 @@ async function onFile(e: Event) {
               :class="{ on: settings.wornTitle === null }"
               @click="wearTitle(null)"
             >
-              不佩戴
+              {{ t('profile.wearNone') }}
             </button>
             <button
-              v-for="t in titles"
-              :key="t.trackId"
+              v-for="x in titles"
+              :key="x.trackId"
               class="title-opt"
-              :class="{ on: settings.wornTitle === t.trackId }"
-              @click="wearTitle(t.trackId)"
+              :class="{ on: settings.wornTitle === x.trackId }"
+              @click="wearTitle(x.trackId)"
             >
-              <strong>{{ t.label }}</strong>
-              <span class="muted">{{ t.trackName }} · Lv.{{ t.level }}</span>
+              <strong>{{ textOf(x.text) }}</strong>
+              <span class="muted">{{ t(x.trackNameKey) }} · Lv.{{ x.level }}</span>
             </button>
           </div>
         </div>
         <div class="wear-item">
           <button class="btn btn-secondary wear-change" @click="badgePickerOpen = !badgePickerOpen">
-            {{ badgePickerOpen ? '收起' : '更换' }}
+            {{ badgePickerOpen ? t('common.collapse') : t('profile.change') }}
           </button>
           <div class="wear-line">
             <Award class="ic" :size="26" />
             <div class="wear-text">
-              <span class="muted">徽章</span>
-              <strong>{{ wornBadgeLabel || '未佩戴' }}</strong>
+              <span class="muted">{{ t('profile.badgeLabel') }}</span>
+              <strong>{{ wornBadgeLabel || t('profile.notWorn') }}</strong>
             </div>
           </div>
           <div v-if="badgePickerOpen" class="title-options">
@@ -347,7 +366,7 @@ async function onFile(e: Event) {
               :class="{ on: settings.wornBadge === null }"
               @click="wearBadge(null)"
             >
-              不佩戴
+              {{ t('profile.wearNone') }}
             </button>
             <button
               v-for="b in earnedBadgeDefs"
@@ -356,8 +375,8 @@ async function onFile(e: Event) {
               :class="{ on: settings.wornBadge === b.id }"
               @click="wearBadge(b.id)"
             >
-              <strong>{{ b.label }}</strong>
-              <span class="muted">{{ b.series }}</span>
+              <strong>{{ t(b.labelKey, { n: ALL_SPECIES_TOTAL }) }}</strong>
+              <span class="muted">{{ t(`badges.series.${b.series}`) }}</span>
             </button>
           </div>
         </div>
@@ -366,19 +385,22 @@ async function onFile(e: Event) {
 
     <!-- 称号 -->
     <section class="card" id="sec-titles">
-      <h3 class="block-title"><Sparkles class="ic" :size="17" /> 称号（{{ titleWall.filter((t) => t.earned).length }} / {{ titleWall.length }}）</h3>
-      <p v-if="loading" class="muted">加载中…</p>
+      <h3 class="block-title">
+        <Sparkles class="ic" :size="17" />
+        {{ t('profile.titlesCount', { earned: titleWall.filter((x) => x.earned).length, total: titleWall.length }) }}
+      </h3>
+      <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
       <div v-else class="badge-grid">
-        <div v-for="t in titleWall" :key="t.id" class="badge" :class="{ locked: !t.earned }">
-          <BadgeIcon class="badge-icon" :name="t.icon" :size="26" />
+        <div v-for="x in titleWall" :key="x.id" class="badge" :class="{ locked: !x.earned }">
+          <BadgeIcon class="badge-icon" :name="x.icon" :size="26" />
           <span class="label">
-            {{ t.label }}<template v-if="t.earned"> {{ t.level }}级</template>
+            {{ textOf(x.text) }}<template v-if="x.earned"> {{ t('profile.levelTag', { n: x.level }) }}</template>
           </span>
-          <span v-if="t.earned" class="desc next">
-            <template v-if="t.remaining !== null">
-              距离下一级还差:<b class="remain">{{ t.remaining }}</b>
+          <span v-if="x.earned" class="desc next">
+            <template v-if="x.remaining !== null">
+              {{ t('profile.nextLevelLeft') }}<b class="remain">{{ x.remaining }}</b>
             </template>
-            <template v-else>已满级</template>
+            <template v-else>{{ t('profile.maxed') }}</template>
           </span>
         </div>
       </div>
@@ -386,12 +408,15 @@ async function onFile(e: Event) {
 
     <!-- 徽章 -->
     <section class="card" id="sec-badges">
-      <h3 class="block-title"><Award class="ic" :size="17" /> 徽章（{{ earned.size }} / {{ BADGES.length }}）</h3>
-      <p v-if="loading" class="muted">加载中…</p>
+      <h3 class="block-title">
+        <Award class="ic" :size="17" />
+        {{ t('profile.badgesCount', { earned: earned.size, total: BADGES.length }) }}
+      </h3>
+      <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
       <template v-else>
         <template v-for="series in SERIES_ORDER" :key="series">
           <h4 class="series-title">
-            {{ series }}
+            {{ t(`badges.series.${series}`) }}
             <span class="series-count">{{ earnedCount(series) }}/{{ totalCount(series) }}</span>
           </h4>
           <div class="badge-grid">
@@ -404,12 +429,12 @@ async function onFile(e: Event) {
               <template v-if="b.hidden && !earned.has(b.id)">
                 <BadgeIcon class="badge-icon" name="lock" :size="28" />
                 <span class="label">???</span>
-                <span class="desc">隐藏徽章 · 继续探索</span>
+                <span class="desc">{{ t('profile.hiddenBadge') }}</span>
               </template>
               <template v-else>
                 <BadgeIcon class="badge-icon" :name="b.icon" :size="28" />
-                <span class="label">{{ b.label }}</span>
-                <span class="desc">{{ b.desc }}</span>
+                <span class="label">{{ t(b.labelKey, { n: ALL_SPECIES_TOTAL }) }}</span>
+                <span class="desc">{{ t(b.descKey, { n: ALL_SPECIES_TOTAL }) }}</span>
               </template>
             </div>
           </div>

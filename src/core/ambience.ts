@@ -34,7 +34,7 @@ const warmed = new Set<string>()
 export async function loadBirdTracks(): Promise<AmbienceTrack[]> {
   if (tracksCache) return tracksCache
   const res = await fetch(API_URL, { cache: 'no-cache' })
-  if (!res.ok) throw new Error(`鸟鸣目录加载失败：HTTP ${res.status}`)
+  if (!res.ok) throw new Error(`bird track catalog load failed: HTTP ${res.status}`)
   const data = (await res.json()) as { items?: CatalogItem[] }
   const items = Array.isArray(data.items) ? data.items : []
   tracksCache = items
@@ -164,7 +164,7 @@ class AmbiencePlayer {
     const all = await loadBirdTracks()
     prewarmBirdTracks() // 后台预热其余音轨（R25）：之后切题/重播都是本地命中
     const checked = all.filter((t) => !this.getExcluded().includes(t.id))
-    if (!checked.length) throw new Error('没有已勾选的鸟叫音轨（请到设置中勾选）')
+    if (!checked.length) throw new Error('no bird tracks checked (enable some in settings)')
     this.failCount = 0
     this.queue = buildStartQueue(
       checked.map((t) => t.id),

@@ -37,27 +37,41 @@ export interface Manifest {
 
 let cache: Manifest | null = null
 
+/** 题库错误码（UI 层映射 errors.* 文案，015 §6.5：异常不直接进界面） */
+export type BankErrorCode = 'bankMissing' | 'bankNotJson' | 'bankParseFailed'
+
+/** 携带错误码与插值参数的题库异常；code 是 errors.* 语言包 key 的尾段 */
+export class BankError extends Error {
+  code: BankErrorCode
+  status?: number
+  url?: string
+
+  constructor(code: BankErrorCode, detail: { status?: number; url?: string } = {}) {
+    super(code)
+    this.name = 'BankError'
+    this.code = code
+    this.status = detail.status
+    this.url = detail.url
+  }
+}
+
 /** 加载题库（构建脚本产物 public/data/manifest.json） */
 export async function loadBank(): Promise<Manifest> {
   if (cache) return cache
   const url = `${import.meta.env.BASE_URL}data/manifest.json`
   const res = await fetch(url)
   if (!res.ok) {
-    throw new Error(
-      `题库不存在（HTTP ${res.status}）。请确认构建时已运行 \`npm run bank\` 生成 ${url}`,
-    )
+    throw new BankError('bankMissing', { status: res.status, url })
   }
   const contentType = res.headers.get('content-type') || ''
   if (!contentType.includes('json')) {
     // 常见于 SPA 回退把缺失的 manifest 改写成了 index.html
-    throw new Error(
-      '题库返回的不是 JSON（被回退成了 HTML）。说明构建时没有生成题库，请在构建命令中加入 `npm run bank`。',
-    )
+    throw new BankError('bankNotJson', { url })
   }
   try {
     cache = (await res.json()) as Manifest
   } catch {
-    throw new Error('题库 JSON 解析失败，文件可能损坏，请重新运行 `npm run bank`。')
+    throw new BankError('bankParseFailed', { url })
   }
   return cache
 }

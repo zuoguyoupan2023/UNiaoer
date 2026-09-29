@@ -57,7 +57,7 @@ export interface AttributionInput {
 export function formatAttribution(a: AttributionInput): string {
   const parts: string[] = []
   if (a.source) parts.push(a.source)
-  parts.push(a.author?.trim() ? a.author.trim() : '未知作者')
+  parts.push(a.author?.trim() ? a.author.trim() : 'Unknown author')
   if (a.license) parts.push(a.license)
   return parts.join(' · ')
 }

@@ -2,7 +2,8 @@
 
 export interface PosterBackground {
   id: string
-  label: string
+  /** 场景名语言包 key（poster.scene.<id>，渲染处 t()，015 §6.4） */
+  labelKey: string
   swatch: string
   /** 纯色背景：文字直接铺在渐变上（不加白底框） */
   plain?: boolean
@@ -126,7 +127,7 @@ function grassBlades(ctx: CanvasRenderingContext2D, W: number, H: number, color:
 export const POSTER_BACKGROUNDS: PosterBackground[] = [
   {
     id: 'forest',
-    label: '山林',
+    labelKey: 'poster.scene.forest',
     swatch: '#2d6a4f',
     light: true,
     draw: (ctx, W, H) => {
@@ -148,7 +149,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'grassland',
-    label: '草原',
+    labelKey: 'poster.scene.grassland',
     swatch: '#c9a227',
     light: true,
     draw: (ctx, W, H) => {
@@ -168,7 +169,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'river',
-    label: '河岸',
+    labelKey: 'poster.scene.river',
     swatch: '#2a7fb8',
     light: true,
     draw: (ctx, W, H) => {
@@ -194,7 +195,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'bush',
-    label: '灌木丛',
+    labelKey: 'poster.scene.bush',
     swatch: '#3f7a52',
     light: true,
     draw: (ctx, W, H) => {
@@ -228,7 +229,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'migratory',
-    label: '候鸟',
+    labelKey: 'poster.scene.migratory',
     swatch: '#5b8fb9',
     light: true,
     draw: (ctx, W, H) => {
@@ -254,7 +255,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'dusk',
-    label: '暮色',
+    labelKey: 'poster.scene.dusk',
     swatch: '#6b4b8a',
     draw: (ctx, W, H) => {
       sky(ctx, W, H, [
@@ -273,7 +274,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'mint',
-    label: '薄荷纯色',
+    labelKey: 'poster.scene.mint',
     swatch: '#40916c',
     plain: true,
     draw: (ctx, W, H) => {
@@ -286,7 +287,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'graphite',
-    label: '石墨纯色',
+    labelKey: 'poster.scene.graphite',
     swatch: '#232326',
     plain: true,
     draw: (ctx, W, H) => {
@@ -299,7 +300,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'white',
-    label: '纯白',
+    labelKey: 'poster.scene.white',
     swatch: '#ffffff',
     plain: true,
     light: true,
@@ -310,7 +311,7 @@ export const POSTER_BACKGROUNDS: PosterBackground[] = [
   },
   {
     id: 'black',
-    label: '纯黑',
+    labelKey: 'poster.scene.black',
     swatch: '#000000',
     plain: true,
     draw: (ctx, W, H) => {

@@ -45,6 +45,37 @@ export interface PosterImage {
   wrong?: boolean
 }
 
+/**
+ * 海报界面文案（015 §6.4/i18n-4）：core 不 import i18n，由调用方（PosterEditor）
+ * 用 t() 按 locale 构造后注入；带 {n}/{name} 占位的模板在绘制时替换。
+ */
+export interface PosterStrings {
+  /** 多轮时的轮次标签，如「第 2 轮」 */
+  roundLabel: string
+  /** 「在认鸟测试中」 */
+  intro: string
+  /** 满分主标题 */
+  perfectTitle: string
+  /** 非满分主标题 */
+  answeredTitle: string
+  /** 正确率行（含数字，调用方拼好） */
+  accuracyLine: string
+  /** 「错题回顾」 */
+  wrongHeading: string
+  /** 无错题提示 */
+  allCorrect: string
+  /** 错题超出 8 条时的占位文案 */
+  overflow: string
+  /** 「超时未作答」 */
+  timedOut: string
+  /** 错选模板，含 {name} 占位 */
+  mistakenAs: string
+  /** 页脚数据来源 */
+  sourceLine: string
+  /** 二维码下方提示 */
+  scanCta: string
+}
+
 export interface PosterOptions {
   /** 背景 id（见 posterScenes） */
   themeId: string
@@ -71,13 +102,13 @@ export interface PosterWrongRow extends PosterWrong {
 /**
  * 选取用于海报展示的错题行（F2）：
  * - ≤8 条：全部展示
- * - >8 条：展示前 7 条，第 8 条替换为「这里放不下了」
+ * - >8 条：展示前 7 条，第 8 条替换为 overflowLabel（占位文案由调用方按 locale 提供）
  */
-export function buildWrongRows(wrong: PosterWrong[]): PosterWrongRow[] {
+export function buildWrongRows(wrong: PosterWrong[], overflowLabel: string): PosterWrongRow[] {
   const overflow = wrong.length > POSTER_WRONG_MAX
   const kept = overflow ? wrong.slice(0, POSTER_WRONG_MAX - 1) : wrong.slice(0, POSTER_WRONG_MAX)
   const rows: PosterWrongRow[] = kept.map((w) => ({ ...w }))
-  if (overflow) rows.push({ answer: '这里放不下了', chosen: null, timedOut: false, placeholder: true })
+  if (overflow) rows.push({ answer: overflowLabel, chosen: null, timedOut: false, placeholder: true })
   return rows
 }
 
@@ -227,7 +258,7 @@ const QR_SIZE = 170
 const QR_MARGIN = 36
 const QR_QUIET = 4
 
-function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptions) {
+function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptions, strings: PosterStrings) {
   const size = QR_SIZE
   const x = W - QR_MARGIN - size
   const y = H - QR_MARGIN - size
@@ -261,7 +292,7 @@ function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptio
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = P.muted
   ctx.font = `400 18px ${FONT}`
-  ctx.fillText('扫码访问官网', x + size / 2, y + size + 22)
+  ctx.fillText(strings.scanCta, x + size / 2, y + size + 22)
 }
 
 /** 星芒（称号胶囊图标，R37） */
@@ -342,6 +373,7 @@ export function drawPoster(
   canvas: HTMLCanvasElement,
   data: PosterData,
   opts: PosterOptions,
+  strings: PosterStrings,
 ): void {
   canvas.width = W
   canvas.height = H
@@ -423,7 +455,7 @@ export function drawPoster(
 
   // 左上角轮次标签（多轮 session 时，F3）
   if (data.round && data.round > 1) {
-    const rt = `第 ${data.round} 轮`
+    const rt = strings.roundLabel
     ctx.font = `700 32px ${FONT}`
     const rw = ctx.measureText(rt).width + 48
     ctx.fillStyle = P.chipBg
@@ -435,11 +467,11 @@ export function drawPoster(
   }
 
   // 正文
-  drawSegments(ctx, [{ text: '在认鸟测试中', color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
+  drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
   const perfect = data.total > 0 && data.correct === data.total
   drawSegments(
     ctx,
-    [{ text: perfect ? '全对了！' : '我答对了！', color: P.dark, weight: 800, size: 64 }],
+    [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
     W / 2,
     650,
     'center',
@@ -456,10 +488,7 @@ export function drawPoster(
     'center',
     box,
   )
-  const accText =
-    data.round && data.round > 1 && data.overallAccuracy !== undefined
-      ? `正确率 ${data.accuracy}% · ${data.tierLabel} · 整体 ${data.overallAccuracy}%`
-      : `正确率 ${data.accuracy}% · ${data.tierLabel}`
+  const accText = strings.accuracyLine
   drawSegments(
     ctx,
     [{ text: accText, color: P.muted, weight: 500, size: 28 }],
@@ -470,12 +499,12 @@ export function drawPoster(
   )
 
   // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
-  drawSegments(ctx, [{ text: '错题回顾', color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
-  const rows = buildWrongRows(data.wrong)
+  drawSegments(ctx, [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
+  const rows = buildWrongRows(data.wrong, strings.overflow)
   if (rows.length === 0) {
     drawSegments(
       ctx,
-      [{ text: '全对，没有错题', color: P.accent, weight: 400, size: 28 }],
+      [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 28 }],
       60,
       1070,
       'left',
@@ -492,7 +521,7 @@ export function drawPoster(
       if (w.placeholder) {
         drawSegments(
           ctx,
-          [{ text: `${i + 1}. 这里放不下了`, color: P.wrong, weight: 600, size: 25 }],
+          [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 25 }],
           x,
           y,
           'left',
@@ -501,7 +530,9 @@ export function drawPoster(
         return
       }
       const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
-      const mineText = w.timedOut ? '超时未作答' : `认成了「${w.chosen ?? '—'}」`
+      const mineText = w.timedOut
+        ? strings.timedOut
+        : strings.mistakenAs.replace('{name}', w.chosen ?? '—')
       ctx.font = `600 26px ${FONT}`
       const headW = ctx.measureText(head.text).width
       const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
@@ -512,7 +543,7 @@ export function drawPoster(
   // 页脚（左对齐，给右下角二维码让位）
   drawSegments(
     ctx,
-    [{ text: '数据来源 iNaturalist / Xeno-canto', color: P.muted, weight: 400, size: 24 }],
+    [{ text: strings.sourceLine, color: P.muted, weight: 400, size: 24 }],
     60,
     H - 30,
     'left',
@@ -520,12 +551,16 @@ export function drawPoster(
   )
 
   // 右下角二维码位（F4）
-  drawQrSlot(ctx, P, opts)
+  drawQrSlot(ctx, P, opts, strings)
 }
 
-export function renderPoster(data: PosterData, opts: PosterOptions): HTMLCanvasElement {
+export function renderPoster(
+  data: PosterData,
+  opts: PosterOptions,
+  strings: PosterStrings,
+): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
-  drawPoster(canvas, data, opts)
+  drawPoster(canvas, data, opts, strings)
   return canvas
 }
 
@@ -549,8 +584,12 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob | null>
 }
 
 /** 产出海报 PNG Blob（不触发下载，供弹层内预览/保存，见 006 F7） */
-export function renderPosterBlob(data: PosterData, opts: PosterOptions): Promise<Blob | null> {
-  return canvasToPngBlob(renderPoster(data, opts))
+export function renderPosterBlob(
+  data: PosterData,
+  opts: PosterOptions,
+  strings: PosterStrings,
+): Promise<Blob | null> {
+  return canvasToPngBlob(renderPoster(data, opts, strings))
 }
 
 /** 触发浏览器下载。用于保存已生成的 blob（不再自动关闭弹层） */
@@ -569,9 +608,10 @@ export function downloadBlob(blob: Blob, filename = 'uniaoer-result.png'): void 
 export async function downloadPoster(
   data: PosterData,
   opts: PosterOptions,
+  strings: PosterStrings,
   filename = 'uniaoer-result.png',
 ): Promise<void> {
-  const blob = await renderPosterBlob(data, opts)
+  const blob = await renderPosterBlob(data, opts, strings)
   if (blob) downloadBlob(blob, filename)
 }
 
@@ -583,6 +623,6 @@ export async function downloadPoster(
 export async function loadImage(url: string): Promise<ImageBitmap> {
   const bust = url + (url.includes('?') ? '&' : '?') + '_cors=1'
   const res = await fetch(bust, { mode: 'cors', cache: 'reload' })
-  if (!res.ok) throw new Error('图片加载失败 HTTP ' + res.status)
+  if (!res.ok) throw new Error('image load failed HTTP ' + res.status)
   return await createImageBitmap(await res.blob())
 }

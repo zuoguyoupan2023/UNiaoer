@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CircleCheck, Lock, Unlock, X } from 'lucide-vue-next'
 import {
   downloadBlob,
@@ -9,11 +10,14 @@ import {
   type PosterData,
   type PosterImage,
   type PosterOptions,
+  type PosterStrings,
 } from '@/core/poster'
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
 
 const props = defineProps<{ open: boolean; data: PosterData; images: PosterImage[] }>()
 const emit = defineEmits<{ close: [] }>()
+
+const { t } = useI18n()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const themeId = ref('forest')
@@ -47,9 +51,36 @@ function options(): PosterOptions {
   return { themeId: themeId.value, bgImage: bgImage.value, bgOffset: offset.value }
 }
 
+/** 海报文案（015 i18n-4）：core/poster 不 import i18n，由这里按 locale 注入 */
+const strings = computed<PosterStrings>(() => {
+  const d = props.data
+  const accuracyLine =
+    d.round && d.round > 1 && d.overallAccuracy !== undefined
+      ? t('poster.canvas.accuracyOverall', {
+          acc: d.accuracy,
+          tier: d.tierLabel,
+          overall: d.overallAccuracy,
+        })
+      : t('poster.canvas.accuracy', { acc: d.accuracy, tier: d.tierLabel })
+  return {
+    roundLabel: t('poster.canvas.roundN', { n: d.round ?? 1 }),
+    intro: t('poster.canvas.intro'),
+    perfectTitle: t('poster.canvas.perfect'),
+    answeredTitle: t('poster.canvas.answered'),
+    accuracyLine,
+    wrongHeading: t('poster.canvas.wrongHeading'),
+    allCorrect: t('poster.canvas.allCorrect'),
+    overflow: t('poster.canvas.overflow'),
+    timedOut: t('result.timedOut'),
+    mistakenAs: t('poster.canvas.mistakenAs'),
+    sourceLine: t('poster.canvas.sourceLine'),
+    scanCta: t('poster.canvas.scanCta'),
+  }
+})
+
 function redraw() {
   const c = canvasRef.value
-  if (c) drawPoster(c, props.data, options())
+  if (c) drawPoster(c, props.data, options(), strings.value)
 }
 
 watch(
@@ -101,7 +132,7 @@ async function selectImage(url: string | null, loadUrl: string | null = url) {
     bgImage.value = img
     offset.value = { x: 0, y: 0 }
   } catch {
-    error.value = '背景图加载失败（跨域受限），已保持纯配色'
+    error.value = t('poster.bgLoadFailed')
   } finally {
     loadingBg.value = false
   }
@@ -121,7 +152,7 @@ function selectTheme(id: string) {
 /** F6：缩略图标题（带"答错"提示） */
 function thumbTitle(img: PosterImage): string {
   const base = img.sci ? `${img.answer} · ${img.sci}` : img.answer
-  return img.wrong ? `${base}（这题你答错了，试试用它做背景？）` : base
+  return img.wrong ? t('poster.wrongThumbTitle', { base }) : base
 }
 
 // ---- 拖拽平移背景 ----
@@ -169,9 +200,9 @@ async function generate() {
   generating.value = true
   resultMsg.value = ''
   try {
-    const blob = await renderPosterBlob(props.data, options())
+    const blob = await renderPosterBlob(props.data, options(), strings.value)
     if (!blob) {
-      resultMsg.value = '生成失败，请重试'
+      resultMsg.value = t('poster.genFailed')
       return
     }
     revokeResult()
@@ -198,8 +229,10 @@ function openImage() {
   <div v-if="open" class="overlay" @click.self="emit('close')">
     <div class="panel">
       <div class="head">
-        <h3>生成海报</h3>
-        <button class="x" aria-label="关闭" @click="emit('close')"><X :size="16" /></button>
+        <h3>{{ t('poster.title') }}</h3>
+        <button class="x" :aria-label="t('common.close')" @click="emit('close')">
+          <X :size="16" />
+        </button>
       </div>
 
       <div class="body">
@@ -213,10 +246,10 @@ function openImage() {
             @pointerup="onPointerUp"
             @pointerleave="onPointerUp"
           ></canvas>
-          <p v-if="bgImage" class="drag-hint">拖拽画面平移背景</p>
+          <p v-if="bgImage" class="drag-hint">{{ t('poster.dragHint') }}</p>
           <div v-if="loadingBg" class="loading-overlay">
             <span class="spin"></span>
-            <span>正在加载原图…</span>
+            <span>{{ t('poster.loadingOriginal') }}</span>
           </div>
         </div>
 
@@ -224,27 +257,27 @@ function openImage() {
           <!-- 背景 -->
           <div class="group">
             <div class="group-title">
-              背景
-              <span v-if="locked" class="lock-tag">已锁定</span>
+              {{ t('poster.background') }}
+              <span v-if="locked" class="lock-tag">{{ t('poster.lockedTag') }}</span>
             </div>
             <div class="swatches">
               <button
-                v-for="t in POSTER_BACKGROUNDS"
-                :key="t.id"
+                v-for="b in POSTER_BACKGROUNDS"
+                :key="b.id"
                 class="swatch"
-                :class="{ on: themeId === t.id && !bgImage, disabled: locked, light: t.light }"
-                :style="{ background: t.swatch }"
-                :title="t.label"
-                @click="selectTheme(t.id)"
+                :class="{ on: themeId === b.id && !bgImage, disabled: locked, light: b.light }"
+                :style="{ background: b.swatch }"
+                :title="t(b.labelKey)"
+                @click="selectTheme(b.id)"
               >
-                <span class="swatch-label">{{ t.label }}</span>
+                <span class="swatch-label">{{ t(b.labelKey) }}</span>
               </button>
             </div>
           </div>
 
           <!-- 背景照片（仅鸟图版有图） -->
           <div v-if="images.length" class="group">
-            <div class="group-title">背景照片</div>
+            <div class="group-title">{{ t('poster.bgPhotos') }}</div>
             <div class="thumbs">
               <div v-for="img in images" :key="img.url" class="thumb-cell">
                 <div class="thumb-wrap">
@@ -254,13 +287,13 @@ function openImage() {
                     :title="thumbTitle(img)"
                     @click="selectImage(img.url, img.xlUrl ?? img.url)"
                   >
-                    <img :src="img.thumbUrl ?? img.url" alt="背景候选" loading="lazy" />
+                    <img :src="img.thumbUrl ?? img.url" :alt="t('poster.bgCandidateAlt')" loading="lazy" />
                   </button>
                   <span
                     v-if="img.wrong"
                     class="wrong-badge"
-                    title="这题你答错了，试试用它做背景？"
-                    aria-label="这题你答错了"
+                    :title="t('poster.wrongBadgeTitle')"
+                    :aria-label="t('poster.wrongBadgeAria')"
                   >
                     <X :size="12" :stroke-width="3" />
                   </span>
@@ -270,7 +303,7 @@ function openImage() {
               </div>
             </div>
             <p v-if="loadingBg" class="loading-hint">
-              <span class="spin-sm"></span> 正在下载原图，请稍候…
+              <span class="spin-sm"></span> {{ t('poster.downloadingOriginal') }}
             </p>
             <p v-if="error" class="err small">{{ error }}</p>
           </div>
@@ -285,7 +318,7 @@ function openImage() {
             >
               <Unlock v-if="locked" :size="15" />
               <Lock v-else :size="15" />
-              {{ locked ? '已锁定（点击解锁）' : '锁定其他修改' }}
+              {{ locked ? t('poster.unlockToggle') : t('poster.lockToggle') }}
             </button>
             <button
               v-if="bgImage"
@@ -294,10 +327,10 @@ function openImage() {
               :style="{ marginTop: isMobile ? '0' : '8px' }"
               @click="resetOffset"
             >
-              重置背景位置
+              {{ t('poster.resetBg') }}
             </button>
             <p v-if="!isMobile" class="muted small" style="margin-top: 8px">
-              锁定后只能上下左右平移背景，背景与照片不可再改。
+              {{ t('poster.lockHint') }}
             </p>
           </div>
 
@@ -309,21 +342,27 @@ function openImage() {
               :disabled="generating"
               @click="generate"
             >
-              {{ generating ? '生成中…' : blobUrl ? '重新生成海报' : '生成海报' }}
+              {{
+                generating
+                  ? t('poster.generating')
+                  : blobUrl
+                    ? t('poster.regenerate')
+                    : t('poster.generate')
+              }}
             </button>
 
             <div v-if="blobUrl" ref="resultRef" class="result" aria-live="polite">
-              <img class="result-img" :src="blobUrl" alt="海报预览" />
-              <p v-if="stale" class="result-status stale">配置已修改，点「生成海报」更新预览</p>
+              <img class="result-img" :src="blobUrl" :alt="t('poster.previewAlt')" />
+              <p v-if="stale" class="result-status stale">{{ t('poster.staleHint') }}</p>
               <p v-else class="result-status">
-                <CircleCheck class="ic" :size="14" /> 海报已生成，若未自动下载，请长按图片保存到相册。
+                <CircleCheck class="ic" :size="14" /> {{ t('poster.generatedHint') }}
               </p>
               <div class="result-actions">
                 <button class="btn btn-secondary" :disabled="stale" @click="download">
-                  下载 PNG
+                  {{ t('poster.downloadPng') }}
                 </button>
                 <button class="btn btn-secondary" :disabled="stale" @click="openImage">
-                  在新标签打开
+                  {{ t('poster.openNewTab') }}
                 </button>
               </div>
             </div>

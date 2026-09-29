@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MediaType, Question, Tier } from '@/types'
-import { loadBank } from '@/core/bank'
+import { loadBank, BankError, type BankErrorCode } from '@/core/bank'
 import { buildQuestions } from '@/core/questionEngine'
 import { getWrongBook } from '@/core/historyDb'
+import { currentLocale } from '@/i18n'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
+
+/** 出题失败错误码（UI 层映射 errors.* 文案，015 §6.5） */
+export type QuizErrorCode = BankErrorCode | 'wrongPoolEmpty' | 'noImageMedia' | 'noAudioMedia' | 'unknown'
 
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
@@ -84,13 +88,15 @@ export const useQuizStore = defineStore('quiz', () => {
         count: opts.count ?? 10,
         tier: tier.value,
         speciesIds: ids,
+        locale: currentLocale(),
       })
       if (!qs.length) {
-        throw new Error(
-          ids
-            ? '错题本里没有可用的这类素材（可能缺图/缺音），换个模式或先去答题'
-            : `题库中没有可用的${type === 'image' ? '图片' : '音频'}素材`,
-        )
+        // 无素材：错误码入 store，文案由组件按 locale 渲染（015 §6.5）；清掉上一轮残留
+        error.value = ids ? 'wrongPoolEmpty' : type === 'image' ? 'noImageMedia' : 'noAudioMedia'
+        questions.value = []
+        chosen.value = []
+        index.value = 0
+        return
       }
       questions.value = qs
       chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
@@ -101,7 +107,7 @@ export const useQuizStore = defineStore('quiz', () => {
           : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
       startedAt.value = Date.now()
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
+      error.value = e instanceof BankError ? e.code : 'unknown'
       questions.value = []
       chosen.value = []
       index.value = 0

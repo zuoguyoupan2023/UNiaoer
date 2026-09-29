@@ -10,7 +10,7 @@ import {
   type RoundRecord,
 } from './historyDb'
 import { evaluateBadges, type BadgeDef } from './badges'
-import { evaluateTitles, titleLabelAt, TITLE_TRACKS, type EarnedTitle } from './titles'
+import { evaluateTitles, titleTextAt, TITLE_TRACKS, type EarnedTitle } from './titles'
 
 type QuizStore = ReturnType<typeof useQuizStore>
 
@@ -96,7 +96,7 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
         newTitles.push({
           ...t,
           level: highestNew,
-          label: titleLabelAt(track, highestNew, stats, rounds),
+          text: titleTextAt(track, highestNew, stats, rounds),
         })
       }
     }
@@ -116,7 +116,7 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
 
     return { badges: newBadges, newTitles }
   } catch (e) {
-    console.warn('保存记录失败：', e)
+    console.warn('failed to persist round:', e)
     return { badges: [], newTitles: [] }
   }
 }

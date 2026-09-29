@@ -17,14 +17,17 @@ describe('海报 · 错题区行选取（F2）', () => {
   })
 
   it('≤8 条：全部展示，无占位', () => {
-    const rows = buildWrongRows([1, 2, 3, 4, 5, 6, 7, 8].map((n) => wrong(`鸟${n}`)))
+    const rows = buildWrongRows([1, 2, 3, 4, 5, 6, 7, 8].map((n) => wrong(`鸟${n}`)), '溢出')
     expect(rows).toHaveLength(8)
     expect(rows.some((r) => r.placeholder)).toBe(false)
     expect(rows[7]!.answer).toBe('鸟8')
   })
 
   it('>8 条：前 7 条 + 第 8 条占位', () => {
-    const rows = buildWrongRows(Array.from({ length: 12 }, (_, i) => wrong(`鸟${i + 1}`)))
+    const rows = buildWrongRows(
+      Array.from({ length: 12 }, (_, i) => wrong(`鸟${i + 1}`)),
+      '溢出',
+    )
     expect(rows).toHaveLength(8)
     expect(rows.slice(0, 7).map((r) => r.answer)).toEqual([
       '鸟1',
@@ -36,11 +39,11 @@ describe('海报 · 错题区行选取（F2）', () => {
       '鸟7',
     ])
     expect(rows[7]!.placeholder).toBe(true)
-    expect(rows[7]!.answer).toBe('这里放不下了')
+    expect(rows[7]!.answer).toBe('溢出')
   })
 
   it('0 条：空数组', () => {
-    expect(buildWrongRows([])).toHaveLength(0)
+    expect(buildWrongRows([], '溢出')).toHaveLength(0)
   })
 })
 

@@ -86,6 +86,6 @@ describe('formatAttribution', () => {
   })
 
   it('作者缺失时回退占位', () => {
-    expect(formatAttribution({ source: 'iNaturalist', license: 'cc0' })).toContain('未知作者')
+    expect(formatAttribution({ source: 'iNaturalist', license: 'cc0' })).toContain('Unknown author')
   })
 })
