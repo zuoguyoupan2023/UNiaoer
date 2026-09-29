@@ -2,8 +2,44 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import type { RoundItem, RoundRecord } from '@/core/historyDb'
 
+// 甲鸟带 5 图 5 音（五图五音画廊用）
+const fakeSpecies = {
+  id: 'sp-a',
+  nameZh: '甲鸟',
+  nameEn: 'Bird A',
+  nameSci: 'A avis',
+  family: '甲科',
+  commonness: 1,
+  desc: '',
+  location: '',
+  habit: '',
+  image: null,
+  audio: null,
+  images: Array.from({ length: 5 }, (_, i) => ({
+    speciesId: 'sp-a',
+    type: 'image' as const,
+    url: `https://img.test/a-${i}.jpg`,
+    license: 'CC-BY',
+    author: 'tester',
+    source: 'iNaturalist',
+    sourceUrl: '',
+  })),
+  audios: Array.from({ length: 5 }, (_, i) => ({
+    speciesId: 'sp-a',
+    type: 'audio' as const,
+    url: `https://audio.test/a-${i}.mp3`,
+    license: 'CC-BY',
+    author: 'tester',
+    source: 'Xeno-canto',
+    sourceUrl: '',
+  })),
+}
+
 vi.mock('@/core/bank', () => ({
   loadBank: vi.fn<() => Promise<unknown>>(async () => ({})),
+  speciesById: vi.fn<(id: string | null | undefined) => unknown>(
+    (id) => (id === 'sp-a' ? fakeSpecies : undefined),
+  ),
   speciesNameById: vi.fn<(id: string | null | undefined) => string | undefined>(
     (id) => (id === 'sp-a' ? '甲鸟' : id === 'sp-b' ? '乙鸟' : undefined),
   ),
@@ -127,6 +163,12 @@ describe('RoundHistoryView（E5 轮次复盘）', () => {
     expect(items[2]!.text()).toContain('超时未作答')
     // 署名行保留（AGENTS 铁律 5）
     expect(items[0]!.find('.attribution').exists()).toBe(true)
+    // 逐题附同种五图五音画廊：甲鸟（题库可查）→ 5 图 5 音；旧记录/超时题查不到 → 回退或隐藏
+    const galleries = wrapper.findAll('.item-gallery')
+    expect(galleries).toHaveLength(1) // 仅第 1 题展示（其余回退单素材 ≤1 自动隐藏）
+    await galleries[0]!.find('.sg-toggle').trigger('click') // 画廊默认折叠，点开
+    expect(galleries[0]!.findAll('.sg-thumb')).toHaveLength(5)
+    expect(galleries[0]!.findAll('.sg-audio-row')).toHaveLength(5)
     // 手风琴：再点收起
     await wrapper.findAll('.round-head')[0]!.trigger('click')
     expect(wrapper.find('.items').exists()).toBe(false)

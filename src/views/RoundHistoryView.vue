@@ -8,11 +8,13 @@ import {
   type RoundItem,
   type RoundRecord,
 } from '@/core/historyDb'
-import { loadBank, speciesNameById, speciesNameByStoredName } from '@/core/bank'
+import { loadBank, speciesById, speciesNameById, speciesNameByStoredName } from '@/core/bank'
+import { assetsOf } from '@/core/questionEngine'
 import type { MediaAsset } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from '@/components/AttributionLine.vue'
+import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
 const { t } = useI18n()
 
@@ -82,6 +84,17 @@ function toAsset(it: RoundItem): MediaAsset {
     sourceUrl: '',
   }
 }
+
+/**
+ * 逐题附同种五图五音画廊（对齐结果页回顾）：资产按 speciesId 回查题库（016 索引），
+ * 记录本身不存资产列表；旧记录（speciesId 是 URL）查不到时回退本题 mediaUrl 单素材，
+ * SpeciesGallery 在总数 ≤1 时自动隐藏。
+ */
+function galleryOf(it: RoundItem, type: 'image' | 'audio'): MediaAsset[] {
+  const sp = speciesById(it.speciesId)
+  if (sp) return assetsOf(sp, type)
+  return it.type === type && it.mediaUrl ? [toAsset(it)] : []
+}
 </script>
 
 <template>
@@ -133,6 +146,14 @@ function toAsset(it: RoundItem): MediaAsset {
                 <div class="muted small">{{ t('result.yourChoice', { choice: choiceOf(it) }) }}</div>
                 <AttributionLine :media="toAsset(it)" />
               </div>
+              <!-- 同种五图五音（browse：缩略图放大 / 内联试听），对齐结果页回顾 -->
+              <SpeciesGallery
+                class="item-gallery"
+                :images="galleryOf(it, 'image')"
+                :audios="galleryOf(it, 'audio')"
+                mode="browse"
+                :label="t('result.viewSpeciesMedia')"
+              />
             </li>
           </ol>
         </li>
@@ -270,6 +291,9 @@ function toAsset(it: RoundItem): MediaAsset {
 .info {
   flex: 1;
   min-width: 0;
+}
+.item-gallery {
+  flex-basis: 100%;
 }
 .name {
   font-weight: 700;
