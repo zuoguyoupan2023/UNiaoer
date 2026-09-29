@@ -178,15 +178,17 @@ function makeEmptyStats() {
     <div v-else class="badge-grid">
       <div v-for="x in titleWall" :key="x.id" class="badge" :class="{ locked: !x.earned }">
         <BadgeIcon class="badge-icon" :name="x.icon" :size="26" />
-        <span class="label">
-          {{ textOf(x.text) }}<template v-if="x.earned"> {{ t('profile.levelTag', { n: x.level }) }}</template>
-        </span>
-        <span v-if="x.earned" class="desc next">
-          <template v-if="x.remaining !== null">
-            {{ t('profile.nextLevelLeft') }}<b class="remain">{{ x.remaining }}</b>
-          </template>
-          <template v-else>{{ t('profile.maxed') }}</template>
-        </span>
+        <div class="badge-text">
+          <span class="label">
+            {{ textOf(x.text) }}<template v-if="x.earned"> {{ t('profile.levelTag', { n: x.level }) }}</template>
+          </span>
+          <span v-if="x.earned" class="desc next">
+            <template v-if="x.remaining !== null">
+              {{ t('profile.nextLevelLeft') }}<b class="remain">{{ x.remaining }}</b>
+            </template>
+            <template v-else>{{ t('profile.maxed') }}</template>
+          </span>
+        </div>
       </div>
     </div>
   </section>
@@ -287,25 +289,31 @@ function makeEmptyStats() {
   border-color: var(--primary);
   background: #f3fbf7;
 }
-/* ---- 称号墙 ---- */
+/* ---- 称号墙：图标左、文字右（移动端一行一个不浪费纵向空间） ---- */
 .badge-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
 }
 .badge {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  text-align: center;
-  padding: 12px 8px;
+  gap: 12px;
+  text-align: left;
+  padding: 10px 14px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
 }
 .badge .badge-icon {
+  flex-shrink: 0;
   color: var(--primary);
+}
+.badge-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .badge .label {
   font-size: 0.82rem;
@@ -321,13 +329,6 @@ function makeEmptyStats() {
 .badge .remain {
   margin-left: 4px;
   font-weight: 700;
-}
-/* 移动端：数字换到第三行 */
-@media (max-width: 480px) {
-  .badge .remain {
-    display: block;
-    margin-left: 0;
-  }
 }
 .badge.locked {
   opacity: 0.45;

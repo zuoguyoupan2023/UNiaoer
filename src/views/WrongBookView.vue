@@ -182,6 +182,7 @@ function fmt(at: number) {
 <style scoped>
 .tabs {
   display: flex;
+  flex-wrap: wrap; /* 窄屏两个 tab 放不下时折行，不右溢 */
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -220,6 +221,7 @@ function fmt(at: number) {
 .info {
   flex: 1;
   min-width: 0;
+  overflow-wrap: break-word;
 }
 .name {
   font-weight: 700;

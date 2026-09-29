@@ -295,6 +295,7 @@ function galleryOf(it: RoundItem, type: 'image' | 'audio'): MediaAsset[] {
 }
 .item-gallery {
   flex-basis: 100%;
+  min-width: 0;
 }
 .name {
   font-weight: 700;

@@ -112,6 +112,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
 <style scoped>
 .sg {
+  min-width: 0; /* 作为 flex 子项允许收缩，防内部固定宽度撑破父容器 */
   margin-top: 12px;
   display: flex;
   flex-direction: column;
@@ -237,6 +238,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 .sg-audio-row audio {
   flex: 1;
   height: 34px;
+  min-width: 0; /* audio 有固有宽度，不置 0 会把整行撑出容器（移动端右溢） */
 }
 .sg-lightbox {
   position: fixed;

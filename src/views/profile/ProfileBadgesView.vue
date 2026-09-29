@@ -50,13 +50,17 @@ function totalCount(series: BadgeSeries) {
           >
             <template v-if="b.hidden && !earned.has(b.id)">
               <BadgeIcon class="badge-icon" name="lock" :size="28" />
-              <span class="label">???</span>
-              <span class="desc">{{ t('profile.hiddenBadge') }}</span>
+              <div class="badge-text">
+                <span class="label">???</span>
+                <span class="desc">{{ t('profile.hiddenBadge') }}</span>
+              </div>
             </template>
             <template v-else>
               <BadgeIcon class="badge-icon" :name="b.icon" :size="28" />
-              <span class="label">{{ t(b.labelKey, { n: ALL_SPECIES_TOTAL }) }}</span>
-              <span class="desc">{{ t(b.descKey, { n: ALL_SPECIES_TOTAL }) }}</span>
+              <div class="badge-text">
+                <span class="label">{{ t(b.labelKey, { n: ALL_SPECIES_TOTAL }) }}</span>
+                <span class="desc">{{ t(b.descKey, { n: ALL_SPECIES_TOTAL }) }}</span>
+              </div>
             </template>
           </div>
         </div>
@@ -98,22 +102,28 @@ function totalCount(series: BadgeSeries) {
 }
 .badge-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
 }
 .badge {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  text-align: center;
-  padding: 12px 8px;
+  gap: 12px;
+  text-align: left;
+  padding: 10px 14px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
 }
 .badge .badge-icon {
+  flex-shrink: 0;
   color: var(--primary);
+}
+.badge-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .badge .label {
   font-size: 0.82rem;

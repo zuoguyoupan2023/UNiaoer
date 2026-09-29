@@ -144,6 +144,14 @@ function saveNickname() {
   .section-tabs {
     top: 92px;
   }
+  /* 窄屏 3+2 折行：数据/称号/徽章在上，错题/历史（记录类）在下；每格等宽居中 */
+  .section-tabs {
+    flex-wrap: wrap;
+  }
+  .section-tabs a {
+    flex: 1 0 calc((100% - 16px) / 3);
+    text-align: center;
+  }
 }
 /* ---- 昵称（R33） ---- */
 .nickname-row {
