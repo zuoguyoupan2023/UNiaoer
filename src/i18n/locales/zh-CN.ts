@@ -166,6 +166,7 @@ export const messages = {
     tabTitles: '称号',
     tabBadges: '徽章',
     tabWrong: '错题本',
+    tabHistory: '历史',
     nicknamePlaceholder: '2–12 个字符',
     nicknameEmpty: '昵称不能为空',
     nicknameShort: '昵称至少 2 个字符',

@@ -172,6 +172,7 @@ const en: typeof zhMessages = {
     tabTitles: 'Titles',
     tabBadges: 'Badges',
     tabWrong: 'Wrong book',
+    tabHistory: 'History',
     nicknamePlaceholder: '2–12 characters',
     nicknameEmpty: 'Nickname cannot be empty',
     nicknameShort: 'Nickname needs at least 2 characters',

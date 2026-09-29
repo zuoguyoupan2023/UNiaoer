@@ -31,19 +31,48 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
     },
     {
+      // 错题本并入 /profile/wrong 后保留旧路径重定向（导航入口已移除，R31）
       path: '/wrong',
-      name: 'wrong',
-      component: () => import('../views/WrongBookView.vue'),
+      redirect: { name: 'profile-wrong' },
     },
     {
+      // 轮次复盘并入 /profile/history 后保留旧路径重定向（E5，013 §5.5）
       path: '/history',
-      name: 'history',
-      component: () => import('../views/RoundHistoryView.vue'),
+      redirect: { name: 'profile-history' },
     },
     {
       path: '/profile',
       name: 'profile',
+      // 布局壳：身份卡 + 标签导航 + <RouterView/>；内容由二级路由切换（013 §5.5）
       component: () => import('../views/ProfileView.vue'),
+      children: [
+        { path: '', redirect: { name: 'profile-data' } },
+        {
+          path: 'data',
+          name: 'profile-data',
+          component: () => import('../views/profile/ProfileDataView.vue'),
+        },
+        {
+          path: 'titles',
+          name: 'profile-titles',
+          component: () => import('../views/profile/ProfileTitlesView.vue'),
+        },
+        {
+          path: 'badges',
+          name: 'profile-badges',
+          component: () => import('../views/profile/ProfileBadgesView.vue'),
+        },
+        {
+          path: 'wrong',
+          name: 'profile-wrong',
+          component: () => import('../views/WrongBookView.vue'),
+        },
+        {
+          path: 'history',
+          name: 'profile-history',
+          component: () => import('../views/RoundHistoryView.vue'),
+        },
+      ],
     },
     {
       path: '/:pathMatch(.*)*',
