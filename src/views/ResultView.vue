@@ -25,7 +25,7 @@ import type { Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
-import { speciesNameById } from '@/core/bank'
+import { speciesNameById, speciesNameByStoredName } from '@/core/bank'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -43,14 +43,18 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 /** 题目答案名按当前语言解析（015 #1）：speciesId 回查题库，回退作答时存储名 */
 const nameOf = (q: { media: { speciesId?: string }; answer: string }) =>
   speciesNameById(q.media.speciesId, currentLocale()) ?? q.answer
-/** 错选名按当前语言解析：超时/未答 → 占位文案 */
+/** 错选名按当前语言解析：optionIds → 存储名反查（旧数据兜底）→ 原字符串 */
 const choiceOf = (q: Question, chosen: string | null) => {
   if (chosen === TIMEOUT || chosen === null) {
     return chosen === TIMEOUT ? t('result.timedOut') : t('result.notAnswered')
   }
   const idx = q.options.indexOf(chosen)
   const id = idx >= 0 ? q.optionIds[idx] : undefined
-  return speciesNameById(id, currentLocale()) ?? chosen
+  return (
+    speciesNameById(id, currentLocale()) ??
+    speciesNameByStoredName(chosen, currentLocale()) ??
+    chosen
+  )
 }
 const newBadges = ref<BadgeDef[]>([])
 /** 新解锁称号的文本（key+params，渲染处 t()） */

@@ -46,8 +46,20 @@ export function speciesName(sp: BankSpecies, locale?: string): string {
 /** speciesId → 物种索引（loadBank 后构建；旧记录 speciesId 可能是媒体 URL，查不到即回退） */
 let speciesIndex: Map<string, BankSpecies> | null = null
 
+/**
+ * 名字（中文名/英文名/学名）→ 物种索引：旧记录（无 chosenId）的错选名
+ * 按当前语言解析用（015 #1）。同名冲突先到先得（撞名极罕见，仅影响该回退路径）。
+ */
+let nameIndex: Map<string, BankSpecies> | null = null
+
 function buildSpeciesIndex(bank: Manifest) {
   speciesIndex = new Map(bank.species.map((s) => [s.id, s]))
+  nameIndex = new Map()
+  for (const sp of bank.species) {
+    if (sp.nameZh && !nameIndex.has(sp.nameZh)) nameIndex.set(sp.nameZh, sp)
+    if (sp.nameEn && !nameIndex.has(sp.nameEn)) nameIndex.set(sp.nameEn, sp)
+    if (sp.nameSci && !nameIndex.has(sp.nameSci)) nameIndex.set(sp.nameSci, sp)
+  }
 }
 
 /** 按 id 查物种（需先 loadBank 建索引） */
@@ -63,6 +75,19 @@ export function speciesById(id: string): BankSpecies | undefined {
 export function speciesNameById(id: string | null | undefined, locale: string): string | undefined {
   if (!id) return undefined
   const sp = speciesIndex?.get(id)
+  return sp ? speciesName(sp, locale) : undefined
+}
+
+/**
+ * 存储的名字字符串（旧记录的错选名/答案名，可能来自任一语言）按 locale 解析：
+ * 名字索引查到物种 → 返回当前语言名字；查不到返回 undefined（调用方回退原字符串）。
+ */
+export function speciesNameByStoredName(
+  stored: string | null | undefined,
+  locale: string,
+): string | undefined {
+  if (!stored) return undefined
+  const sp = nameIndex?.get(stored)
   return sp ? speciesName(sp, locale) : undefined
 }
 
@@ -110,4 +135,5 @@ export async function loadBank(): Promise<Manifest> {
 export function _resetBankCache() {
   cache = null
   speciesIndex = null
+  nameIndex = null
 }

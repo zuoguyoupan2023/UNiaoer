@@ -12,7 +12,7 @@ import {
   type WrongEntry,
   type WrongHistoryItem,
 } from '@/core/historyDb'
-import { loadBank, speciesNameById } from '@/core/bank'
+import { loadBank, speciesNameById, speciesNameByStoredName } from '@/core/bank'
 import type { MediaType } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
@@ -21,12 +21,20 @@ const router = useRouter()
 const quiz = useQuizStore()
 const { t } = useI18n()
 
-/** 记录里的鸟名按当前语言解析（015 #1）：speciesId 查题库，旧记录回退存储名 */
+/**
+ * 记录里的鸟名按当前语言解析（015 #1）：
+ * speciesId 查题库 → 旧记录无 id 时按存储名反查 → 都失败回退存储名。
+ */
 const nameOf = (id: string | undefined, fallback: string) =>
-  speciesNameById(id, currentLocale()) ?? fallback
-/** 错选名：优先按 id 解析，超时/未答显示占位 */
+  speciesNameById(id, currentLocale()) ??
+  speciesNameByStoredName(fallback, currentLocale()) ??
+  fallback
+/** 错选名：id → 存储名反查 → 原字符串；超时/未答显示占位 */
 const choiceOf = (id: string | undefined, stored: string | null, noneKey: string) =>
-  speciesNameById(id, currentLocale()) ?? stored ?? t(noneKey)
+  speciesNameById(id, currentLocale()) ??
+  speciesNameByStoredName(stored, currentLocale()) ??
+  stored ??
+  t(noneKey)
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (zhFamily: string) => familyDisplay(zhFamily, currentLocale())
 
