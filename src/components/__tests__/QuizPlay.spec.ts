@@ -308,6 +308,69 @@ describe('QuizPlay', () => {
     }
   })
 
+  it('R43：浮窗内含「下一题」，主按钮隐藏；点击浮窗可立即进入下一题', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      const answer = store.current!.answer
+      await wrapper.findAll('.option').find((b) => b.text().includes(answer))!.trigger('click')
+
+      expect(wrapper.find('.correct-toast').exists()).toBe(true)
+      expect(wrapper.find('.actions').exists()).toBe(false) // 浮窗期间主按钮隐藏
+      const toastBtn = wrapper.find('.correct-toast .ct-next')
+      expect(toastBtn.exists()).toBe(true)
+      expect(toastBtn.text()).toBe('下一题')
+
+      await toastBtn.trigger('click')
+      await flushPromises()
+      expect(store.index).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('R43：取消切换后主「下一题」按钮恢复显示', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+      const answer = store.current!.answer
+      await wrapper.findAll('.option').find((b) => b.text().includes(answer))!.trigger('click')
+      expect(wrapper.find('.actions').exists()).toBe(false)
+
+      const cancel = wrapper.findAll('button').find((b) => b.text().includes('取消切换'))
+      await cancel!.trigger('click')
+      expect(wrapper.find('.actions').exists()).toBe(true)
+      expect(wrapper.find('.actions button').text()).toContain('下一题')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('最后一题按钮文案为「查看结果」', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startWithTier(wrapper, 'L1')
+      const store = useQuizStore()
+      const settings = useSettingsStore()
+      settings.autoNext = 'manual'
+      store.index = store.total - 1
+      await wrapper.vm.$nextTick()
+      vi.advanceTimersByTime(5000)
+      await flushPromises()
+
+      const q = store.current!
+      await wrapper.findAll('.option').find((b) => b.text().includes(q.answer))!.trigger('click')
+      expect(wrapper.find('.actions button').text()).toContain('查看结果')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('退出测试：已作答 1 题时确认后截断到 1 题并跳结果页', async () => {
     useQuizFakeTimers()
     try {

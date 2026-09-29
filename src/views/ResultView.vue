@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, type Component } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   Award,
   BookOpen,
@@ -28,6 +29,7 @@ import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
 const router = useRouter()
 const quiz = useQuizStore()
+const { t } = useI18n()
 
 const hasResult = computed(() => quiz.total > 0)
 const modeLabel = computed(() => (quiz.mode === 'audio' ? '听音认鸟' : '看图认鸟'))
@@ -176,7 +178,7 @@ async function again() {
           :images="q.type === 'image' ? q.assets : q.crossAssets"
           :audios="q.type === 'audio' ? q.assets : q.crossAssets"
           mode="browse"
-          label="查看同种其它图/音"
+          :label="t('result.viewSpeciesMedia')"
         />
       </li>
     </ol>

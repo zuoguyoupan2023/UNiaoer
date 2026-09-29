@@ -105,17 +105,15 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   return picked.map((sp, i) => {
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractors(sp, full, Math.max(0, cfg.optionCount - 1), cfg.distractor)
-    // C3（R8）：暴露同种两类素材（各按档位取材池裁剪），供答题/回顾查看其它图、音
-    const samePool = assetsOf(sp, type)
-    const crossPool = assetsOf(sp, otherType)
-    const size = cfg.mediaPoolSize
+    // C3（R8）：携带同种两类全部素材，供答题/回顾查看其它图、音（不按档位裁剪——
+    // 出题仍严格用第 1/前 3/前 5，画廊只是额外练习资源）
     return {
       id: `${sp.id}-${type}-${i}`,
       tier,
       type,
       media,
-      assets: samePool.slice(0, Math.min(size, samePool.length)),
-      crossAssets: crossPool.slice(0, Math.min(size, crossPool.length)),
+      assets: assetsOf(sp, type),
+      crossAssets: assetsOf(sp, otherType),
       answer: sp.nameZh,
       sci: sp.nameSci,
       family: sp.family,

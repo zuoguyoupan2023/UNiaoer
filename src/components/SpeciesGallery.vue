@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Images, Music, X } from 'lucide-vue-next'
 import type { MediaAsset } from '@/types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   images?: MediaAsset[]
@@ -44,12 +47,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
       :aria-expanded="open"
       @click="open = !open"
     >
-      <Images class="ic" :size="13" /> {{ label || '其它素材' }}（{{ total }}）
+      <Images class="ic" :size="13" /> {{ label || t('gallery.title') }}（{{ total }}）
     </button>
 
     <div v-if="open" class="sg-body">
       <div v-if="images.length" class="sg-group">
-        <span class="sg-cap"><Images class="ic" :size="12" /> 照片</span>
+        <span class="sg-cap"><Images class="ic" :size="12" /> {{ t('gallery.photos') }}</span>
         <div class="sg-row">
           <button
             v-for="(m, i) in images"
@@ -57,7 +60,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
             type="button"
             class="sg-thumb"
             :class="{ on: m.url === activeUrl }"
-            :title="`照片 ${i + 1}`"
+            :title="`${t('gallery.photos')} ${i + 1}`"
             @click="mode === 'browse' ? openZoom(m) : emit('select', m)"
           >
             <img :src="m.thumbUrl || m.url" alt="" loading="lazy" decoding="async" />
@@ -66,7 +69,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
       </div>
 
       <div v-if="audios.length" class="sg-group">
-        <span class="sg-cap"><Music class="ic" :size="12" /> 录音</span>
+        <span class="sg-cap"><Music class="ic" :size="12" /> {{ t('gallery.audios') }}</span>
         <div v-if="mode === 'browse'" class="sg-audios">
           <div v-for="(m, i) in audios" :key="m.url" class="sg-audio-row">
             <span class="sg-num">{{ i + 1 }}</span>
@@ -80,7 +83,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
             type="button"
             class="sg-audio"
             :class="{ on: m.url === activeUrl }"
-            :title="`录音 ${i + 1}`"
+            :title="`${t('gallery.audios')} ${i + 1}`"
             @click="emit('select', m)"
           >
             <Music class="ic" :size="14" /> {{ i + 1 }}
@@ -90,9 +93,15 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     </div>
 
     <Teleport to="body">
-      <div v-if="zoom" class="sg-lightbox" role="dialog" aria-label="查看照片" @click="closeZoom">
+      <div
+        v-if="zoom"
+        class="sg-lightbox"
+        role="dialog"
+        :aria-label="t('gallery.viewPhoto')"
+        @click="closeZoom"
+      >
         <img :src="zoom.xlUrl || zoom.url" alt="" @click.stop />
-        <button class="sg-close" type="button" aria-label="关闭" @click="closeZoom">
+        <button class="sg-close" type="button" :aria-label="t('gallery.close')" @click="closeZoom">
           <X :size="20" />
         </button>
       </div>

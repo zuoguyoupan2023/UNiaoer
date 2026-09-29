@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
@@ -38,6 +39,7 @@ const props = defineProps<{ type: MediaType }>()
 const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
+const { t } = useI18n()
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
@@ -83,18 +85,15 @@ const displayMedia = computed<MediaAsset | null>(
 const displayType = computed<MediaType>(
   () => displayMedia.value?.type ?? quiz.current?.type ?? props.type,
 )
-/** 是否展示「其它素材」：L1 只用第 1 个、不切换（011 §1.3） */
-const showGallery = computed(() => {
-  const q = quiz.current
-  if (!q) return false
-  if ((TIERS[q.tier]?.mediaPoolSize ?? 1) <= 1) return false
-  return samePool.value.length + crossPool.value.length > 1
-})
 const galleryImages = computed<MediaAsset[]>(() =>
   quiz.current?.type === 'image' ? samePool.value : crossPool.value,
 )
 const galleryAudios = computed<MediaAsset[]>(() =>
   quiz.current?.type === 'audio' ? samePool.value : crossPool.value,
+)
+/** 「下一题」；最后一题改为「查看结果」（没有第 11 题） */
+const nextLabel = computed(() =>
+  quiz.index + 1 >= quiz.total ? t('quiz.viewResult') : t('quiz.next'),
 )
 
 // ---- 计时 ----
@@ -447,14 +446,13 @@ function onTouchEnd(e: TouchEvent) {
         </template>
       </MediaCard>
 
-      <!-- C3 同种多素材（R8）：查看并切换该鸟的其它图/音（含跨类型） -->
+      <!-- C3 同种多素材（R8）：查看并切换该鸟的其它图/音（含跨类型；L1 也展示全部） -->
       <SpeciesGallery
-        v-if="showGallery"
         :images="galleryImages"
         :audios="galleryAudios"
         :active-url="displayMedia?.url"
         mode="select"
-        label="其它素材"
+        :label="t('gallery.title')"
         @select="selected = $event"
       />
 
@@ -491,6 +489,7 @@ function onTouchEnd(e: TouchEvent) {
             <span class="ct-count">
               <Hourglass class="ic" :size="13" /> 即将自动进入下一题…
             </span>
+            <button class="btn-mini ct-next" type="button" @click="goNext">{{ nextLabel }}</button>
             <button class="btn-mini" type="button" @click="cancelAutoOnce">取消切换</button>
           </div>
         </div>
@@ -515,9 +514,10 @@ function onTouchEnd(e: TouchEvent) {
         </button>
       </div>
 
-      <div v-if="quiz.answered" class="actions">
+      <!-- 自动切换浮窗期间隐藏主按钮（避免重复）；取消/手动时恢复显示 -->
+      <div v-if="showInline" class="actions">
         <button class="btn btn-primary" @click="goNext">
-          {{ quiz.index + 1 >= quiz.total ? '查看结果' : '下一题' }}
+          {{ nextLabel }}
           <ArrowRight class="ic" :size="16" />
         </button>
       </div>
@@ -820,6 +820,18 @@ function onTouchEnd(e: TouchEvent) {
   color: var(--primary);
   border-color: var(--primary-light);
   background: #eaf4ef;
+}
+/* 浮窗内的「下一题/查看结果」：宽度贴合文字（不撑满），更醒目 */
+.ct-next {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.ct-next:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  filter: brightness(0.94);
 }
 .quit-corner {
   display: inline-flex;
