@@ -24,6 +24,7 @@ import { BADGES, type BadgeDef } from '@/core/badges'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
+import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
 const router = useRouter()
 const quiz = useQuizStore()
@@ -170,6 +171,13 @@ async function again() {
           你的选择：{{ quiz.chosen[i] === TIMEOUT ? '超时未作答' : quiz.chosen[i] || '未作答' }}
         </div>
         <AttributionLine :media="q.media" />
+        <!-- C3：回顾该鸟的其它图/音（可放大、可试听） -->
+        <SpeciesGallery
+          :images="q.type === 'image' ? q.assets : q.crossAssets"
+          :audios="q.type === 'audio' ? q.assets : q.crossAssets"
+          mode="browse"
+          label="查看同种其它图/音"
+        />
       </li>
     </ol>
   </section>

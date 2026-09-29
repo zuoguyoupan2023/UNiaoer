@@ -101,16 +101,21 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   }
   const picked = shuffle(pool).slice(0, Math.min(count, pool.length))
 
+  const otherType: MediaType = type === 'image' ? 'audio' : 'image'
   return picked.map((sp, i) => {
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractors(sp, full, Math.max(0, cfg.optionCount - 1), cfg.distractor)
+    // C3（R8）：暴露同种两类素材（各按档位取材池裁剪），供答题/回顾查看其它图、音
+    const samePool = assetsOf(sp, type)
+    const crossPool = assetsOf(sp, otherType)
+    const size = cfg.mediaPoolSize
     return {
       id: `${sp.id}-${type}-${i}`,
       tier,
       type,
       media,
-      // C3（R8）：同种同类型全部素材，供答题页查看其它图/音
-      assets: assetsOf(sp, type),
+      assets: samePool.slice(0, Math.min(size, samePool.length)),
+      crossAssets: crossPool.slice(0, Math.min(size, crossPool.length)),
       answer: sp.nameZh,
       sci: sp.nameSci,
       family: sp.family,

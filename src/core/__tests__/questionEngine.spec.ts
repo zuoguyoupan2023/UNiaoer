@@ -131,10 +131,23 @@ describe('分档取材 (mediaPoolSize)', () => {
     expect(qs[0]!.media).toBeTruthy()
   })
 
-  it('C3：题目带同种全部素材，且当前题面在其中', () => {
-    const qs = buildQuestions([multi(5)], { type: 'image', count: 1, tier: 3 })
+  it('C3：题目带同种素材池（按档位裁剪），且当前题面在其中', () => {
+    const qs = buildQuestions([multi(5)], { type: 'image', count: 1, tier: 4 })
     expect(qs[0]!.assets).toHaveLength(5)
     expect(qs[0]!.assets!.some((m) => m.url === qs[0]!.media.url)).toBe(true)
+  })
+
+  it('C3：L3 同类型与跨类型素材池都裁剪到前 3', () => {
+    const species: BankSpecies = {
+      ...sp('dual', '双材鸟', '甲科'),
+      image: null,
+      audio: null,
+      images: Array.from({ length: 5 }, (_, i) => asset(`dual-i${i}`, 'image')),
+      audios: Array.from({ length: 5 }, (_, i) => asset(`dual-a${i}`, 'audio')),
+    }
+    const qs = buildQuestions([species], { type: 'image', count: 1, tier: 3 })
+    expect(qs[0]!.assets).toHaveLength(3)
+    expect(qs[0]!.crossAssets).toHaveLength(3)
   })
 })
 
