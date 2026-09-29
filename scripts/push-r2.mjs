@@ -8,9 +8,13 @@
  *
  * 用法：
  *   npm run r2:push                       # 全量上传
- *   npm run r2:push -- --retry-failed     # 只重传上次失败的文件
+ *   npm run r2:push -- --resume           # 断点续传（跳过台账已传，台账 data-cache/r2-uploaded.json）
+ *   npm run r2:push -- --retry-failed     # 只重传上次失败的文件（data-cache/r2-failed.json）
+ *   npm run r2:push -- --s3               # 用 S3 凭证直传（需 R2_ACCOUNT_ID/KEY，比 wrangler 快）
+ *   npm run r2:push -- --s3 --skip-existing   # 直传并跳过桶内已存在的对象
  *
  * 失败清单：data-cache/r2-failed.json（成功重传的会自动从清单移除）
+ * 中途被 Ctrl-C 时此清单不会写；改用 --resume 续传更稳。
  */
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
@@ -18,6 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { loadEnv, mapPool, parseArgs, sleep } from './lib/util.mjs'
+import { makeR2 } from './lib/r2.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -32,8 +37,47 @@ if (!bucket) {
 
 const MEDIA_DIR = path.join(ROOT, 'public/media')
 const LOG = path.join(ROOT, 'data-cache/r2-failed.json')
-const CONCURRENCY = args.concurrency ? Number(args.concurrency) : 4
+// --s3：用 .env 的 S3 凭证直传（绕开 wrangler 登录态；build-bank --media r2 同款）
+const USE_S3 = !!args.s3
+// --skip-existing：上传前用 S3 HeadObject 判断，已存在则跳过（断点续传）
+const SKIP_EXISTING = !!args['skip-existing']
+const CONCURRENCY = args.concurrency ? Number(args.concurrency) : USE_S3 ? 8 : 4
 const TRIES = args.tries ? Number(args.tries) : 3
+
+const R2 = USE_S3 || SKIP_EXISTING ? makeR2() : null
+if ((USE_S3 || SKIP_EXISTING) && !R2.ready) {
+  console.error(`❌ --s3/--skip-existing 需要 S3 凭证：${R2.missing.join(', ')}`)
+  process.exit(1)
+}
+// --resume：断点续传台账（data-cache/r2-uploaded.json 记录已成功上传的 key）
+const LEDGER = path.join(ROOT, 'data-cache/r2-uploaded.json')
+const RESUME = !!args.resume
+async function readLedger() {
+  try {
+    return new Set(JSON.parse(await fs.readFile(LEDGER, 'utf8')))
+  } catch {
+    return new Set()
+  }
+}
+async function saveLedger(set) {
+  await fs.mkdir(path.dirname(LEDGER), { recursive: true })
+  await fs.writeFile(LEDGER, JSON.stringify([...set]))
+}
+const CONTENT_TYPES = {
+  webp: 'image/webp',
+  avif: 'image/avif',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+}
+function contentTypeOf(rel) {
+  const ext = String(rel).split('.').pop().toLowerCase()
+  return CONTENT_TYPES[ext] || 'application/octet-stream'
+}
 
 async function walk(dir) {
   const out = []
@@ -62,6 +106,7 @@ async function writeFailed(failures) {
 }
 
 // 目标列表（rel 相对 public/media，如 media/<id>/image.full.webp）
+const ledger = RESUME ? await readLedger() : null
 let rels
 if (args['retry-failed']) {
   rels = (await readFailed()).map((f) => f.rel).filter(Boolean)
@@ -76,19 +121,38 @@ if (args['retry-failed']) {
     console.error('❌ public/media 为空，请先运行 `npm run bank:stage`')
     process.exit(1)
   }
-  console.log(`⬆️  上传 ${rels.length} 个文件到 R2 桶「${bucket}」的 media/ 下（并发 ${CONCURRENCY}，重试 ${TRIES}）…\n`)
+  if (ledger) {
+    const before = rels.length
+    rels = rels.filter((r) => !ledger.has(r))
+    console.log(`↩️  续传：台账已记 ${before - rels.length} 个，本次待传 ${rels.length} 个`)
+  }
+  const via = USE_S3 ? 'S3 凭证直传' : 'wrangler --remote'
+  console.log(
+    `⬆️  上传 ${rels.length} 个文件到 R2 桶「${bucket}」的 media/ 下（${via}，并发 ${CONCURRENCY}，重试 ${TRIES}${SKIP_EXISTING ? '，跳过已存在' : ''}）…\n`,
+  )
 }
 
 async function uploadOne(rel) {
   const file = path.join(MEDIA_DIR, rel.replace(/^media\//, ''))
+  if (SKIP_EXISTING) {
+    try {
+      if (await R2.exists(rel)) return { ok: true, skipped: true }
+    } catch {
+      /* HEAD 失败：当作不存在，照常上传 */
+    }
+  }
   let lastMsg = ''
   for (let i = 0; i < TRIES; i++) {
     try {
-      await execFileP(
-        'npx',
-        ['--yes', 'wrangler', 'r2', 'object', 'put', `${bucket}/${rel}`, '--file', file, '--remote'],
-        { cwd: ROOT },
-      )
+      if (USE_S3) {
+        await R2.put(rel, await fs.readFile(file), contentTypeOf(rel))
+      } else {
+        await execFileP(
+          'npx',
+          ['--yes', 'wrangler', 'r2', 'object', 'put', `${bucket}/${rel}`, '--file', file, '--remote'],
+          { cwd: ROOT },
+        )
+      }
       return { ok: true }
     } catch (e) {
       lastMsg = (e.stderr?.toString?.() || e.stdout?.toString?.() || e.message || '').trim().split('\n')[0]
@@ -99,23 +163,35 @@ async function uploadOne(rel) {
 }
 
 let ok = 0
+let skipped = 0
 let done = 0
 const failures = []
 await mapPool(rels, CONCURRENCY, async (rel) => {
   const r = await uploadOne(rel)
   done++
   if (r.ok) {
-    ok++
-    console.log(`   ↑ [${String(done).padStart(5)}/${rels.length}]`, rel)
+    if (r.skipped) {
+      skipped++
+    } else {
+      ok++
+      if (ledger) {
+        ledger.add(rel)
+        if (ok % 200 === 0) await saveLedger(ledger)
+      }
+      console.log(`   ↑ [${String(done).padStart(5)}/${rels.length}]`, rel)
+    }
   } else {
     failures.push({ rel, msg: r.msg })
     console.error(`   ✗ [${String(done).padStart(5)}/${rels.length}]`, rel, r.msg)
   }
 })
 
+if (ledger) await saveLedger(ledger)
 await writeFailed(failures)
 
-console.log(`\n${failures.length ? '⚠️' : '✅'} 成功 ${ok} / ${rels.length}`)
+console.log(
+  `\n${failures.length ? '⚠️' : '✅'} 上传成功 ${ok}${skipped ? ` · 跳过已存在 ${skipped}` : ''} / 共 ${rels.length}`,
+)
 if (failures.length) {
   console.log(`\n❌ 仍有 ${failures.length} 个失败（已写入 data-cache/r2-failed.json）：`)
   failures.forEach((f) => console.log(`   · ${f.rel}  →  ${f.msg}`))

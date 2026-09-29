@@ -54,5 +54,10 @@ export function makeR2(env = process.env) {
         throw new Error(`R2 PUT ${key} → ${res.status} ${text.slice(0, 200)}`)
       }
     },
+    /** 对象是否存在（S3 HeadObject；仅 200 视为存在，其余当不存在） */
+    async exists(key) {
+      const res = await client.fetch(`${endpoint}/${key}`, { method: 'HEAD' })
+      return res.status === 200
+    },
   }
 }

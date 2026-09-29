@@ -323,10 +323,10 @@ async function download(url, dest, tries = 5) {
   let lastErr
   for (let i = 0; i < tries; i++) {
     const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 90000)
+    // 超时需覆盖 body；收到响应头后就 clearTimeout 会让卡住的 body 无限挂起
+    const timer = setTimeout(() => ctrl.abort(), 120000)
     try {
       const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'UNiaoer-build/0.1' } })
-      clearTimeout(timer)
       if (!res.ok) {
         const e = new Error('download HTTP ' + res.status)
         e.retryable = res.status === 429 || res.status >= 500
@@ -335,10 +335,11 @@ async function download(url, dest, tries = 5) {
       await fs.writeFile(dest, Buffer.from(await res.arrayBuffer()))
       return dest
     } catch (e) {
-      clearTimeout(timer)
       lastErr = e
       if (e.retryable === false || i >= tries - 1) break
       await sleep(1500 * (i + 1))
+    } finally {
+      clearTimeout(timer)
     }
   }
   throw lastErr

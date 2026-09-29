@@ -41,6 +41,16 @@ function isR2Url(url) {
   return url.startsWith(`${PUBLIC_BASE}/`)
 }
 
+/** 物种的全部素材（manifest v2 多素材优先，兼容单张 image/audio） */
+function assetsOf(sp) {
+  const images = sp.images && sp.images.length ? sp.images : sp.image ? [sp.image] : []
+  const audios = sp.audios && sp.audios.length ? sp.audios : sp.audio ? [sp.audio] : []
+  return [
+    ...images.map((a) => ({ a, kind: 'image' })),
+    ...audios.map((a) => ({ a, kind: 'audio' })),
+  ]
+}
+
 async function headOk(url) {
   try {
     const ctrl = new AbortController()
@@ -76,8 +86,18 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
   if (manifest.stats?.withAudio !== withAudio) {
     fail(`stats.withAudio(${manifest.stats?.withAudio}) 与实际(${withAudio}) 不一致`)
   }
+  const imageCount = manifest.species.reduce((n, s) => n + (s.images ? s.images.length : 0), 0)
+  const audioCount = manifest.species.reduce((n, s) => n + (s.audios ? s.audios.length : 0), 0)
+  if (manifest.stats?.imageCount != null && manifest.stats.imageCount !== imageCount) {
+    fail(`stats.imageCount(${manifest.stats.imageCount}) 与实际(${imageCount}) 不一致`)
+  }
+  if (manifest.stats?.audioCount != null && manifest.stats.audioCount !== audioCount) {
+    fail(`stats.audioCount(${manifest.stats.audioCount}) 与实际(${audioCount}) 不一致`)
+  }
 
   const seenIds = new Set()
+  let missOriginal = 0
+  let missSourceId = 0
   for (const sp of manifest.species) {
     if (!sp.id || !sp.nameZh || !sp.nameSci || !sp.family) {
       fail(`物种缺少基础字段：${sp.id || sp.nameZh || JSON.stringify(sp).slice(0, 60)}`)
@@ -85,23 +105,33 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
     if (seenIds.has(sp.id)) fail(`物种 id 重复：${sp.id}`)
     seenIds.add(sp.id)
 
-    for (const kind of ['image', 'audio']) {
-      const a = sp[kind]
-      if (!a) continue
+    for (const { a, kind } of assetsOf(sp)) {
       if (!a.url) fail(`${sp.id}.${kind} 缺少 url`)
       for (const f of ['license', 'author', 'source', 'sourceUrl']) {
         if (!a[f]) fail(`${sp.id}.${kind} 署名缺少 ${f}（CC 合规要求）`)
       }
+      // M3 溯源字段（011 §5）：构建脚本必写 originalUrl/sourceId；
+      // 旧版 manifest 尚无这些字段，故此处只告警不硬失败（重建 M3 后应归零）。
+      if (!a.originalUrl) missOriginal++
+      if (!a.sourceId) missSourceId++
     }
+  }
+  if (missOriginal) {
+    warn.push(`有 ${missOriginal} 个素材缺少 originalUrl（旧版 manifest；重跑 M3 后应归零）`)
+  }
+  if (missSourceId) {
+    warn.push(`有 ${missSourceId} 个素材缺少 sourceId（覆盖表/无 id 源，可接受但建议补）`)
   }
 }
 
 // ---- 2. 归属：媒体 URL 必须是 R2 公开域名 ----
 const nonR2 = []
 for (const sp of manifest.species) {
-  for (const kind of ['image', 'audio']) {
-    const a = sp[kind]
-    if (a?.url && !isR2Url(a.url)) nonR2.push(`${sp.id}.${kind}: ${a.url}`)
+  for (const { a, kind } of assetsOf(sp)) {
+    for (const field of ['url', 'thumbUrl', 'xlUrl', 'avifUrl']) {
+      const u = a[field]
+      if (u && !isR2Url(u)) nonR2.push(`${sp.id}.${kind}.${field}: ${u}`)
+    }
   }
 }
 if (nonR2.length > MAX_SOURCE_URL) {
@@ -118,9 +148,8 @@ let bad = 0
 if (DO_NET) {
   const r2Urls = []
   for (const sp of manifest.species) {
-    for (const kind of ['image', 'audio']) {
-      const a = sp[kind]
-      if (a?.url && isR2Url(a.url)) r2Urls.push(a.url)
+    for (const { a } of assetsOf(sp)) {
+      if (a.url && isR2Url(a.url)) r2Urls.push(a.url)
     }
   }
   const picked = [...r2Urls].sort(() => Math.random() - 0.5).slice(0, Math.max(0, SAMPLE))

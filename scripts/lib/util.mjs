@@ -44,20 +44,21 @@ export async function fetchJson(url, { retries = 3, timeout = 45000, headers = {
   let lastErr
   for (let attempt = 0; attempt <= retries; attempt++) {
     const ctrl = new AbortController()
+    // 超时覆盖 body（res.json()）；只在收到头后清除会让卡住的 body 无限挂起
     const timer = setTimeout(() => ctrl.abort(), timeout)
     try {
       const res = await fetch(url, {
         signal: ctrl.signal,
         headers: { 'User-Agent': UA, Accept: 'application/json', ...headers },
       })
-      clearTimeout(timer)
       if (res.status === 429) throw new Error('HTTP 429 (rate limited)')
       if (!res.ok) throw new Error('HTTP ' + res.status)
       return await res.json()
     } catch (e) {
-      clearTimeout(timer)
       lastErr = e
       if (attempt < retries) await sleep(1200 * (attempt + 1))
+    } finally {
+      clearTimeout(timer)
     }
   }
   throw lastErr

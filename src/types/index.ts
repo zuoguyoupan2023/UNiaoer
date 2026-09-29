@@ -47,6 +47,10 @@ export interface MediaAsset {
   author: string
   source: string // 'Xeno-canto' | 'iNaturalist' | ...
   sourceUrl: string
+  /** 源站直链（下载母版前的 URL；与官网比对用，manifest v2 起） */
+  originalUrl?: string
+  /** 源站稳定 id（iNat observation/photo id 或 XC recording id，manifest v2 起） */
+  sourceId?: string
   quality?: 'A' | 'B' | 'C' | 'D' | 'E'
   durationSec?: number
   /** ND 等不可转码的素材为 false（占位/派生均不做） */

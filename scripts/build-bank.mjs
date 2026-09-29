@@ -38,6 +38,7 @@ import { rgbaToThumbHash } from 'thumbhash'
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const INAT = 'https://api.inaturalist.org/v1'
+const GBIF = 'https://api.gbif.org/v1'
 const CACHE = path.join(ROOT, 'data-cache')
 const PUBLIC_DATA = path.join(ROOT, 'public/data')
 const PUBLIC_MEDIA = path.join(ROOT, 'public/media')
@@ -57,6 +58,13 @@ const OPT = {
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
   out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
+  retryFailed: !!args['retry-failed'] || !!args['only-failed'], // 只重跑有问题的物种
+  from: args.from || '', // --retry-failed 时读取的旧 manifest（默认 out 或 data-cache/manifest-m3.json）
+  ids: (args.ids || args.id || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean), // 只处理指定物种（id 或学名）
+  verbose: !!args.verbose, // 打印「已存在，跳过」等细节
 }
 
 /** R2 S3 客户端（仅 --media r2 用）；--media stage 只需 publicBase */
@@ -66,6 +74,30 @@ let PUBLIC_BASE = ''
 let OVERRIDES = {}
 /** 可用的 AV1 静图编码器（检测一次；null = 不产出 AVIF） */
 let AVIF_ENCODER = null
+/** IUCN 同义词覆盖表（懒加载；XC 查不到时备用学名） */
+let IUCN_SYNONYMS = null
+/**
+ * XC 限流极重（并发下会掉到 ~1 条/分钟）：全局串行队列 + 每次请求后随机延迟，
+ * 保证任意时刻最多一个 XC 请求在途（011 §4.2 / 014 §2.4）。
+ */
+let XC_TAIL = Promise.resolve()
+function xcQueue(fn) {
+  const result = XC_TAIL.then(fn, fn)
+  const coolDown = () => sleep(1200 + Math.random() * 1200)
+  XC_TAIL = result.then(coolDown, coolDown)
+  return result
+}
+
+async function loadIucnSynonyms() {
+  if (IUCN_SYNONYMS) return IUCN_SYNONYMS
+  try {
+    const d = JSON.parse(await fs.readFile(path.join(ROOT, 'data/iucn-synonyms.json'), 'utf8'))
+    IUCN_SYNONYMS = d.synonyms || {}
+  } catch {
+    IUCN_SYNONYMS = {}
+  }
+  return IUCN_SYNONYMS
+}
 
 /** 可用磁盘字节（statfs；失败返回 Infinity，视为充足） */
 async function freeBytes() {
@@ -98,6 +130,22 @@ function stub(sp) {
     image: null,
     audio: null,
   }
+}
+
+/** 判断旧 manifest 里的物种是否需要修复（--retry-failed）：
+ *  - 素材缺失或下载失败（url 仍指向源站）
+ *  - 可转码图片缺少派生图（thumbUrl）
+ */
+function needsRepair(prev) {
+  if (!prev) return true
+  const assets = [...(prev.images || []), ...(prev.audios || [])]
+  if (!assets.length) return true
+  for (const a of assets) {
+    if (!a.url) return true
+    if (PUBLIC_BASE && !a.url.startsWith(PUBLIC_BASE + '/')) return true
+    if (a.type === 'image' && a.transcode && !a.thumbUrl) return true
+  }
+  return false
 }
 
 /** 人工覆盖表 data/media-overrides.json（可选）：{ "<id 或学名>": { images:[], audios:[], excludeUrls:[] } } */
@@ -137,8 +185,23 @@ async function main() {
   const source = OPT.taxa ? 'data/taxa.json' : 'data/species.json'
   const raw = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
   const species = Array.isArray(raw) ? raw : raw.species || []
-  const list = species.slice(0, OPT.limit)
   OVERRIDES = await loadOverrides()
+
+  // 定向修复：只挑有问题的物种，结果合并回旧 manifest（不破坏其余物种）
+  let prevManifest = null
+  let list = species.slice(0, OPT.limit)
+  if (OPT.ids.length) {
+    const set = new Set(OPT.ids)
+    list = species.filter((s) => set.has(s.id) || set.has(s.nameSci))
+  } else if (OPT.retryFailed) {
+    const fromRel = OPT.from || OPT.out || 'data-cache/manifest-m3.json'
+    const fromAbs = path.resolve(ROOT, fromRel)
+    prevManifest = JSON.parse(await fs.readFile(fromAbs, 'utf8'))
+    if (!OPT.out) OPT.out = fromRel // 读写同一份 manifest
+    const prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
+    list = species.filter((sp) => needsRepair(prevById.get(sp.id)))
+    console.log(`\n🔧 定向修复：${fromRel} → 待修 ${list.length} 个物种`)
+  }
 
   console.log(`\n🐦 UNiaoer 题库构建`)
   console.log(`   清单: ${source}  物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
@@ -176,8 +239,24 @@ async function main() {
     return rec
   })
 
-  const withImage = records.filter((r) => r.image).length
-  const withAudio = records.filter((r) => r.audio).length
+  // 修复模式：把重跑结果按 id 合并回旧 manifest，保持原顺序
+  let outputSpecies = records
+  if (prevManifest) {
+    const recordById = new Map(records.map((r) => [r.id, r]))
+    const seen = new Set()
+    outputSpecies = (prevManifest.species || []).map((s) => {
+      const r = recordById.get(s.id)
+      if (r) {
+        seen.add(s.id)
+        return r
+      }
+      return s
+    })
+    for (const r of records) if (!seen.has(r.id)) outputSpecies.push(r)
+  }
+
+  const withImage = outputSpecies.filter((r) => r.image).length
+  const withAudio = outputSpecies.filter((r) => r.audio).length
   const manifest = {
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
@@ -185,21 +264,25 @@ async function main() {
     mediaMode: OPT.media,
     source,
     perSpecies: OPT.per,
-    total: records.length,
+    total: outputSpecies.length,
     stats: {
       withImage,
       withAudio,
-      imageCount: records.reduce((n, r) => n + (r.images ? r.images.length : 0), 0),
-      audioCount: records.reduce((n, r) => n + (r.audios ? r.audios.length : 0), 0),
+      imageCount: outputSpecies.reduce((n, r) => n + (r.images ? r.images.length : 0), 0),
+      audioCount: outputSpecies.reduce((n, r) => n + (r.audios ? r.audios.length : 0), 0),
     },
-    species: records,
+    species: outputSpecies,
+  }
+  if (prevManifest) {
+    manifest.repairedAt = new Date().toISOString()
+    manifest.repairedSpecies = records.map((r) => r.id)
   }
 
   const outFile = OPT.out ? path.resolve(ROOT, OPT.out) : path.join(PUBLIC_DATA, 'manifest.json')
   await ensureDir(path.dirname(outFile))
   await fs.writeFile(outFile, JSON.stringify(manifest, null, 2))
 
-  console.log(`\n✅ 完成：${records.length} 种，图片 ${withImage}，音频 ${withAudio}`)
+  console.log(`\n✅ 完成：处理 ${records.length} 种，输出 ${outputSpecies.length} 种（图片 ${withImage}，音频 ${withAudio}）`)
   if (skipped) console.log(`   ⏱️ 因时间预算跳过 ${skipped} 种（下次构建会补齐）`)
   console.log(`   写入 ${path.relative(ROOT, outFile)}`)
   const failed = records.filter((r) => !r.image && !r.audio && !skipped).map((r) => r.nameZh)
@@ -220,17 +303,15 @@ async function buildSpecies(sp, useXc) {
       fetchTaxon(taxon.id),
     ])
 
-    // M1：每物种 ≤per 图/音；图以 iNat taxon.default_photo 为首选（011 §4.1）
+    // M3：每物种 ≤per 图/音；图以 iNat taxon.default_photo 为首选（011 §4.1）
     base.images = pickInatImages(photos, OPT.policy, detail && detail.default_photo)
     base.image = base.images[0] || null
 
-    let audios = pickInatAudios(sounds, OPT.policy)
-    if (useXc) {
-      const xc = await fetchXc(sp.nameSci)
-      const xcAudio = pickXcAudio(xc, OPT.policy)
-      if (xcAudio) audios = [xcAudio, ...audios] // XC 优先（质量更可控）
-    }
-    base.audios = audios.slice(0, OPT.per)
+    // 音频：XC 优先（质量 A→E、同质量取短），不足用 iNat sounds 兜底（011 §4.2）
+    const [xcAudios, inatAudios] = useXc
+      ? await Promise.all([findXcAudios(sp), Promise.resolve(pickInatAudios(sounds, OPT.policy))])
+      : [[], pickInatAudios(sounds, OPT.policy)]
+    base.audios = [...xcAudios, ...inatAudios].slice(0, OPT.per)
     base.audio = base.audios[0] || null
 
     applyOverrides(base)
@@ -296,11 +377,13 @@ async function fetchInat(taxonId, kind) {
       return (d.results || []).map((o) => ({
         id: o.id,
         photos: (o.photos || []).map((p) => ({
+          id: p.id,
           url: p.url,
           license_code: p.license_code,
           attribution: p.attribution,
         })),
         sounds: (o.sounds || []).map((s) => ({
+          id: s.id,
           file_url: s.file_url,
           license_code: s.license_code,
           attribution: s.attribution,
@@ -324,7 +407,7 @@ async function fetchTaxon(taxonId) {
   )
 }
 
-/** 抓取 Xeno-canto（带缓存） */
+/** 抓取 Xeno-canto（带缓存；网络请求走全局串行队列，规避限流） */
 async function fetchXc(sci) {
   const cacheFile = path.join(CACHE, 'xc', `${slug(sci)}.json`)
   return cachedJson(
@@ -332,57 +415,113 @@ async function fetchXc(sci) {
     async () => {
       const query = `sp:"${sci}"`
       const url = `https://xeno-canto.org/api/3/recordings?query=${encodeURIComponent(query)}&per_page=100&key=${encodeURIComponent(OPT.xcKey)}`
-      return await fetchJson(url)
+      return await xcQueue(() => fetchJson(url, { retries: 5, timeout: 90000 }))
     },
     { force: OPT.force },
   )
 }
 
-/** 由 iNat photo 对象构造 asset（large 母版，medium 回退） */
-function inatPhotoAsset(p, sourceUrl) {
+/**
+ * 在 XC 上找 ≤per 条候选录音。先用 iNat 学名；无结果再用同义词
+ * （覆盖表 + GBIF accepted/synonyms）逐个查（014 §2.4）。
+ */
+async function findXcAudios(sp) {
+  let list = pickXcAudios(await fetchXc(sp.nameSci), OPT.policy)
+  if (list.length) return list
+  const names = (await candidateNames(sp)).filter((n) => n !== sp.nameSci)
+  for (const nm of names) {
+    list = pickXcAudios(await fetchXc(nm), OPT.policy)
+    if (list.length) return list
+    await sleep(600 + Math.random() * 600)
+  }
+  return []
+}
+
+/** 备选学名（含同义词），缓存；顺序：原名 → 覆盖表 → GBIF accepted → GBIF synonyms */
+async function candidateNames(sp) {
+  const cacheFile = path.join(CACHE, 'xc-syn', `${sp.id}.json`)
+  const synonyms = await loadIucnSynonyms()
+  return cachedJson(
+    cacheFile,
+    async () => {
+      const out = [sp.nameSci]
+      const ov = synonyms[sp.nameSci]
+      for (const v of Array.isArray(ov) ? ov : ov ? [ov] : []) out.push(v)
+      try {
+        const m = await fetchJson(`${GBIF}/species/match?name=${encodeURIComponent(sp.nameSci)}`)
+        if (m && m.kingdom === 'Animalia') {
+          const key = m.acceptedUsageKey || m.usageKey
+          if (m.acceptedUsageKey && m.acceptedUsageKey !== m.usageKey) {
+            const acc = await fetchJson(`${GBIF}/species/${m.acceptedUsageKey}`)
+            if (acc && acc.canonicalName) out.push(acc.canonicalName)
+          }
+          if (key) {
+            const syn = await fetchJson(`${GBIF}/species/${key}/synonyms?limit=200`)
+            for (const r of syn.results || []) {
+              const c = r.canonicalName || r.scientificName
+              if (c) out.push(c.trim().split(/\s+/).slice(0, 2).join(' '))
+            }
+          }
+        }
+      } catch {
+        /* 无 GBIF 时忽略 */
+      }
+      return [...new Set(out.map((s) => String(s).trim()).filter(Boolean))].slice(0, 25)
+    },
+    { force: OPT.force },
+  )
+}
+
+/** 由 iNat photo 对象构造 asset（large 母版，medium 回退）；带 originalUrl/sourceId 溯源 */
+function inatPhotoAsset(p, sourceUrl, sourceId) {
   const url = p.url || ''
   if (!url) return null
-  const a = asset(
-    url.replace('/square.', '/large.'),
-    p.license_code,
-    p.attribution,
-    'iNaturalist',
-    sourceUrl,
-  )
+  const master = url.replace('/square.', '/large.')
+  const a = asset(master, p.license_code, p.attribution, 'iNaturalist', sourceUrl, sourceId)
+  a.originalUrl = master
   const medium = url.replace('/square.', '/medium.')
-  if (medium !== a.url) a.altUrl = medium
+  if (medium !== master) a.altUrl = medium
   return a
 }
 
-/** M1 取图：taxon.default_photo 优先，再按观察票数（每条观察最多 1 张），去重，≤per */
+/** iNat 的 GIF 动图没有 large/medium 变体（会 404/挂起），且不适合当认鸟图，直接跳过 */
+function isGif(url) {
+  return /\.gif(?:[?#]|$)/i.test(String(url || ''))
+}
+
+/** M3 取图：taxon.default_photo 优先，再按观察票数（每条观察最多 1 张），按 id/url 去重，≤per */
 function pickInatImages(results, policy, defaultPhoto) {
   const out = []
   const seen = new Set()
   const push = (a) => {
-    if (!a || seen.has(a.url)) return
+    if (!a) return
+    if (seen.has(a.url) || (a.sourceId && seen.has(a.sourceId))) return
     seen.add(a.url)
+    if (a.sourceId) seen.add(a.sourceId)
     out.push(a)
   }
-  if (defaultPhoto && licenseAllowed(defaultPhoto.license_code, policy)) {
+  if (defaultPhoto && !isGif(defaultPhoto.url) && licenseAllowed(defaultPhoto.license_code, policy)) {
     push(
       inatPhotoAsset(
         defaultPhoto,
         defaultPhoto.id ? `https://www.inaturalist.org/photos/${defaultPhoto.id}` : '',
+        defaultPhoto.id,
       ),
     )
   }
   for (const o of results) {
     if (out.length >= OPT.per) break
     for (const p of o.photos || []) {
-      if (!licenseAllowed(p.license_code, policy)) continue
-      push(inatPhotoAsset(p, `https://www.inaturalist.org/observations/${o.id}`))
-      break // 每条观察最多取 1 张
+      if (!licenseAllowed(p.license_code, policy) || isGif(p.url)) continue
+      const before = out.length
+      push(inatPhotoAsset(p, `https://www.inaturalist.org/observations/${o.id}`, p.id ?? o.id))
+      if (out.length > before) break // 每条观察最多取 1 张
     }
   }
   return out.slice(0, OPT.per)
 }
 
-/** M1 取音：iNat sounds（去重，≤per） */
+/** M3 取音：iNat sounds（按 url 去重，≤per） */
 function pickInatAudios(results, policy) {
   const out = []
   const seen = new Set()
@@ -393,7 +532,14 @@ function pickInatAudios(results, policy) {
       if (!s.file_url || seen.has(s.file_url)) continue
       seen.add(s.file_url)
       out.push(
-        asset(s.file_url, s.license_code, s.attribution, 'iNaturalist', `https://www.inaturalist.org/observations/${o.id}`),
+        asset(
+          s.file_url,
+          s.license_code,
+          s.attribution,
+          'iNaturalist',
+          `https://www.inaturalist.org/observations/${o.id}`,
+          s.id ?? o.id,
+        ),
       )
       break
     }
@@ -411,32 +557,45 @@ function applyOverrides(base) {
   const toAssets = (list, kind) =>
     (list || [])
       .filter((o) => o && o.url && licenseAllowed(o.license, OPT.policy))
-      .map((o) =>
-        asset(o.url, o.license, o.author, o.source || 'override', o.sourceUrl || ''),
-      )
-      .map((a) => ({ ...a, overridden: true, type: kind, speciesId: base.id }))
+      .map((o) => {
+        const a = asset(
+          o.url,
+          o.license,
+          o.author,
+          o.source || 'override',
+          o.sourceUrl || '',
+          o.sourceId,
+        )
+        if (o.originalUrl) a.originalUrl = o.originalUrl
+        return { ...a, overridden: true, type: kind, speciesId: base.id }
+      })
 
   base.images = [...toAssets(ov.images, 'image'), ...filter(base.images)].slice(0, OPT.per)
   base.audios = [...toAssets(ov.audios, 'audio'), ...filter(base.audios)].slice(0, OPT.per)
 }
 
-function pickXcAudio(data, policy) {
+/** M3 取音：XC 质量 A→E 优先（同质量取短），许可过滤，≤per；返回 best-first 候选数组 */
+function pickXcAudios(data, policy) {
   const order = { A: 0, B: 1, C: 2, D: 3, E: 4 }
   // 质量优先；同质量下优先短录音（体积小、加载快）
-  const recs = [...(data.recordings || [])].sort(
+  const recs = [...((data && data.recordings) || [])].sort(
     (a, b) => (order[a.q] ?? 9) - (order[b.q] ?? 9) || lengthSec(a.length) - lengthSec(b.length),
   )
+  const out = []
+  const seen = new Set()
   for (const r of recs) {
+    if (out.length >= OPT.per) break
     if (!licenseAllowed(r.lic, policy)) continue
     if (lengthSec(r.length) <= 0) continue // 跳过 0:00 之类的坏录音（下载会 404）
     let file = r.file || ''
     if (file.startsWith('//')) file = 'https:' + file
-    if (!file) continue
-    const a = asset(file, r.lic, r.rec, 'Xeno-canto', r.url || '')
+    if (!file || seen.has(file)) continue
+    seen.add(file)
+    const a = asset(file, r.lic, r.rec, 'Xeno-canto', r.url || '', r.id)
     a.quality = r.q || ''
-    return a
+    out.push(a)
   }
-  return null
+  return out
 }
 
 /** "4:08" → 248 秒；未知按很长处理 */
@@ -445,9 +604,13 @@ function lengthSec(s) {
   return m ? Number(m[1]) * 60 + Number(m[2]) : 9999
 }
 
-function asset(url, rawLicense, author, source, sourceUrl) {
+function asset(url, rawLicense, author, source, sourceUrl, sourceId) {
   return {
     url,
+    /** 源站直链（下载母版前的 URL；与官网比对用，011 §5） */
+    originalUrl: url,
+    /** 源站稳定 id（iNat observation/photo id 或 XC recording id） */
+    sourceId: sourceId == null ? '' : String(sourceId),
     license: normalizeLicense(rawLicense),
     licenseRaw: rawLicense || '',
     author: (author || '').trim() || '未知作者',
@@ -459,34 +622,41 @@ function asset(url, rawLicense, author, source, sourceUrl) {
 
 /** 下载 →（可选）转码 → 落盘 public/media，或 stage（本地暂存+URL 指向 R2），或上传 R2 */
 async function materialize(rec, id) {
-  if (rec.image) rec.image = await persistImage(rec.image, id)
-  if (rec.audio) rec.audio = await persistOne(rec.audio, id, 'audio', 'mp3')
-  if (rec.images && rec.images.length) rec.images[0] = rec.image || rec.images[0]
-  if (rec.audios && rec.audios.length) rec.audios[0] = rec.audio || rec.audios[0]
+  // 序号即"从优到劣"排名（011 §6）：image-1/audio-1 为首选
+  for (let i = 0; i < (rec.images || []).length; i++) {
+    rec.images[i] = await persistImage(rec.images[i], id, i + 1)
+  }
+  for (let i = 0; i < (rec.audios || []).length; i++) {
+    rec.audios[i] = await persistOne(rec.audios[i], id, `audio-${i + 1}`, 'mp3')
+  }
+  rec.image = rec.images[0] || null
+  rec.audio = rec.audios[0] || null
 }
 
 /**
  * 图片（可转码）：生成派生图组 thumb/full/xl(+avif) + ThumbHash（C2，详 006 §8）。
+ * - 5 张图都出全套（MM4）；序号 n 即排名，文件名 `image-<n>.*`
  * - ND 等不可转码的走 persistOne 原样保存（ThumbHash 亦属派生作品，ND 一律不做）
  * - stage 模式下本地派生齐全则跳过下载，ThumbHash 从现有 thumb 重算（增量补抓）
  */
-async function persistImage(a, id) {
-  if (!a.transcode) return persistOne(a, id, 'image', 'webp')
+async function persistImage(a, id, n) {
+  const name = `image-${n}`
+  if (!a.transcode) return persistOne(a, id, name, 'webp')
 
   const outDir = path.join(PUBLIC_MEDIA, id)
   await ensureDir(outDir)
   const files = {
-    thumb: path.join(outDir, 'image.thumb.webp'),
-    full: path.join(outDir, 'image.full.webp'),
-    xl: path.join(outDir, 'image.xl.webp'),
-    avif: path.join(outDir, 'image.full.avif'),
+    thumb: path.join(outDir, `${name}.thumb.webp`),
+    full: path.join(outDir, `${name}.full.webp`),
+    xl: path.join(outDir, `${name}.xl.webp`),
+    avif: path.join(outDir, `${name}.full.avif`),
   }
   const exists = (f) => fs.access(f).then(() => true, () => false)
 
   if (OPT.media === 'stage' && (await exists(files.thumb)) && (await exists(files.full)) && (await exists(files.xl))) {
     const thumbhash = await thumbHashFromFile(files.thumb).catch(() => '')
-    const out = await finalizeImage(a, id, { thumbhash, avif: await exists(files.avif) })
-    console.log('      ↳ image 派生图已存在，跳过下载')
+    const out = await finalizeImage(a, id, n, { thumbhash, avif: await exists(files.avif) })
+    if (OPT.verbose) console.log(`      ↳ ${name} 派生图已存在，跳过下载`)
     return out
   }
 
@@ -503,12 +673,12 @@ async function persistImage(a, id) {
         raw = await download(a.altUrl, path.join(tmpDir, 'image.src'))
         masterUrl = a.altUrl // large 缺失时以 medium 为母版，manifest 指向它保持一致
       } catch (e2) {
-        console.warn(`      ↳ image 下载失败，保留源站地址：${e2.message}`)
+        console.warn(`      ↳ ${name} 下载失败，保留源站地址：${e2.message}`)
         await fs.rm(tmpDir, { recursive: true, force: true })
         return a
       }
     } else {
-      console.warn(`      ↳ image 下载失败，保留源站地址：${e1.message}`)
+      console.warn(`      ↳ ${name} 下载失败，保留源站地址：${e1.message}`)
       await fs.rm(tmpDir, { recursive: true, force: true })
       return a
     }
@@ -530,25 +700,38 @@ async function persistImage(a, id) {
         await fs.rm(files.avif, { force: true })
       }
     }
-    const thumbhash = await thumbHashFromFile(files.thumb)
+    // 极少数源图会产出无法二次解码的 thumb（"image data not found"）。
+    // 失败时重编一次 thumb 再试；仍失败则放弃 ThumbHash 占位图，但**保留**全部派生图，
+    // 避免整张图退化成单文件（旧行为）。
+    let thumbhash = ''
+    try {
+      thumbhash = await thumbHashFromFile(files.thumb)
+    } catch {
+      try {
+        await runFfmpeg(['-y', '-i', raw, '-vf', "scale='min(320,iw)':-2", '-c:v', 'libwebp', '-quality', '72', files.thumb])
+        thumbhash = await thumbHashFromFile(files.thumb)
+      } catch {
+        console.warn(`      ↳ ${name} ThumbHash 生成失败，跳过占位图（派生图保留）`)
+      }
+    }
     await fs.rm(raw, { force: true })
     await fs.rm(tmpDir, { recursive: true, force: true })
-    return finalizeImage({ ...a, url: masterUrl }, id, { thumbhash, avif })
+    return finalizeImage({ ...a, url: masterUrl, originalUrl: masterUrl }, id, n, { thumbhash, avif })
   } catch (e) {
     // 转码失败：退回单文件（保留原始扩展名），与旧行为一致；raw 复用，不再重新下载
-    console.warn(`      ↳ image 转码失败，保留原文件：${e.message}`)
+    console.warn(`      ↳ ${name} 转码失败，保留原文件：${e.message}`)
     for (const f of [files.thumb, files.full, files.xl, files.avif]) await fs.rm(f, { force: true })
-    return persistLocalFile({ ...a, url: masterUrl }, id, 'image', raw, masterUrl, 'webp')
+    return persistLocalFile({ ...a, url: masterUrl, originalUrl: masterUrl }, id, name, raw, masterUrl, 'webp')
   }
 }
 
 /** 派生图齐全后的 URL 组装；r2 模式再把 public/media 里的派生图逐个直传 */
-async function finalizeImage(a, id, { thumbhash, avif }) {
+async function finalizeImage(a, id, n, { thumbhash, avif }) {
   const rels = {
-    url: `media/${id}/image.full.webp`,
-    thumbUrl: `media/${id}/image.thumb.webp`,
-    xlUrl: `media/${id}/image.xl.webp`,
-    ...(avif ? { avifUrl: `media/${id}/image.full.avif` } : {}),
+    url: `media/${id}/image-${n}.full.webp`,
+    thumbUrl: `media/${id}/image-${n}.thumb.webp`,
+    xlUrl: `media/${id}/image-${n}.xl.webp`,
+    ...(avif ? { avifUrl: `media/${id}/image-${n}.full.avif` } : {}),
   }
   const out = { ...a }
   delete out.altUrl
@@ -612,7 +795,7 @@ async function persistOne(a, id, kind, ext) {
   await ensureDir(tmpDir)
 
   // 未转码（ND 或转码失败）时保留原始扩展名，避免出现 image.src 这种怪文件名
-  const outExt = a.transcode ? ext : extFromUrl(a.url) || (kind === 'image' ? 'jpg' : 'mp3')
+  const outExt = a.transcode ? ext : extFromUrl(a.url) || (kind.startsWith('image') ? 'jpg' : 'mp3')
   const localPath = path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}`)
 
   // stage 增量：目标文件已在本地则跳过下载（补抓只拉缺失的）
@@ -621,7 +804,7 @@ async function persistOne(a, id, kind, ext) {
     (outExt === ext || !a.transcode) &&
     (await fs.access(localPath).then(() => true, () => false))
   ) {
-    console.log(`      ↳ ${kind} 已存在，跳过下载`)
+    if (OPT.verbose) console.log(`      ↳ ${kind} 已存在，跳过下载`)
     return { ...a, url: `${PUBLIC_BASE}/media/${id}/${kind}.${outExt}` }
   }
 
@@ -642,7 +825,7 @@ async function persistLocalFile(a, id, kind, raw, srcUrl, ext) {
   const tmpDir = path.join(TMP, id)
   await ensureDir(tmpDir)
 
-  let outExt = extFromUrl(srcUrl) || (kind === 'image' ? 'jpg' : 'mp3')
+  let outExt = extFromUrl(srcUrl) || (kind.startsWith('image') ? 'jpg' : 'mp3')
   let file = raw
   if (a.transcode) {
     const out = path.join(tmpDir, `${kind}.${ext}`)
@@ -682,7 +865,7 @@ function extFromUrl(url) {
 }
 
 async function transcode(kind, src, out) {
-  if (kind === 'image') {
+  if (kind.startsWith('image')) {
     await execFileP('ffmpeg', [
       '-y', '-i', src,
       '-vf', "scale='min(1280,iw)':-2",
@@ -705,17 +888,18 @@ function guessContentType(url, kind, ext) {
   if (u.includes('.wav')) return 'audio/wav'
   if (u.includes('.ogg')) return 'audio/ogg'
   if (u.includes('.mp3')) return 'audio/mpeg'
-  return kind === 'image' ? 'image/jpeg' : 'audio/mpeg'
+  return kind.startsWith('image') ? 'image/jpeg' : 'audio/mpeg'
 }
 
 async function download(url, dest, tries = 5) {
   let lastErr
   for (let i = 0; i < tries; i++) {
     const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 60000)
+    // 超时覆盖「响应头 + body」全程：不能在收到响应头后就清掉，
+    // 否则服务器发头后卡住 body 会导致请求无限挂起（假死）。
+    const timer = setTimeout(() => ctrl.abort(), 120000)
     try {
       const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'UNiaoer-build/0.1' } })
-      clearTimeout(timer)
       if (!res.ok) {
         const err = new Error('download HTTP ' + res.status)
         // 4xx（除 429）不重试；网络错误/429/5xx 可重试
@@ -726,10 +910,11 @@ async function download(url, dest, tries = 5) {
       await fs.writeFile(dest, buf)
       return dest
     } catch (e) {
-      clearTimeout(timer)
       lastErr = e
       if (e.retryable === false || i >= tries - 1) break
       await sleep(1000 * (i + 1) + Math.random() * 800)
+    } finally {
+      clearTimeout(timer)
     }
   }
   throw lastErr
