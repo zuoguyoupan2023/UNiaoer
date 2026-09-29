@@ -28,8 +28,8 @@ const en: typeof zhMessages = {
   },
   footer: {
     source: 'Data: Xeno-canto · iNaturalist',
-    taglineLeft: 'Meet birds easy',
-    taglineRight: 'Meet birds friendly',
+    taglineLeft: 'Meet birds friendly',
+    taglineRight: 'Meet birds easy',
   },
   home: {
     title: 'Time for a challenge!',

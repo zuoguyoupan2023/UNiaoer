@@ -23,8 +23,8 @@ export const messages = {
   },
   footer: {
     source: '数据来源：Xeno-canto · iNaturalist',
-    taglineLeft: '有鸟儿',
-    taglineRight: '友鸟儿',
+    taglineLeft: '友鸟儿',
+    taglineRight: '有鸟儿',
   },
   home: {
     title: '是时候挑战一下自己了！',
