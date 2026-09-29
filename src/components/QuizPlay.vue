@@ -69,7 +69,7 @@ watch(
     selected.value = null
   },
 )
-/** 同类型池（buildQuestions 已按档位裁剪：L2/L3 前 3、L4/L5 前 5）；缺省回退当前题面 */
+/** 同类型全部素材（buildQuestions 提供，不按档位裁剪，L1 也全给）；缺省回退当前题面 */
 const samePool = computed<MediaAsset[]>(() => {
   const q = quiz.current
   if (!q) return []
