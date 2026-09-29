@@ -3,11 +3,11 @@ import { FAMILY_EN, FAMILY_LATIN, familyDisplay } from '../family'
 
 describe('familyDisplay（015 #2 拉丁名+本地名）', () => {
   it('zh：拉丁名+中文', () => {
-    expect(familyDisplay('鸫科', 'zh-CN')).toBe('Turdidae 鸫科')
+    expect(familyDisplay('鸫科', 'zh-CN')).toBe('Turdidae | 鸫科')
   })
 
   it('en：拉丁名+英文', () => {
-    expect(familyDisplay('鸫科', 'en')).toBe('Turdidae Thrushes')
+    expect(familyDisplay('鸫科', 'en')).toBe('Turdidae | Thrushes')
   })
 
   it('两张映射表覆盖同一批科', () => {

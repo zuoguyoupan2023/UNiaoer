@@ -15,6 +15,10 @@
   width: 100%; /* R34：与 app-main 真等宽（否则 auto margin 使其收缩为内容宽） */
   max-width: 760px; /* 与 app-main 等宽 */
   margin: 0 auto 12px;
+  /* 吸顶（016 #3）：滚动时导航常驻（设置页长列表等）；答题沉浸模式本就 v-if 隐藏 */
+  position: sticky;
+  top: 8px;
+  z-index: 20;
   padding: 6px 8px 6px 12px;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);

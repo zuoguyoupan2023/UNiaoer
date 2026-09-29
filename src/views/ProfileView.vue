@@ -455,7 +455,8 @@ async function onFile(e: Event) {
 }
 .section-tabs {
   position: sticky;
-  top: 0;
+  /* 顶栏已全局吸顶（top 8px + 高≈48px，移动端两行≈84px），标签停靠其下 */
+  top: 60px;
   z-index: 6;
   display: flex;
   gap: 8px;
@@ -488,7 +489,18 @@ async function onFile(e: Event) {
 #sec-titles,
 #sec-badges,
 #sec-wrong {
-  scroll-margin-top: 58px;
+  scroll-margin-top: 112px;
+}
+@media (max-width: 640px) {
+  .section-tabs {
+    top: 92px;
+  }
+  #sec-data,
+  #sec-titles,
+  #sec-badges,
+  #sec-wrong {
+    scroll-margin-top: 144px;
+  }
 }
 h2.sec {
   font-size: 1.15rem;

@@ -270,15 +270,16 @@ export const FAMILY_EN: Record<string, string> = {
 }
 
 /**
- * 科名显示（015 #2）：「拉丁名 + 本地名」组合，随 locale 切换。
- * - zh：`Turdidae 鸫科`（拉丁名+中文）
- * - en：`Turdidae Thrushes`（拉丁名+英文）
+ * 科名显示（015 #2）：「拉丁名 | 本地名」组合，随 locale 切换。
+ * - zh：`Turdidae | 鸫科`（拉丁名+中文）
+ * - en：`Turdidae | Thrushes`（拉丁名+英文）
+ * 竖线分隔（016 #2）：拉丁名与俗名都是拉丁字母时（en）极易混在一起，视觉上必须隔开。
  * 未收录的科回退中文原文；en 缺英文俗名时只显示拉丁名。
  */
 export function familyDisplay(zhFamily: string, locale: string): string {
   const latin = FAMILY_LATIN[zhFamily]
   if (!latin) return zhFamily
-  if (locale !== 'en') return `${latin} ${zhFamily}`
+  if (locale !== 'en') return `${latin} | ${zhFamily}`
   const en = FAMILY_EN[zhFamily]
-  return en ? `${latin} ${en}` : latin
+  return en ? `${latin} | ${en}` : latin
 }
