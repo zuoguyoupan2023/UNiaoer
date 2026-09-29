@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Activity, Award, Download, Sparkles, Upload, User } from 'lucide-vue-next'
+import { Activity, Award, Download, History, Sparkles, Upload, User } from 'lucide-vue-next'
 import {
   clearAll,
   exportAll,
@@ -295,6 +295,9 @@ async function onFile(e: Event) {
         <StatsCharts :rounds="rounds" />
 
         <div class="actions">
+          <RouterLink class="btn btn-secondary" to="/history">
+            <History class="ic" :size="16" /> {{ t('profile.historyBtn') }}
+          </RouterLink>
           <button class="btn btn-secondary" @click="exportJson">
             <Download class="ic" :size="16" /> {{ t('profile.exportData') }}
           </button>

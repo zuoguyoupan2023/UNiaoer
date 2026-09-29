@@ -30,146 +30,144 @@ const WHITELIST = [
 
 const CJK = /[\u4e00-\u9fff\u3400-\u4dbf]/
 
-/** 剥离注释，保留字符串字面量内容（我们要找的就是字符串/模板里的 CJK） */
+/** 剥离注释，保留字符串字面量内容（我们要找的就是字符串/模板里的 CJK）。
+ * 统一状态栈：sq/dq/tpl 等子状态结束后回到进入前的状态，避免模板字符串里的
+ * 引号（如 `${String(x, '0')}`）把状态机打回 code 导致后续注释被误判为代码。 */
 function stripComments(code) {
   let out = ''
   let i = 0
   const n = code.length
-  let state = 'code' // code | line | block | html | sq | dq | bt | tplExpr
-  const btDepth = [] // 模板字符串中 ${ 嵌套层级
+  let state = 'code' // code | line | block | html | sq | dq | bt | tpl
+  const stack = []
+  const pop = () => stack.pop() ?? 'code'
+  let braceDepth = 0 // tpl 内嵌套 { } 计数（进入 tpl 时清零）
   while (i < n) {
     const c = code[i]
     const next = code[i + 1]
-    if (state === 'code') {
-      if (c === '/' && next === '/') {
-        state = 'line'
-        i += 2
-        continue
-      }
-      if (c === '/' && next === '*') {
-        state = 'block'
-        i += 2
-        continue
-      }
-      if (c === '<' && code.startsWith('<!--', i)) {
-        state = 'html'
-        i += 4
-        continue
-      }
-      if (c === "'") {
-        state = 'sq'
-        out += c
-        i++
-        continue
-      }
-      if (c === '"') {
-        state = 'dq'
-        out += c
-        i++
-        continue
-      }
-      if (c === '`') {
-        state = 'bt'
-        out += c
-        i++
-        continue
-      }
-      out += c
-      i++
-      continue
-    }
-    if (state === 'line') {
-      if (c === '\n') {
-        state = 'code'
-        out += c
-      }
-      i++
-      continue
-    }
-    if (state === 'block') {
-      if (c === '*' && next === '/') {
-        state = 'code'
-        i += 2
-        continue
-      }
-      if (c === '\n') out += c // 保留换行以维持行号
-      i++
-      continue
-    }
-    if (state === 'html') {
-      if (code.startsWith('-->', i)) {
-        state = 'code'
-        i += 3
-        continue
-      }
-      if (c === '\n') out += c
-      i++
-      continue
-    }
-    if (state === 'sq' || state === 'dq') {
-      const quote = state === 'sq' ? "'" : '"'
-      if (c === '\\') {
-        out += code.slice(i, i + 2)
-        i += 2
-        continue
-      }
-      if (c === quote) state = 'code'
-      out += c
-      i++
-      continue
-    }
-    if (state === 'bt') {
-      if (c === '\\') {
-        out += code.slice(i, i + 2)
-        i += 2
-        continue
-      }
-      if (c === '`') {
-        state = 'code'
-        out += c
-        i++
-        continue
-      }
-      if (c === '$' && next === '{') {
-        state = 'tplExpr'
-        btDepth.push('bt')
-        out += c
-        i += 2
-        continue
-      }
-      out += c
-      i++
-      continue
-    }
-    if (state === 'tplExpr') {
-      if (c === '{') btDepth.push('{')
-      if (c === '}') {
-        btDepth.pop()
-        if (btDepth.length === 0 || btDepth[btDepth.length - 1] === 'bt') {
-          btDepth.pop()
+    switch (state) {
+      case 'code': {
+        if (c === '/' && next === '/') {
+          state = 'line'
+          i += 2
+        } else if (c === '/' && next === '*') {
+          state = 'block'
+          i += 2
+        } else if (c === '<' && code.startsWith('<!--', i)) {
+          state = 'html'
+          i += 4
+        } else if (c === "'" || c === '"') {
+          stack.push(state)
+          state = c === "'" ? 'sq' : 'dq'
+          out += c
+          i++
+        } else if (c === '`') {
           state = 'bt'
+          out += c
+          i++
+        } else {
+          out += c
+          i++
         }
+        break
       }
-      if (c === "'") {
-        state = 'sq'
+      case 'line': {
+        if (c === '\n') {
+          state = pop()
+          out += c
+        }
+        i++
+        break
+      }
+      case 'block': {
+        if (c === '*' && next === '/') {
+          state = pop()
+          i += 2
+        } else {
+          if (c === '\n') out += c // 保留换行以维持行号
+          i++
+        }
+        break
+      }
+      case 'html': {
+        if (code.startsWith('-->', i)) {
+          state = pop()
+          i += 3
+        } else {
+          if (c === '\n') out += c
+          i++
+        }
+        break
+      }
+      case 'sq':
+      case 'dq': {
+        const quote = state === 'sq' ? "'" : '"'
+        if (c === '\\') {
+          out += code.slice(i, i + 2)
+          i += 2
+        } else if (c === quote) {
+          state = pop()
+          out += c
+          i++
+        } else {
+          out += c
+          i++
+        }
+        break
+      }
+      case 'bt': {
+        if (c === '\\') {
+          out += code.slice(i, i + 2)
+          i += 2
+        } else if (c === '`') {
+          state = 'code'
+          out += c
+          i++
+        } else if (c === '$' && next === '{') {
+          stack.push('bt')
+          state = 'tpl'
+          braceDepth = 0
+          out += c
+          i += 2
+        } else {
+          out += c
+          i++
+        }
+        break
+      }
+      case 'tpl': {
+        if (c === '{') {
+          braceDepth++
+          out += c
+          i++
+        } else if (c === '}') {
+          if (braceDepth > 0) braceDepth--
+          else {
+            state = pop() // 回到 bt
+            out += c
+          }
+          i++
+        } else if (c === "'" || c === '"') {
+          stack.push(state)
+          state = c === "'" ? 'sq' : 'dq'
+          out += c
+          i++
+        } else if (c === '/' && next === '/') {
+          stack.push(state)
+          state = 'line'
+          i += 2
+        } else if (c === '/' && next === '*') {
+          stack.push(state)
+          state = 'block'
+          i += 2
+        } else {
+          out += c
+          i++
+        }
+        break
+      }
+      default:
         out += c
         i++
-        continue
-      }
-      if (c === '"') {
-        state = 'dq'
-        out += c
-        i++
-        continue
-      }
-      if (c === '/' && next === '/') {
-        state = 'line'
-        i += 2
-        continue
-      }
-      out += c
-      i++
-      continue
     }
   }
   return out
