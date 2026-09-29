@@ -261,6 +261,7 @@ function galleryOf(it: RoundItem, type: 'image' | 'audio'): MediaAsset[] {
 }
 .item {
   display: flex;
+  flex-wrap: wrap; /* 宽度不足时画廊整体换行，信息区不被压缩成逐字竖排 */
   align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
