@@ -65,6 +65,8 @@ export interface Question {
   tier: Tier
   type: MediaType
   media: MediaAsset
+  /** 同种同类型全部素材（best-first，含当前 media）；C3 同种多素材查看（R8） */
+  assets?: MediaAsset[]
   answer: string
   sci: string
   family: string

@@ -130,6 +130,12 @@ describe('分档取材 (mediaPoolSize)', () => {
     const qs = buildQuestions([multi(2)], { type: 'image', count: 1, tier: 5 })
     expect(qs[0]!.media).toBeTruthy()
   })
+
+  it('C3：题目带同种全部素材，且当前题面在其中', () => {
+    const qs = buildQuestions([multi(5)], { type: 'image', count: 1, tier: 3 })
+    expect(qs[0]!.assets).toHaveLength(5)
+    expect(qs[0]!.assets!.some((m) => m.url === qs[0]!.media.url)).toBe(true)
+  })
 })
 
 describe('难度梯度', () => {

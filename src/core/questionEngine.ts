@@ -109,6 +109,8 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
       tier,
       type,
       media,
+      // C3（R8）：同种同类型全部素材，供答题页查看其它图/音
+      assets: assetsOf(sp, type),
       answer: sp.nameZh,
       sci: sp.nameSci,
       family: sp.family,

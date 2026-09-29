@@ -20,14 +20,16 @@ import {
   CircleX,
   Hourglass,
   Image as ImageIcon,
+  Images,
   Keyboard,
   LogOut,
+  Music,
   Play,
   Smartphone,
   Timer,
   X,
 } from 'lucide-vue-next'
-import type { MediaType, Tier } from '@/types'
+import type { MediaAsset, MediaType, Tier } from '@/types'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -56,6 +58,41 @@ const intro = computed(() =>
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
+
+// ---- C3 同种多素材查看（R8）：答题页可查看该鸟的其它图/音 ----
+/** 本题可查看的同种同类型素材（best-first，含当前题面）；
+ *  按档位取材池裁剪：L1 仅 1 个（不可切换）、L2/L3 前 3、L4/L5 前 5（011 §1.3） */
+const siblings = computed<MediaAsset[]>(() => {
+  const q = quiz.current
+  if (!q) return []
+  const pool = q.assets && q.assets.length ? q.assets : [q.media]
+  const size = TIERS[q.tier]?.mediaPoolSize ?? pool.length
+  return pool.slice(0, Math.min(size, pool.length))
+})
+/** 用户手动选择的素材 URL（空 = 用题目默认题面） */
+const selectedUrl = ref('')
+const galleryOpen = ref(false)
+/** 当前真正展示的素材 */
+const displayMedia = computed<MediaAsset | null>(() => {
+  const list = siblings.value
+  if (!list.length) return null
+  const picked = selectedUrl.value ? list.find((m) => m.url === selectedUrl.value) : null
+  return picked ?? quiz.current?.media ?? list[0] ?? null
+})
+const activeIndex = computed(() => siblings.value.findIndex((m) => m.url === displayMedia.value?.url))
+function toggleGallery() {
+  galleryOpen.value = !galleryOpen.value
+}
+function selectSibling(m: MediaAsset) {
+  selectedUrl.value = m.url
+}
+watch(
+  () => quiz.current?.id,
+  () => {
+    selectedUrl.value = ''
+    galleryOpen.value = false
+  },
+)
 
 // ---- 计时 ----
 const timeLeft = ref<number | null>(null)
@@ -394,7 +431,7 @@ function onTouchEnd(e: TouchEvent) {
       <MediaCard
         :key="quiz.current.id"
         :type="quiz.current.type"
-        :media="quiz.current.media"
+        :media="displayMedia ?? quiz.current.media"
         :autoplay="quiz.current.type === 'audio' && quiz.index >= 1 && settings.autoplayAudio"
         :autoplay-delay="settings.autoplayDelayMs"
         :show-attribution="false"
@@ -406,6 +443,43 @@ function onTouchEnd(e: TouchEvent) {
           </button>
         </template>
       </MediaCard>
+
+      <!-- C3 同种多素材（R8）：查看并切换该鸟的其它图/音 -->
+      <div v-if="siblings.length > 1" class="sib-bar">
+        <button
+          class="sib-toggle"
+          type="button"
+          :class="{ on: galleryOpen }"
+          :aria-expanded="galleryOpen"
+          @click="toggleGallery"
+        >
+          <Images class="ic" :size="13" />
+          {{ type === 'image' ? '其它照片' : '其它录音' }}（{{ siblings.length }}）
+        </button>
+        <div v-if="galleryOpen" class="sib-strip">
+          <button
+            v-for="(m, i) in siblings"
+            :key="m.url"
+            type="button"
+            class="sib-thumb"
+            :class="{ on: i === activeIndex }"
+            :title="`素材 ${i + 1}`"
+            @click="selectSibling(m)"
+          >
+            <img
+              v-if="type === 'image'"
+              :src="m.thumbUrl || m.url"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+            <template v-else>
+              <Music class="ic" :size="15" />
+              <span>{{ i + 1 }}</span>
+            </template>
+          </button>
+        </div>
+      </div>
 
       <OptionList
         :options="quiz.current.options"
@@ -477,8 +551,8 @@ function onTouchEnd(e: TouchEvent) {
         </span>
       </div>
 
-      <!-- 署名信息移到卡片最底部，避免干扰（R41） -->
-      <AttributionLine class="quiz-attr" :media="quiz.current.media" />
+      <!-- 署名信息移到卡片最底部，避免干扰（R41）；切换素材后跟随当前素材 -->
+      <AttributionLine class="quiz-attr" :media="displayMedia ?? quiz.current.media" />
     </div>
   </template>
 </template>
@@ -659,6 +733,76 @@ function onTouchEnd(e: TouchEvent) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+/* C3 同种多素材（R8）：其它图/音切换 */
+.sib-bar {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.sib-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.sib-toggle:hover,
+.sib-toggle.on {
+  color: var(--primary);
+  border-color: var(--primary-light);
+  background: #eaf4ef;
+}
+.sib-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #f7faf8;
+  border: 1px dashed var(--border);
+  animation: pop 0.2s ease;
+}
+.sib-thumb {
+  width: 56px;
+  height: 46px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+.sib-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sib-thumb:hover {
+  border-color: var(--primary-light);
+}
+.sib-thumb.on {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px #d8f3dc;
 }
 /* 署名移到卡片最底部（R41） */
 .quiz-attr {
