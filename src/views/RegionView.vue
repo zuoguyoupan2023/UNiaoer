@@ -9,6 +9,7 @@ import {
   countryStats,
   filterCountries,
   presentContinents,
+  REGION_LABEL_KEY,
   type Continent,
 } from '@/core/region'
 import { currentLocale } from '@/i18n'
@@ -35,8 +36,10 @@ onMounted(async () => {
   }
 })
 
-/** ISO 3166-1 alpha-2 → 本地化地区名（Intl.DisplayNames；不支持时回退代码） */
+/** ISO 3166-1 alpha-2 → 本地化地区名（Intl.DisplayNames；港澳台走特别标注；不支持时回退代码） */
 function countryName(code: string): string {
+  const key = REGION_LABEL_KEY[code]
+  if (key) return t(key)
   try {
     return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
   } catch {

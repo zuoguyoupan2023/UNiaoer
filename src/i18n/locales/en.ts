@@ -165,7 +165,12 @@ const en: typeof zhMessages = {
     count: '{n} spp.',
     speciesTitle: 'Birds of {country}',
     continentsLabel: 'Filter by continent',
-    note: 'Shown as text only — no maps or borders; Hong Kong, Macao and Taiwan are included under China.',
+    note: 'Shown as text only — no maps or borders; related regions are labelled "Hong Kong, China / Macao, China / Taiwan, China".',
+    regions: {
+      HK: 'Hong Kong, China',
+      MO: 'Macao, China',
+      TW: 'Taiwan, China',
+    },
     continents: {
       asia: 'Asia',
       europe: 'Europe',

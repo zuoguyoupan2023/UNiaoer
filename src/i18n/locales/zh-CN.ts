@@ -160,7 +160,12 @@ export const messages = {
     count: '{n} 种',
     speciesTitle: '{country} 的鸟种',
     continentsLabel: '按大洲筛选',
-    note: '仅按国家/地区文本列出，不涉及地图与边界；港澳台并入中国。',
+    note: '仅按国家/地区文本列出，不涉及地图与边界；相关地区标注为「中国香港／中国澳门／中国台湾」。',
+    regions: {
+      HK: '中国香港',
+      MO: '中国澳门',
+      TW: '中国台湾',
+    },
     continents: {
       asia: '亚洲',
       europe: '欧洲',
