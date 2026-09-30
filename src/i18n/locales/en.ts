@@ -228,7 +228,7 @@ const en: typeof zhMessages = {
     statBestStreak: 'Best streak',
     historyBtn: 'Round history',
     exportData: 'Export current',
-    exportAllData: 'Export all users',
+    exportAllData: 'Export all archives',
     importData: 'Import data',
     clearData: 'Clear data',
     resetConfirm:

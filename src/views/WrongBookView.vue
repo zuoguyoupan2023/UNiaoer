@@ -12,10 +12,13 @@ import {
   type WrongEntry,
   type WrongHistoryItem,
 } from '@/core/historyDb'
-import { loadBank, speciesNameById, speciesNameByStoredName } from '@/core/bank'
-import type { MediaType } from '@/types'
+import { loadBank, speciesById, speciesNameById, speciesNameByStoredName } from '@/core/bank'
+import { assetsOf } from '@/core/questionEngine'
+import type { MediaAsset, MediaType } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
+import AttributionLine from '@/components/AttributionLine.vue'
+import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
 const router = useRouter()
 const quiz = useQuizStore()
@@ -37,6 +40,34 @@ const choiceOf = (id: string | undefined, stored: string | null, noneKey: string
   t(noneKey)
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (zhFamily: string) => familyDisplay(zhFamily, currentLocale())
+
+/** 记录只存 mediaUrl/署名——构造最小 MediaAsset 供署名行/画廊渲染 */
+function toAsset(
+  speciesId: string,
+  type: MediaType,
+  url: string,
+  source: string,
+  author: string,
+  license: string,
+): MediaAsset {
+  return { speciesId, type, url, source, author, license, sourceUrl: '' }
+}
+
+/**
+ * 同种五图五音（对齐结果页/轮次历史）：资产按 speciesId 回查题库；
+ * 查不到（旧记录/题库未加载）时回退本题的单素材。
+ */
+function galleryOf(
+  speciesId: string,
+  media: { type: MediaType; mediaUrl: string; source: string; author: string; license: string },
+  want: MediaType,
+): MediaAsset[] {
+  const sp = speciesById(speciesId)
+  if (sp) return assetsOf(sp, want)
+  return media.type === want && media.mediaUrl
+    ? [toAsset(speciesId, media.type, media.mediaUrl, media.source, media.author, media.license)]
+    : []
+}
 
 type Tab = 'current' | 'history'
 const tab = ref<Tab>('current')
@@ -120,6 +151,21 @@ function fmt(at: number) {
       </p>
       <ul v-else class="list">
         <li v-for="e in current" :key="e.speciesId" class="item">
+          <img
+            v-if="e.type === 'image' && e.mediaUrl"
+            class="thumb"
+            :src="e.mediaUrl"
+            :alt="nameOf(e.speciesId, e.answer)"
+            loading="lazy"
+            decoding="async"
+          />
+          <audio
+            v-else-if="e.type === 'audio' && e.mediaUrl"
+            class="audio"
+            :src="e.mediaUrl"
+            controls
+            preload="none"
+          ></audio>
           <div class="info">
             <div class="name">
               {{ nameOf(e.speciesId, e.answer) }}
@@ -133,11 +179,21 @@ function fmt(at: number) {
                 })
               }}
             </div>
-            <div class="muted tiny">{{ e.source }} · {{ e.author }} · {{ e.license }}</div>
+            <AttributionLine
+              :media="toAsset(e.speciesId, e.type, e.mediaUrl, e.source, e.author, e.license)"
+            />
           </div>
           <button class="btn btn-secondary btn-sm" @click="remove(e.speciesId)">
             {{ t('common.remove') }}
           </button>
+          <!-- 同种其它图/音（对齐结果页/轮次历史） -->
+          <SpeciesGallery
+            class="item-gallery"
+            :images="galleryOf(e.speciesId, e, 'image')"
+            :audios="galleryOf(e.speciesId, e, 'audio')"
+            mode="browse"
+            :label="t('result.viewSpeciesMedia')"
+          />
         </li>
       </ul>
       <div v-if="current.length" class="actions">
@@ -156,6 +212,21 @@ function fmt(at: number) {
       <p v-if="history.length === 0" class="muted">{{ t('wrongBook.emptyHistory') }}</p>
       <ul v-else class="list">
         <li v-for="(e, i) in history" :key="`${e.speciesId}-${e.at}-${i}`" class="item">
+          <img
+            v-if="e.type === 'image' && e.mediaUrl"
+            class="thumb"
+            :src="e.mediaUrl"
+            :alt="nameOf(e.speciesId, e.answer)"
+            loading="lazy"
+            decoding="async"
+          />
+          <audio
+            v-else-if="e.type === 'audio' && e.mediaUrl"
+            class="audio"
+            :src="e.mediaUrl"
+            controls
+            preload="none"
+          ></audio>
           <div class="info">
             <div class="name">
               {{ nameOf(e.speciesId, e.answer) }}
@@ -172,7 +243,18 @@ function fmt(at: number) {
                 })
               }}
             </div>
+            <AttributionLine
+              :media="toAsset(e.speciesId, e.type, e.mediaUrl, e.source, e.author, e.license)"
+            />
           </div>
+          <!-- 同种其它图/音（对齐结果页/轮次历史） -->
+          <SpeciesGallery
+            class="item-gallery"
+            :images="galleryOf(e.speciesId, e, 'image')"
+            :audios="galleryOf(e.speciesId, e, 'audio')"
+            mode="browse"
+            :label="t('result.viewSpeciesMedia')"
+          />
         </li>
       </ul>
     </template>
@@ -210,7 +292,8 @@ function fmt(at: number) {
 }
 .item {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap; /* 画廊在下方整行展开，信息区不被压缩 */
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
@@ -218,20 +301,35 @@ function fmt(at: number) {
 .item:last-child {
   border-bottom: none;
 }
+.thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background: #f5f5f5;
+}
+.audio {
+  width: 180px;
+  max-width: 100%;
+  height: 34px;
+  flex-shrink: 0;
+}
 .info {
   flex: 1;
   min-width: 0;
   overflow-wrap: break-word;
+}
+.item-gallery {
+  flex-basis: 100%;
+  min-width: 0;
 }
 .name {
   font-weight: 700;
 }
 .small {
   font-size: 0.78rem;
-}
-.tiny {
-  font-size: 0.7rem;
-  opacity: 0.8;
 }
 .actions {
   margin-top: 16px;

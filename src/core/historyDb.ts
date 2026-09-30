@@ -620,6 +620,13 @@ export interface WrongHistoryItem {
   at: number
   mode: MediaType
   tier: Tier
+  /** 原题素材与署名（错题本也能回看原题图/音） */
+  mediaUrl: string
+  source: string
+  author: string
+  license: string
+  /** 原题素材类型 */
+  type: MediaType
 }
 
 /** 历史错题：从活动档全部轮次记录里展开（只增不减，永久保留） */
@@ -640,6 +647,11 @@ export async function listWrongHistory(): Promise<WrongHistoryItem[]> {
         at: r.at,
         mode: r.mode,
         tier: r.tier,
+        mediaUrl: it.mediaUrl,
+        source: it.source,
+        author: it.author,
+        license: it.license,
+        type: it.type,
       })
     }
   }
@@ -846,7 +858,7 @@ export interface BackupFileV2 {
   app: 'uniaoer'
   version: 2
   exportedAt: string
-  /** archive=仅当前档案；all=导出全部档案（含各用户） */
+  /** archive=仅当前档案；all=导出所有档 */
   scope: 'archive' | 'all'
   profile: BackupProfileRef
   /** 活动档案（scope=archive 时唯一） */
@@ -954,7 +966,7 @@ export async function exportCurrentArchive(): Promise<BackupFileV2> {
   }
 }
 
-/** 导出全部档案（v2，scope=all；当前设备所有用户/档案） */
+/** 导出所有档（v2，scope=all；当前设备全部档案，不区分用户） */
 export async function exportAllArchives(): Promise<BackupFileV2> {
   const db = await openDb()
   const [profile, active] = await Promise.all([getActiveProfile(), getActiveArchive()])

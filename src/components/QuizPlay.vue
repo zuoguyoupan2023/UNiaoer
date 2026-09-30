@@ -1047,14 +1047,18 @@ function onTouchEnd(e: TouchEvent) {
 /* 自动切换浮窗（R43）：可点击「取消切换」，取消后回落到下方常驻 */
 .correct-toast {
   position: fixed;
-  left: 50%;
+  /* left/right 0 + margin auto 居中：避开 left:50% 时可用宽度只剩 50vw 的坑，
+     浮窗可在整幅宽度内取 fit-content，倒计时数字变化不再触发折行抖动 */
+  left: 0;
+  right: 0;
   bottom: 21vh;
   z-index: 80;
-  transform: translateX(-50%);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  width: fit-content;
   max-width: min(92vw, 560px);
   padding: 12px 18px;
   border-radius: 14px;
@@ -1082,8 +1086,10 @@ function onTouchEnd(e: TouchEvent) {
 .ct-main {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* 允许在浮窗宽度内换行，不撑破 */
   line-height: 1.35;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 .ct-main strong {
   font-size: 0.92rem;
@@ -1097,10 +1103,12 @@ function onTouchEnd(e: TouchEvent) {
   color: var(--text-light);
 }
 .ct-auto {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  row-gap: 8px;
+  /* 不强制同行：倒计时与按钮放不下时整行折行，避免浮窗宽度抖动 */
   flex-wrap: wrap;
 }
 .ct-count {
@@ -1110,6 +1118,7 @@ function onTouchEnd(e: TouchEvent) {
   font-size: 0.74rem;
   color: var(--primary);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums; /* 数字等宽：2.3/1.9/0.8 宽度一致 */
 }
 .toast-enter-active,
 .toast-leave-active {
@@ -1120,7 +1129,7 @@ function onTouchEnd(e: TouchEvent) {
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(10px);
+  transform: translateY(10px);
 }
 /* 自动切换控制行（R43） */
 .auto-ctrl {

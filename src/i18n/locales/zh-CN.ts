@@ -222,7 +222,7 @@ export const messages = {
     statBestStreak: '最长连对',
     historyBtn: '历史轮次',
     exportData: '导出当前档案',
-    exportAllData: '导出全部用户',
+    exportAllData: '导出所有档',
     importData: '导入数据',
     clearData: '清空数据',
     resetConfirm:
