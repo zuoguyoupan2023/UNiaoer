@@ -186,10 +186,8 @@ export class BankError extends Error {
   }
 }
 
-/** 加载题库（构建脚本产物 public/data/manifest.json） */
-export async function loadBank(): Promise<Manifest> {
-  if (cache) return cache
-  const url = `${import.meta.env.BASE_URL}data/manifest.json`
+/** 取一个 manifest URL，统一校验状态/内容类型/解析；失败抛 BankError */
+async function fetchManifest(url: string): Promise<Manifest> {
   const res = await fetch(url)
   if (!res.ok) {
     throw new BankError('bankMissing', { status: res.status, url })
@@ -200,12 +198,34 @@ export async function loadBank(): Promise<Manifest> {
     throw new BankError('bankNotJson', { url })
   }
   try {
-    cache = (await res.json()) as Manifest
+    return (await res.json()) as Manifest
   } catch {
     throw new BankError('bankParseFailed', { url })
   }
-  buildSpeciesIndex(cache)
-  return cache
+}
+
+/**
+ * 加载题库（构建脚本产物 public/data/manifest.json）。
+ * 生产环境优先走 Worker 的 `/api/manifest`（B3），失败自动回退静态文件；
+ * 开发/测试只用静态，避免本地没有 Worker 时报错。
+ */
+export async function loadBank(): Promise<Manifest> {
+  if (cache) return cache
+  const staticUrl = `${import.meta.env.BASE_URL}data/manifest.json`
+  const urls = import.meta.env.PROD ? ['/api/manifest', staticUrl] : [staticUrl]
+  let lastError: unknown
+  for (const url of urls) {
+    try {
+      cache = await fetchManifest(url)
+      buildSpeciesIndex(cache)
+      return cache
+    } catch (err) {
+      lastError = err
+    }
+  }
+  throw lastError instanceof BankError
+    ? lastError
+    : new BankError('bankMissing', { url: staticUrl })
 }
 
 /** 测试用：清空缓存 */

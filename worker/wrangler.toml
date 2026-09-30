@@ -1,0 +1,23 @@
+name = "uniaoer-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-30"
+
+# D1：物种 / 媒体 / 出题元数据（B1 已灌：1299 物种、12938 媒体）
+[[d1_databases]]
+binding = "DB"
+database_name = "uniaoer"
+database_id = "c81ea045-6f89-429d-9484-af8d6be50eba"
+
+# R2：媒体仓库（/api/media 302 到公开域名；后续可代理隐藏源站）
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "uniaoerbucket"
+
+[vars]
+# /api/manifest 的上游（Pages 的静态 manifest）；R2 命中 data/manifest.json 时优先
+MANIFEST_ORIGIN = "https://uniaoer.com"
+
+# 挂到站点同源，前端直接 /api/*（无需 CORS）
+[[routes]]
+pattern = "uniaoer.com/api/*"
+zone_name = "uniaoer.com"

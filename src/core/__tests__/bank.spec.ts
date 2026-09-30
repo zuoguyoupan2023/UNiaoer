@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   _resetBankCache,
   loadBank,
@@ -148,5 +148,54 @@ describe('speciesProfileById / speciesProfileText（C1 物种档案）', () => {
     expect(
       speciesProfileText({ habitatZh: '仅中文', habitEn: 'Only EN' }, 'en'),
     ).toEqual({ habitat: '仅中文', habit: 'Only EN' })
+  })
+})
+
+describe('loadBank（B3：生产优先 /api/manifest，失败回退静态）', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('生产：优先请求 /api/manifest', async () => {
+    _resetBankCache()
+    vi.stubEnv('PROD', true)
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        calls.push(String(input))
+        return new Response(JSON.stringify(manifest), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }),
+    )
+    await loadBank()
+    expect(calls[0]).toContain('/api/manifest')
+  })
+
+  it('生产：/api/manifest 失败时回退到静态文件', async () => {
+    _resetBankCache()
+    vi.stubEnv('PROD', true)
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        calls.push(u)
+        if (u.includes('/api/manifest')) {
+          return new Response('boom', { status: 500, headers: { 'content-type': 'text/plain' } })
+        }
+        return new Response(JSON.stringify(manifest), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }),
+    )
+    const m = await loadBank()
+    expect(m.total).toBe(2)
+    expect(calls.some((u) => u.includes('/api/manifest'))).toBe(true)
+    expect(calls.some((u) => u.includes('data/manifest.json'))).toBe(true)
   })
 })
