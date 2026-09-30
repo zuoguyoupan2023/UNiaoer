@@ -1094,9 +1094,9 @@ function onTouchEnd(e: TouchEvent) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 12px;
+  padding: 5px 11px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #f0f4f2;
   color: var(--text-light);
   font-size: 0.76rem;

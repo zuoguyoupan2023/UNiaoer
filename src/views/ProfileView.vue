@@ -277,7 +277,7 @@ async function saveNickname() {
   flex-shrink: 0;
   padding: 7px 18px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: #fff;
   color: var(--text-light);
   font-size: 0.8rem;
@@ -296,7 +296,7 @@ async function saveNickname() {
   flex-shrink: 0;
   padding: 7px 18px;
   border: 1px dashed var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: #f3f5f4;
   color: #b8c4bd;
   font-size: 0.8rem;
@@ -331,7 +331,7 @@ async function saveNickname() {
   gap: 5px;
   padding: 6px 14px;
   border: 2px solid var(--primary-light);
-  border-radius: 16px;
+  border-radius: 8px;
   background: #f3fbf7;
   color: var(--primary-dark);
   font-size: 0.9rem;
@@ -378,7 +378,7 @@ async function saveNickname() {
 .archive-chip {
   padding: 5px 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: #fff;
   color: var(--text-light);
   font-size: 0.78rem;

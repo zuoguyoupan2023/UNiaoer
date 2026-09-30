@@ -14,8 +14,8 @@
   --border: #dcebe3;
   --gold: #d4a017;
 
-  --radius: 20px;
-  --radius-sm: 12px;
+  --radius: 14px;
+  --radius-sm: 9px;
   --shadow-sm: 0 2px 8px rgba(20, 52, 42, 0.06);
   --shadow: 0 14px 34px -18px rgba(20, 52, 42, 0.4), 0 2px 8px rgba(20, 52, 42, 0.05);
   --shadow-lg: 0 30px 70px -28px rgba(20, 52, 42, 0.5);
