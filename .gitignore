@@ -43,6 +43,8 @@ __screenshots__/
 /legacy/
 # 规划文档
 /0[0-9][0-9]-*.md
+# 开发过程文档（000-SUMMARY / 006 / 019 等；同步到私有 repo uniaoer-private，不随开源上传）
+/docs/
 # 实现总览（本地文档，如需入库请删掉本行）
 /SUMMARY.md
 # 本地密钥 / 环境变量
