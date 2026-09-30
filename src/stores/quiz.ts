@@ -1,20 +1,29 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { MediaType, Question, Tier } from '@/types'
+import type { MediaType, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode } from '@/core/bank'
-import { buildQuestions } from '@/core/questionEngine'
-import { getWrongBook } from '@/core/historyDb'
+import { assetsOf, buildQuestions } from '@/core/questionEngine'
+import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { currentLocale } from '@/i18n'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
 
 /** 出题失败错误码（UI 层映射 errors.* 文案，015 §6.5） */
-export type QuizErrorCode = BankErrorCode | 'wrongPoolEmpty' | 'noImageMedia' | 'noAudioMedia' | 'unknown'
+export type QuizErrorCode =
+  | BankErrorCode
+  | 'wrongPoolEmpty'
+  | 'noImageMedia'
+  | 'noAudioMedia'
+  | 'standardPoolEmpty'
+  | 'poolEmpty'
+  | 'unknown'
 
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
   const tier = ref<Tier>(2)
+  /** 赛制（013 §4）：介绍页选择，决定选题池；再来一轮沿用同赛制 */
+  const regime = ref<QuizRegime>('standard')
   const roundId = ref<string>('')
   const startedAt = ref<number>(0)
   const questions = ref<Question[]>([])
@@ -30,8 +39,6 @@ export const useQuizStore = defineStore('quiz', () => {
   /** 标记"从结果页继续下一轮"，供 QuizPlay 跳过介绍页直接开始 */
   const pendingContinue = ref(false)
 
-  // ---- E1 错题重练：下一轮 start() 只出错误本中的物种；开轮后自动复原 ----
-  const wrongPoolOnly = ref(false)
   /** 本轮来源（落库标记，隐藏徽章/称号统计用，R28） */
   const source = ref<'normal' | 'wrong-practice'>('normal')
   /** 退出确认点了「取消」后继续答题（"浪子回头"标记） */
@@ -59,9 +66,57 @@ export const useQuizStore = defineStore('quiz', () => {
     return t ? Math.round(((sessionCorrect.value + correctCount.value) / t) * 100) : 0
   })
 
+/** IndexedDB 不可用（隐私模式等）时按"无练习史"降级，不阻塞出题 */
+async function safeListRounds(): Promise<RoundRecord[]> {
+  try {
+    return await listRounds()
+  } catch {
+    return []
+  }
+}
+async function safeWrongBook(): Promise<WrongEntry[]> {
+  try {
+    return await getWrongBook()
+  } catch {
+    return []
+  }
+}
+
+/** 赛制 → 选题池（undefined = 全库随机）；池空返回错误码，由 UI 引导去专项赛/新建档案 */
+  async function computePool(
+    r: QuizRegime,
+    type: MediaType,
+  ): Promise<{ pool?: ReadonlySet<string>; errorCode?: QuizErrorCode }> {
+    if (r === 'random') return {}
+    const [bank, rounds] = await Promise.all([loadBank(), safeListRounds()])
+    const withMedia = new Set(
+      bank.species.filter((sp) => assetsOf(sp, type).length > 0).map((sp) => sp.id),
+    )
+    const practiced = new Set<string>()
+    const correctSet = new Set<string>()
+    for (const round of rounds) {
+      for (const it of round.items) {
+        if (it.type !== type || !withMedia.has(it.speciesId)) continue
+        practiced.add(it.speciesId)
+        if (it.correct) correctSet.add(it.speciesId)
+      }
+    }
+    if (r === 'standard') {
+      const pool = new Set([...withMedia].filter((id) => !practiced.has(id)))
+      return pool.size ? { pool } : { errorCode: 'standardPoolEmpty' }
+    }
+    if (r === 'revival') {
+      const wrongIds = new Set((await safeWrongBook()).map((w) => w.speciesId))
+      const pool = new Set([...wrongIds].filter((id) => withMedia.has(id)))
+      return pool.size ? { pool } : { errorCode: 'wrongPoolEmpty' }
+    }
+    const wanted = r === 'review' ? practiced : correctSet
+    return wanted.size ? { pool: new Set(wanted) } : { errorCode: 'poolEmpty' }
+  }
+
   async function start(
     type: MediaType,
-    opts: { count?: number; tier?: Tier; keepSession?: boolean } = {},
+    opts: { count?: number; tier?: Tier; keepSession?: boolean; regime?: QuizRegime } = {},
   ) {
     mode.value = type
     if (opts.tier) tier.value = opts.tier
@@ -70,29 +125,35 @@ export const useQuizStore = defineStore('quiz', () => {
       sessionCorrect.value = 0
       sessionTotal.value = 0
     }
+    if (opts.regime) regime.value = opts.regime
     loading.value = true
     error.value = ''
     try {
       const bank = await loadBank()
-      let ids: Set<string> | undefined
-      if (wrongPoolOnly.value) {
-        ids = new Set((await getWrongBook()).map((w) => w.speciesId))
-        wrongPoolOnly.value = false // 只影响即将开始的这一轮
-        source.value = 'wrong-practice'
-      } else if (!opts.keepSession) {
-        source.value = 'normal'
+      // A2 赛制选题池（013 §4）：standard=未练过 / review=练过 / reinforce=练对过 /
+      // revival=错题本 / random=全库；按「物种 × 媒体类型」记练过（013 P2 粒度）
+      const poolResult = await computePool(regime.value, type)
+      if (poolResult.errorCode) {
+        error.value = poolResult.errorCode
+        questions.value = []
+        chosen.value = []
+        index.value = 0
+        return
+      }
+      if (!opts.keepSession) {
+        source.value = regime.value === 'revival' ? 'wrong-practice' : 'normal'
       }
       escapedQuit.value = false
       const qs = buildQuestions(bank.species, {
         type,
         count: opts.count ?? 10,
         tier: tier.value,
-        speciesIds: ids,
+        speciesPool: poolResult.pool,
         locale: currentLocale(),
       })
       if (!qs.length) {
-        // 无素材：错误码入 store，文案由组件按 locale 渲染（015 §6.5）；清掉上一轮残留
-        error.value = ids ? 'wrongPoolEmpty' : type === 'image' ? 'noImageMedia' : 'noAudioMedia'
+        // 无素材（池内物种都缺对应媒体）：错误码入 store，文案由组件按 locale 渲染（015 §6.5）
+        error.value = type === 'image' ? 'noImageMedia' : 'noAudioMedia'
         questions.value = []
         chosen.value = []
         index.value = 0
@@ -145,9 +206,9 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   }
 
-  /** E1：标记下一轮为"错题重练"并进入对应答题页（难度仍在介绍页选） */
+  /** E1 → 复活赛（013 §10 并入赛制）：标记下一轮为"错题重练"并进入对应答题页（难度仍在介绍页选） */
   function startWrongBook(type: MediaType) {
-    wrongPoolOnly.value = true
+    regime.value = 'revival'
     mode.value = type
     tier.value = 2
     sessionRound.value = 1
@@ -164,7 +225,7 @@ export const useQuizStore = defineStore('quiz', () => {
     chosen.value = chosen.value.slice(0, len)
     index.value = len
     pendingContinue.value = false
-    wrongPoolOnly.value = false
+    regime.value = 'standard'
   }
 
   function reset() {
@@ -176,7 +237,7 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionCorrect.value = 0
     sessionTotal.value = 0
     pendingContinue.value = false
-    wrongPoolOnly.value = false
+    regime.value = 'standard'
     source.value = 'normal'
     escapedQuit.value = false
   }
@@ -203,7 +264,7 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionCorrect,
     sessionTotal,
     pendingContinue,
-    wrongPoolOnly,
+    regime,
     source,
     escapedQuit,
     overallAccuracy,

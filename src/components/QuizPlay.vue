@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
+import { getActiveProfile, setProfileNickname } from '@/core/historyDb'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import {
   AUTO_NEXT_DELAY_CORRECT_MS,
@@ -28,7 +29,7 @@ import {
   Timer,
   X,
 } from 'lucide-vue-next'
-import type { MediaAsset, MediaType, Tier } from '@/types'
+import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from './AttributionLine.vue'
@@ -42,6 +43,38 @@ const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
+
+/** A2 赛制（013 §4）：与难度正交——赛制定"考哪些鸟"，L1–L5 定"怎么考" */
+const REGIMES: { id: QuizRegime; labelKey: string; hintKey: string }[] = [
+  { id: 'standard', labelKey: 'regime.standard.label', hintKey: 'regime.standard.hint' },
+  { id: 'review', labelKey: 'regime.review.label', hintKey: 'regime.review.hint' },
+  { id: 'reinforce', labelKey: 'regime.reinforce.label', hintKey: 'regime.reinforce.hint' },
+  { id: 'revival', labelKey: 'regime.revival.label', hintKey: 'regime.revival.hint' },
+  { id: 'random', labelKey: 'regime.random.label', hintKey: 'regime.random.hint' },
+]
+
+// ---- A1 昵称引导（013 §3.1）：档案无昵称且未跳过时，在介绍页展示 ----
+const profileNicknameEmpty = ref(false)
+const guideDraft = ref('')
+const showNicknameGuide = computed(
+  () => profileNicknameEmpty.value && !settings.nicknameGuideDismissed,
+)
+
+async function saveGuide() {
+  const v = guideDraft.value.trim()
+  if (v.length < 2) return
+  settings.nickname = v
+  try {
+    await setProfileNickname(v)
+  } catch {
+    /* IndexedDB 不可用时仍保留设备级昵称 */
+  }
+  profileNicknameEmpty.value = false
+}
+
+function skipGuide() {
+  settings.nicknameGuideDismissed = true
+}
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
@@ -291,6 +324,13 @@ function updateInterference() {
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
+  getActiveProfile()
+    .then((p) => {
+      profileNicknameEmpty.value = !p.nickname
+    })
+    .catch(() => {
+      /* IndexedDB 不可用时不展示引导 */
+    })
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
     // 从结果页续轮也是"测试开始"：环境鸟鸣停播
@@ -393,9 +433,39 @@ function onTouchEnd(e: TouchEvent) {
     </div>
     <p class="lead muted">{{ intro.lead }}</p>
 
-    <p v-if="quiz.wrongPoolOnly" class="wrong-hint">
+    <!-- A1 昵称引导（013 §3.1）：可跳过，跳过不再提示 -->
+    <div v-if="showNicknameGuide" class="nickname-guide">
+      <p class="guide-title">{{ t('profile.guideTitle') }}</p>
+      <div class="guide-row">
+        <input
+          v-model="guideDraft"
+          class="guide-input"
+          maxlength="12"
+          :placeholder="t('profile.nicknamePlaceholder')"
+          @keyup.enter="saveGuide"
+        />
+        <button class="btn btn-primary btn-sm" @click="saveGuide">{{ t('common.save') }}</button>
+        <button class="btn btn-secondary btn-sm" @click="skipGuide">{{ t('profile.guideSkip') }}</button>
+      </div>
+    </div>
+
+    <p v-if="quiz.regime === 'revival'" class="wrong-hint">
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
+
+    <!-- A2 赛制选择（013 §4）：标准/复习/强化/复活/随机 -->
+    <div class="regimes">
+      <button
+        v-for="r in REGIMES"
+        :key="r.id"
+        class="regime"
+        :class="{ on: quiz.regime === r.id }"
+        @click="quiz.regime = r.id"
+      >
+        <strong>{{ t(r.labelKey) }}</strong>
+        <span>{{ t(r.hintKey) }}</span>
+      </button>
+    </div>
 
     <div class="tiers">
       <button
@@ -599,6 +669,78 @@ function onTouchEnd(e: TouchEvent) {
   color: var(--wrong);
   font-size: 0.82rem;
   font-weight: 600;
+}
+.regimes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 520px;
+  margin: 0 auto 10px;
+}
+.regime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+.regime:hover {
+  border-color: var(--primary-light);
+}
+.regime.on {
+  border-color: var(--primary);
+  background: #f3fbf7;
+}
+.regime strong {
+  font-size: 0.8rem;
+}
+.regime span {
+  font-size: 0.62rem;
+  color: var(--text-light);
+  line-height: 1.35;
+}
+@media (max-width: 520px) {
+  .regimes {
+    grid-template-columns: 1fr 1fr;
+  }
+  .regime:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+.nickname-guide {
+  max-width: 420px;
+  margin: 0 auto 14px;
+  padding: 12px 16px;
+  border: 2px solid var(--primary-light);
+  border-radius: var(--radius-sm);
+  background: #f3fbf7;
+}
+.guide-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+.guide-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.guide-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 7px 12px;
+  border: 2px solid var(--primary-light);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
 }
 .tiers {
   display: grid;

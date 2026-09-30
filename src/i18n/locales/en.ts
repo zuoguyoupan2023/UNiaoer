@@ -42,6 +42,13 @@ const en: typeof zhMessages = {
     imageRound: 'Photo round',
     audioRound: 'Audio round',
   },
+  regime: {
+    standard: { label: 'Standard', hint: 'Only species you have not played yet (no repeats)' },
+    review: { label: 'Review', hint: 'Only species you have played (right or wrong)' },
+    reinforce: { label: 'Reinforce', hint: 'Only species you answered correctly' },
+    revival: { label: 'Revival', hint: 'Only species you missed (wrong book)' },
+    random: { label: 'Random', hint: 'Whole bank (repeats allowed)' },
+  },
   quiz: {
     next: 'Next',
     viewResult: 'View results',
@@ -189,7 +196,7 @@ const en: typeof zhMessages = {
     importData: 'Import data',
     clearData: 'Erase my data',
     resetConfirm:
-      'Erase ALL local data (rounds / wrong book / badges)? This action cannot be undone.',
+      'Erase ALL data of the current archive (rounds / wrong book / badges)? This action cannot be undone.',
     exportDone: 'Exported {rounds} rounds, {wrong} wrong entries and {badges} badges.',
     importInvalid: 'Import failed: not a valid UNiaoer backup file.',
     importConfirm:
@@ -199,6 +206,8 @@ const en: typeof zhMessages = {
     wearTitle: 'Worn',
     titleLabel: 'Title',
     badgeLabel: 'Badge',
+    guideTitle: 'Give yourself a name (2–12 characters) — your rounds will be saved to your archive',
+    guideSkip: 'Skip for now',
     notWorn: 'None worn',
     wearNone: 'None',
     change: 'Change',
@@ -431,6 +440,9 @@ const en: typeof zhMessages = {
       'No usable media of this kind in the wrong book (missing photos/recordings?) — try another mode or play a normal round first',
     noImageMedia: 'No usable photo media in the question bank',
     noAudioMedia: 'No usable audio media in the question bank',
+    standardPoolEmpty:
+      'Every species in this mode has been played: try Review / Reinforce / Revival, or create a new archive in Profile',
+    poolEmpty: 'Nothing to practice in this regime yet — play a few Standard rounds first',
   },
 }
 

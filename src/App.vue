@@ -97,6 +97,7 @@ const immersive = computed(
       </span>
       <span class="nav-group nav-utility">
         <RouterLink to="/profile">{{ t('nav.profile') }}</RouterLink>
+        <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
         <button
           class="ambience-btn"
           type="button"
@@ -109,7 +110,6 @@ const immersive = computed(
           <Volume2 v-if="ambienceOn" :size="16" />
           <VolumeX v-else :size="16" />
         </button>
-        <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
       </span>
     </nav>
   </div>

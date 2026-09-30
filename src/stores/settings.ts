@@ -27,6 +27,8 @@ interface Persisted {
   nickname: string
   /** 界面语言（i18n-6；缺省由 i18n 模块的 savedLocale()/detectLocale() 决定） */
   locale?: AppLocale
+  /** A1 昵称引导：用户点过「先跳过」后不再提示（013 §3.1 可跳过） */
+  nicknameGuideDismissed?: boolean
 }
 
 function load(): Partial<Persisted> {
@@ -67,6 +69,8 @@ export const useSettingsStore = defineStore('settings', () => {
    * 本地持久化由下面的 watch 统一落盘；写入即同步 i18n 与 <html lang>。
    */
   const locale = ref<AppLocale>(i18nCurrentLocale())
+  /** A1 昵称引导跳过标记（013 §3.1） */
+  const nicknameGuideDismissed = ref<boolean>(saved.nicknameGuideDismissed ?? false)
 
   // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
   watch(locale, (v) => {
@@ -87,6 +91,7 @@ export const useSettingsStore = defineStore('settings', () => {
       ambienceEnabled,
       nickname,
       locale,
+      nicknameGuideDismissed,
     ],
     () => {
       try {
@@ -105,6 +110,7 @@ export const useSettingsStore = defineStore('settings', () => {
             ambienceEnabled: ambienceEnabled.value,
             nickname: nickname.value,
             locale: locale.value,
+            nicknameGuideDismissed: nicknameGuideDismissed.value,
           } satisfies Persisted),
         )
       } catch {
@@ -127,5 +133,6 @@ export const useSettingsStore = defineStore('settings', () => {
     ambienceEnabled,
     nickname,
     locale,
+    nicknameGuideDismissed,
   }
 })

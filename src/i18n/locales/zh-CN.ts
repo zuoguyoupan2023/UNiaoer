@@ -37,6 +37,13 @@ export const messages = {
     imageRound: '鸟图版',
     audioRound: '鸟声版',
   },
+  regime: {
+    standard: { label: '标准赛', hint: '只出未练过的物种（不重复）' },
+    review: { label: '复习赛', hint: '只出练过的物种（对错都算）' },
+    reinforce: { label: '强化赛', hint: '只出练对过的物种' },
+    revival: { label: '复活赛', hint: '只出练错过的（错题本）' },
+    random: { label: '随机赛', hint: '全库随机（允许重复）' },
+  },
   quiz: {
     next: '下一题',
     viewResult: '查看结果',
@@ -182,7 +189,7 @@ export const messages = {
     exportData: '导出数据',
     importData: '导入数据',
     clearData: '清空我的数据',
-    resetConfirm: '确定清空全部本地数据（记录 / 错题本 / 徽章）吗？此操作不可恢复。',
+    resetConfirm: '确定清空当前档案的全部数据（记录 / 错题本 / 徽章）吗？此操作不可恢复。',
     exportDone: '已导出 {rounds} 轮记录、{wrong} 条错题、{badges} 枚徽章。',
     importInvalid: '导入失败：不是有效的 UNiaoer 备份文件。',
     importConfirm:
@@ -192,6 +199,8 @@ export const messages = {
     wearTitle: '佩戴',
     titleLabel: '称号',
     badgeLabel: '徽章',
+    guideTitle: '给自己起个名字（2–12 字符），答题记录将存入你的档案',
+    guideSkip: '先跳过',
     notWorn: '未佩戴',
     wearNone: '不佩戴',
     change: '更换',
@@ -407,6 +416,8 @@ export const messages = {
     wrongPoolEmpty: '错题本里没有可用的这类素材（可能缺图/缺音），换个模式或先去答题',
     noImageMedia: '题库中没有可用的图片素材',
     noAudioMedia: '题库中没有可用的音频素材',
+    standardPoolEmpty: '本档该模式已全部练过：去「复习 / 强化 / 复活赛」，或在「我的」新建档案',
+    poolEmpty: '该赛制还没有可练的题目，先去标准赛练几轮',
   },
 }
 

@@ -13,6 +13,9 @@ export type LicensePolicy = 'strict' | 'relaxed'
 /** 自动进入下一题的时机 */
 export type AutoNextMode = 'correct' | 'all' | 'manual'
 
+/** 赛制（013 §4）：选题池规则；与难度（Tier）正交 */
+export type QuizRegime = 'standard' | 'review' | 'reinforce' | 'revival' | 'random'
+
 /** 物种 */
 export interface Species {
   id: string // 'turdus-merula'

@@ -1,16 +1,21 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
+  activateArchive,
   clearAll,
+  createArchive,
   exportAll,
+  getBadges,
   getStats,
   getWrongBook,
   importBackup,
   isBackupFile,
+  listArchives,
   listRounds,
   listWrongHistory,
   removeWrong,
   saveRound,
+  saveBadges,
   _resetDb,
   type RoundRecord,
 } from '../historyDb'
@@ -156,5 +161,49 @@ describe('historyDb', () => {
     expect(isBackupFile({ app: 'other', version: 1, rounds: [] })).toBe(false)
     expect(isBackupFile(null)).toBe(false)
     expect(isBackupFile('json')).toBe(false)
+  })
+})
+
+describe('historyDb v2 档案隔离（013-A0）', () => {
+  it('新建档案=清零重开：切档后数据互不可见，徽章复合键按档隔离', async () => {
+    // 当前（默认）档案里放一轮 + 徽章
+    await saveRound(round('r-a', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    await saveBadges([{ id: 'first-round', at: Date.now() }])
+    expect((await listRounds()).length).toBeGreaterThan(0)
+
+    // 新建档案并自动切换 → 全新进度
+    const b = await createArchive('档案B')
+    expect((await listRounds()).length).toBe(0)
+    expect((await getWrongBook()).length).toBe(0)
+    expect(await getBadges()).toEqual([])
+
+    // B 档写数据
+    await saveRound(round('r-b', [{ sid: 'b', answer: '丙', chosen: '丁' }]))
+    await saveBadges([{ id: 'first-round', at: Date.now() }])
+    const statsB = await getStats()
+    expect(statsB.rounds).toBe(1)
+
+    // 切回默认档：原数据完好、B 的数据不可见
+    const archives = await listArchives()
+    const defaultArchive = archives.find((x) => x.id !== b.id)!
+    await activateArchive(defaultArchive.id)
+    const roundsA = await listRounds()
+    expect(roundsA.some((r) => r.id === 'r-a')).toBe(true)
+    expect(roundsA.some((r) => r.id === 'r-b')).toBe(false)
+    expect((await getBadges()).map((x) => x.id)).toContain('first-round')
+    // 清空只影响当前档案：再切到 B 仍有数据
+    await clearAll()
+    await activateArchive(b.id)
+    expect((await listRounds()).length).toBe(1)
+    // 还原到默认档，避免影响其它用例
+    await activateArchive(defaultArchive.id)
+  })
+
+  it('档案名同日去重：自动加序号', async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const a = await createArchive() // 与现有档案同名 → 自动 #2
+    expect(a.name.startsWith(today)).toBe(true)
+    const names = (await listArchives()).map((x) => x.name)
+    expect(new Set(names).size).toBe(names.length)
   })
 })

@@ -6,8 +6,9 @@ export interface BuildOptions {
   type: MediaType
   count?: number
   tier?: Tier
-  /** E1 错题重练：只从这个物种集合出题（干扰项仍取全库）；空集/无素材时返回空数组 */
-  speciesIds?: ReadonlySet<string>
+  /** A2 赛制选题池（013 §4）：只从这个物种集合出题（干扰项仍取全库）；
+   *  池上仍按档位筛常见度，样本不足时放宽到池内全部；缺省全库 */
+  speciesPool?: ReadonlySet<string>
   /** 出题语种（015 §6.1）：'en' 时答案/选项优先 nameEn，缺失回退学名；缺省中文 */
   locale?: string
 }
@@ -107,16 +108,19 @@ export function pickMedia(sp: BankSpecies, type: MediaType, poolSize: number): M
  * 从题库构建一轮题目。
  * - 按档位筛常见度（样本不足时放宽到全部）
  * - 选项数量与干扰项策略来自档位配置
- * - speciesIds（错题重练）：题目只取该集合内的物种，不做档位放宽
+ * - speciesPool（A2 赛制）：题目只取池内物种，池上仍按档位筛常见度（不足放宽到池）
  */
 export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
-  const { type, count = 10, tier = 2, speciesIds, locale } = opts
+  const { type, count = 10, tier = 2, speciesPool, locale } = opts
   const cfg = TIERS[tier]
   const full = mediaPool(bank, type)
 
   let pool: BankSpecies[]
-  if (speciesIds) {
-    pool = full.filter((s) => speciesIds.has(s.id))
+  if (speciesPool) {
+    const inPool = full.filter((s) => speciesPool.has(s.id))
+    // 池上仍按档位筛常见度；样本不足放宽到池内全部（013 §4.2 标准赛也允许难度筛选）
+    const tiered = inPool.filter((s) => cfg.commonness.includes(s.commonness))
+    pool = tiered.length >= Math.min(count, 4) ? tiered : inPool
   } else {
     const tiered = full.filter((s) => cfg.commonness.includes(s.commonness))
     pool = tiered.length >= Math.min(count, 4) ? tiered : full
