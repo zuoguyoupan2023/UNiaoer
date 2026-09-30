@@ -5,7 +5,11 @@ import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import { setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
+import {
+  listRounds,
+  setActiveArchiveNickname,
+  setProfileNickname,
+} from '@/core/historyDb'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import {
   AUTO_NEXT_DELAY_CORRECT_MS,
@@ -61,17 +65,23 @@ function persistRegime(r: QuizRegime) {
   if (props.type === 'audio') settings.regimeAudio = r
   else settings.regimeImage = r
 }
+/** 当前模式的已存难度（与赛制一致，图/声分离记忆） */
+const savedTier = computed<Tier | undefined>(() =>
+  props.type === 'audio' ? settings.tierAudio : settings.tierImage,
+)
+function persistTier(v: Tier) {
+  if (props.type === 'audio') settings.tierAudio = v
+  else settings.tierImage = v
+}
 
-// ---- 首次进入向导（013 §3.1/§4）：第一步 欢迎+昵称，第二步 赛制 ----
-const wizardStep = ref<0 | 1 | 2>(savedRegime.value ? 0 : 1)
+// ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
+const showNameModal = ref(false)
 const wizardDraft = ref('')
-const wizardRegime = ref<QuizRegime>('standard')
 const wizardStartEnabled = computed(() => {
   const v = wizardDraft.value.trim()
   return v.length >= 2 && v.length <= 12
 })
 
-/** 「开始」：保存昵称（设备级 + 档案级）进入第二步 */
 async function wizardSaveNickname() {
   if (!wizardStartEnabled.value) return
   const v = wizardDraft.value.trim()
@@ -83,26 +93,20 @@ async function wizardSaveNickname() {
   } catch {
     /* IndexedDB 不可用时仍保留设备级昵称 */
   }
-  wizardStep.value = 2
+  showNameModal.value = false
 }
 
-/** 「直接开始」：不填昵称，直接进入第二步 */
+/** 「直接开始」：跳过昵称，且不再提示 */
 function wizardSkip() {
-  wizardStep.value = 2
-}
-
-/** 第二步「完成」：记忆赛制（下次直接进入）并套用到本轮 */
-function wizardDone() {
-  quiz.regime = wizardRegime.value
-  persistRegime(wizardRegime.value)
-  wizardStep.value = 0
+  settings.nicknameGuideDismissed = true
+  showNameModal.value = false
 }
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
-const tier = ref<Tier>(quiz.tier)
+const tier = ref<Tier>(savedTier.value ?? quiz.tier)
 // 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）
 if (savedRegime.value) quiz.regime = savedRegime.value
 
@@ -111,6 +115,65 @@ const intro = computed(() =>
     ? { title: t('nav.audioQuiz'), lead: t('quiz.introAudioLead') }
     : { title: t('nav.imageQuiz'), lead: t('quiz.introImageLead') },
 )
+
+// ---- 第 2/3 步：水平、形式（主界面；新档分步显示，老档摘要可直接开始） ----
+/** 选择中（true=显示步骤界面；false=显示已选摘要） */
+const picking = ref(false)
+/** 'new'=新档分步（水平→形式，不同时出现）；'full'=更改时完整显示两步 */
+const pickMode = ref<'new' | 'full'>('new')
+const introStep = ref<2 | 3>(2)
+const regimeCountsData = ref<Record<QuizRegime, number> | null>(null)
+/** 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰 */
+const visibleRegimes = computed(() => {
+  const c = regimeCountsData.value
+  if (!c) return REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
+  return REGIMES.filter((r) => c[r.id] > 0)
+})
+const tierLabelText = computed(() => t(TIERS[tier.value].labelKey))
+const regimeLabelText = computed(
+  () => t(REGIMES.find((r) => r.id === quiz.regime)?.labelKey ?? 'regime.standard.label'),
+)
+/** 老档点「更改」：完整显示第 2、3 步 */
+function startPicking() {
+  pickMode.value = 'full'
+  picking.value = true
+}
+function chooseTier(v: Tier) {
+  tier.value = v
+  persistTier(v)
+  if (pickMode.value === 'new') introStep.value = 3
+}
+function chooseRegime(r: QuizRegime) {
+  quiz.regime = r
+  persistRegime(r)
+  if (pickMode.value === 'new') picking.value = false
+}
+
+/** 进入介绍页时：决定是否弹昵称、可用赛制、以及新档分步还是老档摘要 */
+async function initIntro() {
+  if (!settings.nickname && !settings.nicknameGuideDismissed) showNameModal.value = true
+  try {
+    regimeCountsData.value = await quiz.regimeCounts(props.type)
+  } catch {
+    regimeCountsData.value = null
+  }
+  const vis = visibleRegimes.value
+  if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
+    quiz.regime = vis[0]!.id
+    persistRegime(quiz.regime)
+  }
+  let rounds = 0
+  try {
+    rounds = (await listRounds()).length
+  } catch {
+    /* IndexedDB 不可用：按新档处理 */
+  }
+  if (rounds === 0) {
+    picking.value = true
+    pickMode.value = 'new'
+    introStep.value = 2
+  }
+}
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
@@ -360,6 +423,7 @@ onMounted(() => {
     quiz.questions = []
     quiz.chosen = []
     quiz.index = 0
+    void initIntro() // 决定昵称浮窗 / 可用赛制 / 新档分步
   }
 })
 onUnmounted(() => {
@@ -439,51 +503,39 @@ function onTouchEnd(e: TouchEvent) {
 </script>
 
 <template>
-  <!-- 首次进入向导（013 §3.1/§4）：第一步 欢迎+昵称 → 第二步 赛制；完成后不再出现 -->
+  <!-- 第 1 步：昵称浮窗（仅此步用浮窗；第 2/3 步在主界面） -->
   <Teleport to="body">
-    <div v-if="wizardStep > 0" class="wizard-overlay" role="dialog" :aria-label="t('quiz.wizardTitle')">
+    <div
+      v-if="showNameModal"
+      class="wizard-overlay"
+      role="dialog"
+      :aria-label="t('quiz.wizardTitle')"
+    >
       <div class="wizard-panel">
-        <template v-if="wizardStep === 1">
-          <h3 class="wizard-title">{{ t('quiz.wizardWelcome') }}</h3>
-          <p class="wizard-sub">{{ t('quiz.wizardWelcomeSub') }}</p>
-          <input
-            v-model="wizardDraft"
-            class="wizard-input"
-            maxlength="12"
-            :placeholder="t('profile.nicknamePlaceholder')"
-            @keyup.enter="wizardSaveNickname"
-          />
-          <div class="wizard-actions">
-            <button class="btn btn-primary" :disabled="!wizardStartEnabled" @click="wizardSaveNickname">
-              {{ t('quiz.wizardStart') }}
-            </button>
-            <button class="btn btn-secondary" @click="wizardSkip">{{ t('quiz.wizardSkip') }}</button>
-          </div>
-        </template>
-        <template v-else>
-          <h3 class="wizard-title">{{ t('quiz.wizardRegimeTitle') }}</h3>
-          <p class="wizard-sub">{{ t('quiz.wizardRegimeSub') }}</p>
-          <div class="wizard-regimes">
-            <button
-              v-for="r in REGIMES"
-              :key="r.id"
-              class="regime"
-              :class="{ on: wizardRegime === r.id }"
-              @click="wizardRegime = r.id"
-            >
-              <strong>{{ t(r.labelKey) }}</strong>
-              <span>{{ t(r.hintKey) }}</span>
-            </button>
-          </div>
-          <div class="wizard-actions">
-            <button class="btn btn-primary" @click="wizardDone">{{ t('quiz.wizardDone') }}</button>
-          </div>
-        </template>
+        <h3 class="wizard-title">{{ t('quiz.wizardWelcome') }}</h3>
+        <p class="wizard-sub">{{ t('quiz.wizardWelcomeSub') }}</p>
+        <input
+          v-model="wizardDraft"
+          class="wizard-input"
+          maxlength="12"
+          :placeholder="t('profile.nicknamePlaceholder')"
+          @keyup.enter="wizardSaveNickname"
+        />
+        <div class="wizard-actions">
+          <button
+            class="btn btn-primary"
+            :disabled="!wizardStartEnabled"
+            @click="wizardSaveNickname"
+          >
+            {{ t('quiz.wizardStart') }}
+          </button>
+          <button class="btn btn-secondary" @click="wizardSkip">{{ t('quiz.wizardSkip') }}</button>
+        </div>
       </div>
     </div>
   </Teleport>
 
-  <!-- 介绍页 -->
+  <!-- 介绍页：第 2 步 水平 → 第 3 步 形式（主界面；老档显示已选摘要） -->
   <section v-if="!started" class="card intro">
     <div class="intro-head">
       <div class="intro-icon">
@@ -498,34 +550,68 @@ function onTouchEnd(e: TouchEvent) {
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
 
-    <!-- A2 赛制选择（013 §4）：标准/复习/强化/复活/随机 -->
-    <div class="regimes">
-      <button
-        v-for="r in REGIMES"
-        :key="r.id"
-        class="regime"
-        :class="{ on: quiz.regime === r.id }"
-        @click="persistRegime(r.id), (quiz.regime = r.id)"
-      >
-        <strong>{{ t(r.labelKey) }}</strong>
-        <span>{{ t(r.hintKey) }}</span>
-      </button>
-    </div>
+    <!-- 选择中：新档分步（水平→形式）；「更改」时两步完整显示 -->
+    <template v-if="picking">
+      <div v-if="pickMode === 'new'" class="steps">
+        <span class="step" :class="{ on: introStep === 2 }">
+          <b>2</b> {{ t('quiz.stepLevel') }}
+        </span>
+        <span class="step" :class="{ on: introStep === 3 }">
+          <b>3</b> {{ t('quiz.stepForm') }}
+        </span>
+      </div>
 
-    <div class="tiers">
-      <button
-        v-for="cfg in TIER_LIST"
-        :key="cfg.tier"
-        class="tier"
-        :class="{ on: tier === cfg.tier }"
-        @click="tier = cfg.tier"
-      >
-        <strong>{{ t(cfg.labelKey) }}</strong>
-        <span>{{ t(cfg.descKey) }}</span>
-      </button>
-    </div>
+      <template v-if="pickMode === 'full' || introStep === 2">
+        <p class="step-cap">{{ t('quiz.stepLevel') }}</p>
+        <div class="tiers">
+          <button
+            v-for="cfg in TIER_LIST"
+            :key="cfg.tier"
+            class="tier"
+            :class="{ on: tier === cfg.tier }"
+            @click="chooseTier(cfg.tier)"
+          >
+            <strong>{{ t(cfg.labelKey) }}</strong>
+            <span>{{ t(cfg.descKey) }}</span>
+          </button>
+        </div>
+      </template>
 
-    <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
+      <template v-if="pickMode === 'full' || introStep === 3">
+        <p class="step-cap">{{ t('quiz.stepForm') }}</p>
+        <div class="regimes">
+          <button
+            v-for="r in visibleRegimes"
+            :key="r.id"
+            class="tier regime"
+            :class="{ on: quiz.regime === r.id }"
+            @click="chooseRegime(r.id)"
+          >
+            <strong>{{ t(r.labelKey) }}</strong>
+            <span>{{ t(r.hintKey) }}</span>
+          </button>
+        </div>
+      </template>
+    </template>
+
+    <!-- 老档：直接显示已选的水平/形式 + 开始；可「更改」 -->
+    <template v-else>
+      <div class="summary">
+        <div class="sum-row">
+          <span class="sum-cap">{{ t('quiz.stepLevel') }}</span>
+          <b>{{ tierLabelText }}</b>
+        </div>
+        <div class="sum-row">
+          <span class="sum-cap">{{ t('quiz.stepForm') }}</span>
+          <b>{{ regimeLabelText }}</b>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm summary-change" @click="startPicking">
+        {{ t('quiz.change') }}
+      </button>
+    </template>
+
+    <button v-if="!picking" class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
   <!-- 加载中 -->
@@ -769,57 +855,92 @@ function onTouchEnd(e: TouchEvent) {
   cursor: not-allowed;
   transform: none;
 }
-.wizard-regimes {
-  display: grid;
-  gap: 8px;
-}
-.wizard-regimes .regime {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 8px;
-}
+/* 第 3 步 形式：与第 2 步 水平按钮同层级同风格（按钮本身复用 .tier 样式） */
 .regimes {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   max-width: 520px;
   margin: 0 auto 10px;
 }
-.regime {
+@media (max-width: 520px) {
+  .regimes {
+    grid-template-columns: 1fr;
+  }
+}
+/* 步骤指示（新档分步时显示） */
+.steps {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #eef4f1;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.step b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d5e6dd;
+  color: var(--primary-dark, var(--primary));
+  font-size: 0.72rem;
+}
+.step.on {
+  background: #f3fbf7;
+  color: var(--primary);
+}
+.step.on b {
+  background: var(--primary);
+  color: #fff;
+}
+.step-cap {
+  margin: 6px 0 8px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-light);
+}
+/* 老档：已选水平/形式摘要 */
+.summary {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 8px 10px;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto 12px;
+}
+.sum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.18s ease;
 }
-.regime:hover {
-  border-color: var(--primary-light);
+.sum-row b {
+  color: var(--primary-dark, var(--primary));
 }
-.regime.on {
-  border-color: var(--primary);
-  background: #f3fbf7;
-}
-.regime strong {
-  font-size: 0.8rem;
-}
-.regime span {
-  font-size: 0.62rem;
+.sum-cap {
+  font-size: 0.78rem;
   color: var(--text-light);
-  line-height: 1.35;
+  font-weight: 700;
 }
-@media (max-width: 520px) {
-  .regimes {
-    grid-template-columns: 1fr 1fr;
-  }
-  .regime:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
+.summary-change {
+  display: block;
+  margin: 0 auto 14px;
 }
 .nickname-guide {
   max-width: 420px;

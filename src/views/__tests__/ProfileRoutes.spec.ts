@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
-import type { RoundRecord, Stats } from '@/core/historyDb'
+import type { ArchiveRow, ProfileRow, RoundRecord, Stats } from '@/core/historyDb'
 
 vi.mock('@/core/historyDb', () => ({
   getStats: vi.fn<() => Promise<Stats>>(async () => emptyStats),
@@ -16,6 +16,34 @@ vi.mock('@/core/historyDb', () => ({
   exportAll: vi.fn<() => Promise<unknown>>(),
   importBackup: vi.fn<() => Promise<unknown>>(),
   isBackupFile: vi.fn<() => boolean>(() => false),
+  // 档案（013 A3-lite）
+  getActiveProfile: vi.fn<() => Promise<ProfileRow>>(async () => ({
+    id: 'p',
+    nickname: '',
+    createdAt: 0,
+    activeArchiveId: 'a',
+    updatedAt: 0,
+  })),
+  getActiveArchive: vi.fn<() => Promise<ArchiveRow>>(async () => ({
+    id: 'a',
+    profileId: 'p',
+    name: '2026-01-01, 00-00',
+    nickname: '',
+    createdAt: 0,
+  })),
+  listArchives: vi.fn<() => Promise<ArchiveRow[]>>(async () => [
+    { id: 'a', profileId: 'p', name: '2026-01-01, 00-00', nickname: '', createdAt: 0 },
+  ]),
+  activateArchive: vi.fn<(id: string) => Promise<void>>(async () => undefined),
+  createArchive: vi.fn<(name?: string, nickname?: string) => Promise<ArchiveRow>>(async () => ({
+    id: 'a2',
+    profileId: 'p',
+    name: '2026-01-02, 00-00',
+    nickname: '',
+    createdAt: 0,
+  })),
+  setProfileNickname: vi.fn<(n: string) => Promise<void>>(async () => undefined),
+  setActiveArchiveNickname: vi.fn<(n: string) => Promise<void>>(async () => undefined),
 }))
 vi.mock('@/core/bank', () => ({
   loadBank: vi.fn<() => Promise<unknown>>(async () => ({})),
@@ -96,15 +124,14 @@ describe('「我的」页二级路由（013 §5.5）', () => {
     expect(router.currentRoute.value.name).toBe('profile-data')
 
     const wrapper = mountApp(router)
+    // 无数据时「历史 / 错题本」置灰不可点，只有 3 个可点标签
     const tabs = wrapper.findAll('.section-tabs a')
-    expect(tabs).toHaveLength(5)
     expect(tabs.map((a) => a.attributes('href'))).toEqual([
       '/profile/data',
       '/profile/titles',
       '/profile/badges',
-      '/profile/wrong',
-      '/profile/history',
     ])
+    expect(wrapper.findAll('.section-tabs .tab-off')).toHaveLength(2)
     // 默认渲染数据子页（含 6 张统计卡）
     await flushPromises()
     expect(wrapper.findAll('.stat')).toHaveLength(6)

@@ -82,33 +82,56 @@ async function safeWrongBook(): Promise<WrongEntry[]> {
   }
 }
 
+/** 各赛制的派生集合（按「物种 × 媒体类型」；computePool 与 regimeCounts 共用） */
+async function poolData(type: MediaType) {
+  const [bank, rounds, wrong] = await Promise.all([
+    loadBank(),
+    safeListRounds(),
+    safeWrongBook(),
+  ])
+  const withMedia = new Set(
+    bank.species.filter((sp) => assetsOf(sp, type).length > 0).map((sp) => sp.id),
+  )
+  const practiced = new Set<string>()
+  const correctSet = new Set<string>()
+  for (const round of rounds) {
+    for (const it of round.items) {
+      if (it.type !== type || !withMedia.has(it.speciesId)) continue
+      practiced.add(it.speciesId)
+      if (it.correct) correctSet.add(it.speciesId)
+    }
+  }
+  const wrongSet = new Set(
+    wrong.map((w) => w.speciesId).filter((id) => withMedia.has(id)),
+  )
+  return { withMedia, practiced, correctSet, wrongSet }
+}
+
+/** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
+async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>> {
+  const { withMedia, practiced, correctSet, wrongSet } = await poolData(type)
+  return {
+    standard: [...withMedia].filter((id) => !practiced.has(id)).length,
+    review: practiced.size,
+    reinforce: correctSet.size,
+    revival: wrongSet.size,
+    random: withMedia.size,
+  }
+}
+
 /** 赛制 → 选题池（undefined = 全库随机）；池空返回错误码，由 UI 引导去专项赛/新建档案 */
   async function computePool(
     r: QuizRegime,
     type: MediaType,
   ): Promise<{ pool?: ReadonlySet<string>; errorCode?: QuizErrorCode }> {
     if (r === 'random') return {}
-    const [bank, rounds] = await Promise.all([loadBank(), safeListRounds()])
-    const withMedia = new Set(
-      bank.species.filter((sp) => assetsOf(sp, type).length > 0).map((sp) => sp.id),
-    )
-    const practiced = new Set<string>()
-    const correctSet = new Set<string>()
-    for (const round of rounds) {
-      for (const it of round.items) {
-        if (it.type !== type || !withMedia.has(it.speciesId)) continue
-        practiced.add(it.speciesId)
-        if (it.correct) correctSet.add(it.speciesId)
-      }
-    }
+    const { withMedia, practiced, correctSet, wrongSet } = await poolData(type)
     if (r === 'standard') {
       const pool = new Set([...withMedia].filter((id) => !practiced.has(id)))
       return pool.size ? { pool } : { errorCode: 'standardPoolEmpty' }
     }
     if (r === 'revival') {
-      const wrongIds = new Set((await safeWrongBook()).map((w) => w.speciesId))
-      const pool = new Set([...wrongIds].filter((id) => withMedia.has(id)))
-      return pool.size ? { pool } : { errorCode: 'wrongPoolEmpty' }
+      return wrongSet.size ? { pool: new Set(wrongSet) } : { errorCode: 'wrongPoolEmpty' }
     }
     const wanted = r === 'review' ? practiced : correctSet
     return wanted.size ? { pool: new Set(wanted) } : { errorCode: 'poolEmpty' }
@@ -269,6 +292,7 @@ async function safeWrongBook(): Promise<WrongEntry[]> {
     escapedQuit,
     overallAccuracy,
     start,
+    regimeCounts,
     answer,
     timeUp,
     next,

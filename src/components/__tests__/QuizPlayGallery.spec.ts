@@ -76,6 +76,9 @@ describe('QuizPlay C3 画廊', () => {
       await flushPromises()
       const tierBtn = wrapper.findAll('.tier').find((b) => b.text().includes('L1'))!
       await tierBtn.trigger('click')
+      await flushPromises()
+      await wrapper.findAll('.regime')[0]!.trigger('click')
+      await flushPromises()
       const startBtn = wrapper.findAll('.intro button').find((b) => b.text().includes('开始答题'))!
       await startBtn.trigger('click')
       await flushPromises()

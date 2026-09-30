@@ -74,6 +74,13 @@ async function startWithTier(wrapper: VueWrapper, label: string) {
   const tierBtn = wrapper.findAll('.tier').find((b) => b.text().includes(label))
   expect(tierBtn).toBeTruthy()
   await tierBtn!.trigger('click')
+  await flushPromises()
+  // 新档分步：选完「水平」进入「形式」步骤，需再选一个赛制
+  const regimeBtn = wrapper.findAll('.regime')[0]
+  if (regimeBtn) {
+    await regimeBtn.trigger('click')
+    await flushPromises()
+  }
   const startBtn = wrapper.findAll('.intro button').find((b) => b.text().includes('开始答题'))
   expect(startBtn).toBeTruthy()
   await startBtn!.trigger('click')

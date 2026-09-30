@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { AutoNextMode, LicensePolicy, QuizRegime } from '@/types'
+import type { AutoNextMode, LicensePolicy, QuizRegime, Tier } from '@/types'
 import { setLocale, currentLocale as i18nCurrentLocale, type AppLocale } from '@/i18n'
 
 // v2：音频自动播放默认由「关」改为「开」（见 006），旧键不复用以免沿用旧默认
@@ -32,6 +32,9 @@ interface Persisted {
   /** A2 赛制按图/声分别记忆（向导完成后写入；013 §4，看图/听声互不影响） */
   regimeImage?: QuizRegime
   regimeAudio?: QuizRegime
+  /** A2 难度按图/声分别记忆（与赛制一致，013 §4 官能正交） */
+  tierImage?: Tier
+  tierAudio?: Tier
 }
 
 function load(): Partial<Persisted> {
@@ -77,6 +80,9 @@ export const useSettingsStore = defineStore('settings', () => {
   /** A2 赛制（图/声分离记忆；向导完成后持久化，下次直接进入） */
   const regimeImage = ref<QuizRegime | undefined>(saved.regimeImage)
   const regimeAudio = ref<QuizRegime | undefined>(saved.regimeAudio)
+  /** A2 难度（图/声分离记忆；与赛制一致） */
+  const tierImage = ref<Tier | undefined>(saved.tierImage)
+  const tierAudio = ref<Tier | undefined>(saved.tierAudio)
 
   // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
   watch(locale, (v) => {
@@ -100,6 +106,8 @@ export const useSettingsStore = defineStore('settings', () => {
       nicknameGuideDismissed,
       regimeImage,
       regimeAudio,
+      tierImage,
+      tierAudio,
     ],
     () => {
       try {
@@ -121,6 +129,8 @@ export const useSettingsStore = defineStore('settings', () => {
             nicknameGuideDismissed: nicknameGuideDismissed.value,
             regimeImage: regimeImage.value,
             regimeAudio: regimeAudio.value,
+            tierImage: tierImage.value,
+            tierAudio: tierAudio.value,
           } satisfies Persisted),
         )
       } catch {
@@ -146,5 +156,7 @@ export const useSettingsStore = defineStore('settings', () => {
     nicknameGuideDismissed,
     regimeImage,
     regimeAudio,
+    tierImage,
+    tierAudio,
   }
 })

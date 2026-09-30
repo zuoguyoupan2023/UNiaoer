@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Archive, Plus, User } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
@@ -9,6 +9,7 @@ import {
   createArchive,
   getActiveArchive,
   getActiveProfile,
+  getStats,
   listArchives,
   setProfileNickname,
   type ArchiveRow,
@@ -17,6 +18,7 @@ import {
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const settings = useSettingsStore()
 
 /** 标签导航（原 sticky 锚点，现指向 /profile 二级路由，013 §5.5） */
@@ -33,18 +35,32 @@ const tab = computed(() => route.path.split('/')[2] ?? 'data')
 const profile = ref<ProfileRow | null>(null)
 const activeArchive = ref<ArchiveRow | null>(null)
 const archives = ref<ArchiveRow[]>([])
+const roundsCount = ref(0)
+const wrongCount = ref(0)
+
+/** 无数据的历史/错题本标签置灰不可点（不存在的入口不出现） */
+function tabEnabled(id: string) {
+  if (id === 'history') return roundsCount.value > 0
+  if (id === 'wrong') return wrongCount.value > 0
+  return true
+}
 
 async function loadArchive() {
   try {
-    const [p, a, list] = await Promise.all([
+    const [p, a, list, st] = await Promise.all([
       getActiveProfile(),
       getActiveArchive(),
       listArchives(),
+      getStats().catch(() => null),
     ])
     profile.value = p
     activeArchive.value = a
     archives.value = list
+    roundsCount.value = st?.rounds ?? 0
+    wrongCount.value = st?.wrongCount ?? 0
     if (p?.nickname) settings.nickname = p.nickname // 身份级昵称，与档案快照解耦
+    // 当前标签若已不可用，回落到数据页
+    if (!tabEnabled(tab.value)) router.replace('/profile/data')
   } catch {
     /* IndexedDB 不可用（隐私模式）：档案功能静默降级 */
   }
@@ -151,9 +167,16 @@ async function saveNickname() {
 
     <!-- 标签导航：/profile/<id> 二级路由切换 -->
     <nav class="section-tabs" :aria-label="t('nav.profile')">
-      <RouterLink v-for="s in TABS" :key="s.id" :to="`/profile/${s.id}`" :class="{ on: tab === s.id }">
-        {{ t(s.labelKey) }}
-      </RouterLink>
+      <template v-for="s in TABS" :key="s.id">
+        <RouterLink
+          v-if="tabEnabled(s.id)"
+          :to="`/profile/${s.id}`"
+          :class="{ on: tab === s.id }"
+        >
+          {{ t(s.labelKey) }}
+        </RouterLink>
+        <span v-else class="tab-off" aria-disabled="true">{{ t(s.labelKey) }}</span>
+      </template>
     </nav>
 
     <!-- 切档后按档案 id 重挂载子页，统计/错题/历史即时刷新 -->
@@ -213,6 +236,19 @@ async function saveNickname() {
   color: #fff;
   border-color: transparent;
 }
+/* 无数据标签：置灰不可点 */
+.section-tabs .tab-off {
+  flex-shrink: 0;
+  padding: 7px 18px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #f3f5f4;
+  color: #b8c4bd;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: not-allowed;
+  user-select: none;
+}
 @media (max-width: 640px) {
   .section-tabs {
     top: 92px;
@@ -221,7 +257,8 @@ async function saveNickname() {
   .section-tabs {
     flex-wrap: wrap;
   }
-  .section-tabs a {
+  .section-tabs a,
+  .section-tabs .tab-off {
     flex: 1 0 calc((100% - 16px) / 3);
     text-align: center;
   }
