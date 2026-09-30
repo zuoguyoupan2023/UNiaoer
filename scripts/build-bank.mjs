@@ -33,6 +33,7 @@ import {
   normalizeLicense,
 } from './lib/license.mjs'
 import { makeR2 } from './lib/r2.mjs'
+import { loadSpeciesNotes, applySpeciesNotes, unmatchedNoteIds } from './lib/notes.mjs'
 import { rgbaToThumbHash } from 'thumbhash'
 
 const execFileP = promisify(execFile)
@@ -72,6 +73,8 @@ let R2CLIENT = null
 let PUBLIC_BASE = ''
 /** 人工覆盖表（data/media-overrides.json） */
 let OVERRIDES = {}
+/** 答疑专栏文案（data/species-notes.json，011 §9）→ 写入 species[].notes */
+let NOTES = {}
 /** 可用的 AV1 静图编码器（检测一次；null = 不产出 AVIF） */
 let AVIF_ENCODER = null
 /** IUCN 同义词覆盖表（懒加载；XC 查不到时备用学名） */
@@ -186,6 +189,7 @@ async function main() {
   const raw = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
   const species = Array.isArray(raw) ? raw : raw.species || []
   OVERRIDES = await loadOverrides()
+  NOTES = await loadSpeciesNotes(ROOT)
 
   // 定向修复：只挑有问题的物种，结果合并回旧 manifest（不破坏其余物种）
   let prevManifest = null
@@ -253,6 +257,14 @@ async function main() {
       return s
     })
     for (const r of records) if (!seen.has(r.id)) outputSpecies.push(r)
+  }
+
+  // 答疑专栏说明并入（011 §9）：按物种 id 写 species[].notes
+  const noted = applySpeciesNotes(outputSpecies, NOTES)
+  const orphanNotes = unmatchedNoteIds(outputSpecies, NOTES)
+  if (Object.keys(NOTES).length) {
+    console.log(`\n📝 答疑专栏：并入 ${noted}/${Object.keys(NOTES).length} 条说明`)
+    if (orphanNotes.length) console.log(`   ⚠️ 未匹配到物种（检查 id）：${orphanNotes.join('、')}`)
   }
 
   const withImage = outputSpecies.filter((r) => r.image).length

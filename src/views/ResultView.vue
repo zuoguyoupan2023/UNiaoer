@@ -8,6 +8,7 @@ import {
   CircleCheck,
   CircleX,
   Flame,
+  HelpCircle,
   PartyPopper,
   Sparkles,
   Star,
@@ -25,7 +26,7 @@ import type { Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
-import { speciesNameById, speciesNameByStoredName } from '@/core/bank'
+import { loadBank, speciesNameById, speciesNameByStoredName, speciesNoteById } from '@/core/bank'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -67,6 +68,13 @@ const settings = useSettingsStore()
 const showPoster = ref(false)
 /** 活动档案的昵称快照（旧档海报署名不随身份改昵称而变，013 §3.3） */
 const archiveNickname = ref('')
+/** 答疑专栏入口（011 §9）：bank 就绪后按物种查说明 */
+const bankReady = ref(false)
+function faqIdOf(q: Question): string | null {
+  if (!bankReady.value) return null
+  const id = q.media.speciesId
+  return id && speciesNoteById(id) ? id : null
+}
 
 const message = computed<{ icon: Component; text: string }>(() => {
   const p = quiz.accuracy
@@ -131,6 +139,9 @@ onMounted(async () => {
     router.replace('/')
     return
   }
+  void loadBank()
+    .then(() => (bankReady.value = true))
+    .catch(() => {})
   try {
     archiveNickname.value = (await getActiveArchive()).nickname || ''
   } catch {
@@ -213,6 +224,11 @@ async function again() {
           mode="browse"
           :label="t('result.viewSpeciesMedia')"
         />
+        <!-- 答疑专栏入口（011 §9） -->
+        <RouterLink v-if="faqIdOf(q)" class="faq-link" :to="`/faq/${faqIdOf(q)}`">
+          <HelpCircle class="ic" :size="14" />
+          {{ q.type === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
+        </RouterLink>
       </li>
     </ol>
   </section>
@@ -312,5 +328,26 @@ async function again() {
 }
 .small {
   font-size: 0.78rem;
+}
+/* 答疑专栏入口（011 §9） */
+.faq-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  font-weight: 600;
+  transition: all 0.18s ease;
+}
+.faq-link:hover {
+  color: var(--primary);
+  border-color: var(--primary-light);
+  background: #eaf4ef;
+  text-decoration: none;
 }
 </style>

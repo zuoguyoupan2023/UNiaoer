@@ -105,6 +105,14 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
     if (seenIds.has(sp.id)) fail(`物种 id 重复：${sp.id}`)
     seenIds.add(sp.id)
 
+    // 答疑专栏说明（011 §9）：出现时四字段（中英标题+正文）必须为非空字符串
+    if (sp.notes) {
+      for (const f of ['titleZh', 'titleEn', 'bodyZh', 'bodyEn']) {
+        const v = sp.notes[f]
+        if (typeof v !== 'string' || !v.trim()) fail(`${sp.id}.notes.${f} 缺失或为空`)
+      }
+    }
+
     for (const { a, kind } of assetsOf(sp)) {
       if (!a.url) fail(`${sp.id}.${kind} 缺少 url`)
       for (const f of ['license', 'author', 'source', 'sourceUrl']) {

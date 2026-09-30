@@ -20,6 +20,7 @@ import {
   AudioLines,
   CircleCheck,
   CircleX,
+  HelpCircle,
   Hourglass,
   Image as ImageIcon,
   Keyboard,
@@ -30,6 +31,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
+import { loadBank, speciesNoteById } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from './AttributionLine.vue'
@@ -178,6 +180,14 @@ const galleryImages = computed<MediaAsset[]>(() =>
 const galleryAudios = computed<MediaAsset[]>(() =>
   quiz.current?.type === 'audio' ? samePool.value : crossPool.value,
 )
+
+/** 答疑专栏入口（011 §9）：仅当该物种有说明时显示 */
+const bankReady = ref(false)
+const faqId = computed<string | null>(() => {
+  if (!bankReady.value) return null
+  const id = quiz.current?.media.speciesId
+  return id && speciesNoteById(id) ? id : null
+})
 /** 「下一题」；最后一题改为「查看结果」（没有第 11 题） */
 const nextLabel = computed(() =>
   quiz.index + 1 >= quiz.total ? t('quiz.viewResult') : t('quiz.next'),
@@ -380,6 +390,10 @@ function updateInterference() {
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
+  // 答疑入口需要物种 notes（bank 通常已由 quiz.start 加载，此处兜底）
+  void loadBank()
+    .then(() => (bankReady.value = true))
+    .catch(() => {})
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
     // 从结果页续轮也是"测试开始"：环境鸟鸣停播
@@ -616,6 +630,12 @@ function onTouchEnd(e: TouchEvent) {
         :label="t('gallery.title')"
         @select="selected = $event"
       />
+
+      <!-- 答疑专栏入口（011 §9）：仅该物种有说明时显示 -->
+      <RouterLink v-if="faqId" class="faq-link" :to="`/faq/${faqId}`">
+        <HelpCircle class="ic" :size="14" />
+        {{ displayType === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
+      </RouterLink>
 
       <OptionList
         :options="quiz.current.options"
@@ -1002,6 +1022,27 @@ function onTouchEnd(e: TouchEvent) {
 /* 署名移到卡片最底部（R41） */
 .quiz-attr {
   margin-top: 14px;
+}
+/* 答疑专栏入口（011 §9） */
+.faq-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  font-weight: 600;
+  transition: all 0.18s ease;
+}
+.faq-link:hover {
+  color: var(--primary);
+  border-color: var(--primary-light);
+  background: #eaf4ef;
+  text-decoration: none;
 }
 /* 自动切换浮窗（R43）：可点击「取消切换」，取消后回落到下方常驻 */
 .correct-toast {

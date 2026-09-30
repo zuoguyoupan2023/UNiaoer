@@ -1,0 +1,19 @@
+{
+  "_comment": "答疑专栏文案（011 §9）。键为物种 id（学名 slug），构建期由 build-bank.mjs 并入 manifest 的 species[].notes；不重跑 bank 时用 `npm run bank:notes` 增量并入。",
+  "_format": {
+    "<speciesId>": {
+      "titleZh": "条目标题（中文）",
+      "titleEn": "entry title (English)",
+      "bodyZh": "说明正文（中文，可含换行）",
+      "bodyEn": "entry body (English, may contain newlines)"
+    }
+  },
+  "notes": {
+    "fulica-atra": {
+      "titleZh": "为什么首图看起来不对？",
+      "titleEn": "Why does the first photo look wrong?",
+      "bodyZh": "这张照片的主体其实是一只雀鹰在扑抓水面的白骨顶，白骨顶在背景里。iNaturalist 上这条观察的首图票数最高，旧算法按“首图”取图才会出现这种情况；现已改为优先使用物种的策展默认图（default_photo），并加入人工覆盖表兜底。\n\n同一物种的不同角度、季节、雌雄或幼鸟也可能差异较大，下面的其它素材可以对照着看。",
+      "bodyEn": "The main subject of this photo is actually a Eurasian Sparrowhawk grabbing a coot on the water, with the coot in the background. On iNaturalist this observation's first photo drew the most votes, and the old algorithm picked the \"first photo\", which is how it slipped in. We now prefer the species' curated default photo (default_photo) and keep a manual override table as a fallback.\n\nA single species can also look quite different by angle, season, sex or age — compare with the other media below."
+    }
+  }
+}

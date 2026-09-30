@@ -1,5 +1,13 @@
 import type { MediaAsset } from '@/types'
 
+/** 答疑专栏说明（011 §9）：物种 id → 图文说明，双语；构建期并入 manifest */
+export interface SpeciesNote {
+  titleZh: string
+  titleEn: string
+  bodyZh: string
+  bodyEn: string
+}
+
 /** 题库中单个物种（来自构建脚本生成的 manifest） */
 export interface BankSpecies {
   id: string
@@ -18,6 +26,8 @@ export interface BankSpecies {
   desc: string
   location: string
   habit: string
+  /** 答疑专栏说明（011 §9；仅少数物种有） */
+  notes?: SpeciesNote
   /** 兼容期：首选素材（= images[0] / audios[0]） */
   image: MediaAsset | null
   audio: MediaAsset | null
@@ -89,6 +99,27 @@ export function speciesNameByStoredName(
   if (!stored) return undefined
   const sp = nameIndex?.get(stored)
   return sp ? speciesName(sp, locale) : undefined
+}
+
+/** 按 id 取答疑说明（需先 loadBank 建索引；无说明返回 undefined） */
+export function speciesNoteById(id: string | null | undefined): SpeciesNote | undefined {
+  if (!id) return undefined
+  return speciesIndex?.get(id)?.notes
+}
+
+/**
+ * 答疑说明按 locale 取文本（缺英文字段回退中文，反之亦然）；无说明返回 null。
+ * 供 FAQ 页与题目/结果页入口渲染（数据驱动文案，不经过 i18n 静态语言包）。
+ */
+export function speciesNoteText(
+  note: SpeciesNote | undefined,
+  locale: string,
+): { title: string; body: string } | null {
+  if (!note) return null
+  if (locale === 'en') {
+    return { title: note.titleEn || note.titleZh, body: note.bodyEn || note.bodyZh }
+  }
+  return { title: note.titleZh || note.titleEn, body: note.bodyZh || note.bodyEn }
 }
 
 /** 题库错误码（UI 层映射 errors.* 文案，015 §6.5：异常不直接进界面） */

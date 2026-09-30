@@ -31,6 +31,17 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
     },
     {
+      // 答疑专栏（011 §9）：总览 + 单条详情
+      path: '/faq',
+      name: 'faq',
+      component: () => import('../views/FaqView.vue'),
+    },
+    {
+      path: '/faq/:speciesId',
+      name: 'faq-detail',
+      component: () => import('../views/FaqDetailView.vue'),
+    },
+    {
       // 错题本并入 /profile/wrong 后保留旧路径重定向（导航入口已移除，R31）
       path: '/wrong',
       redirect: { name: 'profile-wrong' },
