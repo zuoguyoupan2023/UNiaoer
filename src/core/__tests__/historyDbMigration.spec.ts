@@ -75,11 +75,12 @@ describe('historyDb v1 → v2 迁移（013-A0）', () => {
     expect(stats.rounds).toBe(1)
     expect(stats.wrongCount).toBe(1)
 
-    // 4. 默认档案名 = 最早一轮日期；昵称沿用设置
+    // 4. 默认档案名 = 最早一轮的日期时间（yyyy-mm-dd, hh-mm）；昵称快照沿用设置
     const archives = await listArchives()
     expect(archives).toHaveLength(1)
-    expect(archives[0]!.name).toBe(new Date(1_700_000_000_000).toISOString().slice(0, 10))
+    expect(archives[0]!.name).toMatch(/^\d{4}-\d{2}-\d{2}, \d{2}-\d{2}$/)
     expect(archives[0]!.profileId).toBe('p-default')
+    expect(archives[0]!.nickname).toBe('老鸟人') // 建档时昵称快照
     const profile = await getActiveProfile()
     expect(profile.nickname).toBe('老鸟人')
   }, 10_000)

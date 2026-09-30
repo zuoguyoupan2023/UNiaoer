@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import { getActiveProfile, setProfileNickname } from '@/core/historyDb'
+import { setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import {
   AUTO_NEXT_DELAY_CORRECT_MS,
@@ -53,27 +53,49 @@ const REGIMES: { id: QuizRegime; labelKey: string; hintKey: string }[] = [
   { id: 'random', labelKey: 'regime.random.label', hintKey: 'regime.random.hint' },
 ]
 
-// ---- A1 昵称引导（013 §3.1）：档案无昵称且未跳过时，在介绍页展示 ----
-const profileNicknameEmpty = ref(false)
-const guideDraft = ref('')
-const showNicknameGuide = computed(
-  () => profileNicknameEmpty.value && !settings.nicknameGuideDismissed,
+/** 当前模式的已存赛制（013 §4：图/声分离记忆） */
+const savedRegime = computed<QuizRegime | undefined>(() =>
+  props.type === 'audio' ? settings.regimeAudio : settings.regimeImage,
 )
+function persistRegime(r: QuizRegime) {
+  if (props.type === 'audio') settings.regimeAudio = r
+  else settings.regimeImage = r
+}
 
-async function saveGuide() {
-  const v = guideDraft.value.trim()
-  if (v.length < 2) return
+// ---- 首次进入向导（013 §3.1/§4）：第一步 欢迎+昵称，第二步 赛制 ----
+const wizardStep = ref<0 | 1 | 2>(savedRegime.value ? 0 : 1)
+const wizardDraft = ref('')
+const wizardRegime = ref<QuizRegime>('standard')
+const wizardStartEnabled = computed(() => {
+  const v = wizardDraft.value.trim()
+  return v.length >= 2 && v.length <= 12
+})
+
+/** 「开始」：保存昵称（设备级 + 档案级）进入第二步 */
+async function wizardSaveNickname() {
+  if (!wizardStartEnabled.value) return
+  const v = wizardDraft.value.trim()
   settings.nickname = v
   try {
+    // 首次向导：同时定名「用户」与当前（首个）档案快照
     await setProfileNickname(v)
+    await setActiveArchiveNickname(v)
   } catch {
     /* IndexedDB 不可用时仍保留设备级昵称 */
   }
-  profileNicknameEmpty.value = false
+  wizardStep.value = 2
 }
 
-function skipGuide() {
-  settings.nicknameGuideDismissed = true
+/** 「直接开始」：不填昵称，直接进入第二步 */
+function wizardSkip() {
+  wizardStep.value = 2
+}
+
+/** 第二步「完成」：记忆赛制（下次直接进入）并套用到本轮 */
+function wizardDone() {
+  quiz.regime = wizardRegime.value
+  persistRegime(wizardRegime.value)
+  wizardStep.value = 0
 }
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
@@ -81,6 +103,8 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
 const tier = ref<Tier>(quiz.tier)
+// 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）
+if (savedRegime.value) quiz.regime = savedRegime.value
 
 const intro = computed(() =>
   props.type === 'audio'
@@ -324,13 +348,6 @@ function updateInterference() {
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
-  getActiveProfile()
-    .then((p) => {
-      profileNicknameEmpty.value = !p.nickname
-    })
-    .catch(() => {
-      /* IndexedDB 不可用时不展示引导 */
-    })
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
     // 从结果页续轮也是"测试开始"：环境鸟鸣停播
@@ -422,6 +439,50 @@ function onTouchEnd(e: TouchEvent) {
 </script>
 
 <template>
+  <!-- 首次进入向导（013 §3.1/§4）：第一步 欢迎+昵称 → 第二步 赛制；完成后不再出现 -->
+  <Teleport to="body">
+    <div v-if="wizardStep > 0" class="wizard-overlay" role="dialog" :aria-label="t('quiz.wizardTitle')">
+      <div class="wizard-panel">
+        <template v-if="wizardStep === 1">
+          <h3 class="wizard-title">{{ t('quiz.wizardWelcome') }}</h3>
+          <p class="wizard-sub">{{ t('quiz.wizardWelcomeSub') }}</p>
+          <input
+            v-model="wizardDraft"
+            class="wizard-input"
+            maxlength="12"
+            :placeholder="t('profile.nicknamePlaceholder')"
+            @keyup.enter="wizardSaveNickname"
+          />
+          <div class="wizard-actions">
+            <button class="btn btn-primary" :disabled="!wizardStartEnabled" @click="wizardSaveNickname">
+              {{ t('quiz.wizardStart') }}
+            </button>
+            <button class="btn btn-secondary" @click="wizardSkip">{{ t('quiz.wizardSkip') }}</button>
+          </div>
+        </template>
+        <template v-else>
+          <h3 class="wizard-title">{{ t('quiz.wizardRegimeTitle') }}</h3>
+          <p class="wizard-sub">{{ t('quiz.wizardRegimeSub') }}</p>
+          <div class="wizard-regimes">
+            <button
+              v-for="r in REGIMES"
+              :key="r.id"
+              class="regime"
+              :class="{ on: wizardRegime === r.id }"
+              @click="wizardRegime = r.id"
+            >
+              <strong>{{ t(r.labelKey) }}</strong>
+              <span>{{ t(r.hintKey) }}</span>
+            </button>
+          </div>
+          <div class="wizard-actions">
+            <button class="btn btn-primary" @click="wizardDone">{{ t('quiz.wizardDone') }}</button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- 介绍页 -->
   <section v-if="!started" class="card intro">
     <div class="intro-head">
@@ -432,22 +493,6 @@ function onTouchEnd(e: TouchEvent) {
       <h2>{{ intro.title }}</h2>
     </div>
     <p class="lead muted">{{ intro.lead }}</p>
-
-    <!-- A1 昵称引导（013 §3.1）：可跳过，跳过不再提示 -->
-    <div v-if="showNicknameGuide" class="nickname-guide">
-      <p class="guide-title">{{ t('profile.guideTitle') }}</p>
-      <div class="guide-row">
-        <input
-          v-model="guideDraft"
-          class="guide-input"
-          maxlength="12"
-          :placeholder="t('profile.nicknamePlaceholder')"
-          @keyup.enter="saveGuide"
-        />
-        <button class="btn btn-primary btn-sm" @click="saveGuide">{{ t('common.save') }}</button>
-        <button class="btn btn-secondary btn-sm" @click="skipGuide">{{ t('profile.guideSkip') }}</button>
-      </div>
-    </div>
 
     <p v-if="quiz.regime === 'revival'" class="wrong-hint">
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
@@ -460,7 +505,7 @@ function onTouchEnd(e: TouchEvent) {
         :key="r.id"
         class="regime"
         :class="{ on: quiz.regime === r.id }"
-        @click="quiz.regime = r.id"
+        @click="persistRegime(r.id), (quiz.regime = r.id)"
       >
         <strong>{{ t(r.labelKey) }}</strong>
         <span>{{ t(r.hintKey) }}</span>
@@ -669,6 +714,69 @@ function onTouchEnd(e: TouchEvent) {
   color: var(--wrong);
   font-size: 0.82rem;
   font-weight: 600;
+}
+.wizard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 30, 22, 0.55);
+  backdrop-filter: blur(6px);
+}
+.wizard-panel {
+  width: min(480px, 100%);
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6);
+}
+.wizard-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.wizard-sub {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.wizard-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--primary-light);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+}
+.wizard-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 16px;
+}
+.wizard-actions .btn {
+  flex: 1;
+}
+.wizard-actions .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+.wizard-regimes {
+  display: grid;
+  gap: 8px;
+}
+.wizard-regimes .regime {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
 }
 .regimes {
   display: grid;

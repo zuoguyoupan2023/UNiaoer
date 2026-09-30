@@ -18,7 +18,7 @@ import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
-import { getStats, listRounds } from '@/core/historyDb'
+import { getActiveArchive, getStats, listRounds } from '@/core/historyDb'
 import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
 import { ALL_SPECIES_TOTAL, BADGES, type BadgeDef } from '@/core/badges'
 import type { Question } from '@/types'
@@ -65,6 +65,8 @@ const wornTitleIcon = ref('')
 const wornBadgeIcon = ref('')
 const settings = useSettingsStore()
 const showPoster = ref(false)
+/** 活动档案的昵称快照（旧档海报署名不随身份改昵称而变，013 §3.3） */
+const archiveNickname = ref('')
 
 const message = computed<{ icon: Component; text: string }>(() => {
   const p = quiz.accuracy
@@ -100,7 +102,7 @@ const posterData = computed<PosterData>(() => {
     wornTitleIcon: wornTitleIcon.value || undefined,
     wornBadge: wornBadgeLabel.value || undefined,
     wornBadgeIcon: wornBadgeIcon.value || undefined,
-    nickname: settings.nickname || undefined,
+    nickname: archiveNickname.value || settings.nickname || undefined,
     wrong,
   }
 })
@@ -128,6 +130,11 @@ onMounted(async () => {
   if (!hasResult.value) {
     router.replace('/')
     return
+  }
+  try {
+    archiveNickname.value = (await getActiveArchive()).nickname || ''
+  } catch {
+    /* IndexedDB 不可用：海报回退 settings.nickname */
   }
   const res = await persistRound(quiz)
   newBadges.value = res.badges

@@ -83,6 +83,8 @@ export interface ArchiveRow {
   id: string
   profileId: string
   name: string
+  /** 建档时的昵称快照：旧档永远用它显示/上海报；改昵称只影响新开局（013 §3.3） */
+  nickname: string
   createdAt: number
 }
 
@@ -144,9 +146,11 @@ function badgeKey(archiveId: string, badgeId: string): string {
   return `${archiveId}::${badgeId}`
 }
 
-/** 档案默认名：建档日期（013 §3.1 自动以日期建档） */
+/** 档案默认名：建档日期时间（013 §3.1：yyyy-mm-dd, hh-mm，本地时间） */
 function archiveName(at: number): string {
-  return new Date(at).toISOString().slice(0, 10)
+  const d = new Date(at)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}, ${pad(d.getHours())}-${pad(d.getMinutes())}`
 }
 
 /** v1 迁移读取设置里的昵称（settings store 同键；core 不 import store，直接读 localStorage） */
@@ -280,6 +284,7 @@ async function openDbInstance(): Promise<IDBDatabase> {
         id: DEFAULT_ARCHIVE_ID,
         profileId: DEFAULT_PROFILE_ID,
         name: archiveName(firstAt),
+        nickname: readSavedNickname(),
         createdAt: now,
       } satisfies ArchiveRow)
       metaS.put({ key: 'schema', value: 2 })
@@ -355,6 +360,7 @@ async function ensureCtx(): Promise<ActiveCtx> {
           id: `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
           profileId: profile.id,
           name: archiveName(Date.now()),
+          nickname: profile.nickname,
           createdAt: Date.now(),
         }
         archivesS.put(archive)
@@ -381,6 +387,21 @@ export async function getActiveProfile(): Promise<ProfileRow> {
   return row!
 }
 
+/**
+ * 更新**活动档案**的昵称快照（013 §3.3）。
+ * 仅用于首次向导建档时定名；平时的「改昵称」只改 Profile.nickname，
+ * 不动已有档案快照（旧档海报/署名保持原昵称，新开局才用新昵称）。
+ */
+export async function setActiveArchiveNickname(nickname: string): Promise<void> {
+  const db = await openDb()
+  const { archiveId } = await ensureCtx()
+  const tx = db.transaction(STORE_ARCHIVES, 'readwrite')
+  const s = tx.objectStore(STORE_ARCHIVES)
+  const row = await p<ArchiveRow | undefined>(s.get(archiveId))
+  if (row) s.put({ ...row, nickname })
+  await txDone(tx)
+}
+
 /** 更新当前用户昵称（A1 引导保存；档案级 Profile.nickname） */
 export async function setProfileNickname(nickname: string): Promise<void> {
   const db = await openDb()
@@ -390,6 +411,16 @@ export async function setProfileNickname(nickname: string): Promise<void> {
   const row = await p<ProfileRow | undefined>(s.get(profileId))
   if (row) s.put({ ...row, nickname, updatedAt: Date.now() })
   await txDone(tx)
+}
+
+/** 当前活动档案（昵称快照/档案名显示用） */
+export async function getActiveArchive(): Promise<ArchiveRow> {
+  const db = await openDb()
+  const { archiveId } = await ensureCtx()
+  const row = await p<ArchiveRow>(
+    db.transaction(STORE_ARCHIVES).objectStore(STORE_ARCHIVES).get(archiveId),
+  )
+  return row!
 }
 
 /** 当前用户的全部档案（新→旧；A3 档案管理用） */
@@ -404,9 +435,10 @@ export async function listArchives(): Promise<ArchiveRow[]> {
 
 /**
  * 新建档案并切换为活动档（013 §3.3「新建档案 = 清零重开」；A2 池空引导 / A3 管理页用）。
- * name 缺省 = 日期；同日多档自动加序号（YYYY-MM-DD #2）。
+ * name 缺省 = 建档日期时间（yyyy-mm-dd, hh-mm）；同档名自动加序号（#2）。
+ * nickname 缺省 = 当前用户昵称快照（旧档永远保留建档时的昵称）。
  */
-export async function createArchive(name?: string): Promise<ArchiveRow> {
+export async function createArchive(name?: string, nickname?: string): Promise<ArchiveRow> {
   const db = await openDb()
   const { profileId } = await ensureCtx()
   const tx = db.transaction([STORE_ARCHIVES, STORE_PROFILES], 'readwrite')
@@ -419,17 +451,21 @@ export async function createArchive(name?: string): Promise<ArchiveRow> {
   for (let n = 2; existing.some((a) => a.name === finalName); n++) {
     finalName = `${base} #${n}`
   }
+  const profile = await p<ProfileRow | undefined>(tx.objectStore(STORE_PROFILES).get(profileId))
   const archive: ArchiveRow = {
     id: `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     profileId,
     name: finalName,
+    nickname: nickname ?? profile?.nickname ?? '',
     createdAt: Date.now(),
   }
   archivesS.put(archive)
-  const profilesS = tx.objectStore(STORE_PROFILES)
-  const profile = await p<ProfileRow | undefined>(profilesS.get(profileId))
   if (profile) {
-    profilesS.put({ ...profile, activeArchiveId: archive.id, updatedAt: Date.now() })
+    tx.objectStore(STORE_PROFILES).put({
+      ...profile,
+      activeArchiveId: archive.id,
+      updatedAt: Date.now(),
+    })
   }
   await txDone(tx)
   ctxPromise = null // 切档后让后续调用重新解析活动档

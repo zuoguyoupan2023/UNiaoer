@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { User } from 'lucide-vue-next'
+import { Archive, Plus, User } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
+import {
+  activateArchive,
+  createArchive,
+  getActiveArchive,
+  getActiveProfile,
+  listArchives,
+  setProfileNickname,
+  type ArchiveRow,
+  type ProfileRow,
+} from '@/core/historyDb'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -19,18 +29,53 @@ const TABS = [
 ] as const
 const tab = computed(() => route.path.split('/')[2] ?? 'data')
 
-// ---- 用户昵称（R33）：2–12 字符，存本地，用于「我的」页与海报 ----
+// ---- 档案（013 A3-lite）：切换 / 新建；数据（统计/错题/徽章/历史）按活动档隔离 ----
+const profile = ref<ProfileRow | null>(null)
+const activeArchive = ref<ArchiveRow | null>(null)
+const archives = ref<ArchiveRow[]>([])
+
+async function loadArchive() {
+  try {
+    const [p, a, list] = await Promise.all([
+      getActiveProfile(),
+      getActiveArchive(),
+      listArchives(),
+    ])
+    profile.value = p
+    activeArchive.value = a
+    archives.value = list
+    if (p?.nickname) settings.nickname = p.nickname // 身份级昵称，与档案快照解耦
+  } catch {
+    /* IndexedDB 不可用（隐私模式）：档案功能静默降级 */
+  }
+}
+onMounted(loadArchive)
+
+async function switchArchive(id: string) {
+  if (id === activeArchive.value?.id) return
+  await activateArchive(id)
+  await loadArchive()
+}
+
+/** 新开一局 = 新建档案从零计数（旧档保留，可切回） */
+async function newGame() {
+  if (!confirm(t('archive.newGameConfirm'))) return
+  await createArchive()
+  await loadArchive()
+}
+
+// ---- 用户昵称（R33）：2–12 字符；改「身份」昵称，不改已有档案快照（旧档海报不变） ----
 const editingNickname = ref(false)
 const nicknameDraft = ref('')
 const nicknameMsg = ref('')
 
 function startNickname() {
-  nicknameDraft.value = settings.nickname
+  nicknameDraft.value = profile.value?.nickname || settings.nickname
   nicknameMsg.value = ''
   editingNickname.value = true
 }
 
-function saveNickname() {
+async function saveNickname() {
   const v = nicknameDraft.value.trim()
   if (!v) {
     nicknameMsg.value = t('profile.nicknameEmpty')
@@ -41,13 +86,19 @@ function saveNickname() {
     return
   }
   settings.nickname = v
+  try {
+    await setProfileNickname(v) // 仅身份级；新开局建档时才快照进新档案
+  } catch {
+    /* 降级：仅设备级 */
+  }
+  if (profile.value) profile.value = { ...profile.value, nickname: v }
   editingNickname.value = false
 }
 </script>
 
 <template>
   <div class="profile-page">
-    <!-- 身份卡：标题 + 昵称（所有子页共用） -->
+    <!-- 身份卡：昵称 + 当前档案 + 档案切换/新开一局（所有子页共用） -->
     <section class="card head-card">
       <h2 class="sec"><User class="ic" :size="20" /> {{ t('nav.profile') }}</h2>
       <div class="nickname-row">
@@ -67,13 +118,34 @@ function saveNickname() {
         <template v-else>
           <span class="nickname-chip">
             <User class="ic" :size="13" />
-            {{ settings.nickname || t('profile.noNickname') }}
+            {{ profile?.nickname || settings.nickname || t('profile.noNickname') }}
           </span>
           <button class="btn btn-secondary btn-sm" @click="startNickname">
-            {{ settings.nickname ? t('common.edit') : t('profile.setNickname') }}
+            {{ profile?.nickname ? t('common.edit') : t('profile.setNickname') }}
           </button>
         </template>
         <span v-if="nicknameMsg" class="nickname-msg">{{ nicknameMsg }}</span>
+      </div>
+
+      <div class="archive-row">
+        <span class="archive-cap">
+          <Archive class="ic" :size="13" /> {{ t('archive.count', { n: archives.length }) }}
+        </span>
+        <div class="archive-list">
+          <button
+            v-for="a in archives"
+            :key="a.id"
+            class="archive-chip"
+            :class="{ on: a.id === activeArchive?.id }"
+            :title="t('archive.createdAt', { date: a.name })"
+            @click="switchArchive(a.id)"
+          >
+            {{ a.name }}
+          </button>
+        </div>
+        <button class="btn btn-secondary btn-sm archive-new" @click="newGame">
+          <Plus class="ic" :size="14" /> {{ t('archive.newGame') }}
+        </button>
       </div>
     </section>
 
@@ -84,7 +156,8 @@ function saveNickname() {
       </RouterLink>
     </nav>
 
-    <RouterView />
+    <!-- 切档后按档案 id 重挂载子页，统计/错题/历史即时刷新 -->
+    <RouterView :key="activeArchive?.id || 'none'" />
   </div>
 </template>
 
@@ -186,5 +259,51 @@ function saveNickname() {
 .nickname-msg {
   font-size: 0.78rem;
   color: var(--wrong);
+}
+/* ---- 档案（013 A3-lite） ---- */
+.archive-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.archive-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  font-weight: 700;
+}
+.archive-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.archive-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.archive-chip:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+.archive-chip.on {
+  background: var(--grad);
+  color: #fff;
+  border-color: transparent;
+}
+.archive-new .ic {
+  margin-right: 2px;
 }
 </style>
