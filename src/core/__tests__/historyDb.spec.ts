@@ -4,7 +4,9 @@ import {
   activateArchive,
   clearAll,
   createArchive,
-  exportAll,
+  deleteArchive,
+  exportAllArchives,
+  exportCurrentArchive,
   getBadges,
   getStats,
   getWrongBook,
@@ -16,7 +18,9 @@ import {
   removeWrong,
   saveRound,
   saveBadges,
+  summarizeBackup,
   _resetDb,
+  type BackupFileV1,
   type RoundRecord,
 } from '../historyDb'
 
@@ -112,52 +116,113 @@ describe('historyDb', () => {
     expect(s.bestStreak).toBe(2)
   })
 
-  it('E2 导出包含全部仓库且带版本标记', async () => {
+  it('E2 导出为档案级 v2，含归属与档案名', async () => {
     await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
-    const data = await exportAll()
+    const data = await exportCurrentArchive()
     expect(isBackupFile(data)).toBe(true)
-    expect(data.rounds).toHaveLength(1)
-    expect(data.wrong).toHaveLength(1)
-    expect(data.badges).toEqual([])
+    expect(data.version).toBe(2)
+    expect(data.scope).toBe('archive')
+    expect(data.archive.rounds).toHaveLength(1)
+    expect(data.archive.wrong).toHaveLength(1)
+    expect(data.archive.id).toBe((await listArchives())[0]!.id)
+    expect(data.archive.name).toBeTruthy()
   })
 
-  it('E2 导出后清空再导入，数据完整恢复', async () => {
+  it('E2 导出后清空再导入，数据完整恢复（同档 id → 合并）', async () => {
     await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
-    const backup = await exportAll()
+    const backup = await exportCurrentArchive()
     await clearAll()
     expect(await listRounds()).toHaveLength(0)
 
-    const r = await importBackup(backup)
+    const r = await importBackup(backup, { newArchiveName: '导入档案' })
     expect(r.rounds).toBe(1)
     expect(r.wrong).toBe(1)
+    expect(r.archivesMerged).toBe(1)
+    expect(r.archivesCreated).toBe(0)
     expect((await listRounds())[0]!.id).toBe('r1')
     expect((await getWrongBook())[0]!.speciesId).toBe('a')
   })
 
-  it('E2 导入按 id 合并：同轮覆盖，错题保留更大 wrongCount，徽章取并集', async () => {
+  it('E2 同档 id 合并：同轮覆盖，错题保留更大 wrongCount，徽章取并集', async () => {
     await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
     await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }])) // 同 id 再存（wrongCount=2）
 
-    const backup = await exportAll()
+    const backup = await exportCurrentArchive()
+    backup.archive.badges = [{ id: 'badge-1', at: 1 }]
     await clearAll()
-    // 设备上先有：同 id 轮次 + wrongCount 更小的错题 + 一枚徽章
+    // 设备上先有：同 id 轮次 + wrongCount 更小的错题
     await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '丙' }]))
     await saveRound(round('other', [{ sid: 'b', answer: '乙', chosen: '乙' }]))
-    await importBackup({
-      ...backup,
-      badges: [{ id: 'badge-1', at: 1 }],
-    })
+    const r = await importBackup(backup, { newArchiveName: 'x' })
 
+    expect(r.archivesMerged).toBe(1)
     const rounds = await listRounds()
     expect(rounds).toHaveLength(2) // r1（被覆盖）+ other（保留）
-    expect(rounds.find((r) => r.id === 'r1')!.items[0]!.chosen).toBe('乙') // 备份版本覆盖
-    const wrong = await getWrongBook()
-    expect(wrong.find((w) => w.speciesId === 'a')!.wrongCount).toBe(2) // 保留更大的计数
-    expect(rounds.find((r) => r.id === 'other')).toBeTruthy()
+    expect(rounds.find((x) => x.id === 'r1')!.items[0]!.chosen).toBe('乙') // 备份版本覆盖
+    expect((await getWrongBook()).find((w) => w.speciesId === 'a')!.wrongCount).toBe(2)
+    expect(await getBadges()).toEqual([{ id: 'badge-1', at: 1 }])
   })
 
-  it('E2 isBackupFile 拒绝非备份结构', () => {
+  it('E2 异档 id 作为新档案导入，不污染当前档', async () => {
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    const backup = await exportCurrentArchive()
+    // 模拟“另一台设备”的备份：不同档案 id、不同轮次 id
+    backup.archive = {
+      ...backup.archive,
+      id: 'a-external',
+      name: '异地档案',
+      rounds: [round('r-ext', [{ sid: 'z', answer: '丙', chosen: '丙' }])],
+      wrong: [],
+      badges: [],
+    }
+    const r = await importBackup(backup, { newArchiveName: '导入档案' })
+
+    expect(r.archivesCreated).toBe(1)
+    expect(r.archivesMerged).toBe(0)
+    expect((await listArchives()).some((a) => a.id === 'a-external' && a.name === '异地档案')).toBe(
+      true,
+    )
+    // 当前档数据未受影响（仍只有 r1）
+    expect((await listRounds()).map((x) => x.id)).toEqual(['r1'])
+    // 切到新档可见其数据，再切回并清理
+    await activateArchive('a-external')
+    expect((await listRounds()).map((x) => x.id)).toEqual(['r-ext'])
+    const back = (await listArchives()).find((a) => a.id !== 'a-external')!
+    await activateArchive(back.id)
+    await deleteArchive('a-external')
+  })
+
+  it('E2 v1 备份导入自动建「导入档案」（兼容旧备份）', async () => {
+    const v1: BackupFileV1 = {
+      app: 'uniaoer',
+      version: 1,
+      exportedAt: '',
+      rounds: [round('v1r', [{ sid: 'z', answer: '甲', chosen: '乙' }])],
+      wrong: [],
+      badges: [],
+    }
+    expect(isBackupFile(v1)).toBe(true)
+    const r = await importBackup(v1, { newArchiveName: '导入档案' })
+    expect(r.archivesCreated).toBe(1)
+    expect(r.rounds).toBe(1)
+    const created = (await listArchives()).find((a) => a.name === '导入档案')!
+    expect(created).toBeTruthy()
+    await deleteArchive(created.id) // 清理，避免影响后续用例
+  })
+
+  it('E2 summarizeBackup 统计 v1/v2', async () => {
+    await saveRound(round('r1', [{ sid: 'a', answer: '甲', chosen: '乙' }]))
+    const v2 = await exportCurrentArchive()
+    expect(summarizeBackup(v2)).toEqual({ archives: 1, rounds: 1, wrong: 1, badges: 0 })
+    const all = await exportAllArchives()
+    expect(all.scope).toBe('all')
+    expect(summarizeBackup(all).archives).toBeGreaterThanOrEqual(1)
+  })
+
+  it('E2 isBackupFile 接受 v1/v2，拒绝其他结构', () => {
     expect(isBackupFile({ app: 'uniaoer', version: 1, rounds: [] })).toBe(true)
+    expect(isBackupFile({ app: 'uniaoer', version: 2, archive: {} })).toBe(true)
+    expect(isBackupFile({ app: 'uniaoer', version: 2 })).toBe(false)
     expect(isBackupFile({ app: 'other', version: 1, rounds: [] })).toBe(false)
     expect(isBackupFile(null)).toBe(false)
     expect(isBackupFile('json')).toBe(false)

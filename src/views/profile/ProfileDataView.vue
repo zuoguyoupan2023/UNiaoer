@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { inject, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Activity, Download, History, Upload } from 'lucide-vue-next'
 import {
   clearAll,
-  exportAll,
+  exportAllArchives,
+  exportCurrentArchive,
   getStats,
   importBackup,
   isBackupFile,
   listRounds,
+  summarizeBackup,
   type RoundRecord,
   type Stats,
 } from '@/core/historyDb'
@@ -21,6 +23,8 @@ const rounds = ref<RoundRecord[]>([])
 const loading = ref(true)
 const backupMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+/** 由 ProfileView provide：导入可能新建档案，重载档案列表/活动档 */
+const reloadProfile = inject<() => void | Promise<void>>('reloadProfile', () => {})
 
 async function refresh() {
   loading.value = true
@@ -38,23 +42,39 @@ async function reset() {
   await refresh()
 }
 
-/** E2 导出：下载 JSON 备份 */
-async function exportJson() {
-  backupMsg.value = ''
-  const data = await exportAll()
-  const stamp = new Date().toISOString().slice(0, 10)
+function download(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `uniaoer-backup-${stamp}.json`
+  a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+/** 导出当前档案（013-A4：v2 档案级备份） */
+async function exportJson() {
+  backupMsg.value = ''
+  const data = await exportCurrentArchive()
+  const stamp = new Date().toISOString().slice(0, 10)
+  download(data, `uniaoer-backup-${stamp}.json`)
+  const s = summarizeBackup(data)
   backupMsg.value = t('profile.exportDone', {
-    rounds: data.rounds.length,
-    wrong: data.wrong.length,
-    badges: data.badges.length,
+    name: data.archive.name,
+    rounds: s.rounds,
+    wrong: s.wrong,
+    badges: s.badges,
   })
+}
+
+/** 导出全部档案（013-A4：v2 scope=all） */
+async function exportAllJson() {
+  backupMsg.value = ''
+  const data = await exportAllArchives()
+  const stamp = new Date().toISOString().slice(0, 10)
+  download(data, `uniaoer-backup-all-${stamp}.json`)
+  const s = summarizeBackup(data)
+  backupMsg.value = t('profile.exportAllDone', { archives: s.archives, rounds: s.rounds })
 }
 
 function pickFile() {
@@ -62,7 +82,7 @@ function pickFile() {
   fileInput.value?.click()
 }
 
-/** E2 导入：按 id 合并（不覆盖现有），轮次/错题/徽章 */
+/** 导入（013-A4）：同档 id 合并，异档作为新档案加入当前用户；兼容 v1 */
 async function onFile(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -74,16 +94,16 @@ async function onFile(e: Event) {
       backupMsg.value = t('profile.importInvalid')
       return
     }
-    const ok = confirm(
-      t('profile.importConfirm', {
-        rounds: parsed.rounds.length,
-        wrong: parsed.wrong.length,
-        badges: parsed.badges.length,
-      }),
-    )
-    if (!ok) return
-    const r = await importBackup(parsed)
-    backupMsg.value = t('profile.importDone', { rounds: r.rounds, wrong: r.wrong, badges: r.badges })
+    if (!confirm(t('profile.importConfirm', { ...summarizeBackup(parsed) }))) return
+    const r = await importBackup(parsed, { newArchiveName: t('profile.importArchiveName') })
+    backupMsg.value = t('profile.importDone', {
+      created: r.archivesCreated,
+      merged: r.archivesMerged,
+      rounds: r.rounds,
+      wrong: r.wrong,
+      badges: r.badges,
+    })
+    await reloadProfile() // 新建档案可能改变档案列表
     await refresh()
   } catch {
     backupMsg.value = t('profile.importParseFailed')
@@ -114,6 +134,9 @@ async function onFile(e: Event) {
         </RouterLink>
         <button class="btn btn-secondary" @click="exportJson">
           <Download class="ic" :size="16" /> {{ t('profile.exportData') }}
+        </button>
+        <button class="btn btn-secondary" @click="exportAllJson">
+          <Download class="ic" :size="16" /> {{ t('profile.exportAllData') }}
         </button>
         <button class="btn btn-secondary" @click="pickFile">
           <Upload class="ic" :size="16" /> {{ t('profile.importData') }}

@@ -13,9 +13,11 @@ vi.mock('@/core/historyDb', () => ({
   clearAll: vi.fn<() => Promise<void>>(async () => undefined),
   clearWrong: vi.fn<() => Promise<void>>(async () => undefined),
   removeWrong: vi.fn<(id: string) => Promise<void>>(async () => undefined),
-  exportAll: vi.fn<() => Promise<unknown>>(),
+  exportCurrentArchive: vi.fn<() => Promise<unknown>>(),
+  exportAllArchives: vi.fn<() => Promise<unknown>>(),
   importBackup: vi.fn<() => Promise<unknown>>(),
   isBackupFile: vi.fn<() => boolean>(() => false),
+  summarizeBackup: vi.fn<() => unknown>(() => ({ archives: 0, rounds: 0, wrong: 0, badges: 0 })),
   // 档案（013 A3-lite）
   getActiveProfile: vi.fn<() => Promise<ProfileRow>>(async () => ({
     id: 'p',

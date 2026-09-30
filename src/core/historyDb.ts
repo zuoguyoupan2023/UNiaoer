@@ -153,6 +153,11 @@ function archiveName(at: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}, ${pad(d.getHours())}-${pad(d.getMinutes())}`
 }
 
+/** 新档案 id（时间戳 + 随机后缀，物理唯一） */
+function newArchiveId(): string {
+  return `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+}
+
 /** v1 迁移读取设置里的昵称（settings store 同键；core 不 import store，直接读 localStorage） */
 function readSavedNickname(): string {
   try {
@@ -357,7 +362,7 @@ async function ensureCtx(): Promise<ActiveCtx> {
         : undefined
       if (!archive) {
         archive = {
-          id: `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          id: newArchiveId(),
           profileId: profile.id,
           name: archiveName(Date.now()),
           nickname: profile.nickname,
@@ -453,7 +458,7 @@ export async function createArchive(name?: string, nickname?: string): Promise<A
   }
   const profile = await p<ProfileRow | undefined>(tx.objectStore(STORE_PROFILES).get(profileId))
   const archive: ArchiveRow = {
-    id: `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: newArchiveId(),
     profileId,
     name: finalName,
     nickname: nickname ?? profile?.nickname ?? '',
@@ -567,25 +572,40 @@ export async function saveRound(record: RoundRecord): Promise<void> {
   await txDone(tx)
 }
 
-export function listRounds(): Promise<RoundRecord[]> {
-  return (async () => {
-    const db = await openDb()
-    const { archiveId } = await ensureCtx()
-    return p<RoundRecord[]>(
-      db.transaction(STORE_ROUNDS).objectStore(STORE_ROUNDS).index('archiveId').getAll(archiveId),
-    )
-  })()
+/** 某档案的全部轮次（按 archiveId 查询，不依赖活动档；导出/导入复用） */
+async function roundsOf(archiveId: string): Promise<RoundRecord[]> {
+  const db = await openDb()
+  return p<RoundRecord[]>(
+    db.transaction(STORE_ROUNDS).objectStore(STORE_ROUNDS).index('archiveId').getAll(archiveId),
+  )
 }
 
-export function getWrongBook(): Promise<WrongEntry[]> {
-  return (async () => {
-    const db = await openDb()
-    const { archiveId } = await ensureCtx()
-    const rows = await p<(WrongEntry & { id: string; archiveId: string })[]>(
-      db.transaction(STORE_WRONG).objectStore(STORE_WRONG).index('archiveId').getAll(archiveId),
-    )
-    return rows.map(({ id: _id, archiveId: _a, ...entry }) => entry)
-  })()
+/** 某档案的错题本（去掉内部复合键字段；导出复用） */
+async function wrongOf(archiveId: string): Promise<WrongEntry[]> {
+  const db = await openDb()
+  const rows = await p<(WrongEntry & { id: string; archiveId: string })[]>(
+    db.transaction(STORE_WRONG).objectStore(STORE_WRONG).index('archiveId').getAll(archiveId),
+  )
+  return rows.map(({ id: _id, archiveId: _a, ...entry }) => entry)
+}
+
+/** 某档案的徽章（返回未加前缀的 badgeId；导出复用） */
+async function badgesOf(archiveId: string): Promise<EarnedBadge[]> {
+  const db = await openDb()
+  const rows = await p<(EarnedBadge & { archiveId: string; badgeId: string })[]>(
+    db.transaction(STORE_BADGES).objectStore(STORE_BADGES).index('archiveId').getAll(archiveId),
+  )
+  return rows.map(({ badgeId, at }) => ({ id: badgeId, at }))
+}
+
+export async function listRounds(): Promise<RoundRecord[]> {
+  const { archiveId } = await ensureCtx()
+  return roundsOf(archiveId)
+}
+
+export async function getWrongBook(): Promise<WrongEntry[]> {
+  const { archiveId } = await ensureCtx()
+  return wrongOf(archiveId)
 }
 
 export interface WrongHistoryItem {
@@ -646,15 +666,9 @@ export async function clearWrong(): Promise<void> {
 }
 
 /** 取活动档已获徽章/称号标记（返回未加前缀的 badgeId，调用方无感知） */
-export function getBadges(): Promise<EarnedBadge[]> {
-  return (async () => {
-    const db = await openDb()
-    const { archiveId } = await ensureCtx()
-    const rows = await p<(EarnedBadge & { archiveId: string; badgeId: string })[]>(
-      db.transaction(STORE_BADGES).objectStore(STORE_BADGES).index('archiveId').getAll(archiveId),
-    )
-    return rows.map(({ badgeId, at }) => ({ id: badgeId, at }))
-  })()
+export async function getBadges(): Promise<EarnedBadge[]> {
+  const { archiveId } = await ensureCtx()
+  return badgesOf(archiveId)
 }
 
 /** 保存徽章/称号标记（自动加活动档前缀） */
@@ -796,9 +810,10 @@ export async function clearAll(): Promise<void> {
   await txDone(tx)
 }
 
-// ---- E2 导出 / 导入（JSON 备份；A0 阶段为活动档粒度，013-A4 升级档案结构） ----
+// ---- E2 导出 / 导入（JSON 备份；013-A4 升级为档案级 v2，兼容 v1） ----
 
-export interface BackupFile {
+/** v1 备份（A0 阶段的活动档粒度，仅数据；导入时自动建「导入档案」） */
+export interface BackupFileV1 {
   app: 'uniaoer'
   version: 1
   exportedAt: string
@@ -807,84 +822,268 @@ export interface BackupFile {
   badges: EarnedBadge[]
 }
 
+/** 单个档案的备份结构（含归属与档案元信息） */
+export interface BackupArchive {
+  /** 原档案 id：导入时同 id 且属当前用户 → 合并；否则作为新档案 */
+  id: string
+  profileId: string
+  name: string
+  nickname: string
+  createdAt: number
+  rounds: RoundRecord[]
+  wrong: WrongEntry[]
+  badges: EarnedBadge[]
+}
+
+/** 备份中的用户引用（昵称/身份标识；导入落到当前用户） */
+export interface BackupProfileRef {
+  id: string
+  nickname: string
+}
+
+/** v2 备份（档案级；013 §7） */
+export interface BackupFileV2 {
+  app: 'uniaoer'
+  version: 2
+  exportedAt: string
+  /** archive=仅当前档案；all=导出全部档案（含各用户） */
+  scope: 'archive' | 'all'
+  profile: BackupProfileRef
+  /** 活动档案（scope=archive 时唯一） */
+  archive: BackupArchive
+  /** scope=all：设备上全部档案 */
+  archives?: BackupArchive[]
+}
+
+export type BackupFile = BackupFileV1 | BackupFileV2
+
 export interface ImportResult {
+  rounds: number
+  wrong: number
+  badges: number
+  /** 新建的档案数 */
+  archivesCreated: number
+  /** 命中同 id 而合并的档案数 */
+  archivesMerged: number
+}
+
+export interface ImportOptions {
+  /** v1 备份 / 无档案名时，新建档案的默认名（由调用方注入 i18n 文案） */
+  newArchiveName?: string
+}
+
+/** 备份内容概要（导入确认与提示用；对 v1/v2 一视同仁） */
+export interface BackupSummary {
+  archives: number
   rounds: number
   wrong: number
   badges: number
 }
 
 export function isBackupFile(value: unknown): value is BackupFile {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as BackupFile).app === 'uniaoer' &&
-    (value as BackupFile).version === 1 &&
-    Array.isArray((value as BackupFile).rounds)
-  )
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Partial<BackupFileV1> & Partial<BackupFileV2>
+  if (v.app !== 'uniaoer') return false
+  if (v.version === 1) return Array.isArray(v.rounds)
+  if (v.version === 2) return typeof v.archive === 'object' && v.archive !== null
+  return false
 }
 
-/** 导出当前档案数据（记录 / 错题本 / 徽章） */
-export async function exportAll(): Promise<BackupFile> {
-  const [rounds, wrong, badges] = await Promise.all([listRounds(), getWrongBook(), getBadges()])
+/** 备份里的全部档案（v1 → 单个匿名档；v2 all → archives，缺省回退 archive） */
+function backupArchives(data: BackupFile): BackupArchive[] {
+  if (data.version === 1) {
+    return [
+      {
+        id: '',
+        profileId: '',
+        name: '',
+        nickname: '',
+        createdAt: 0,
+        rounds: data.rounds ?? [],
+        wrong: data.wrong ?? [],
+        badges: data.badges ?? [],
+      },
+    ]
+  }
+  if (data.scope === 'all' && data.archives?.length) return data.archives
+  return [data.archive]
+}
+
+export function summarizeBackup(data: BackupFile): BackupSummary {
+  const archives = backupArchives(data)
+  let rounds = 0
+  let wrong = 0
+  let badges = 0
+  for (const a of archives) {
+    rounds += a.rounds?.length ?? 0
+    wrong += a.wrong?.length ?? 0
+    badges += a.badges?.length ?? 0
+  }
+  return { archives: archives.length, rounds, wrong, badges }
+}
+
+/** 组装单个档案的备份结构（含该档全部轮次/错题/徽章） */
+async function buildArchiveBackup(archive: ArchiveRow): Promise<BackupArchive> {
+  const [rounds, wrong, badges] = await Promise.all([
+    roundsOf(archive.id),
+    wrongOf(archive.id),
+    badgesOf(archive.id),
+  ])
   return {
-    app: 'uniaoer',
-    version: 1,
-    exportedAt: new Date().toISOString(),
+    id: archive.id,
+    profileId: archive.profileId,
+    name: archive.name,
+    nickname: archive.nickname,
+    createdAt: archive.createdAt,
     rounds,
     wrong,
     badges,
   }
 }
 
+/** 导出当前档案（v2，scope=archive） */
+export async function exportCurrentArchive(): Promise<BackupFileV2> {
+  const [profile, archive] = await Promise.all([getActiveProfile(), getActiveArchive()])
+  return {
+    app: 'uniaoer',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    scope: 'archive',
+    profile: { id: profile.id, nickname: profile.nickname },
+    archive: await buildArchiveBackup(archive),
+  }
+}
+
+/** 导出全部档案（v2，scope=all；当前设备所有用户/档案） */
+export async function exportAllArchives(): Promise<BackupFileV2> {
+  const db = await openDb()
+  const [profile, active] = await Promise.all([getActiveProfile(), getActiveArchive()])
+  const rows = await p<ArchiveRow[]>(
+    db.transaction(STORE_ARCHIVES).objectStore(STORE_ARCHIVES).getAll(),
+  )
+  const archives = await Promise.all(rows.map(buildArchiveBackup))
+  const archive = archives.find((a) => a.id === active.id) ?? (await buildArchiveBackup(active))
+  return {
+    app: 'uniaoer',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    scope: 'all',
+    profile: { id: profile.id, nickname: profile.nickname },
+    archive,
+    archives,
+  }
+}
+
+/** 新建档案行（导入用；不改活动档） */
+async function putArchiveRow(row: ArchiveRow): Promise<void> {
+  const db = await openDb()
+  const tx = db.transaction(STORE_ARCHIVES, 'readwrite')
+  tx.objectStore(STORE_ARCHIVES).put(row)
+  await txDone(tx)
+}
+
 /**
- * 导入备份到当前档案：按 id 合并（不删除现有数据）。
+ * 把一组数据合并进指定档案（不删除现有数据；013 §7）：
  * - 轮次：同 id 覆盖（视为同一轮），新轮次追加
  * - 错题：同物种保留 wrongCount 更大的那个
  * - 徽章：并集
  */
-export async function importBackup(data: BackupFile): Promise<ImportResult> {
-  const { profileId, archiveId } = await ensureCtx()
+async function mergeIntoArchive(
+  profileId: string,
+  archiveId: string,
+  inRounds: RoundRecord[],
+  inWrong: WrongEntry[],
+  inBadges: EarnedBadge[],
+): Promise<{ rounds: number; wrong: number; badges: number }> {
+  const db = await openDb()
+  const tx = db.transaction([STORE_ROUNDS, STORE_WRONG, STORE_BADGES], 'readwrite')
+  const roundsS = tx.objectStore(STORE_ROUNDS)
+  const wrongS = tx.objectStore(STORE_WRONG)
+  const badgesS = tx.objectStore(STORE_BADGES)
   let rounds = 0
   let wrong = 0
   let badges = 0
-  const db = await openDb()
 
-  for (const r of data.rounds ?? []) {
+  for (const r of inRounds) {
     if (!r?.id) continue
-    const tx = db.transaction([STORE_ROUNDS], 'readwrite')
-    const done = txDone(tx)
-    tx.objectStore(STORE_ROUNDS).put({ ...r, profileId, archiveId })
-    await done
+    roundsS.put({ ...r, profileId, archiveId })
     rounds++
   }
-
-  for (const w of data.wrong ?? []) {
+  for (const w of inWrong) {
     if (!w?.speciesId) continue
     const key = wrongKey(archiveId, w.speciesId)
-    const tx = db.transaction([STORE_WRONG], 'readwrite')
-    const s = tx.objectStore(STORE_WRONG)
-    const existing = await p<(WrongEntry & { id: string }) | undefined>(s.get(key))
+    const existing = await p<(WrongEntry & { id: string }) | undefined>(wrongS.get(key))
     if (existing && (existing.wrongCount ?? 0) >= (w.wrongCount ?? 0)) continue
-    s.put({ ...w, id: key, archiveId })
-    await txDone(tx)
+    wrongS.put({ ...w, id: key, archiveId })
     wrong++
   }
-
-  for (const b of data.badges ?? []) {
+  for (const b of inBadges) {
     if (!b?.id) continue
-    const tx = db.transaction([STORE_BADGES], 'readwrite')
-    const done = txDone(tx)
-    tx.objectStore(STORE_BADGES).put({
-      ...b,
-      id: badgeKey(archiveId, b.id),
-      archiveId,
-      badgeId: b.id,
-    })
-    await done
+    badgesS.put({ ...b, id: badgeKey(archiveId, b.id), archiveId, badgeId: b.id })
     badges++
   }
-
+  await txDone(tx)
   return { rounds, wrong, badges }
+}
+
+/**
+ * 导入备份（013 §7）：
+ * - 同档案 id 且属当前用户 → 合并进该档；
+ * - 否则作为**新档案**加入当前用户（沿用原名/昵称/建档时间）。
+ * - v1 备份自动建「导入档案」（名字由调用方按 locale 注入）。
+ */
+export async function importBackup(
+  data: BackupFile,
+  opts: ImportOptions = {},
+): Promise<ImportResult> {
+  const db = await openDb()
+  const { profileId } = await ensureCtx()
+  const now = Date.now()
+  const fallbackName = opts.newArchiveName?.trim() || 'Imported'
+  const sources = backupArchives(data)
+
+  const existing = await p<ArchiveRow[]>(
+    db.transaction(STORE_ARCHIVES).objectStore(STORE_ARCHIVES).getAll(),
+  )
+  const globalIds = new Set(existing.map((a) => a.id))
+  const mine = new Set(existing.filter((a) => a.profileId === profileId).map((a) => a.id))
+
+  let archivesCreated = 0
+  let archivesMerged = 0
+  let rounds = 0
+  let wrong = 0
+  let badges = 0
+
+  for (const src of sources) {
+    let targetId: string
+    if (src.id && mine.has(src.id)) {
+      targetId = src.id
+      archivesMerged++
+    } else {
+      targetId = src.id && !globalIds.has(src.id) ? src.id : newArchiveId()
+      globalIds.add(targetId)
+      await putArchiveRow({
+        id: targetId,
+        profileId,
+        name: src.name?.trim() || fallbackName,
+        nickname: src.nickname ?? '',
+        createdAt: src.createdAt || now,
+      })
+      archivesCreated++
+    }
+    const r = await mergeIntoArchive(
+      profileId,
+      targetId,
+      src.rounds ?? [],
+      src.wrong ?? [],
+      src.badges ?? [],
+    )
+    rounds += r.rounds
+    wrong += r.wrong
+    badges += r.badges
+  }
+
+  return { rounds, wrong, badges, archivesCreated, archivesMerged }
 }
 
 /** 测试用：重置连接与活动档缓存（关闭旧连接，避免泄漏连接干扰后续开库） */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, provide, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Archive, Plus, User } from 'lucide-vue-next'
@@ -68,6 +68,8 @@ async function loadArchive() {
   }
 }
 onMounted(loadArchive)
+// 供子页（数据页导入后）重载档案列表/活动档
+provide('reloadProfile', loadArchive)
 
 async function switchArchive(id: string) {
   if (id === activeArchive.value?.id) return
