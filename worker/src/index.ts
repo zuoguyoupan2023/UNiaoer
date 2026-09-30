@@ -321,14 +321,12 @@ async function handleSubmitReport(request: Request, env: Env): Promise<Response>
   return json({ ok: true, id }, { status: 201 })
 }
 
-/** 公开列表：已发布 + 待评审（open/published），按时间倒序 */
+/** 公开列表：**仅已发布**（published）；待处理/驳回不公开，按时间倒序 */
 async function handlePublicReports(env: Env, url: URL): Promise<Response> {
   const limit = clampInt(url.searchParams.get('limit'), 1, 50, 20)
   const offset = clampInt(url.searchParams.get('offset'), 0, 10000, 0)
   const species = str(url.searchParams.get('species'), 100)
-  const where = species
-    ? "status IN ('open','published') AND species_id = ?"
-    : "status IN ('open','published')"
+  const where = species ? "status = 'published' AND species_id = ?" : "status = 'published'"
   const binds = species ? [species] : []
   const rows = await env.DB.prepare(
     `SELECT id,created_at,species_id,species_name,sci,question_type,media_url,reason,

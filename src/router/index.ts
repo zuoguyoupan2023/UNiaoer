@@ -60,6 +60,12 @@ const router = createRouter({
       component: () => import('../views/ReportsView.vue'),
     },
     {
+      // B6 管理入口（隐藏；需 ADMIN_KEY 解锁后调用受保护接口）
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminView.vue'),
+    },
+    {
       // 错题本并入 /profile/wrong 后保留旧路径重定向（导航入口已移除，R31）
       path: '/wrong',
       redirect: { name: 'profile-wrong' },
