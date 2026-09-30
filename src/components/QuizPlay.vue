@@ -5,11 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import {
-  listRounds,
-  setActiveArchiveNickname,
-  setProfileNickname,
-} from '@/core/historyDb'
+import { setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import {
   AUTO_NEXT_DELAY_CORRECT_MS,
@@ -116,12 +112,7 @@ const intro = computed(() =>
     : { title: t('nav.imageQuiz'), lead: t('quiz.introImageLead') },
 )
 
-// ---- 第 2/3 步：水平、形式（主界面；新档分步显示，老档摘要可直接开始） ----
-/** 选择中（true=显示步骤界面；false=显示已选摘要） */
-const picking = ref(false)
-/** 'new'=新档分步（水平→形式，不同时出现）；'full'=更改时完整显示两步 */
-const pickMode = ref<'new' | 'full'>('new')
-const introStep = ref<2 | 3>(2)
+// ---- 第 2/3 步：水平、形式（主界面完整显示两个区域，直接切换，无「更改」步骤） ----
 const regimeCountsData = ref<Record<QuizRegime, number> | null>(null)
 /** 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰 */
 const visibleRegimes = computed(() => {
@@ -129,27 +120,16 @@ const visibleRegimes = computed(() => {
   if (!c) return REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
   return REGIMES.filter((r) => c[r.id] > 0)
 })
-const tierLabelText = computed(() => t(TIERS[tier.value].labelKey))
-const regimeLabelText = computed(
-  () => t(REGIMES.find((r) => r.id === quiz.regime)?.labelKey ?? 'regime.standard.label'),
-)
-/** 老档点「更改」：完整显示第 2、3 步 */
-function startPicking() {
-  pickMode.value = 'full'
-  picking.value = true
-}
 function chooseTier(v: Tier) {
   tier.value = v
   persistTier(v)
-  if (pickMode.value === 'new') introStep.value = 3
 }
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
   persistRegime(r)
-  if (pickMode.value === 'new') picking.value = false
 }
 
-/** 进入介绍页时：决定是否弹昵称、可用赛制、以及新档分步还是老档摘要 */
+/** 进入介绍页：决定是否弹昵称浮窗、可用赛制（不可用则回退首个可用） */
 async function initIntro() {
   if (!settings.nickname && !settings.nicknameGuideDismissed) showNameModal.value = true
   try {
@@ -161,17 +141,6 @@ async function initIntro() {
   if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
     quiz.regime = vis[0]!.id
     persistRegime(quiz.regime)
-  }
-  let rounds = 0
-  try {
-    rounds = (await listRounds()).length
-  } catch {
-    /* IndexedDB 不可用：按新档处理 */
-  }
-  if (rounds === 0) {
-    picking.value = true
-    pickMode.value = 'new'
-    introStep.value = 2
   }
 }
 
@@ -550,68 +519,37 @@ function onTouchEnd(e: TouchEvent) {
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
 
-    <!-- 选择中：新档分步（水平→形式）；「更改」时两步完整显示 -->
-    <template v-if="picking">
-      <div v-if="pickMode === 'new'" class="steps">
-        <span class="step" :class="{ on: introStep === 2 }">
-          <b>2</b> {{ t('quiz.stepLevel') }}
-        </span>
-        <span class="step" :class="{ on: introStep === 3 }">
-          <b>3</b> {{ t('quiz.stepForm') }}
-        </span>
-      </div>
-
-      <template v-if="pickMode === 'full' || introStep === 2">
-        <p class="step-cap">{{ t('quiz.stepLevel') }}</p>
-        <div class="tiers">
-          <button
-            v-for="cfg in TIER_LIST"
-            :key="cfg.tier"
-            class="tier"
-            :class="{ on: tier === cfg.tier }"
-            @click="chooseTier(cfg.tier)"
-          >
-            <strong>{{ t(cfg.labelKey) }}</strong>
-            <span>{{ t(cfg.descKey) }}</span>
-          </button>
-        </div>
-      </template>
-
-      <template v-if="pickMode === 'full' || introStep === 3">
-        <p class="step-cap">{{ t('quiz.stepForm') }}</p>
-        <div class="regimes">
-          <button
-            v-for="r in visibleRegimes"
-            :key="r.id"
-            class="tier regime"
-            :class="{ on: quiz.regime === r.id }"
-            @click="chooseRegime(r.id)"
-          >
-            <strong>{{ t(r.labelKey) }}</strong>
-            <span>{{ t(r.hintKey) }}</span>
-          </button>
-        </div>
-      </template>
-    </template>
-
-    <!-- 老档：直接显示已选的水平/形式 + 开始；可「更改」 -->
-    <template v-else>
-      <div class="summary">
-        <div class="sum-row">
-          <span class="sum-cap">{{ t('quiz.stepLevel') }}</span>
-          <b>{{ tierLabelText }}</b>
-        </div>
-        <div class="sum-row">
-          <span class="sum-cap">{{ t('quiz.stepForm') }}</span>
-          <b>{{ regimeLabelText }}</b>
-        </div>
-      </div>
-      <button class="btn btn-secondary btn-sm summary-change" @click="startPicking">
-        {{ t('quiz.change') }}
+    <!-- 第 2 步 水平 -->
+    <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepLevel') }}</p>
+    <div class="tiers">
+      <button
+        v-for="cfg in TIER_LIST"
+        :key="cfg.tier"
+        class="tier"
+        :class="{ on: tier === cfg.tier }"
+        @click="chooseTier(cfg.tier)"
+      >
+        <strong>{{ t(cfg.labelKey) }}</strong>
+        <span>{{ t(cfg.descKey) }}</span>
       </button>
-    </template>
+    </div>
 
-    <button v-if="!picking" class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
+    <!-- 第 3 步 形式（只显示当前可用赛制） -->
+    <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
+    <div class="regimes">
+      <button
+        v-for="r in visibleRegimes"
+        :key="r.id"
+        class="tier regime"
+        :class="{ on: quiz.regime === r.id }"
+        @click="chooseRegime(r.id)"
+      >
+        <strong>{{ t(r.labelKey) }}</strong>
+        <span>{{ t(r.hintKey) }}</span>
+      </button>
+    </div>
+
+    <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
   <!-- 加载中 -->
@@ -868,79 +806,28 @@ function onTouchEnd(e: TouchEvent) {
     grid-template-columns: 1fr;
   }
 }
-/* 步骤指示（新档分步时显示） */
-.steps {
+/* 区域标题：2 · 水平 / 3 · 形式 */
+.step-cap {
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.step {
-  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  background: #eef4f1;
-  color: var(--text-light);
-  font-size: 0.8rem;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 8px;
+  font-size: 0.82rem;
   font-weight: 700;
+  color: var(--text-light);
 }
-.step b {
+.step-no {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #d5e6dd;
-  color: var(--primary-dark, var(--primary));
-  font-size: 0.72rem;
-}
-.step.on {
-  background: #f3fbf7;
-  color: var(--primary);
-}
-.step.on b {
   background: var(--primary);
   color: #fff;
-}
-.step-cap {
-  margin: 6px 0 8px;
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-light);
-}
-/* 老档：已选水平/形式摘要 */
-.summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 420px;
-  margin: 0 auto 12px;
-}
-.sum-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 16px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-}
-.sum-row b {
-  color: var(--primary-dark, var(--primary));
-}
-.sum-cap {
-  font-size: 0.78rem;
-  color: var(--text-light);
-  font-weight: 700;
-}
-.summary-change {
-  display: block;
-  margin: 0 auto 14px;
+  font-size: 0.72rem;
+  font-style: normal;
 }
 .nickname-guide {
   max-width: 420px;

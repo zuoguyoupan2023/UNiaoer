@@ -67,7 +67,6 @@ export const messages = {
     wizardSkip: '直接开始',
     stepLevel: '水平',
     stepForm: '形式',
-    change: '更改',
     start: '开始答题',
     preparing: '正在准备题目…',
     preparingSub: '正在加载第 1 题，并预取接下来 3 题',

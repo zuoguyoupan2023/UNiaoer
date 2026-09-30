@@ -72,7 +72,6 @@ const en: typeof zhMessages = {
     wizardSkip: 'Skip',
     stepLevel: 'Level',
     stepForm: 'Mode',
-    change: 'Change',
     start: 'Start',
     preparing: 'Preparing questions…',
     preparingSub: 'Loading question 1 and prefetching the next 3',
