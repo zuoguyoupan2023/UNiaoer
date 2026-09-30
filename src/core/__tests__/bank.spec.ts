@@ -6,6 +6,8 @@ import {
   speciesNameByStoredName,
   speciesNoteById,
   speciesNoteText,
+  speciesProfileById,
+  speciesProfileText,
   type Manifest,
 } from '../bank'
 
@@ -27,6 +29,15 @@ const manifest: Manifest = {
       location: '',
       habit: '',
       notes: { titleZh: '标题甲', titleEn: 'Title A', bodyZh: '正文甲', bodyEn: 'Body A' },
+      profile: {
+        group: 'waterbird',
+        migration: 'winter',
+        habitatZh: '湖泊',
+        habitatEn: 'Lakes',
+        habitZh: '潜水',
+        habitEn: 'Dives',
+        distribution: { count: 2, category: 'LC' },
+      },
       image: null,
       audio: null,
     },
@@ -114,5 +125,28 @@ describe('speciesNoteById / speciesNoteText（011 §9 答疑专栏）', () => {
       speciesNoteText({ titleZh: '仅中文', bodyZh: '正文', titleEn: '', bodyEn: '' }, 'en'),
     ).toEqual({ title: '仅中文', body: '正文' })
     expect(speciesNoteText(undefined, 'en')).toBeNull()
+  })
+})
+
+describe('speciesProfileById / speciesProfileText（C1 物种档案）', () => {
+  beforeEach(async () => {
+    _resetBankCache()
+    stubFetch()
+    await loadBank()
+  })
+
+  it('按 id 取档案；无档案物种返回 undefined', () => {
+    expect(speciesProfileById('a')?.group).toBe('waterbird')
+    expect(speciesProfileById('b')).toBeUndefined()
+    expect(speciesProfileById(null)).toBeUndefined()
+  })
+
+  it('生境/习性按 locale 取，缺英文回退中文', () => {
+    const profile = speciesProfileById('a')
+    expect(speciesProfileText(profile, 'zh-CN')).toEqual({ habitat: '湖泊', habit: '潜水' })
+    expect(speciesProfileText(profile, 'en')).toEqual({ habitat: 'Lakes', habit: 'Dives' })
+    expect(
+      speciesProfileText({ habitatZh: '仅中文', habitEn: 'Only EN' }, 'en'),
+    ).toEqual({ habitat: '仅中文', habit: 'Only EN' })
   })
 })

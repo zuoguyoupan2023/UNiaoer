@@ -34,6 +34,12 @@ import {
 } from './lib/license.mjs'
 import { makeR2 } from './lib/r2.mjs'
 import { loadSpeciesNotes, applySpeciesNotes, unmatchedNoteIds } from './lib/notes.mjs'
+import {
+  loadDistribution,
+  loadSpeciesProfiles,
+  applyProfiles,
+  unmatchedProfileIds,
+} from './lib/profiles.mjs'
 import { rgbaToThumbHash } from 'thumbhash'
 
 const execFileP = promisify(execFile)
@@ -75,6 +81,9 @@ let PUBLIC_BASE = ''
 let OVERRIDES = {}
 /** 答疑专栏文案（data/species-notes.json，011 §9）→ 写入 species[].notes */
 let NOTES = {}
+/** 物种档案（C1）：分布（data/distribution.json）+ 人工整理（data/species-profiles.json） */
+let DIST_BY_TAXON = {}
+let PROFILES = {}
 /** 可用的 AV1 静图编码器（检测一次；null = 不产出 AVIF） */
 let AVIF_ENCODER = null
 /** IUCN 同义词覆盖表（懒加载；XC 查不到时备用学名） */
@@ -190,6 +199,8 @@ async function main() {
   const species = Array.isArray(raw) ? raw : raw.species || []
   OVERRIDES = await loadOverrides()
   NOTES = await loadSpeciesNotes(ROOT)
+  DIST_BY_TAXON = await loadDistribution(ROOT)
+  PROFILES = await loadSpeciesProfiles(ROOT)
 
   // 定向修复：只挑有问题的物种，结果合并回旧 manifest（不破坏其余物种）
   let prevManifest = null
@@ -265,6 +276,14 @@ async function main() {
   if (Object.keys(NOTES).length) {
     console.log(`\n📝 答疑专栏：并入 ${noted}/${Object.keys(NOTES).length} 条说明`)
     if (orphanNotes.length) console.log(`   ⚠️ 未匹配到物种（检查 id）：${orphanNotes.join('、')}`)
+  }
+
+  // 物种档案并入（C1）：类群（按科）+ 分布（distribution.json）+ 人工居留型/生境/习性
+  const profiled = applyProfiles(outputSpecies, DIST_BY_TAXON, PROFILES)
+  const orphanProfiles = unmatchedProfileIds(outputSpecies, PROFILES)
+  if (Object.keys(DIST_BY_TAXON).length || Object.keys(PROFILES).length) {
+    console.log(`\n📇 物种档案：并入 ${profiled}/${outputSpecies.length} 条`)
+    if (orphanProfiles.length) console.log(`   ⚠️ 未匹配到物种（检查 id）：${orphanProfiles.join('、')}`)
   }
 
   const withImage = outputSpecies.filter((r) => r.image).length

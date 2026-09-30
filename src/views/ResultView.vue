@@ -26,9 +26,16 @@ import type { Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
-import { loadBank, speciesNameById, speciesNameByStoredName, speciesNoteById } from '@/core/bank'
+import {
+  loadBank,
+  speciesNameById,
+  speciesNameByStoredName,
+  speciesNoteById,
+  speciesProfileById,
+} from '@/core/bank'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
+import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import PosterEditor from '@/components/PosterEditor.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
@@ -74,6 +81,10 @@ function faqIdOf(q: Question): string | null {
   if (!bankReady.value) return null
   const id = q.media.speciesId
   return id && speciesNoteById(id) ? id : null
+}
+/** 该题物种档案（C1；bank 就绪后可用） */
+function profileOf(q: Question) {
+  return bankReady.value ? speciesProfileById(q.media.speciesId) : undefined
 }
 
 const message = computed<{ icon: Component; text: string }>(() => {
@@ -229,6 +240,14 @@ async function again() {
           <HelpCircle class="ic" :size="14" />
           {{ q.type === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
         </RouterLink>
+        <!-- 物种档案（C1）：类群 / 居留型 / 分布 -->
+        <SpeciesFacts
+          v-if="profileOf(q)"
+          class="species-facts"
+          :profile="profileOf(q)"
+          :species-id="q.media.speciesId"
+          compact
+        />
       </li>
     </ol>
   </section>
@@ -349,5 +368,8 @@ async function again() {
   border-color: var(--primary-light);
   background: #eaf4ef;
   text-decoration: none;
+}
+.species-facts {
+  margin-top: 8px;
 }
 </style>

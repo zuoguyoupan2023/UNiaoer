@@ -13,6 +13,7 @@ import {
 } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import AttributionLine from '@/components/AttributionLine.vue'
+import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
 const route = useRoute()
@@ -67,6 +68,8 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
         <h3>{{ note.title }}</h3>
         <p class="body">{{ note.body }}</p>
       </section>
+
+      <SpeciesFacts class="facts-block" :profile="species.profile" :species-id="species.id" />
 
       <SpeciesGallery
         :images="images"
@@ -136,6 +139,9 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
   line-height: 1.75;
   color: var(--text);
   white-space: pre-line;
+}
+.facts-block {
+  margin-top: 12px;
 }
 .credits {
   margin-top: 16px;

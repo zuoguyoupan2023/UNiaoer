@@ -1,0 +1,64 @@
+{
+  "_comment": "物种档案人工整理（C1）。类群按科自动派生（见 scripts/lib/profiles.mjs），本文件只覆盖：类群特例、居留型、生境、习性；分布来自 data/distribution.json。构建期由 build-bank.mjs / `npm run bank:profiles` 并入 manifest 的 species[].profile。",
+  "_format": {
+    "<speciesId>": {
+      "group": "waterbird | raptor | landbird（可省略，默认按科派生）",
+      "migration": "resident | summer | winter | passage | migrant | vagrant",
+      "habitatZh": "生境（中文）",
+      "habitatEn": "habitat (English)",
+      "habitZh": "习性（中文）",
+      "habitEn": "habits (English)"
+    }
+  },
+  "profiles": {
+    "pycnonotus-sinensis": {
+      "migration": "resident",
+      "habitatZh": "林地、公园、庭院与灌丛。",
+      "habitatEn": "Woodland, parks, gardens and scrub.",
+      "habitZh": "性活泼，常结小群活动，取食果实与昆虫。",
+      "habitEn": "Active and gregarious; feeds on fruit and insects."
+    },
+    "fulica-atra": {
+      "migration": "winter",
+      "habitatZh": "湖泊、池塘、河湾等开阔水域，多见于有芦苇等水生植物的岸边。",
+      "habitatEn": "Open freshwater: lakes, ponds and river bays, often near reedbeds.",
+      "habitZh": "善游泳与潜水，主食水生植物，也吃昆虫与软体动物。",
+      "habitEn": "A strong swimmer and diver; feeds mainly on aquatic plants, also insects and molluscs."
+    },
+    "anas-platyrhynchos": {
+      "migration": "winter",
+      "habitatZh": "江河、湖泊、池塘、水库等各类水域。",
+      "habitatEn": "Rivers, lakes, ponds and reservoirs.",
+      "habitZh": "常在水面倒立觅食，杂食（水生植物、种子、昆虫、小鱼）。",
+      "habitEn": "Dabbles at the surface; omnivorous (aquatic plants, seeds, insects, small fish)."
+    },
+    "hirundo-rustica": {
+      "migration": "summer",
+      "habitatZh": "村镇、农舍屋檐下及开阔田野、水面上空。",
+      "habitatEn": "Towns and farmsteads (nests on eaves) and open fields or water.",
+      "habitZh": "飞行中捕食昆虫，常集群活动。",
+      "habitEn": "Hawks insects in flight; often gregarious."
+    },
+    "falco-tinnunculus": {
+      "migration": "resident",
+      "habitatZh": "开阔原野、农田、草地及城市建筑附近。",
+      "habitatEn": "Open country, farmland, grassland and around urban buildings.",
+      "habitZh": "善悬停振翅搜索地面猎物，主食鼠类与昆虫。",
+      "habitEn": "Hovers while hunting; feeds mainly on rodents and insects."
+    },
+    "pica-serica": {
+      "migration": "resident",
+      "habitatZh": "村庄、农田、城市绿地与林缘。",
+      "habitatEn": "Villages, farmland, urban green spaces and woodland edges.",
+      "habitZh": "杂食，善筑大型球状巢，性机警。",
+      "habitEn": "Omnivorous; builds a large domed nest; wary and intelligent."
+    },
+    "turdus-mandarinus": {
+      "migration": "resident",
+      "habitatZh": "林地、公园、庭院与灌丛，常在地面活动。",
+      "habitatEn": "Woodland, parks, gardens and scrub; often feeds on the ground.",
+      "habitZh": "地面翻找昆虫与蚯蚓，也取食浆果；鸣声婉转。",
+      "habitEn": "Forages on the ground for insects and earthworms, also berries; a fine songster."
+    }
+  }
+}

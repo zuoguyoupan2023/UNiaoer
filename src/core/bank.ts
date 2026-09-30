@@ -8,6 +8,32 @@ export interface SpeciesNote {
   bodyEn: string
 }
 
+/** 类群（C1）：水鸟 / 猛禽 / 林鸟 */
+export type SpeciesGroup = 'waterbird' | 'raptor' | 'landbird'
+/** 居留型（C1）：留鸟 / 夏候鸟 / 冬候鸟 / 旅鸟 / 候鸟 / 迷鸟 */
+export type SpeciesMigration = 'resident' | 'summer' | 'winter' | 'passage' | 'migrant' | 'vagrant'
+
+/** 分布（由 data/distribution.json 按 taxonId 派生；国家码列表见 public/data/distribution.json 按需加载） */
+export interface SpeciesDistribution {
+  /** 分布国家/地区数 */
+  count: number
+  /** IUCN 红色名录等级（LC/NT/VU/EN/CR…） */
+  category?: string
+  source?: string
+  url?: string
+}
+
+/** 物种档案（C1）：类群自动派生、分布来自分布数据，居留型/生境/习性人工整理（稀疏） */
+export interface SpeciesProfile {
+  group?: SpeciesGroup
+  migration?: SpeciesMigration
+  habitatZh?: string
+  habitatEn?: string
+  habitZh?: string
+  habitEn?: string
+  distribution?: SpeciesDistribution
+}
+
 /** 题库中单个物种（来自构建脚本生成的 manifest） */
 export interface BankSpecies {
   id: string
@@ -28,6 +54,8 @@ export interface BankSpecies {
   habit: string
   /** 答疑专栏说明（011 §9；仅少数物种有） */
   notes?: SpeciesNote
+  /** 物种档案（C1）：类群/分布/居留型/生境/习性 */
+  profile?: SpeciesProfile
   /** 兼容期：首选素材（= images[0] / audios[0]） */
   image: MediaAsset | null
   audio: MediaAsset | null
@@ -120,6 +148,24 @@ export function speciesNoteText(
     return { title: note.titleEn || note.titleZh, body: note.bodyEn || note.bodyZh }
   }
   return { title: note.titleZh || note.titleEn, body: note.bodyZh || note.bodyEn }
+}
+
+/** 按 id 取物种档案（需先 loadBank 建索引） */
+export function speciesProfileById(id: string | null | undefined): SpeciesProfile | undefined {
+  if (!id) return undefined
+  return speciesIndex?.get(id)?.profile
+}
+
+/** 物种档案里的人工文本（生境/习性）按 locale 取；缺英文回退中文，反之亦然 */
+export function speciesProfileText(
+  profile: SpeciesProfile | undefined,
+  locale: string,
+): { habitat?: string; habit?: string } {
+  if (!profile) return {}
+  const pick = (zh?: string, en?: string) => (locale === 'en' ? en || zh : zh || en)
+  const habitat = pick(profile.habitatZh, profile.habitatEn)
+  const habit = pick(profile.habitZh, profile.habitEn)
+  return { habitat: habitat || undefined, habit: habit || undefined }
 }
 
 /** 题库错误码（UI 层映射 errors.* 文案，015 §6.5：异常不直接进界面） */

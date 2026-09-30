@@ -18,6 +18,7 @@
     "bank:r2": "node scripts/build-bank.mjs --media r2",
     "bank:stage": "node scripts/build-bank.mjs --media stage",
     "bank:notes": "node scripts/apply-notes.mjs",
+    "bank:profiles": "node scripts/apply-profiles.mjs",
     "r2:push": "node scripts/push-r2.mjs",
     "check:bank": "node scripts/check-bank.mjs",
     "check:media": "node scripts/check-media.mjs",

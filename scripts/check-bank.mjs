@@ -113,6 +113,20 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
       }
     }
 
+    // 物种档案（C1）：类群/居留型枚举合法，分布国家码为非空字符串数组
+    if (sp.profile) {
+      const { group, migration, distribution } = sp.profile
+      if (group && !['waterbird', 'raptor', 'landbird'].includes(group)) {
+        fail(`${sp.id}.profile.group 非法：${group}`)
+      }
+      if (migration && !['resident', 'summer', 'winter', 'passage', 'migrant', 'vagrant'].includes(migration)) {
+        fail(`${sp.id}.profile.migration 非法：${migration}`)
+      }
+      if (distribution && typeof distribution.count !== 'number') {
+        fail(`${sp.id}.profile.distribution.count 不是数字`)
+      }
+    }
+
     for (const { a, kind } of assetsOf(sp)) {
       if (!a.url) fail(`${sp.id}.${kind} 缺少 url`)
       for (const f of ['license', 'author', 'source', 'sourceUrl']) {
