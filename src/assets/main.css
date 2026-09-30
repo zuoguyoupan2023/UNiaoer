@@ -142,11 +142,32 @@
 }
 
 .app-footer {
+  position: relative;
   text-align: center;
   padding: 12px 16px;
   font-size: 0.76rem;
   color: var(--text-light);
   line-height: 1.6;
+}
+/* 答疑专栏入口：与 UNiaoer 同字号；宽屏右下，窄屏居中居下 */
+.app-footer .faq-entry {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-light);
+}
+.app-footer .faq-entry:hover {
+  color: var(--primary);
+}
+@media (max-width: 600px) {
+  .app-footer .faq-entry {
+    position: static;
+    display: block;
+    width: fit-content;
+    margin: 4px auto 0;
+  }
 }
 /* 标语：左「有鸟儿」/ 右「友鸟儿」夹 UNiaoer；窄屏分三行、UNiaoer 居中（015 #6） */
 .app-footer .tagline {

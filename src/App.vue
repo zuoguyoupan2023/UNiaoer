@@ -128,5 +128,7 @@ const immersive = computed(
       <span class="tag-sep" aria-hidden="true">·</span>
       <span class="tag-side">{{ t('footer.taglineRight') }}</span>
     </p>
+    <!-- 答疑专栏入口：宽屏靠右下、窄屏居中居下（与 UNiaoer 同字号） -->
+    <RouterLink class="faq-entry" to="/faq">{{ t('faq.title') }}</RouterLink>
   </footer>
 </template>
