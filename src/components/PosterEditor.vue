@@ -13,9 +13,13 @@ import {
   type PosterStrings,
 } from '@/core/poster'
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
+import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 
 const props = defineProps<{ open: boolean; data: PosterData; images: PosterImage[] }>()
 const emit = defineEmits<{ close: [] }>()
+
+// 弹层无障碍：焦点移入/圈闭/ESC 关闭/还原/滚动锁（打开状态由 props.open 驱动）
+const { panelRef } = useDialogA11y(() => props.open, { onClose: () => emit('close') })
 
 const { t } = useI18n()
 
@@ -210,7 +214,10 @@ async function generate() {
     blobUrl.value = URL.createObjectURL(blob)
     stale.value = false
     await nextTick()
-    resultRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    resultRef.value?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'nearest',
+    })
   } finally {
     generating.value = false
   }
@@ -227,7 +234,7 @@ function openImage() {
 
 <template>
   <div v-if="open" class="overlay" @click.self="emit('close')">
-    <div class="panel">
+    <div ref="panelRef" class="panel" role="dialog" aria-modal="true" :aria-label="t('poster.title')">
       <div class="head">
         <h3>{{ t('poster.title') }}</h3>
         <button class="x" :aria-label="t('common.close')" @click="emit('close')">
@@ -292,6 +299,7 @@ function openImage() {
                   <span
                     v-if="img.wrong"
                     class="wrong-badge"
+                    role="img"
                     :title="t('poster.wrongBadgeTitle')"
                     :aria-label="t('poster.wrongBadgeAria')"
                   >
@@ -305,7 +313,7 @@ function openImage() {
             <p v-if="loadingBg" class="loading-hint">
               <span class="spin-sm"></span> {{ t('poster.downloadingOriginal') }}
             </p>
-            <p v-if="error" class="err small">{{ error }}</p>
+            <p v-if="error" class="err small" role="alert">{{ error }}</p>
           </div>
 
           <!-- 锁定 / 平移（仅鸟图版有背景照片时才需要；移动端隐藏锁定，自由平移） -->
@@ -366,7 +374,7 @@ function openImage() {
                 </button>
               </div>
             </div>
-            <p v-if="resultMsg" class="err small" style="margin-top: 8px">{{ resultMsg }}</p>
+            <p v-if="resultMsg" class="err small" role="alert" style="margin-top: 8px">{{ resultMsg }}</p>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
@@ -39,6 +39,7 @@ import { submitReport as uploadReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -79,6 +80,8 @@ function persistTier(v: Tier) {
 
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
 const showNameModal = ref(false)
+// 无 onClose：昵称浮窗只能「开始 / 直接开始」二选一，ESC 不跳过
+const { panelRef: namePanelRef } = useDialogA11y(() => showNameModal.value)
 const wizardDraft = ref('')
 const wizardStartEnabled = computed(() => {
   const v = wizardDraft.value.trim()
@@ -117,6 +120,10 @@ const reportReason = ref<ReportReason>('image')
 const reportAnswer = ref('')
 const reportNote = ref('')
 const reportState = ref<'idle' | 'done' | 'error'>('idle')
+// ESC / 焦点圈闭 / 打开时移焦由 useDialogA11y 统一处理
+const { panelRef: reportPanelRef } = useDialogA11y(() => showReport.value, {
+  onClose: closeReport,
+})
 
 function openReport() {
   reportReason.value = quiz.current?.type === 'audio' ? 'audio' : 'image'
@@ -325,6 +332,8 @@ const willAuto = computed(() => {
 const showToast = computed(() => quiz.answered && willAuto.value && !cancelledThisQuestion.value)
 /** 其余已作答情形（手动 / 不触发自动 / 取消本次后）：下方常驻 */
 const showInline = computed(() => quiz.answered && !showToast.value)
+/** 常驻反馈块（作答后焦点移入，读屏播报） */
+const feedbackRef = ref<HTMLElement | null>(null)
 /** 「不再自动切换」仅在"取消本次"后出现 */
 const showDisableBtn = computed(
   () => quiz.answered && cancelledThisQuestion.value && settings.autoNext !== 'manual',
@@ -504,6 +513,10 @@ watch(
     if (a) {
       stopTimer()
       scheduleAutoNext()
+      // 作答后选项全部 disabled、焦点脱落：手动场景把焦点移到反馈块（role=status 同步播报）
+      void nextTick(() => {
+        if (showInline.value) feedbackRef.value?.focus()
+      })
     } else {
       clearAutoNext()
       cancelledThisQuestion.value = false
@@ -519,6 +532,16 @@ watch(
 )
 
 function onKey(e: KeyboardEvent) {
+  // 弹层打开时答题快捷键让位；带修饰键的组合（如 Cmd/Ctrl+A）不是答题意图
+  if (showNameModal.value || showReport.value) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const el = e.target
+  if (
+    el instanceof HTMLElement &&
+    (el.isContentEditable || /^(input|textarea|select)$/i.test(el.tagName))
+  ) {
+    return
+  }
   const q = quiz.current
   if (!q) return
 
@@ -564,15 +587,17 @@ function onTouchEnd(e: TouchEvent) {
       v-if="showNameModal"
       class="wizard-overlay"
       role="dialog"
+      aria-modal="true"
       :aria-label="t('quiz.wizardTitle')"
     >
-      <div class="wizard-panel">
+      <div ref="namePanelRef" class="wizard-panel">
         <h3 class="wizard-title">{{ t('quiz.wizardWelcome') }}</h3>
         <p class="wizard-sub">{{ t('quiz.wizardWelcomeSub') }}</p>
         <input
           v-model="wizardDraft"
           class="wizard-input"
           maxlength="12"
+          :aria-label="t('profile.nicknameLabel')"
           :placeholder="t('profile.nicknamePlaceholder')"
           @keyup.enter="wizardSaveNickname"
         />
@@ -600,7 +625,7 @@ function onTouchEnd(e: TouchEvent) {
       :aria-label="t('report.title')"
       @click.self="closeReport"
     >
-      <div class="wizard-panel report-panel">
+      <div ref="reportPanelRef" class="wizard-panel report-panel">
         <h3 class="wizard-title">
           <Flag class="ic" :size="18" /> {{ t('report.title') }}
         </h3>
@@ -609,13 +634,14 @@ function onTouchEnd(e: TouchEvent) {
           <p class="wizard-sub">{{ t('report.sub') }}</p>
 
           <p class="report-label">{{ t('report.reasonLabel') }}</p>
-          <div class="report-reasons">
+          <div class="report-reasons" role="group" :aria-label="t('report.reasonLabel')">
             <button
               v-for="r in REPORT_REASONS"
               :key="r.id"
               type="button"
               class="reason"
               :class="{ on: reportReason === r.id }"
+              :aria-pressed="reportReason === r.id"
               @click="reportReason = r.id"
             >
               {{ t(r.labelKey) }}
@@ -631,7 +657,9 @@ function onTouchEnd(e: TouchEvent) {
             <textarea v-model="reportNote" rows="2" :placeholder="t('report.notePlaceholder')"></textarea>
           </label>
 
-          <p v-if="reportState === 'error'" class="report-err">{{ t('report.error') }}</p>
+          <p v-if="reportState === 'error'" class="report-err" role="alert">
+            {{ t('report.error') }}
+          </p>
 
           <div class="wizard-actions">
             <button class="btn btn-primary" type="button" @click="submitReport">
@@ -815,7 +843,7 @@ function onTouchEnd(e: TouchEvent) {
             </div>
           </div>
           <div class="ct-auto">
-            <span class="ct-count">
+            <span class="ct-count" aria-hidden="true">
               <Hourglass class="ic" :size="13" />
               {{ t('quiz.autoAdvancing', { sec: (autoNextRemaining ?? 0).toFixed(1) }) }}
             </span>
@@ -826,7 +854,14 @@ function onTouchEnd(e: TouchEvent) {
       </Transition>
 
       <!-- 下方常驻反馈：手动 / 不触发自动 / 取消了本次自动 时显示 -->
-      <div v-if="showInline" class="feedback" :class="isCorrect ? 'ok' : 'no'">
+      <div
+        v-if="showInline"
+        ref="feedbackRef"
+        class="feedback"
+        :class="isCorrect ? 'ok' : 'no'"
+        role="status"
+        tabindex="-1"
+      >
         <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> {{ t('quiz.timeout') }}</strong>
         <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> {{ t('quiz.correct') }}</strong>
         <strong v-else><CircleX class="ic" :size="16" /> {{ t('quiz.wrong') }}</strong>
@@ -1150,6 +1185,10 @@ function onTouchEnd(e: TouchEvent) {
 .feedback strong {
   display: block;
   margin-bottom: 5px;
+}
+/* 作答后焦点被程序移入（读屏播报），本身不是可交互元素，不画焦点框 */
+.feedback:focus {
+  outline: none;
 }
 .actions {
   display: flex;

@@ -84,8 +84,10 @@ const immersive = computed(
 </script>
 
 <template>
+  <!-- 键盘用户跳过导航直达主内容（H3） -->
+  <a class="skip-link" href="#main">{{ t('nav.skipToMain') }}</a>
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
-  <div v-if="!immersive" class="app-topbar">
+  <header v-if="!immersive" class="app-topbar">
     <RouterLink to="/" class="brand" :aria-label="t('nav.brandHome')">
       <Bird class="brand-icon" :size="26" />
       <h1 class="brand-name">UNiaoer</h1>
@@ -114,9 +116,9 @@ const immersive = computed(
         </button>
       </span>
     </nav>
-  </div>
+  </header>
 
-  <main class="app-main">
+  <main id="main" class="app-main">
     <RouterView />
   </main>
 

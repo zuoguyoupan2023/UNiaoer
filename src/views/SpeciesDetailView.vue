@@ -59,7 +59,7 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
         v-if="hero"
         class="hero"
         :src="hero.xlUrl || hero.url"
-        alt=""
+        :alt="name"
         decoding="async"
         loading="lazy"
       />

@@ -1,9 +1,20 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 defineProps<{ current: number; total: number }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
-  <div class="progress-wrap">
+  <div
+    class="progress-wrap"
+    role="progressbar"
+    :aria-valuenow="current"
+    :aria-valuemin="0"
+    :aria-valuemax="total"
+    :aria-label="t('quiz.progress', { n: current, total })"
+  >
     <div
       class="progress-bar"
       :style="{ width: (total ? (current / total) * 100 : 0) + '%' }"

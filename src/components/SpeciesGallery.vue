@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Images, Music, X } from 'lucide-vue-next'
 import type { MediaAsset } from '@/types'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const { t } = useI18n()
 
@@ -24,18 +25,15 @@ const images = computed(() => props.images ?? [])
 const audios = computed(() => props.audios ?? [])
 const total = computed(() => images.value.length + audios.value.length)
 
+// 焦点移入/圈闭/ESC/还原由 useDialogA11y 统一处理
+const { panelRef: zoomPanelRef } = useDialogA11y(() => !!zoom.value, { onClose: closeZoom })
+
 function openZoom(m: MediaAsset) {
   zoom.value = m
-  document.addEventListener('keydown', onKey)
 }
 function closeZoom() {
   zoom.value = null
-  document.removeEventListener('keydown', onKey)
 }
-function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeZoom()
-}
-onUnmounted(() => document.removeEventListener('keydown', onKey))
 </script>
 
 <template>
@@ -62,6 +60,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
             class="sg-thumb"
             :class="{ on: m.url === activeUrl }"
             :title="`${t('gallery.photos')} ${i + 1}`"
+            :aria-label="t('gallery.photoN', { n: i + 1 })"
             @click="mode === 'browse' ? openZoom(m) : emit('select', m)"
           >
             <img :src="m.thumbUrl || m.url" alt="" loading="lazy" decoding="async" />
@@ -85,6 +84,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
             class="sg-audio"
             :class="{ on: m.url === activeUrl }"
             :title="`${t('gallery.audios')} ${i + 1}`"
+            :aria-label="t('gallery.audioN', { n: i + 1 })"
+            :aria-pressed="m.url === activeUrl"
             @click="emit('select', m)"
           >
             <Music class="ic" :size="14" /> {{ i + 1 }}
@@ -96,12 +97,14 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     <Teleport to="body">
       <div
         v-if="zoom"
+        ref="zoomPanelRef"
         class="sg-lightbox"
         role="dialog"
+        aria-modal="true"
         :aria-label="t('gallery.viewPhoto')"
         @click="closeZoom"
       >
-        <img :src="zoom.xlUrl || zoom.url" alt="" @click.stop />
+        <img :src="zoom.xlUrl || zoom.url" :alt="t('gallery.photoLargeAlt')" @click.stop />
         <button class="sg-close" type="button" :aria-label="t('gallery.close')" @click="closeZoom">
           <X :size="20" />
         </button>

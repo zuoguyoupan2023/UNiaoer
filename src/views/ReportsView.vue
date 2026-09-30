@@ -72,9 +72,9 @@ async function vote(r: PublicReport, value: 1 | -1) {
     <p class="muted lead">{{ t('reports.lead') }}</p>
     <p v-if="!loading && !failed" class="count">{{ t('reports.count', { n: total }) }}</p>
 
-    <p v-if="loading" class="muted empty">{{ t('common.loading') }}</p>
-    <p v-else-if="failed" class="muted empty">{{ t('reports.unavailable') }}</p>
-    <p v-else-if="!reports.length" class="muted empty">{{ t('reports.empty') }}</p>
+    <p v-if="loading" class="muted empty" role="status">{{ t('common.loading') }}</p>
+    <p v-else-if="failed" class="muted empty" role="alert">{{ t('reports.unavailable') }}</p>
+    <p v-else-if="!reports.length" class="muted empty" role="status">{{ t('reports.empty') }}</p>
 
     <ul v-else class="list">
       <li v-for="r in reports" :key="r.id" class="item">
@@ -99,7 +99,8 @@ async function vote(r: PublicReport, value: 1 | -1) {
             type="button"
             class="vote"
             :class="{ on: myVotes[r.id] === 1 }"
-            :aria-label="t('reports.upvote')"
+            :aria-pressed="myVotes[r.id] === 1"
+            :aria-label="t('reports.upvoteCount', { n: r.up })"
             @click="vote(r, 1)"
           >
             <ThumbsUp :size="15" /> {{ r.up }}
@@ -108,7 +109,8 @@ async function vote(r: PublicReport, value: 1 | -1) {
             type="button"
             class="vote down"
             :class="{ on: myVotes[r.id] === -1 }"
-            :aria-label="t('reports.downvote')"
+            :aria-pressed="myVotes[r.id] === -1"
+            :aria-label="t('reports.downvoteCount', { n: r.down })"
             @click="vote(r, -1)"
           >
             <ThumbsDown :size="15" /> {{ r.down }}

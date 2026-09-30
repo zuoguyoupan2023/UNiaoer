@@ -159,6 +159,7 @@ async function saveNickname() {
             v-model="nicknameDraft"
             class="nickname-input"
             maxlength="12"
+            :aria-label="t('profile.nicknameLabel')"
             :placeholder="t('profile.nicknamePlaceholder')"
             @keyup.enter="saveNickname"
           />
@@ -176,7 +177,7 @@ async function saveNickname() {
             {{ profile?.nickname ? t('common.edit') : t('profile.setNickname') }}
           </button>
         </template>
-        <span v-if="nicknameMsg" class="nickname-msg">{{ nicknameMsg }}</span>
+        <span v-if="nicknameMsg" class="nickname-msg" role="alert">{{ nicknameMsg }}</span>
       </div>
 
       <div class="archive-row">
@@ -189,6 +190,7 @@ async function saveNickname() {
             :key="a.id"
             class="archive-chip"
             :class="{ on: a.id === activeArchive?.id }"
+            :aria-pressed="a.id === activeArchive?.id"
             :title="t('archive.createdAt', { date: a.name })"
             @click="switchArchive(a.id)"
           >
@@ -211,6 +213,7 @@ async function saveNickname() {
             v-model="archiveNameDraft"
             class="archive-input"
             maxlength="40"
+            :aria-label="t('archive.renamePlaceholder')"
             :placeholder="t('archive.renamePlaceholder')"
             @keyup.enter="saveRename"
           />
@@ -229,6 +232,7 @@ async function saveNickname() {
           v-if="tabEnabled(s.id)"
           :to="`/profile/${s.id}`"
           :class="{ on: tab === s.id }"
+          :aria-current="tab === s.id ? 'page' : undefined"
         >
           {{ t(s.labelKey) }}
         </RouterLink>

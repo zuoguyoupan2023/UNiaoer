@@ -98,6 +98,9 @@ describe('QuizPlay', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     pushMock.mockClear()
+    // 预设昵称：跳过首次向导浮窗（H3 后浮窗打开会拦截答题快捷键，键盘用例需要它不出现）
+    localStorage.clear()
+    useSettingsStore().nickname = '测试者'
   })
 
   it('切到下一题后，图片 src 会变化', async () => {
@@ -438,6 +441,55 @@ describe('QuizPlay', () => {
       expect(store.questions.length).toBe(3) // mock 题库只有 3 种
       expect(pushMock).not.toHaveBeenCalledWith('/result')
       expect(pushMock).not.toHaveBeenCalledWith('/')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('H3：报错浮窗打开时答题快捷键不触发，关闭后恢复', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+
+      // 打开报错浮窗（Teleport 到 body，需从 document 查）
+      const reportBtn = wrapper.findAll('button').find((b) => b.text().includes('报错'))
+      await reportBtn!.trigger('click')
+      expect(document.querySelector('.report-panel')).toBeTruthy()
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+      await flushPromises()
+      expect(store.answered).toBe(false)
+
+      // 点浮窗内「取消」关闭后，快捷键恢复
+      const cancel = [...document.querySelectorAll<HTMLButtonElement>('.report-panel button')].find(
+        (b) => b.textContent?.includes('取消'),
+      )
+      cancel!.click()
+      await flushPromises()
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+      await flushPromises()
+      expect(store.answered).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('H3：带修饰键的按键（如 Ctrl+A）不触发作答', async () => {
+    useQuizFakeTimers()
+    try {
+      const wrapper = mount(QuizPlay, { props: { type: 'image' } })
+      await startRevealed(wrapper, 'L1', 5000)
+      const store = useQuizStore()
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true }))
+      await flushPromises()
+      expect(store.answered).toBe(false)
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+      await flushPromises()
+      expect(store.answered).toBe(true)
     } finally {
       vi.useRealTimers()
     }

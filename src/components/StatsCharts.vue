@@ -91,11 +91,21 @@ function fmtDay(at: number) {
     <h3 class="sec">
       <TrendingUp class="ic" :size="18" /> {{ t('charts.trendTitle') }}
     </h3>
-    <div class="range">
-      <button type="button" :class="{ on: range === '7d' }" @click="range = '7d'">
+    <div class="range" role="group" :aria-label="t('charts.trendTitle')">
+      <button
+        type="button"
+        :class="{ on: range === '7d' }"
+        :aria-pressed="range === '7d'"
+        @click="range = '7d'"
+      >
         {{ t('charts.range7d') }}
       </button>
-      <button type="button" :class="{ on: range === '30d' }" @click="range = '30d'">
+      <button
+        type="button"
+        :class="{ on: range === '30d' }"
+        :aria-pressed="range === '30d'"
+        @click="range = '30d'"
+      >
         {{ t('charts.range30d') }}
       </button>
       <button
@@ -103,6 +113,7 @@ function fmtDay(at: number) {
         :key="y"
         type="button"
         :class="{ on: range === y }"
+        :aria-pressed="range === y"
         @click="range = y"
       >
         {{ t('charts.rangeYear', { year: y }) }}

@@ -5,6 +5,7 @@ import { ImageOff, VolumeX, X, ZoomIn } from 'lucide-vue-next'
 import { thumbHashToDataURL } from 'thumbhash'
 import type { MediaAsset, MediaType } from '@/types'
 import { preferredImageUrl } from '@/core/mediaLoader'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
 
 const { t } = useI18n()
@@ -31,6 +32,8 @@ const src = ref(props.media.url)
 const placeholder = ref('')
 /** 点击看原图（xl）弹层 */
 const zoomed = ref(false)
+// 焦点移入/圈闭/ESC/还原由 useDialogA11y 统一处理
+const { panelRef: zoomPanelRef } = useDialogA11y(() => zoomed.value, { onClose: closeZoom })
 let timer: number | undefined
 
 function decodePlaceholder(hash: string) {
@@ -63,7 +66,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (timer) clearTimeout(timer)
   audioEl.value?.pause()
-  document.removeEventListener('keydown', onZoomKey)
 })
 
 // 切题（key 重挂载）时会重建组件；同一素材字段变化也要跟随
@@ -79,19 +81,13 @@ watch(
   },
 )
 
-function onZoomKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') zoomed.value = false
-}
-
 function openZoom() {
   if (!props.media.xlUrl) return
   zoomed.value = true
-  document.addEventListener('keydown', onZoomKey)
 }
 
 function closeZoom() {
   zoomed.value = false
-  document.removeEventListener('keydown', onZoomKey)
 }
 </script>
 
@@ -135,7 +131,7 @@ function closeZoom() {
       </div>
       <div class="audio-under">
         <slot name="media-corner" />
-        <p v-if="playBlocked" class="hint">
+        <p v-if="playBlocked" class="hint" role="status">
           <VolumeX class="ic" :size="15" /> {{ t('media.autoplayBlocked') }}
         </p>
       </div>
@@ -148,8 +144,10 @@ function closeZoom() {
   <Teleport to="body">
     <div
       v-if="zoomed"
+      ref="zoomPanelRef"
       class="lightbox"
       role="dialog"
+      aria-modal="true"
       :aria-label="t('media.originalView')"
       @click="closeZoom"
     >

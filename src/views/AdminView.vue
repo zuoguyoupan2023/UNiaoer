@@ -123,6 +123,7 @@ const count = computed(() => reports.value.length)
         <input
           v-model="key"
           type="password"
+          :aria-label="t('admin.keyLabel')"
           :placeholder="t('admin.keyPlaceholder')"
           autocomplete="off"
         />
@@ -130,8 +131,8 @@ const count = computed(() => reports.value.length)
           {{ t('admin.unlock') }}
         </button>
       </form>
-      <p v-if="authError" class="err">{{ t('admin.wrongKey') }}</p>
-      <p v-else-if="failed" class="err">{{ t('reports.unavailable') }}</p>
+      <p v-if="authError" class="err" role="alert">{{ t('admin.wrongKey') }}</p>
+      <p v-else-if="failed" class="err" role="alert">{{ t('reports.unavailable') }}</p>
     </template>
 
     <!-- 已解锁 -->
@@ -152,10 +153,10 @@ const count = computed(() => reports.value.length)
           {{ t('admin.logout') }}
         </button>
         <span class="count">{{ t('admin.reportCount', { n: count }) }}</span>
-        <span v-if="savedMsg" class="saved">{{ savedMsg }}</span>
+        <span v-if="savedMsg" class="saved" role="status">{{ savedMsg }}</span>
       </div>
 
-      <p v-if="loading" class="muted empty">{{ t('common.loading') }}</p>
+      <p v-if="loading" class="muted empty" role="status">{{ t('common.loading') }}</p>
       <p v-else-if="!reports.length" class="muted empty">{{ t('admin.empty') }}</p>
 
       <ul v-else class="list">

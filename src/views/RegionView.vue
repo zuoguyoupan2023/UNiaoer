@@ -81,6 +81,7 @@ watch(continent, () => {
           type="button"
           class="continent-btn"
           :class="{ active: c === continent }"
+          :aria-pressed="c === continent"
           @click="continent = c"
         >
           {{ t(`region.continents.${c}`) }}
@@ -92,7 +93,12 @@ watch(continent, () => {
         <aside class="countries">
           <label class="search">
             <Search class="ic" :size="14" />
-            <input v-model="query" type="search" :placeholder="t('region.search')" />
+            <input
+              v-model="query"
+              type="search"
+              :aria-label="t('region.searchLabel')"
+              :placeholder="t('region.search')"
+            />
           </label>
           <p class="col-title">{{ t('region.countries') }}</p>
           <ul class="country-list">
@@ -101,6 +107,7 @@ watch(continent, () => {
                 type="button"
                 class="country-btn"
                 :class="{ active: s.code === selected }"
+                :aria-pressed="s.code === selected"
                 @click="selected = s.code"
               >
                 <span class="country-name">{{ countryName(s.code) }}</span>
@@ -136,8 +143,8 @@ watch(continent, () => {
       </div>
     </template>
 
-    <p v-else-if="failed" class="muted empty">{{ t('errors.unknown') }}</p>
-    <p v-else class="muted empty">{{ t('common.loading') }}</p>
+    <p v-else-if="failed" class="muted empty" role="alert">{{ t('errors.unknown') }}</p>
+    <p v-else class="muted empty" role="status">{{ t('common.loading') }}</p>
   </section>
 </template>
 
@@ -211,6 +218,9 @@ watch(continent, () => {
 .search .ic {
   color: var(--text-light);
   flex-shrink: 0;
+}
+.search:focus-within {
+  border-color: var(--primary-light);
 }
 .search input {
   border: none;

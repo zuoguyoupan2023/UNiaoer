@@ -111,10 +111,11 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
 
     <div class="setting">
       <h3><Languages class="ic lang-ic" :size="17" /> {{ t('settings.languageTitle') }}</h3>
-      <div class="lang-choices">
+      <div class="lang-choices" role="group" :aria-label="t('settings.languageTitle')">
         <button
           class="choice"
           :class="{ on: settings.locale === 'zh-CN' }"
+          :aria-pressed="settings.locale === 'zh-CN'"
           @click="settings.locale = 'zh-CN'"
         >
           <strong>中文</strong>
@@ -123,6 +124,7 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
         <button
           class="choice"
           :class="{ on: settings.locale === 'en' }"
+          :aria-pressed="settings.locale === 'en'"
           @click="settings.locale = 'en'"
         >
           <strong>English</strong>
@@ -156,12 +158,13 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
     <div class="setting">
       <h3>{{ t('settings.autoNextTitle') }}</h3>
       <p class="muted">{{ t('settings.autoNextDesc') }}</p>
-      <div class="choices">
+      <div class="choices" role="group" :aria-label="t('settings.autoNextTitle')">
         <button
           v-for="o in autoNextOptions"
           :key="o.value"
           class="choice"
           :class="{ on: settings.autoNext === o.value }"
+          :aria-pressed="settings.autoNext === o.value"
           @click="settings.autoNext = o.value"
         >
           <strong>{{ t(o.labelKey) }}</strong>
@@ -212,7 +215,7 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
       <button class="btn btn-secondary" style="margin-top: 10px" @click="clearMediaCache">
         {{ t('settings.clearCache') }}
       </button>
-      <p v-if="cacheMsg" class="muted" style="margin-top: 8px">{{ cacheMsg }}</p>
+      <p v-if="cacheMsg" class="muted" role="status" style="margin-top: 8px">{{ cacheMsg }}</p>
     </div>
 
     <div class="setting">
@@ -227,7 +230,7 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
           {{ t('settings.clearReports') }}
         </button>
       </div>
-      <p v-if="reportsMsg" class="muted" style="margin-top: 8px">{{ reportsMsg }}</p>
+      <p v-if="reportsMsg" class="muted" role="status" style="margin-top: 8px">{{ reportsMsg }}</p>
     </div>
   </section>
 </template>

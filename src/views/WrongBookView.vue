@@ -126,11 +126,21 @@ function fmt(at: number) {
   <section class="card">
     <h2 class="sec"><BookX class="ic" :size="20" /> {{ t('wrongBook.title') }}</h2>
 
-    <div class="tabs">
-      <button class="tab" :class="{ on: tab === 'current' }" @click="tab = 'current'">
+    <div class="tabs" role="group" :aria-label="t('wrongBook.title')">
+      <button
+        class="tab"
+        :class="{ on: tab === 'current' }"
+        :aria-pressed="tab === 'current'"
+        @click="tab = 'current'"
+      >
         {{ t('wrongBook.currentTab', { n: current.length }) }}
       </button>
-      <button class="tab" :class="{ on: tab === 'history' }" @click="tab = 'history'">
+      <button
+        class="tab"
+        :class="{ on: tab === 'history' }"
+        :aria-pressed="tab === 'history'"
+        @click="tab = 'history'"
+      >
         {{ t('wrongBook.historyTab', { n: history.length }) }}
       </button>
     </div>
@@ -142,7 +152,7 @@ function fmt(at: number) {
       <template v-else> {{ t('wrongBook.historyHint') }} </template>
     </p>
 
-    <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
+    <p v-if="loading" class="muted" role="status">{{ t('common.loading') }}</p>
 
     <!-- 当前错题本 -->
     <template v-else-if="tab === 'current'">
