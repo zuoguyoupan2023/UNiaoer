@@ -73,6 +73,8 @@ export const messages = {
     wizardStart: '开始',
     wizardSkip: '直接开始',
     stepLevel: '水平',
+    adaptiveUp: '已按最近 {n} 轮表现（正确率 {acc}%）把难度升到「{tier}」',
+    adaptiveDown: '最近 {n} 轮正确率 {acc}%，已把难度降到「{tier}」',
     stepForm: '形式',
     start: '开始答题',
     preparing: '正在准备题目…',
@@ -350,6 +352,9 @@ export const messages = {
         hint: '始终手动点击「下一题」',
       },
     },
+    adaptiveTitle: '自适应难度',
+    adaptiveSwitch: '按最近表现自动升降难度（介绍页会标明推荐档位，可手动改回）',
+    adaptiveHint: '开启后：介绍页依据最近约 5 轮正确率推荐档位；「再来一轮」也会按表现自动升降。',
     ambienceTitle: '环境鸟鸣',
     ambienceSwitch: '进入应用时自动播放背景鸟鸣；关闭后顶栏喇叭也不再自动开启',
     ambienceHint:

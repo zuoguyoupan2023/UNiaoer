@@ -35,6 +35,8 @@ interface Persisted {
   /** A2 难度按图/声分别记忆（与赛制一致，013 §4 官能正交） */
   tierImage?: Tier
   tierAudio?: Tier
+  /** D5 自适应难度：按最近表现自动升降档（默认开） */
+  adaptiveTier?: boolean
 }
 
 function load(): Partial<Persisted> {
@@ -83,6 +85,8 @@ export const useSettingsStore = defineStore('settings', () => {
   /** A2 难度（图/声分离记忆；与赛制一致） */
   const tierImage = ref<Tier | undefined>(saved.tierImage)
   const tierAudio = ref<Tier | undefined>(saved.tierAudio)
+  /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
+  const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
 
   // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
   watch(locale, (v) => {
@@ -108,6 +112,7 @@ export const useSettingsStore = defineStore('settings', () => {
       regimeAudio,
       tierImage,
       tierAudio,
+      adaptiveTier,
     ],
     () => {
       try {
@@ -131,6 +136,7 @@ export const useSettingsStore = defineStore('settings', () => {
             regimeAudio: regimeAudio.value,
             tierImage: tierImage.value,
             tierAudio: tierAudio.value,
+            adaptiveTier: adaptiveTier.value,
           } satisfies Persisted),
         )
       } catch {
@@ -158,5 +164,6 @@ export const useSettingsStore = defineStore('settings', () => {
     regimeAudio,
     tierImage,
     tierAudio,
+    adaptiveTier,
   }
 })

@@ -128,6 +128,15 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
     </div>
 
     <div class="setting">
+      <h3>{{ t('settings.adaptiveTitle') }}</h3>
+      <label class="switch">
+        <input v-model="settings.adaptiveTier" type="checkbox" />
+        <span>{{ t('settings.adaptiveSwitch') }}</span>
+      </label>
+      <p class="muted" style="margin-top: 8px">{{ t('settings.adaptiveHint') }}</p>
+    </div>
+
+    <div class="setting">
       <h3>{{ t('settings.ambienceTitle') }}</h3>
       <label class="switch">
         <input

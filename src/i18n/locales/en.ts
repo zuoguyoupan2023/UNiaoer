@@ -78,6 +78,8 @@ const en: typeof zhMessages = {
     wizardStart: 'Start',
     wizardSkip: 'Skip',
     stepLevel: 'Level',
+    adaptiveUp: 'Raised to “{tier}” based on your last {n} rounds ({acc}% correct)',
+    adaptiveDown: 'Lowered to “{tier}” — {acc}% correct across your last {n} rounds',
     stepForm: 'Mode',
     start: 'Start',
     preparing: 'Preparing questions…',
@@ -359,6 +361,11 @@ const en: typeof zhMessages = {
         hint: 'Always tap "Next" yourself',
       },
     },
+    adaptiveTitle: 'Adaptive difficulty',
+    adaptiveSwitch:
+      'Auto-adjust the level by recent performance (the intro shows the recommended level; you can still change it)',
+    adaptiveHint:
+      'When on: the intro recommends a level from your last ~5 rounds, and "Play again" also shifts up/down automatically.',
     ambienceTitle: 'Ambient birdsong',
     ambienceSwitch:
       'Play background birdsong when the app starts; when off, the top-bar speaker stays silent too',

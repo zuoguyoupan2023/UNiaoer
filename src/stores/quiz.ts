@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import type { MediaType, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode } from '@/core/bank'
 import { assetsOf, buildQuestions } from '@/core/questionEngine'
+import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
+import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
 
 /** 超时未作答的标记（区别于 null=未作答） */
@@ -80,6 +82,11 @@ async function safeWrongBook(): Promise<WrongEntry[]> {
   } catch {
     return []
   }
+}
+
+/** D5：按最近表现给出档位建议（图/声隔离；IndexedDB 不可用时保持当前档） */
+async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierSuggestion> {
+  return suggestTier(await safeListRounds(), type, currentTier)
 }
 
 /** 各赛制的派生集合（按「物种 × 媒体类型」；computePool 与 regimeCounts 共用） */
@@ -215,12 +222,16 @@ async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>
     if (index.value < questions.value.length) index.value++
   }
 
-  /** D4：把本轮并入 session 累计，再以同模式/同难度开新一轮 */
+  /** D4：把本轮并入 session 累计，再以同模式开新一轮；D5 开自适应时按最近表现升降档 */
   async function nextRound() {
     sessionCorrect.value += correctCount.value
     sessionTotal.value += total.value
     sessionRound.value += 1
     pendingContinue.value = true
+    if (useSettingsStore().adaptiveTier) {
+      const s = await tierSuggestion(mode.value, tier.value)
+      tier.value = s.tier
+    }
     // 保持与上一轮相同的题量
     await start(mode.value, {
       tier: tier.value,
@@ -293,6 +304,7 @@ async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>
     overallAccuracy,
     start,
     regimeCounts,
+    tierSuggestion,
     answer,
     timeUp,
     next,

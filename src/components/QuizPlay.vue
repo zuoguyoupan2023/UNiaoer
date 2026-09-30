@@ -14,6 +14,7 @@ import {
 } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
+import type { TierSuggestion } from '@/core/adaptive'
 import {
   AlarmClock,
   ArrowRight,
@@ -105,6 +106,8 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
 const tier = ref<Tier>(savedTier.value ?? quiz.tier)
+/** D5：介绍页的档位推荐提示（用户手动改档后清除） */
+const adaptiveHint = ref<TierSuggestion | null>(null)
 // 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）
 if (savedRegime.value) quiz.regime = savedRegime.value
 
@@ -125,6 +128,7 @@ const visibleRegimes = computed(() => {
 function chooseTier(v: Tier) {
   tier.value = v
   persistTier(v)
+  adaptiveHint.value = null
 }
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
@@ -143,6 +147,19 @@ async function initIntro() {
   if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
     quiz.regime = vis[0]!.id
     persistRegime(quiz.regime)
+  }
+  // D5 自适应难度：按最近表现推荐档位（不改用户记忆的档位以外的行为；手动可改回）
+  if (settings.adaptiveTier) {
+    try {
+      const s = await quiz.tierSuggestion(props.type, tier.value)
+      if (s.change !== 'stay') {
+        tier.value = s.tier
+        persistTier(s.tier)
+        adaptiveHint.value = s
+      }
+    } catch {
+      /* IndexedDB 不可用：保持当前档 */
+    }
   }
 }
 
@@ -547,6 +564,15 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(cfg.descKey) }}</span>
       </button>
     </div>
+    <p v-if="adaptiveHint" class="adaptive-hint">
+      {{
+        t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
+          n: adaptiveHint.sample,
+          acc: adaptiveHint.accuracy,
+          tier: t(TIERS[adaptiveHint.tier].labelKey),
+        })
+      }}
+    </p>
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
@@ -889,6 +915,16 @@ function onTouchEnd(e: TouchEvent) {
   .tiers {
     grid-template-columns: 1fr;
   }
+}
+.adaptive-hint {
+  max-width: 520px;
+  margin: -12px auto 22px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #eaf4ef;
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+  text-align: center;
 }
 .tier {
   display: flex;
