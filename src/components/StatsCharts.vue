@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { BarChart3, TrendingUp } from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
@@ -14,13 +14,32 @@ const props = defineProps<{ rounds: RoundRecord[] }>()
 const MODE_KEYS: Record<MediaType, string> = { image: 'charts.modeImage', audio: 'charts.modeAudio' }
 const modeOf = (m: MediaType) => t(MODE_KEYS[m])
 
-/** 时间正序的趋势点（最近 20 轮） */
-const trend = computed(() =>
-  [...props.rounds]
+// ---- 趋势区间：默认最近 7 天；可切最近 30 天；以及有数据的年份 ----
+type TrendRange = '7d' | '30d' | number
+const DAY = 86_400_000
+const range = ref<TrendRange>('7d')
+
+/** 有数据的年份（降序，只列出存在的） */
+const years = computed(() => {
+  const set = new Set<number>()
+  for (const r of props.rounds) set.add(new Date(r.at).getFullYear())
+  return [...set].sort((a, b) => b - a)
+})
+
+function rangeBounds(r: TrendRange): [number, number] {
+  if (r === '7d') return [Date.now() - 7 * DAY, Infinity]
+  if (r === '30d') return [Date.now() - 30 * DAY, Infinity]
+  return [new Date(r, 0, 1).getTime(), new Date(r + 1, 0, 1).getTime()]
+}
+
+/** 时间正序的趋势点（按所选区间过滤） */
+const trend = computed(() => {
+  const [from, to] = rangeBounds(range.value)
+  return [...props.rounds]
+    .filter((r) => r.at >= from && r.at < to)
     .sort((a, b) => a.at - b.at)
-    .slice(-20)
-    .map((r) => ({ at: r.at, accuracy: r.accuracy, mode: r.mode, tier: r.tier })),
-)
+    .map((r) => ({ at: r.at, accuracy: r.accuracy, mode: r.mode, tier: r.tier }))
+})
 
 function agg(list: RoundRecord[]) {
   const questions = list.reduce((n, r) => n + r.total, 0)
@@ -70,28 +89,48 @@ function fmtDay(at: number) {
 <template>
   <section v-if="rounds.length" class="charts">
     <h3 class="sec">
-      <TrendingUp class="ic" :size="18" /> {{ t('charts.trendTitle', { n: trend.length }) }}
+      <TrendingUp class="ic" :size="18" /> {{ t('charts.trendTitle') }}
     </h3>
+    <div class="range">
+      <button type="button" :class="{ on: range === '7d' }" @click="range = '7d'">
+        {{ t('charts.range7d') }}
+      </button>
+      <button type="button" :class="{ on: range === '30d' }" @click="range = '30d'">
+        {{ t('charts.range30d') }}
+      </button>
+      <button
+        v-for="y in years"
+        :key="y"
+        type="button"
+        :class="{ on: range === y }"
+        @click="range = y"
+      >
+        {{ t('charts.rangeYear', { year: y }) }}
+      </button>
+    </div>
     <div class="chart-card">
-      <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" :aria-label="t('charts.trendAria')">
-        <line v-for="g in [0, 50, 100]" :key="g" :x1="PAD" :x2="W - PAD" :y1="PAD + ((100 - g) * (H - PAD * 2)) / 100" :y2="PAD + ((100 - g) * (H - PAD * 2)) / 100" class="grid" />
-        <text v-for="g in [100, 50, 0]" :key="'t' + g" :x="PAD + 2" :y="PAD + ((100 - g) * (H - PAD * 2)) / 100 - 2" class="grid-text">{{ g }}</text>
-        <polyline v-if="trendPts.length > 1" :points="trendPts.map((p) => `${p.x},${p.y}`).join(' ')" class="line" />
-        <circle
-          v-for="(p, i) in trendPts"
-          :key="i"
-          :cx="p.x"
-          :cy="p.y"
-          :r="3"
-          class="dot"
-          :class="{ audio: p.mode === 'audio' }"
-        >
-          <title>{{
-            t('charts.dotTitle', { day: fmtDay(p.at), mode: modeOf(p.mode), tier: p.tier, acc: p.accuracy })
-          }}</title>
-        </circle>
-      </svg>
-      <p class="legend muted">{{ t('charts.legend') }}</p>
+      <p v-if="!trend.length" class="empty muted">{{ t('charts.trendEmpty') }}</p>
+      <template v-else>
+        <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" :aria-label="t('charts.trendAria')">
+          <line v-for="g in [0, 50, 100]" :key="g" :x1="PAD" :x2="W - PAD" :y1="PAD + ((100 - g) * (H - PAD * 2)) / 100" :y2="PAD + ((100 - g) * (H - PAD * 2)) / 100" class="grid" />
+          <text v-for="g in [100, 50, 0]" :key="'t' + g" :x="PAD + 2" :y="PAD + ((100 - g) * (H - PAD * 2)) / 100 - 2" class="grid-text">{{ g }}</text>
+          <polyline v-if="trendPts.length > 1" :points="trendPts.map((p) => `${p.x},${p.y}`).join(' ')" class="line" />
+          <circle
+            v-for="(p, i) in trendPts"
+            :key="i"
+            :cx="p.x"
+            :cy="p.y"
+            :r="3"
+            class="dot"
+            :class="{ audio: p.mode === 'audio' }"
+          >
+            <title>{{
+              t('charts.dotTitle', { day: fmtDay(p.at), mode: modeOf(p.mode), tier: p.tier, acc: p.accuracy })
+            }}</title>
+          </circle>
+        </svg>
+        <p class="legend muted">{{ t('charts.legend') }}</p>
+      </template>
     </div>
 
     <h3 class="sec"><BarChart3 class="ic" :size="18" /> {{ t('charts.byTierMode') }}</h3>
@@ -112,12 +151,43 @@ function fmtDay(at: number) {
 .charts {
   margin-top: 22px;
 }
+.range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.range button {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.range button:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+.range button.on {
+  background: var(--grad);
+  color: #fff;
+  border-color: transparent;
+}
 .chart-card {
   background: #f9fcfa;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 14px;
   margin-bottom: 12px;
+}
+.empty {
+  text-align: center;
+  padding: 22px 0;
+  font-size: 0.82rem;
 }
 .trend {
   width: 100%;

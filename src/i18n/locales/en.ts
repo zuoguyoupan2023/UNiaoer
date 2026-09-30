@@ -58,6 +58,11 @@ const en: typeof zhMessages = {
       'A new game starts counting from zero (creates a new archive). Old archives are kept and can be switched back anytime. Continue?',
     createdAt: 'Created {date}',
     count: '{n} archives',
+    rename: 'Rename',
+    delete: 'Delete',
+    renamePlaceholder: 'Archive name',
+    deleteConfirm: 'Delete archive "{name}" and all its data (rounds / wrong book / badges)? This cannot be undone.',
+    lastOne: 'Keep at least one archive',
   },
   quiz: {
     next: 'Next',
@@ -211,9 +216,9 @@ const en: typeof zhMessages = {
     historyBtn: 'Round history',
     exportData: 'Export data',
     importData: 'Import data',
-    clearData: 'Erase my data',
+    clearData: 'Clear data',
     resetConfirm:
-      'Erase ALL data of the current archive (rounds / wrong book / badges)? This action cannot be undone.',
+      'Clear ALL data of the current archive (rounds / wrong book / badges)? Only this archive is cleared; others are unaffected. This cannot be undone.',
     exportDone: 'Exported {rounds} rounds, {wrong} wrong entries and {badges} badges.',
     importInvalid: 'Import failed: not a valid UNiaoer backup file.',
     importConfirm:
@@ -306,7 +311,11 @@ const en: typeof zhMessages = {
     cacheUnsupported: 'Cache management is not supported in this browser',
   },
   charts: {
-    trendTitle: 'Accuracy trend (last {n} rounds)',
+    trendTitle: 'Accuracy trend',
+    range7d: 'Last 7 days',
+    range30d: 'Last 30 days',
+    rangeYear: '{year}',
+    trendEmpty: 'No records in this range',
     trendAria: 'Accuracy per round',
     legend: 'Dots: per-round accuracy (hover for details) · green=photo / dark green=sound',
     byTierMode: 'By tier / mode',

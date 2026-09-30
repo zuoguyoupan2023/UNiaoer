@@ -472,6 +472,51 @@ export async function createArchive(name?: string, nickname?: string): Promise<A
   return archive
 }
 
+/** 重命名档案（013 A3；只改名字，不动数据） */
+export async function renameArchive(archiveId: string, name: string): Promise<void> {
+  const db = await openDb()
+  const { profileId } = await ensureCtx()
+  const tx = db.transaction(STORE_ARCHIVES, 'readwrite')
+  const s = tx.objectStore(STORE_ARCHIVES)
+  const row = await p<ArchiveRow | undefined>(s.get(archiveId))
+  const next = name.trim()
+  if (row && row.profileId === profileId && next) s.put({ ...row, name: next })
+  await txDone(tx)
+}
+
+/**
+ * 删除档案及其全部数据（轮次/错题/徽章）；013 A3。
+ * 至少保留一个档案（否则抛 'LAST_ARCHIVE'）；若删的是活动档，自动切到剩余最新档。
+ */
+export async function deleteArchive(archiveId: string): Promise<void> {
+  const db = await openDb()
+  const { profileId, archiveId: activeId } = await ensureCtx()
+  const all = await p<ArchiveRow[]>(
+    db.transaction(STORE_ARCHIVES).objectStore(STORE_ARCHIVES).getAll(),
+  )
+  const mine = all.filter((a) => a.profileId === profileId)
+  if (mine.length <= 1) throw new Error('LAST_ARCHIVE')
+
+  const tx = db.transaction(
+    [STORE_ARCHIVES, STORE_ROUNDS, STORE_WRONG, STORE_BADGES],
+    'readwrite',
+  )
+  tx.objectStore(STORE_ARCHIVES).delete(archiveId)
+  for (const store of [STORE_ROUNDS, STORE_WRONG, STORE_BADGES]) {
+    const s = tx.objectStore(store)
+    const keys = await p<IDBValidKey[]>(s.index('archiveId').getAllKeys(archiveId))
+    for (const k of keys) s.delete(k)
+  }
+  await txDone(tx)
+
+  if (archiveId === activeId) {
+    const rest = mine
+      .filter((a) => a.id !== archiveId)
+      .sort((a, b) => b.createdAt - a.createdAt)
+    if (rest[0]) await activateArchive(rest[0].id)
+  }
+}
+
 /** 切换活动档案（A3；切换后所有查询即指向新档） */
 export async function activateArchive(archiveId: string): Promise<void> {
   const db = await openDb()

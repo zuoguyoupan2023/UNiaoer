@@ -53,6 +53,11 @@ export const messages = {
       '新开一局将从零开始计数（新建一个档案）；旧档案会保留，可随时切回。继续吗？',
     createdAt: '建档于 {date}',
     count: '{n} 个档案',
+    rename: '重命名',
+    delete: '删除',
+    renamePlaceholder: '档案名',
+    deleteConfirm: '删除档案「{name}」及其全部数据（记录 / 错题本 / 徽章）？此操作不可恢复。',
+    lastOne: '至少保留一个档案',
   },
   quiz: {
     next: '下一题',
@@ -205,8 +210,9 @@ export const messages = {
     historyBtn: '历史轮次',
     exportData: '导出数据',
     importData: '导入数据',
-    clearData: '清空我的数据',
-    resetConfirm: '确定清空当前档案的全部数据（记录 / 错题本 / 徽章）吗？此操作不可恢复。',
+    clearData: '清空数据',
+    resetConfirm:
+      '确定清空当前档案的全部数据（记录 / 错题本 / 徽章）吗？仅清空此档案，其他档案不受影响，此操作不可恢复。',
     exportDone: '已导出 {rounds} 轮记录、{wrong} 条错题、{badges} 枚徽章。',
     importInvalid: '导入失败：不是有效的 UNiaoer 备份文件。',
     importConfirm:
@@ -294,7 +300,11 @@ export const messages = {
     cacheUnsupported: '当前浏览器不支持缓存管理',
   },
   charts: {
-    trendTitle: '正确率趋势（最近 {n} 轮）',
+    trendTitle: '正确率趋势',
+    range7d: '最近 7 天',
+    range30d: '最近 30 天',
+    rangeYear: '{year} 年',
+    trendEmpty: '该区间暂无记录',
     trendAria: '每轮正确率趋势',
     legend: '圆点：单轮正确率（悬停看详情） · 绿=看图 / 深绿=听音',
     byTierMode: '按难度 / 模式',

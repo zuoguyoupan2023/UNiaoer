@@ -7,10 +7,12 @@ import { useSettingsStore } from '@/stores/settings'
 import {
   activateArchive,
   createArchive,
+  deleteArchive,
   getActiveArchive,
   getActiveProfile,
   getStats,
   listArchives,
+  renameArchive,
   setProfileNickname,
   type ArchiveRow,
   type ProfileRow,
@@ -78,6 +80,38 @@ async function newGame() {
   if (!confirm(t('archive.newGameConfirm'))) return
   await createArchive()
   await loadArchive()
+}
+
+// ---- 档案重命名 / 删除（013 A3；删除仅针对当前活动档） ----
+const renamingArchive = ref(false)
+const archiveNameDraft = ref('')
+
+function startRename() {
+  archiveNameDraft.value = activeArchive.value?.name || ''
+  renamingArchive.value = true
+}
+
+async function saveRename() {
+  const v = archiveNameDraft.value.trim()
+  if (!v || !activeArchive.value) {
+    renamingArchive.value = false
+    return
+  }
+  await renameArchive(activeArchive.value.id, v)
+  renamingArchive.value = false
+  await loadArchive()
+}
+
+async function removeArchive() {
+  const a = activeArchive.value
+  if (!a) return
+  if (!confirm(t('archive.deleteConfirm', { name: a.name }))) return
+  try {
+    await deleteArchive(a.id)
+    await loadArchive()
+  } catch {
+    alert(t('archive.lastOne')) // 至少保留一个档案
+  }
 }
 
 // ---- 用户昵称（R33）：2–12 字符；改「身份」昵称，不改已有档案快照（旧档海报不变） ----
@@ -159,9 +193,30 @@ async function saveNickname() {
             {{ a.name }}
           </button>
         </div>
-        <button class="btn btn-secondary btn-sm archive-new" @click="newGame">
-          <Plus class="ic" :size="14" /> {{ t('archive.newGame') }}
-        </button>
+        <template v-if="!renamingArchive">
+          <button class="btn btn-secondary btn-sm archive-new" @click="newGame">
+            <Plus class="ic" :size="14" /> {{ t('archive.newGame') }}
+          </button>
+          <button class="btn btn-secondary btn-sm" @click="startRename">
+            {{ t('archive.rename') }}
+          </button>
+          <button class="btn btn-danger btn-sm" @click="removeArchive">
+            {{ t('archive.delete') }}
+          </button>
+        </template>
+        <template v-else>
+          <input
+            v-model="archiveNameDraft"
+            class="archive-input"
+            maxlength="40"
+            :placeholder="t('archive.renamePlaceholder')"
+            @keyup.enter="saveRename"
+          />
+          <button class="btn btn-primary btn-sm" @click="saveRename">{{ t('common.save') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="renamingArchive = false">
+            {{ t('common.cancel') }}
+          </button>
+        </template>
       </div>
     </section>
 
@@ -342,5 +397,22 @@ async function saveNickname() {
 }
 .archive-new .ic {
   margin-right: 2px;
+}
+.archive-input {
+  width: 200px;
+  padding: 7px 12px;
+  border: 2px solid var(--primary-light);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+.btn-danger {
+  color: var(--wrong);
+  border-color: var(--wrong);
+  background: #fff;
+}
+.btn-danger:hover {
+  background: #fdecee;
+  color: var(--wrong);
 }
 </style>

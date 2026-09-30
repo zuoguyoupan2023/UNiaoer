@@ -35,6 +35,8 @@ vi.mock('@/core/historyDb', () => ({
     { id: 'a', profileId: 'p', name: '2026-01-01, 00-00', nickname: '', createdAt: 0 },
   ]),
   activateArchive: vi.fn<(id: string) => Promise<void>>(async () => undefined),
+  renameArchive: vi.fn<(id: string, name: string) => Promise<void>>(async () => undefined),
+  deleteArchive: vi.fn<(id: string) => Promise<void>>(async () => undefined),
   createArchive: vi.fn<(name?: string, nickname?: string) => Promise<ArchiveRow>>(async () => ({
     id: 'a2',
     profileId: 'p',
