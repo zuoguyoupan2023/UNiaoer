@@ -21,6 +21,7 @@ const en: typeof zhMessages = {
     mainNav: 'Main navigation',
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
+    region: 'Regions',
     profile: 'Profile',
     settings: 'Settings',
     ambiencePlay: 'Play ambient birdsong',
@@ -37,6 +38,7 @@ const en: typeof zhMessages = {
     bankStats: 'Bank: {total} species · {image} photos · {audio} recordings',
     modeImageSub: 'Openly licensed photos from iNaturalist',
     modeAudioSub: 'Real bird recordings from Xeno-canto',
+    regionSub: 'Browse birds by country/region',
   },
   mode: {
     imageRound: 'Photo round',
@@ -155,8 +157,17 @@ const en: typeof zhMessages = {
     notFound: 'No such note — it may have been changed or removed.',
     attributionHeading: 'Media credits',
   },
+  region: {
+    title: 'Find birds by region',
+    lead: 'Pick a country or region to see which birds occur there.',
+    search: 'Search country/region…',
+    countries: 'Countries/regions',
+    count: '{n} spp.',
+    speciesTitle: 'Birds of {country}',
+  },
   species: {
     facts: 'Species profile',
+    backToRegion: 'Back to regions',
     group: 'Group',
     migration: 'Residency',
     habitat: 'Habitat',

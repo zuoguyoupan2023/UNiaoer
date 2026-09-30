@@ -16,6 +16,7 @@ export const messages = {
     mainNav: '主导航',
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
+    region: '地区浏览',
     profile: '我的',
     settings: '设置',
     ambiencePlay: '播放环境鸟鸣',
@@ -32,6 +33,7 @@ export const messages = {
     bankStats: '题库：{total} 种 · 图片 {image} · 音频 {audio}',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
+    regionSub: '按国家/地区浏览鸟种',
   },
   mode: {
     imageRound: '鸟图版',
@@ -150,8 +152,17 @@ export const messages = {
     notFound: '没有找到该条说明，可能已被调整或删除。',
     attributionHeading: '素材署名',
   },
+  region: {
+    title: '按地区找鸟',
+    lead: '选择一个国家或地区，看看当地能遇到哪些鸟种。',
+    search: '搜索国家/地区…',
+    countries: '国家/地区',
+    count: '{n} 种',
+    speciesTitle: '{country} 的鸟种',
+  },
   species: {
     facts: '物种档案',
+    backToRegion: '返回地区',
     group: '类群',
     migration: '居留型',
     habitat: '生境',

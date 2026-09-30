@@ -167,7 +167,7 @@ async function handleManifest(env: Env): Promise<Response> {
   // 1) 优先 R2 上的 data/manifest.json（若已上传）
   const obj = await env.MEDIA.get('data/manifest.json')
   if (obj) {
-    return new Response(obj.text(), {
+    return new Response(await obj.text(), {
       headers: {
         'content-type': 'application/json; charset=utf-8',
         'cache-control': 'public, max-age=300, stale-while-revalidate=86400',

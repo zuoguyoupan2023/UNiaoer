@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, AudioLines, Image as ImageIcon, Library } from 'lucide-vue-next'
+import { AlertTriangle, AudioLines, Globe2, Image as ImageIcon, Library } from 'lucide-vue-next'
 import { loadBank, BankError } from '@/core/bank'
 
 const { t } = useI18n()
@@ -50,6 +50,12 @@ onMounted(async () => {
         <span class="mode-sub">{{ t('home.modeAudioSub') }}</span>
       </RouterLink>
     </div>
+
+    <RouterLink to="/region" class="region-link">
+      <Globe2 class="ic" :size="16" />
+      <span class="region-title">{{ t('nav.region') }}</span>
+      <span class="region-sub">{{ t('home.regionSub') }}</span>
+    </RouterLink>
   </section>
 </template>
 
@@ -119,5 +125,35 @@ onMounted(async () => {
 .mode-sub {
   font-size: 0.73rem;
   color: var(--text-light);
+}
+.region-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  transition: all 0.18s ease;
+}
+.region-link:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+}
+.region-link .ic {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.region-title {
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.region-sub {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-left: auto;
 }
 </style>

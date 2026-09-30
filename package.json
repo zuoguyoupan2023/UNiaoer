@@ -20,6 +20,7 @@
     "bank:notes": "node scripts/apply-notes.mjs",
     "bank:profiles": "node scripts/apply-profiles.mjs",
     "r2:push": "node scripts/push-r2.mjs",
+    "r2:manifest": "wrangler r2 object put uniaoerbucket/data/manifest.json --file=public/data/manifest.json --content-type \"application/json; charset=utf-8\" --cache-control \"public, max-age=300\" --remote",
     "check:bank": "node scripts/check-bank.mjs",
     "check:media": "node scripts/check-media.mjs",
     "worker:dev": "wrangler dev -c worker/wrangler.toml --remote",

@@ -42,6 +42,18 @@ const router = createRouter({
       component: () => import('../views/FaqDetailView.vue'),
     },
     {
+      // C7 地区浏览（017）：国家/地区 → 鸟种
+      path: '/region',
+      name: 'region',
+      component: () => import('../views/RegionView.vue'),
+    },
+    {
+      // 通用鸟种详情（地区浏览点击进入；有答疑说明时一并展示）
+      path: '/species/:speciesId',
+      name: 'species',
+      component: () => import('../views/SpeciesDetailView.vue'),
+    },
+    {
       // 错题本并入 /profile/wrong 后保留旧路径重定向（导航入口已移除，R31）
       path: '/wrong',
       redirect: { name: 'profile-wrong' },
