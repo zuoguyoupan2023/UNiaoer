@@ -38,3 +38,31 @@ jobs:
 
       - name: i18n check (zh-CN/en key parity)
         run: npm run i18n:check
+
+  # H2 E2E：关键路径回归（独立 job，不拖慢主 verify）
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --only-shell chromium
+
+      - name: Run E2E
+        run: npx playwright test
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
