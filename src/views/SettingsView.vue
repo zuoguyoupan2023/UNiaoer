@@ -4,11 +4,14 @@ import { useI18n } from 'vue-i18n'
 import { Languages, Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
+import { clearReports, countReports } from '@/core/reportStore'
 import type { AutoNextMode } from '@/types'
 
 const { t } = useI18n()
 const settings = useSettingsStore()
 const cacheMsg = ref('')
+const reportCount = ref(0)
+const reportsMsg = ref('')
 
 // 环境鸟鸣音轨目录（懒加载，默认全部勾选）
 const tracks = ref<AmbienceTrack[] | null>(null)
@@ -20,7 +23,23 @@ onMounted(async () => {
   } catch {
     tracksError.value = true
   }
+  try {
+    reportCount.value = await countReports()
+  } catch {
+    /* IndexedDB 不可用：保持 0 */
+  }
 })
+
+/** G1：清空本地报错记录 */
+async function clearLocalReports() {
+  try {
+    await clearReports()
+    reportCount.value = 0
+    reportsMsg.value = t('settings.reportsCleared')
+  } catch {
+    reportsMsg.value = t('errors.unknown')
+  }
+}
 
 function isTrackChecked(id: string): boolean {
   return !settings.ambienceExcluded.includes(id)
@@ -170,6 +189,20 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
         {{ t('settings.clearCache') }}
       </button>
       <p v-if="cacheMsg" class="muted" style="margin-top: 8px">{{ cacheMsg }}</p>
+    </div>
+
+    <div class="setting">
+      <h3>{{ t('settings.reportsTitle') }}</h3>
+      <p class="muted">{{ t('settings.reportsDesc', { n: reportCount }) }}</p>
+      <button
+        class="btn btn-secondary"
+        style="margin-top: 10px"
+        :disabled="!reportCount"
+        @click="clearLocalReports"
+      >
+        {{ t('settings.clearReports') }}
+      </button>
+      <p v-if="reportsMsg" class="muted" style="margin-top: 8px">{{ reportsMsg }}</p>
     </div>
   </section>
 </template>

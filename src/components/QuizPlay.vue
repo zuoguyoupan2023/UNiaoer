@@ -21,6 +21,7 @@ import {
   AudioLines,
   CircleCheck,
   CircleX,
+  Flag,
   HelpCircle,
   Hourglass,
   Image as ImageIcon,
@@ -33,6 +34,7 @@ import {
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
 import { loadBank, speciesNoteById } from '@/core/bank'
+import { addReport, type ReportReason } from '@/core/reportStore'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from './AttributionLine.vue'
@@ -99,6 +101,50 @@ async function wizardSaveNickname() {
 function wizardSkip() {
   settings.nicknameGuideDismissed = true
   showNameModal.value = false
+}
+
+// ---- G1 报错按钮：本地记录「图/音/答案有问题」 ----
+const REPORT_REASONS: { id: ReportReason; labelKey: string }[] = [
+  { id: 'image', labelKey: 'report.reasons.image' },
+  { id: 'audio', labelKey: 'report.reasons.audio' },
+  { id: 'answer', labelKey: 'report.reasons.answer' },
+  { id: 'other', labelKey: 'report.reasons.other' },
+]
+const showReport = ref(false)
+const reportReason = ref<ReportReason>('image')
+const reportAnswer = ref('')
+const reportNote = ref('')
+const reportState = ref<'idle' | 'done' | 'error'>('idle')
+
+function openReport() {
+  reportReason.value = quiz.current?.type === 'audio' ? 'audio' : 'image'
+  reportAnswer.value = ''
+  reportNote.value = ''
+  reportState.value = 'idle'
+  showReport.value = true
+}
+function closeReport() {
+  showReport.value = false
+}
+async function submitReport() {
+  const q = quiz.current
+  if (!q) return
+  try {
+    await addReport({
+      speciesId: q.media.speciesId,
+      speciesName: q.answer,
+      sci: q.sci,
+      questionType: q.type,
+      mediaUrl: (displayMedia.value ?? q.media).url,
+      reason: reportReason.value,
+      suggestedAnswer: reportAnswer.value.trim() || undefined,
+      note: reportNote.value.trim() || undefined,
+    })
+    reportState.value = 'done'
+    setTimeout(closeReport, 1200)
+  } catch {
+    reportState.value = 'error'
+  }
 }
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
@@ -535,6 +581,64 @@ function onTouchEnd(e: TouchEvent) {
     </div>
   </Teleport>
 
+  <!-- G1 报错浮窗（本地记录） -->
+  <Teleport to="body">
+    <div
+      v-if="showReport"
+      class="wizard-overlay"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('report.title')"
+      @click.self="closeReport"
+    >
+      <div class="wizard-panel report-panel">
+        <h3 class="wizard-title">
+          <Flag class="ic" :size="18" /> {{ t('report.title') }}
+        </h3>
+
+        <template v-if="reportState !== 'done'">
+          <p class="wizard-sub">{{ t('report.sub') }}</p>
+
+          <p class="report-label">{{ t('report.reasonLabel') }}</p>
+          <div class="report-reasons">
+            <button
+              v-for="r in REPORT_REASONS"
+              :key="r.id"
+              type="button"
+              class="reason"
+              :class="{ on: reportReason === r.id }"
+              @click="reportReason = r.id"
+            >
+              {{ t(r.labelKey) }}
+            </button>
+          </div>
+
+          <label class="report-field">
+            <span>{{ t('report.answerLabel') }}</span>
+            <input v-model="reportAnswer" type="text" :placeholder="t('report.answerPlaceholder')" />
+          </label>
+          <label class="report-field">
+            <span>{{ t('report.noteLabel') }}</span>
+            <textarea v-model="reportNote" rows="2" :placeholder="t('report.notePlaceholder')"></textarea>
+          </label>
+
+          <p v-if="reportState === 'error'" class="report-err">{{ t('report.error') }}</p>
+
+          <div class="wizard-actions">
+            <button class="btn btn-primary" type="button" @click="submitReport">
+              {{ t('report.submit') }}
+            </button>
+            <button class="btn btn-secondary" type="button" @click="closeReport">
+              {{ t('common.cancel') }}
+            </button>
+          </div>
+        </template>
+
+        <p v-else class="report-done">{{ t('report.done') }}</p>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- 介绍页：第 2 步 水平 → 第 3 步 形式（主界面；老档显示已选摘要） -->
   <section v-if="!started" class="card intro">
     <div class="intro-head">
@@ -662,6 +766,11 @@ function onTouchEnd(e: TouchEvent) {
         <HelpCircle class="ic" :size="14" />
         {{ displayType === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
       </RouterLink>
+
+      <!-- G1 报错按钮：图/音/答案有问题 → 先本地记录 -->
+      <button class="report-link" type="button" @click="openReport">
+        <Flag class="ic" :size="14" /> {{ t('report.button') }}
+      </button>
 
       <OptionList
         :options="quiz.current.options"
@@ -1258,5 +1367,94 @@ function onTouchEnd(e: TouchEvent) {
   50% {
     transform: translateY(-6px);
   }
+}
+/* ---- G1 报错 ---- */
+.report-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 0 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-light);
+  font-size: 0.78rem;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.report-link:hover {
+  color: var(--primary);
+}
+.report-panel {
+  text-align: left;
+  max-width: 400px;
+}
+.report-panel .wizard-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.report-panel .wizard-title .ic {
+  color: var(--primary);
+}
+.report-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin: 12px 0 6px;
+}
+.report-reasons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.report-reasons .reason {
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.report-reasons .reason.on {
+  border-color: var(--primary);
+  background: #eaf4ef;
+  font-weight: 700;
+}
+.report-field {
+  display: block;
+  margin-top: 12px;
+}
+.report-field span {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+.report-field input,
+.report-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  resize: vertical;
+}
+.report-err {
+  margin-top: 10px;
+  color: var(--wrong);
+  font-size: 0.8rem;
+}
+.report-done {
+  margin: 12px 0;
+  text-align: center;
+  color: var(--primary);
+  font-weight: 700;
 }
 </style>
