@@ -15,13 +15,37 @@ const { t } = useI18n()
 const bank = ref<Manifest | null>(null)
 const failed = ref(false)
 
+interface ChangelogEntry {
+  date: string
+  titleZh: string
+  titleEn: string
+  bodyZh: string
+  bodyEn: string
+  speciesId?: string
+}
+const changelog = ref<ChangelogEntry[]>([])
+
 onMounted(async () => {
   try {
     bank.value = await loadBank()
   } catch {
     failed.value = true
   }
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/faq-changelog.json`)
+    if (res.ok) {
+      const data = (await res.json()) as { entries?: ChangelogEntry[] }
+      changelog.value = (data.entries ?? []).slice().sort((a, b) => (a.date < b.date ? 1 : -1))
+    }
+  } catch {
+    /* 更新日志可选：缺失时忽略 */
+  }
 })
+
+/** 更新日志按 locale 取文本（缺英文回退中文） */
+function pick(zh: string, en: string): string {
+  return currentLocale() === 'en' ? en || zh : zh || en
+}
 
 /** 有答疑说明的物种（保持 manifest 顺序） */
 const entries = computed<BankSpecies[]>(
@@ -62,6 +86,25 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
 
     <p v-else-if="failed" class="muted empty">{{ t('errors.unknown') }}</p>
     <p v-else class="muted empty">{{ t('faq.empty') }}</p>
+
+    <!-- 更新日志（人工维护 data/faq-changelog.json）：按日期倒序 -->
+    <section v-if="changelog.length" class="changelog">
+      <h3 class="cl-title">{{ t('faq.changelogTitle') }}</h3>
+      <ol class="cl-list">
+        <li v-for="c in changelog" :key="c.date + c.titleZh" class="cl-item">
+          <span class="cl-date">{{ c.date }}</span>
+          <div class="cl-body">
+            <p class="cl-head">
+              {{ pick(c.titleZh, c.titleEn) }}
+              <RouterLink v-if="c.speciesId" class="cl-link" :to="`/species/${c.speciesId}`">
+                {{ t('faq.changelogSpecies') }}
+              </RouterLink>
+            </p>
+            <p class="cl-text">{{ pick(c.bodyZh, c.bodyEn) }}</p>
+          </div>
+        </li>
+      </ol>
+    </section>
 
     <p class="faq-foot">
       <RouterLink class="btn btn-secondary" to="/">{{ t('faq.home') }}</RouterLink>
@@ -149,6 +192,57 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
 }
 .empty {
   margin: 14px 0 18px;
+}
+.changelog {
+  max-width: 640px;
+  margin: 8px auto 18px;
+  text-align: left;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.cl-title {
+  font-size: 1rem;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+.cl-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cl-item {
+  display: flex;
+  gap: 10px;
+}
+.cl-date {
+  flex-shrink: 0;
+  width: 84px;
+  font-size: 0.74rem;
+  color: var(--text-light);
+  padding-top: 2px;
+}
+.cl-body {
+  min-width: 0;
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+}
+.cl-head {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.cl-link {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.cl-text {
+  margin-top: 3px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-light);
 }
 .faq-foot {
   margin-top: 6px;

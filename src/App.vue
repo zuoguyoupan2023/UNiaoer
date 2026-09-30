@@ -97,6 +97,7 @@ const immersive = computed(
         <RouterLink to="/region">{{ t('nav.region') }}</RouterLink>
       </span>
       <span class="nav-group nav-utility">
+        <RouterLink to="/reports">{{ t('nav.reports') }}</RouterLink>
         <RouterLink to="/profile">{{ t('nav.profile') }}</RouterLink>
         <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
         <button

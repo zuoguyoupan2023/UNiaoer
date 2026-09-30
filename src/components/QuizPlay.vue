@@ -34,7 +34,9 @@ import {
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
 import { loadBank, speciesNoteById } from '@/core/bank'
-import { addReport, type ReportReason } from '@/core/reportStore'
+import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
+import { submitReport as uploadReport } from '@/core/reportsApi'
+import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from './AttributionLine.vue'
@@ -130,7 +132,7 @@ async function submitReport() {
   const q = quiz.current
   if (!q) return
   try {
-    await addReport({
+    const row = await addReport({
       speciesId: q.media.speciesId,
       speciesName: q.answer,
       sci: q.sci,
@@ -140,6 +142,13 @@ async function submitReport() {
       suggestedAnswer: reportAnswer.value.trim() || undefined,
       note: reportNote.value.trim() || undefined,
     })
+    // B6：尝试上传后端（失败则留在本地，设置页可补传）
+    try {
+      await uploadReport(row, getClientId())
+      await markReportSynced(row.id)
+    } catch {
+      /* 离线/后端不可用：保留 pending */
+    }
     reportState.value = 'done'
     setTimeout(closeReport, 1200)
   } catch {

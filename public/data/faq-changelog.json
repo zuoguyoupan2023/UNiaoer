@@ -1,0 +1,20 @@
+{
+  "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
+  "entries": [
+    {
+      "date": "2026-09-30",
+      "titleZh": "白骨顶首图已改为策展默认图",
+      "titleEn": "Coot main photo now uses the curated default",
+      "bodyZh": "有反馈指出白骨顶的首图里主体其实是雀鹰。已改为优先使用物种策展默认图（default_photo），并加入人工覆盖表兜底；旧图仍保留在下方其它素材中供对照。",
+      "bodyEn": "A report noted the coot's main photo actually features a sparrowhawk. We now prefer the species' curated default photo (default_photo) with a manual override fallback; the old photo remains in the gallery for comparison.",
+      "speciesId": "fulica-atra"
+    },
+    {
+      "date": "2026-09-28",
+      "titleZh": "新增「大众评审」：反馈可上传并投票",
+      "titleEn": "Community review: reports can be uploaded and voted",
+      "bodyZh": "题目页新增「报错」按钮：可选图片/录音/答案问题并填写你认为的正确答案。反馈会先在本地保存，联网后上传；在「大众评审」页大家可以投票，帮助我们判断并纠正。",
+      "bodyEn": "A new Report button on quiz questions lets you flag photo/recording/answer issues and suggest the correct answer. Reports are saved locally first, uploaded when online, and everyone can vote on the Review page to help us verify and fix them."
+    }
+  ]
+}

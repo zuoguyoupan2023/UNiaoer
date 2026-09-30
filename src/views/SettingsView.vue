@@ -4,14 +4,17 @@ import { useI18n } from 'vue-i18n'
 import { Languages, Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
-import { clearReports, countReports } from '@/core/reportStore'
+import { clearReports, countReports, pendingReportCount } from '@/core/reportStore'
+import { syncPendingReports } from '@/core/reportSync'
 import type { AutoNextMode } from '@/types'
 
 const { t } = useI18n()
 const settings = useSettingsStore()
 const cacheMsg = ref('')
 const reportCount = ref(0)
+const pendingCount = ref(0)
 const reportsMsg = ref('')
+const syncing = ref(false)
 
 // 环境鸟鸣音轨目录（懒加载，默认全部勾选）
 const tracks = ref<AmbienceTrack[] | null>(null)
@@ -23,21 +26,42 @@ onMounted(async () => {
   } catch {
     tracksError.value = true
   }
+  await refreshReportCounts()
+})
+
+async function refreshReportCounts() {
   try {
     reportCount.value = await countReports()
+    pendingCount.value = await pendingReportCount()
   } catch {
     /* IndexedDB 不可用：保持 0 */
   }
-})
+}
 
 /** G1：清空本地报错记录 */
 async function clearLocalReports() {
   try {
     await clearReports()
-    reportCount.value = 0
     reportsMsg.value = t('settings.reportsCleared')
+    await refreshReportCounts()
   } catch {
     reportsMsg.value = t('errors.unknown')
+  }
+}
+
+/** B6：把未上传的本地报错补传到后端 */
+async function syncReports() {
+  if (syncing.value) return
+  syncing.value = true
+  reportsMsg.value = ''
+  try {
+    const r = await syncPendingReports()
+    reportsMsg.value = t('settings.reportsSynced', { n: r.synced, failed: r.failed })
+  } catch {
+    reportsMsg.value = t('errors.unknown')
+  } finally {
+    syncing.value = false
+    await refreshReportCounts()
   }
 }
 
@@ -194,14 +218,15 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
     <div class="setting">
       <h3>{{ t('settings.reportsTitle') }}</h3>
       <p class="muted">{{ t('settings.reportsDesc', { n: reportCount }) }}</p>
-      <button
-        class="btn btn-secondary"
-        style="margin-top: 10px"
-        :disabled="!reportCount"
-        @click="clearLocalReports"
-      >
-        {{ t('settings.clearReports') }}
-      </button>
+      <p class="muted">{{ t('settings.reportsPending', { n: pendingCount }) }}</p>
+      <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
+        <button class="btn btn-secondary" :disabled="syncing || !pendingCount" @click="syncReports">
+          {{ syncing ? t('settings.syncing') : t('settings.syncReports') }}
+        </button>
+        <button class="btn btn-secondary" :disabled="!reportCount" @click="clearLocalReports">
+          {{ t('settings.clearReports') }}
+        </button>
+      </div>
       <p v-if="reportsMsg" class="muted" style="margin-top: 8px">{{ reportsMsg }}</p>
     </div>
   </section>

@@ -23,9 +23,11 @@ export interface ReportEntry {
   suggestedAnswer?: string
   /** 补充说明（可选） */
   note?: string
+  /** 是否已上传到后端（B6；离线时先本地，联网后补传） */
+  synced?: boolean
 }
 
-export type NewReport = Omit<ReportEntry, 'id' | 'at'>
+export type NewReport = Omit<ReportEntry, 'id' | 'at' | 'synced'>
 
 const DB_NAME = 'uniaoer-reports'
 const DB_VERSION = 1
@@ -81,7 +83,7 @@ function newId(): string {
 /** 记录一条报错（本地） */
 export async function addReport(entry: NewReport): Promise<ReportEntry> {
   const db = await openDb()
-  const row: ReportEntry = { ...entry, id: newId(), at: Date.now() }
+  const row: ReportEntry = { ...entry, id: newId(), at: Date.now(), synced: false }
   const tx = db.transaction(STORE, 'readwrite')
   tx.objectStore(STORE).put(row)
   await txDone(tx)
@@ -99,6 +101,28 @@ export async function listReports(): Promise<ReportEntry[]> {
 export async function countReports(): Promise<number> {
   const db = await openDb()
   return p<number>(db.transaction(STORE).objectStore(STORE).count())
+}
+
+/** 未上传到后端的报错（B6 补传用） */
+export async function listPendingReports(): Promise<ReportEntry[]> {
+  return (await listReports()).filter((r) => !r.synced)
+}
+
+/** 未上传条数 */
+export async function pendingReportCount(): Promise<number> {
+  return (await listPendingReports()).length
+}
+
+/** 标记某条已上传成功 */
+export async function markReportSynced(id: string): Promise<void> {
+  const db = await openDb()
+  const row = await p<ReportEntry | undefined>(
+    db.transaction(STORE).objectStore(STORE).get(id),
+  )
+  if (!row) return
+  const tx = db.transaction(STORE, 'readwrite')
+  tx.objectStore(STORE).put({ ...row, synced: true })
+  await txDone(tx)
 }
 
 /** 清空本地报错 */

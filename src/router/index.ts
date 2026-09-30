@@ -48,10 +48,16 @@ const router = createRouter({
       component: () => import('../views/RegionView.vue'),
     },
     {
-      // 通用鸟种详情（地区浏览点击进入；有答疑说明时一并展示）
+      // 普通鸟种详情（地区浏览点击进入；有答疑说明时一并展示）
       path: '/species/:speciesId',
       name: 'species',
       component: () => import('../views/SpeciesDetailView.vue'),
+    },
+    {
+      // B6 大众评审：公开报错列表 + 投票
+      path: '/reports',
+      name: 'reports',
+      component: () => import('../views/ReportsView.vue'),
     },
     {
       // 错题本并入 /profile/wrong 后保留旧路径重定向（导航入口已移除，R31）

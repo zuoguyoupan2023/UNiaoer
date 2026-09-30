@@ -61,3 +61,34 @@ CREATE TABLE IF NOT EXISTS questions (
   answer_mode  TEXT NOT NULL DEFAULT 'choice',
   time_limit   INTEGER                   -- 秒；NULL 为不限时
 );
+
+-- B6 报错（G1 上报）：用户对图/音/答案的反馈，供管理方纠正 + 大众评审
+CREATE TABLE IF NOT EXISTS reports (
+  id               TEXT PRIMARY KEY,     -- 客户端生成（uuid）
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL,
+  species_id       TEXT,                 -- 题目物种 id
+  species_name     TEXT,                 -- 显示名快照（当轮语言）
+  sci              TEXT,
+  question_type    TEXT,                 -- image | audio
+  media_url        TEXT,
+  reason           TEXT NOT NULL,        -- image | audio | answer | other
+  suggested_answer TEXT,                 -- 用户认为的正确答案（可选）
+  note             TEXT,                 -- 补充说明（可选）
+  status           TEXT NOT NULL DEFAULT 'open', -- open | published | fixed | rejected
+  up               INTEGER NOT NULL DEFAULT 0,
+  down             INTEGER NOT NULL DEFAULT 0,
+  client_id        TEXT                  -- 匿名设备 id（去重/防刷，非追踪）
+);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_reports_species ON reports(species_id);
+
+-- B6 大众评审投票：每设备每报错一票（+1/-1）
+CREATE TABLE IF NOT EXISTS report_votes (
+  report_id  TEXT NOT NULL,
+  client_id  TEXT NOT NULL,
+  value      INTEGER NOT NULL,           -- 1 | -1
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (report_id, client_id)
+);
+CREATE INDEX IF NOT EXISTS idx_report_votes_report ON report_votes(report_id);

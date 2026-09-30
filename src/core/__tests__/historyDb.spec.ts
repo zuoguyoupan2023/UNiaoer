@@ -265,7 +265,9 @@ describe('historyDb v2 档案隔离（013-A0）', () => {
   })
 
   it('档案名同日去重：自动加序号', async () => {
-    const today = new Date().toISOString().slice(0, 10)
+    // 与 archiveName 一致用「本地日期」，避免跨时区/午夜时 UTC 与本地不同日导致抖动
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const a = await createArchive() // 与现有档案同名 → 自动 #2
     expect(a.name.startsWith(today)).toBe(true)
     const names = (await listArchives()).map((x) => x.name)

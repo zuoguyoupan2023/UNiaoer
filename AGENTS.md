@@ -47,13 +47,16 @@
 | Worker 编译自检（不部署） | `npm run worker:check` |
 | Worker 部署（挂 `uniaoer.com/api/*`） | `npm run worker:deploy` |
 | 下沉 XC 密钥到 Worker secret（值从 `.env` 管道传入） | `wrangler secret put XC_API_KEY -c worker/wrangler.toml` |
+| 查看用户报错（管理，需 `ADMIN_KEY`，见 `.env`） | `curl -H "x-admin-key: $ADMIN_KEY" "https://uniaoer.com/api/reports/admin?status=open"` |
+| 纠正/处理报错（管理） | `curl -X PATCH -H "x-admin-key: $ADMIN_KEY" -H 'content-type: application/json' -d '{"status":"fixed"}' https://uniaoer.com/api/reports/<id>` |
 
 ## 架构速览
 
 - **前端**：Vue 3 + Vite + TS + Pinia；纯静态 SPA，生产优先读 Worker `/api/manifest`（失败回退 `public/data/manifest.json`）。
 - **媒体**：存在 Cloudflare **R2**（`media/<物种id>/…`），经公开域名（r2.dev 或自定义域名）访问。
 - **元数据**：`manifest.json` 仍是主索引；**D1 已启用**（`uniaoer`：species/media/questions，1299 物种 / 12938 媒体）。
-- **后端**：独立 Worker `uniaoer-api`（`worker/`），挂 `uniaoer.com/api/*`：`/api/health`、`/api/manifest`、`/api/questions`、`/api/media/:id`；`XC_API_KEY` 存 Worker secret，前端不接触。
+- **后端**：独立 Worker `uniaoer-api`（`worker/`），挂 `uniaoer.com/api/*`：`/api/health`、`/api/manifest`、`/api/questions`、`/api/media/:id`、`/api/reports`（提交/公开列表/投票）、`/api/reports/:id/vote`、`/api/reports/admin`（受保护）；`XC_API_KEY` 存 Worker secret，`ADMIN_KEY` 存 Worker secret（前端不接触）。
+- **报错/评审（B6）**：前端报错先存本地（`uniaoer-reports`）再上传；`reports`/`report_votes` 在 D1；大众评审页 `/reports`。
 - **构建期数据管道**：`scripts/build-bank.mjs` 抓 iNaturalist（图）+ Xeno-canto/iNat（音）→ 许可过滤 → 转码 → R2。
 - **许可**：`src/core/licenseGuard.ts` + `scripts/lib/license.mjs`（兼容 XC 的 URL 与 iNat 短码）；`relaxed` 含 NC/ND，`strict` 仅 CC0/BY/BY-SA。
 - **用户数据**：仅存浏览器 IndexedDB（`src/core/historyDb.ts`），不上云。
