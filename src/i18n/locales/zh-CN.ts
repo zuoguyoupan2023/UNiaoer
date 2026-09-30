@@ -159,6 +159,17 @@ export const messages = {
     countries: '国家/地区',
     count: '{n} 种',
     speciesTitle: '{country} 的鸟种',
+    continentsLabel: '按大洲筛选',
+    note: '仅按国家/地区文本列出，不涉及地图与边界；港澳台并入中国。',
+    continents: {
+      asia: '亚洲',
+      europe: '欧洲',
+      africa: '非洲',
+      northAmerica: '北美洲',
+      southAmerica: '南美洲',
+      oceania: '大洋洲',
+      antarctica: '南极洲',
+    },
   },
   species: {
     facts: '物种档案',

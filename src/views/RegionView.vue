@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Globe2, Search } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
-import { buildCountryIndex, countryStats, filterCountries, type CountryStat } from '@/core/region'
+import {
+  buildCountryIndex,
+  countriesInContinent,
+  countryStats,
+  filterCountries,
+  presentContinents,
+  type Continent,
+} from '@/core/region'
 import { currentLocale } from '@/i18n'
 
 const { t } = useI18n()
@@ -11,7 +18,8 @@ const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
 const failed = ref(false)
 const query = ref('')
-/** 默认中国（017：先中国） */
+/** 先亚洲、默认中国（017：先中国） */
+const continent = ref<Continent>('asia')
 const selected = ref('CN')
 
 onMounted(async () => {
@@ -36,19 +44,25 @@ function countryName(code: string): string {
   }
 }
 
-const stats = computed<CountryStat[]>(() =>
-  bySpecies.value ? countryStats(bySpecies.value) : [],
-)
-const filtered = computed(() => filterCountries(stats.value, query.value, countryName))
-const index = computed(() =>
-  bySpecies.value ? buildCountryIndex(bySpecies.value) : ({} as Record<string, string[]>),
-)
+const stats = computed(() => (bySpecies.value ? countryStats(bySpecies.value) : []))
+const continents = computed(() => presentContinents(stats.value))
+const continentStats = computed(() => countriesInContinent(stats.value, continent.value))
+const filtered = computed(() => filterCountries(continentStats.value, query.value, countryName))
+const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
 const species = computed<BankSpecies[]>(() =>
   (index.value[selected.value] ?? [])
     .map((id) => speciesById(id))
     .filter((sp): sp is BankSpecies => !!sp),
 )
 const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
+
+/** 切换大洲：搜索清空；若当前国家不属于该洲，自动选中该洲物种最多的国家 */
+watch(continent, () => {
+  query.value = ''
+  if (!continentStats.value.some((s) => s.code === selected.value)) {
+    selected.value = continentStats.value[0]?.code ?? ''
+  }
+})
 </script>
 
 <template>
@@ -57,6 +71,20 @@ const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
     <p class="muted lead">{{ t('region.lead') }}</p>
 
     <template v-if="stats.length">
+      <nav class="continents" :aria-label="t('region.continentsLabel')">
+        <button
+          v-for="c in continents"
+          :key="c"
+          type="button"
+          class="continent-btn"
+          :class="{ active: c === continent }"
+          @click="continent = c"
+        >
+          {{ t(`region.continents.${c}`) }}
+        </button>
+      </nav>
+      <p class="note">{{ t('region.note') }}</p>
+
       <div class="layout">
         <aside class="countries">
           <label class="search">
@@ -122,8 +150,40 @@ const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
 }
 .lead {
   font-size: 0.85rem;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   text-align: center;
+}
+.continents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.continent-btn {
+  padding: 6px 16px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.continent-btn:hover {
+  border-color: var(--primary-light);
+}
+.continent-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.note {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-light);
+  margin-bottom: 12px;
 }
 .layout {
   display: grid;
