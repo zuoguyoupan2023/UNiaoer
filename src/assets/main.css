@@ -158,6 +158,8 @@
   max-width: 760px;
   margin: 0 auto;
   padding: 0 16px 12px;
+  /* 撑开剩余高度：内容短时页脚仍钉在视口底部（sticky footer） */
+  flex: 1;
 }
 
 .app-footer {

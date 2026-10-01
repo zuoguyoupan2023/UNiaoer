@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Flag, ThumbsDown, ThumbsUp } from 'lucide-vue-next'
+import { Flag, ThumbsDown, ThumbsUp } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName, type BankSpecies } from '@/core/bank'
 import { listPublicReports, voteReport, type PublicReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
@@ -65,9 +65,6 @@ async function vote(r: PublicReport, value: 1 | -1) {
 
 <template>
   <section class="card reports">
-    <RouterLink class="back" to="/">
-      <ArrowLeft class="ic" :size="15" /> {{ t('reports.backHome') }}
-    </RouterLink>
     <h2 class="head"><Flag class="ic" :size="22" /> {{ t('reports.title') }}</h2>
     <p class="muted lead">{{ t('reports.lead') }}</p>
     <p v-if="!loading && !failed" class="count">{{ t('reports.count', { n: total }) }}</p>
@@ -124,18 +121,6 @@ async function vote(r: PublicReport, value: 1 | -1) {
 <style scoped>
 .reports {
   text-align: center;
-}
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.8rem;
-  color: var(--text-light);
-  margin-bottom: 10px;
-  align-self: flex-start;
-}
-.back:hover {
-  color: var(--primary);
 }
 .head {
   display: inline-flex;

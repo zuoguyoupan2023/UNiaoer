@@ -1,20 +1,28 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Bird, Volume2, VolumeX } from 'lucide-vue-next'
 import { useQuizStore } from '@/stores/quiz'
+import { useReportsMetaStore } from '@/stores/reportsMeta'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, getAmbienceState, subscribeAmbience } from '@/core/ambience'
 
 const route = useRoute()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
+const reportsMeta = useReportsMetaStore()
 const { t } = useI18n()
 
 // 环境鸟鸣：播放范围来自设置页勾选（默认全部）
 ambiencePlayer.configure({ getExcluded: () => settings.ambienceExcluded })
 const ambienceOn = ref(false)
+// 大众评审导航入口：仅在有已发布条目时显示（60s 节流，挂载与切路由时刷新）
+void reportsMeta.refresh()
+watch(
+  () => route.fullPath,
+  () => void reportsMeta.refresh(),
+)
 onMounted(() => {
   subscribeAmbience((s) => {
     ambienceOn.value = s.playing
@@ -99,7 +107,9 @@ const immersive = computed(
         <RouterLink to="/region">{{ t('nav.region') }}</RouterLink>
       </span>
       <span class="nav-group nav-utility">
-        <RouterLink to="/reports">{{ t('nav.reports') }}</RouterLink>
+        <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports">
+          {{ t('nav.reports') }}
+        </RouterLink>
         <RouterLink to="/profile">{{ t('nav.profile') }}</RouterLink>
         <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
         <button

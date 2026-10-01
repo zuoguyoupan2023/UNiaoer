@@ -209,7 +209,6 @@ export const messages = {
     suggested: '建议答案：{name}',
     upvoteCount: '属实（{n} 票）',
     downvoteCount: '不属实（{n} 票）',
-    backHome: '返回首页',
     status: { fixed: '已修正' },
   },
   admin: {

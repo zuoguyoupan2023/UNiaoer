@@ -118,5 +118,7 @@ test.describe('入口与页面', () => {
     await page.goto('/reports')
     // 无后端环境：列表不可用是既定降级态（离线也可确定性断言）
     await expect(page.getByText('反馈列表暂时不可用（需要联网）。')).toBeVisible()
+    // 导航入口：无可评审内容时不显示（reportsMeta 拉取失败按 0 处理）
+    await expect(page.locator('.app-nav a', { hasText: '大众评审' })).toBeHidden()
   })
 })

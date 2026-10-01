@@ -214,7 +214,6 @@ const en: typeof zhMessages = {
     suggested: 'Suggested answer: {name}',
     upvoteCount: 'Valid ({n} votes)',
     downvoteCount: 'Not valid ({n} votes)',
-    backHome: 'Back home',
     status: { fixed: 'Fixed' },
   },
   admin: {
