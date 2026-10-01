@@ -258,6 +258,12 @@ export const messages = {
       vagrant: '迷鸟',
     },
   },
+  season: {
+    title: '出现月份',
+    peak: '高峰月份：{months}',
+    records: '基于约 {n} 条公开观测记录',
+    hint: '强度 = 该月观测记录占比，多来源归一化（0–100）。',
+  },
   poster: {
     title: '生成海报',
     dragHint: '拖拽画面平移背景',

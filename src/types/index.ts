@@ -58,6 +58,8 @@ export interface MediaAsset {
   durationSec?: number
   /** ND 等不可转码的素材为 false（占位/派生均不做） */
   transcode?: boolean
+  /** 观测月份 1–12（021 M1：构建期自 XC date / iNat observed_on 捕获；旧 manifest 需重建 bank） */
+  month?: number
   /** 来自人工覆盖表 */
   overridden?: boolean
 }

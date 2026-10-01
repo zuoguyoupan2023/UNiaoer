@@ -34,6 +34,7 @@ import {
 } from './lib/license.mjs'
 import { makeR2 } from './lib/r2.mjs'
 import { loadSpeciesNotes, applySpeciesNotes, unmatchedNoteIds } from './lib/notes.mjs'
+import { monthOf } from './region/seasonality-lib.mjs'
 import {
   loadDistribution,
   loadSpeciesProfiles,
@@ -405,8 +406,10 @@ async function fetchInat(taxonId, kind) {
         `&quality_grade=research&${flag}&order_by=votes&per_page=10&locale=zh-CN`
       const d = await fetchJson(url)
       // 只缓存选材所需字段，避免原始观察 JSON 撑爆磁盘（1299 种量级）
+      // month：观测月份（021 M1，季节性数据源；旧缓存无此字段，--force 重建后生效）
       return (d.results || []).map((o) => ({
         id: o.id,
+        month: monthOf(o.observed_on),
         photos: (o.photos || []).map((p) => ({
           id: p.id,
           url: p.url,
@@ -504,12 +507,13 @@ async function candidateNames(sp) {
 }
 
 /** 由 iNat photo 对象构造 asset（large 母版，medium 回退）；带 originalUrl/sourceId 溯源 */
-function inatPhotoAsset(p, sourceUrl, sourceId) {
+function inatPhotoAsset(p, sourceUrl, sourceId, month) {
   const url = p.url || ''
   if (!url) return null
   const master = url.replace('/square.', '/large.')
   const a = asset(master, p.license_code, p.attribution, 'iNaturalist', sourceUrl, sourceId)
   a.originalUrl = master
+  if (month) a.month = month
   const medium = url.replace('/square.', '/medium.')
   if (medium !== master) a.altUrl = medium
   return a
@@ -537,6 +541,7 @@ function pickInatImages(results, policy, defaultPhoto) {
         defaultPhoto,
         defaultPhoto.id ? `https://www.inaturalist.org/photos/${defaultPhoto.id}` : '',
         defaultPhoto.id,
+        null, // default_photo 来自 taxon 详情，无观察日期
       ),
     )
   }
@@ -545,7 +550,7 @@ function pickInatImages(results, policy, defaultPhoto) {
     for (const p of o.photos || []) {
       if (!licenseAllowed(p.license_code, policy) || isGif(p.url)) continue
       const before = out.length
-      push(inatPhotoAsset(p, `https://www.inaturalist.org/observations/${o.id}`, p.id ?? o.id))
+      push(inatPhotoAsset(p, `https://www.inaturalist.org/observations/${o.id}`, p.id ?? o.id, o.month))
       if (out.length > before) break // 每条观察最多取 1 张
     }
   }
@@ -562,16 +567,16 @@ function pickInatAudios(results, policy) {
       if (!licenseAllowed(s.license_code, policy)) continue
       if (!s.file_url || seen.has(s.file_url)) continue
       seen.add(s.file_url)
-      out.push(
-        asset(
-          s.file_url,
-          s.license_code,
-          s.attribution,
-          'iNaturalist',
-          `https://www.inaturalist.org/observations/${o.id}`,
-          s.id ?? o.id,
-        ),
+      const a = asset(
+        s.file_url,
+        s.license_code,
+        s.attribution,
+        'iNaturalist',
+        `https://www.inaturalist.org/observations/${o.id}`,
+        s.id ?? o.id,
       )
+      if (o.month) a.month = o.month
+      out.push(a)
       break
     }
   }
@@ -624,6 +629,8 @@ function pickXcAudios(data, policy) {
     seen.add(file)
     const a = asset(file, r.lic, r.rec, 'Xeno-canto', r.url || '', r.id)
     a.quality = r.q || ''
+    const m = monthOf(r.date)
+    if (m) a.month = m
     out.push(a)
   }
   return out

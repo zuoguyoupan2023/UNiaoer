@@ -107,10 +107,16 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.app-nav a', { hasText: '看图认鸟' })).toBeVisible()
   })
 
-  test('冒烟：地区浏览 / 答疑专栏 / 大众评审', async ({ page }) => {
+  test('冒烟：地区浏览 / 答疑专栏 / 大众评审 / 物种详情季节块', async ({ page }) => {
     await page.goto('/region')
     await expect(page.getByRole('button', { name: '亚洲' })).toBeVisible()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
+
+    // 物种详情：季节块（021 M1）按需加载，有数据的物种显示直方图与署名
+    await page.locator('.species-card').first().click()
+    await expect(page.getByText('出现月份')).toBeVisible()
+    await expect(page.getByText('基于约 1234 条公开观测记录')).toBeVisible()
+    await expect(page.locator('.season')).toContainText('GBIF')
 
     await page.goto('/faq')
     await expect(page.getByText('暂时还没有需要说明的条目。')).toBeVisible()

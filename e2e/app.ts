@@ -24,6 +24,21 @@ export async function stubApp(page: Page) {
     r.fulfill({ json: { bySpecies: { 'sp-01': ['CN'], 'sp-02': ['CN', 'JP'] } } }),
   )
   await page.route('**/data/faq-changelog.json', (r) => r.fulfill({ json: [] }))
+  // 季节性数据（021 M1）：sp-01 有 12 月向量，其余物种无条目（块隐藏）
+  await page.route('**/data/seasonality.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        method: 'max monthly share across sources (0-100)',
+        sources: ['GBIF'],
+        speciesCount: 1,
+        bySpecies: {
+          'sp-01': { months: [0, 0, 0, 80, 100, 90, 60, 20, 0, 0, 0, 0], recordCount: 1234, sources: ['gbif'] },
+        },
+      },
+    }),
+  )
   // 环境鸟鸣目录（外部站）：404 → 应用按「无音轨」降级，不播放
   await page.route('**whitenoise.earthtrip.online/**', (r) => r.fulfill({ status: 404, body: '' }))
   await page.route('**cdn.e2e.invalid/**', fulfillMedia)

@@ -12,13 +12,16 @@ import {
   type Manifest,
 } from '@/core/bank'
 import { currentLocale } from '@/i18n'
+import { loadSeasonality, seasonalityOf, type SeasonalityData } from '@/core/seasonality'
 import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
+import SpeciesSeasonality from '@/components/SpeciesSeasonality.vue'
 
 const route = useRoute()
 const { t } = useI18n()
 const bank = ref<Manifest | null>(null)
+const seasonData = ref<SeasonalityData | null>(null)
 
 async function ensureBank() {
   if (bank.value) return
@@ -28,11 +31,18 @@ async function ensureBank() {
     /* 保持 null → 走 notFound */
   }
 }
-onMounted(ensureBank)
+onMounted(() => {
+  ensureBank()
+  // 季节性数据（021 M1）：按需加载，失败/缺失则整块不显示
+  void loadSeasonality().then((d) => (seasonData.value = d))
+})
 watch(() => route.params.speciesId, ensureBank)
 
 const species = computed<BankSpecies | undefined>(() =>
   bank.value?.species.find((sp) => sp.id === route.params.speciesId),
+)
+const seasonEntry = computed(() =>
+  seasonalityOf(seasonData.value, String(route.params.speciesId)),
 )
 const note = computed(() => speciesNoteText(species.value?.notes, currentLocale()))
 const name = computed(() => (species.value ? speciesName(species.value, currentLocale()) : ''))
@@ -65,6 +75,9 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
       />
 
       <SpeciesFacts class="facts-block" :profile="species.profile" :species-id="species.id" />
+
+      <!-- 季节性（021 M1）：出现月份直方图；无数据不显示 -->
+      <SpeciesSeasonality v-if="seasonEntry" class="season-block" :entry="seasonEntry" />
 
       <section v-if="note" class="note">
         <h3>{{ note.title }}</h3>

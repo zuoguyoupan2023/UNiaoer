@@ -263,6 +263,12 @@ const en: typeof zhMessages = {
       vagrant: 'Vagrant',
     },
   },
+  season: {
+    title: 'Monthly presence',
+    peak: 'Peak months: {months}',
+    records: 'Based on ~{n} public observation records',
+    hint: 'Intensity = share of observations in that month, normalized across sources (0–100).',
+  },
   poster: {
     title: 'Make poster',
     dragHint: 'Drag the canvas to pan the background',
