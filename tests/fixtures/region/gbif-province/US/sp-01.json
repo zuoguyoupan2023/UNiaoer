@@ -1,0 +1,14 @@
+{
+  "count": 160,
+  "facets": [
+    {
+      "field": "STATE_PROVINCE",
+      "counts": [
+        { "name": "California", "count": 100 },
+        { "name": "Washington", "count": 50 },
+        { "name": "Oregon", "count": 10 }
+      ]
+    }
+  ],
+  "results": []
+}

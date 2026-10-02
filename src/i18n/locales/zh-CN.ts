@@ -169,6 +169,11 @@ export const messages = {
     countries: '国家/地区',
     count: '{n} 种',
     speciesTitle: '{country} 的鸟种',
+    speciesTitleProvince: '{province} 的鸟种',
+    provinces: '省级地区',
+    allProvinces: '全部',
+    provinceRecords: '{n} 条记录',
+    provinceSource: '省级数据来源：{sources}',
     continentsLabel: '按大洲筛选',
     note: '仅按国家/地区文本列出，不涉及地图与边界；相关地区标注为「中国香港／中国澳门／中国台湾」。',
     regions: {

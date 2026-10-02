@@ -1,0 +1,14 @@
+{
+  "count": 51,
+  "facets": [
+    {
+      "field": "STATE_PROVINCE",
+      "counts": [
+        { "name": "Tokyo", "count": 30 },
+        { "name": "Aichi", "count": 12 },
+        { "name": "Miyagi Prefecture", "count": 9 }
+      ]
+    }
+  ],
+  "results": []
+}

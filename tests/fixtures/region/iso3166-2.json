@@ -1,0 +1,20 @@
+{
+  "US": {
+    "US-CA": "California",
+    "US-WA": "Washington",
+    "US-OR": "Oregon",
+    "US-NY": "New York"
+  },
+  "GB": {
+    "GB-ENG": "England",
+    "GB-SCT": "Scotland",
+    "GB-WLS": "Wales",
+    "GB-NIR": "Northern Ireland"
+  },
+  "JP": {
+    "JP-13": "Tōkyō [Tokyo]",
+    "JP-04": "Miyagi",
+    "JP-23": "Aiti [Aichi]",
+    "JP-27": "Ôsaka [Osaka]"
+  }
+}

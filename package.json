@@ -25,6 +25,8 @@
     "check:bank": "node scripts/check-bank.mjs",
     "check:media": "node scripts/check-media.mjs",
     "region:build": "node scripts/region/build-seasonality.mjs",
+    "region:provinces": "node scripts/region/build-provinces.mjs",
+    "region:subdiv": "node scripts/region/fetch-subdivisions.mjs",
     "check:region": "node scripts/check-region.mjs",
     "worker:dev": "wrangler dev -c worker/wrangler.toml --remote",
     "worker:deploy": "wrangler deploy -c worker/wrangler.toml",

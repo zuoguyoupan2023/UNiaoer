@@ -127,4 +127,26 @@ test.describe('入口与页面', () => {
     // 导航入口：无可评审内容时不显示（reportsMeta 拉取失败按 0 处理）
     await expect(page.locator('.app-nav a', { hasText: '大众评审' })).toBeHidden()
   })
+
+  test('地区浏览：外国省级层（021 M2）筛选与署名', async ({ page }) => {
+    await page.goto('/region')
+    await page.getByRole('button', { name: '北美洲' }).click()
+    await page.getByRole('button', { name: /美国/ }).click()
+
+    // 省级芯片来自 region-provinces.json；含来源署名
+    await expect(page.getByRole('button', { name: 'California' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Washington' })).toBeVisible()
+    await expect(page.locator('.prov-source')).toContainText('GBIF')
+
+    // 选 California：只剩 sp-01/sp-02；sp-03（仅 WA）不出现
+    await page.getByRole('button', { name: 'California' }).click()
+    await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
+    await expect(page.getByText('测试鸟2', { exact: true })).toBeVisible()
+    await expect(page.getByText('测试鸟3', { exact: true })).toBeHidden()
+    await expect(page.locator('.sp-count').first()).toContainText('条记录')
+
+    // 切回全部：sp-03 重现
+    await page.getByRole('button', { name: '全部' }).click()
+    await expect(page.getByText('测试鸟3', { exact: true })).toBeVisible()
+  })
 })

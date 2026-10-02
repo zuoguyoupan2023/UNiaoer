@@ -21,9 +21,29 @@ export async function stubApp(page: Page) {
   await page.route('**/api/manifest**', (r) => r.fulfill({ json: bank }))
   await page.route('**/data/manifest.json', (r) => r.fulfill({ json: bank }))
   await page.route('**/data/distribution.json', (r) =>
-    r.fulfill({ json: { bySpecies: { 'sp-01': ['CN'], 'sp-02': ['CN', 'JP'] } } }),
+    r.fulfill({
+      json: { bySpecies: { 'sp-01': ['CN', 'US'], 'sp-02': ['CN', 'JP', 'US'], 'sp-03': ['US'] } },
+    }),
   )
   await page.route('**/data/faq-changelog.json', (r) => r.fulfill({ json: [] }))
+  // 外国省级层（021 M2）：美国有 CA/WA 两省；sp-03 仅 WA（用于筛选断言）
+  await page.route('**/data/region-provinces.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        method: 'gbif stateProvince → ISO 3166-2',
+        sources: [{ key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' }],
+        countries: ['US'],
+        byCountry: { US: { 'US-CA': 'California', 'US-WA': 'Washington' } },
+        bySpecies: {
+          'sp-01': { US: { 'US-CA': 120, 'US-WA': 4 } },
+          'sp-02': { US: { 'US-CA': 30 } },
+          'sp-03': { US: { 'US-WA': 8 } },
+        },
+      },
+    }),
+  )
   // 季节性数据（021 M1）：sp-01 有 12 月向量，其余物种无条目（块隐藏）
   await page.route('**/data/seasonality.json', (r) =>
     r.fulfill({

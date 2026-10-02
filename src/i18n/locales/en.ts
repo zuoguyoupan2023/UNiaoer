@@ -174,6 +174,11 @@ const en: typeof zhMessages = {
     countries: 'Countries/regions',
     count: '{n} spp.',
     speciesTitle: 'Birds of {country}',
+    speciesTitleProvince: 'Birds of {province}',
+    provinces: 'Subnational regions',
+    allProvinces: 'All',
+    provinceRecords: '{n} records',
+    provinceSource: 'Subnational data source: {sources}',
     continentsLabel: 'Filter by continent',
     note: 'Shown as text only — no maps or borders; related regions are labelled "Hong Kong, China / Macao, China / Taiwan, China".',
     regions: {

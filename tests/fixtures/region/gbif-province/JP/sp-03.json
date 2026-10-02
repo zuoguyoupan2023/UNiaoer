@@ -1,0 +1,10 @@
+{
+  "count": 15,
+  "facets": [
+    {
+      "field": "STATE_PROVINCE",
+      "counts": [{ "name": "Osaka", "count": 15 }]
+    }
+  ],
+  "results": []
+}

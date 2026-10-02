@@ -1,0 +1,14 @@
+{
+  "count": 88,
+  "facets": [
+    {
+      "field": "STATE_PROVINCE",
+      "counts": [
+        { "name": "England", "count": 80 },
+        { "name": "Scotland - Highland", "count": 5 },
+        { "name": "Atlantis", "count": 3 }
+      ]
+    }
+  ],
+  "results": []
+}

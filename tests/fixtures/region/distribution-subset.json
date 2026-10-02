@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "e2e-fixture",
+  "bySpecies": {
+    "sp-01": ["US", "GB"],
+    "sp-02": ["US", "JP"],
+    "sp-03": ["JP"]
+  }
+}

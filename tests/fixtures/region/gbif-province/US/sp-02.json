@@ -1,0 +1,13 @@
+{
+  "count": 27,
+  "facets": [
+    {
+      "field": "STATE_PROVINCE",
+      "counts": [
+        { "name": "California", "count": 20 },
+        { "name": "New York State (NY)", "count": 7 }
+      ]
+    }
+  ],
+  "results": []
+}
