@@ -153,9 +153,10 @@ test.describe('入口与页面', () => {
     await expect(page.getByText('测试鸟3', { exact: true })).toBeHidden()
     await expect(page.locator('.sp-count').first()).toContainText('条记录')
 
-    // 切回全部：sp-03 重现
-    await page.getByRole('button', { name: '全部' }).click()
+    // 点击国家本身 = 全部：sp-03 重现（二级目录已无「全部」项）
+    await us.click()
     await expect(page.getByText('测试鸟3', { exact: true })).toBeVisible()
+    await expect(page.locator('.country-list .prov-list')).toBeVisible()
   })
 
   test('地区浏览：中国省级层（021 M3）——默认国即中国，港澳台标注', async ({ page }) => {
@@ -177,6 +178,13 @@ test.describe('入口与页面', () => {
     await page.getByRole('button', { name: '中国台湾' }).click()
     await expect(page.getByText('测试鸟2', { exact: true })).toBeVisible()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeHidden()
+
+    // 排序切换（一级二级共用）：按鸟种数 / 按名称；省级条目带鸟种数
+    await page.getByRole('button', { name: '按鸟种数' }).click()
+    await expect(page.locator('.country-list .prov-list')).toBeVisible()
+    await expect(page.locator('.prov-btn', { hasText: '广东省' }).locator('.prov-count')).toContainText('1 种')
+    await page.getByRole('button', { name: '按名称' }).click()
+    await expect(page.locator('.prov-btn', { hasText: '北京市' })).toBeVisible()
   })
 
   test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {

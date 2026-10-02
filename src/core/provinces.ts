@@ -44,9 +44,28 @@ export function provincesOf(
   const map =
     (locale.startsWith('en') ? data?.byCountryAlt?.[country] : null) ?? data?.byCountry?.[country]
   if (!map) return []
-  return Object.entries(map)
-    .map(([code, name]) => ({ code, name }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+  // 保持 data 内顺序（由构建脚本按 code 排序）；排序交给视图按 sortMode 决定
+  return Object.entries(map).map(([code, name]) => ({ code, name }))
+}
+
+/**
+ * 该国省级列表 + 每省鸟种数（供二级目录按鸟种数排序/展示）。
+ * count = 该国该省有记录的物种数（与一级目录的「N 种」同口径）。
+ */
+export function provinceStats(
+  data: ProvinceData | null,
+  country: string,
+  locale = 'zh-CN',
+): { code: string; name: string; count: number }[] {
+  const list = provincesOf(data, country, locale)
+  if (!list.length) return []
+  const counts = new Map<string, number>()
+  for (const byCc of Object.values(data?.bySpecies || {})) {
+    const m = byCc?.[country]
+    if (!m) continue
+    for (const code of Object.keys(m)) counts.set(code, (counts.get(code) ?? 0) + 1)
+  }
+  return list.map((p) => ({ ...p, count: counts.get(p.code) ?? 0 }))
 }
 
 /** 某物种在某国某省的记录数；无则 0 */

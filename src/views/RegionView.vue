@@ -15,7 +15,7 @@ import {
 import {
   loadProvinces,
   provinceCount,
-  provincesOf,
+  provinceStats,
   speciesInProvince,
   type ProvinceData,
 } from '@/core/provinces'
@@ -36,6 +36,8 @@ const province = ref('')
 const expanded = ref(true)
 /** 移动端「选择地区」面板是否展开（桌面端始终显示，见 style 媒体查询） */
 const pickerOpen = ref(false)
+/** 目录排序：名称（zh 拼音 / en 首字母）或鸟种数；一级二级共用 */
+const sortMode = ref<'name' | 'count'>('name')
 
 onMounted(async () => {
   try {
@@ -66,11 +68,19 @@ function countryName(code: string): string {
 const stats = computed(() => (bySpecies.value ? countryStats(bySpecies.value) : []))
 const continents = computed(() => presentContinents(stats.value))
 const continentStats = computed(() => countriesInContinent(stats.value, continent.value))
-const filtered = computed(() => filterCountries(continentStats.value, query.value, countryName))
+/** 名称排序用本地化 collator：zh-CN 按拼音，en 按字母（首字母） */
+const collator = computed(() => new Intl.Collator(currentLocale(), { numeric: true }))
+const filtered = computed(() => {
+  const list = filterCountries(continentStats.value, query.value, countryName)
+  if (sortMode.value === 'count') return list // countryStats 已按鸟种数降序
+  return [...list].sort((a, b) => collator.value.compare(countryName(a.code), countryName(b.code)))
+})
 const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
-const provinces = computed(() =>
-  provincesOf(provinceData.value, selected.value, locale.value),
-)
+const provinces = computed(() => {
+  const list = provinceStats(provinceData.value, selected.value, locale.value)
+  if (sortMode.value === 'count') return [...list].sort((a, b) => b.count - a.count)
+  return [...list].sort((a, b) => collator.value.compare(a.name, b.name))
+})
 const provinceName = computed(
   () => provinces.value.find((p) => p.code === province.value)?.name ?? '',
 )
@@ -112,10 +122,24 @@ watch(selected, () => {
   expanded.value = true
 })
 
-/** 点击国家：已选则折叠/展开省级；未选则选中并展开 */
+/**
+ * 点击国家：
+ * - 未选 → 选中并展开（视为「全部」）
+ * - 已选且正筛选某省 → 清除省级，回到「全部」
+ * - 已选且无省级筛选 → 折叠/展开二级列表
+ * 故「点击国家本身 = 全部」，二级目录不再需要「全部」项。
+ */
 function selectCountry(code: string) {
-  if (code === selected.value) expanded.value = !expanded.value
-  else selected.value = code
+  if (code !== selected.value) {
+    selected.value = code
+    return
+  }
+  if (province.value) {
+    province.value = ''
+    expanded.value = true
+  } else {
+    expanded.value = !expanded.value
+  }
 }
 
 /** 选择省级：移动端选完收起面板，便于直接看到下方鸟种 */
@@ -168,7 +192,29 @@ function pickProvince(code: string) {
                 :placeholder="t('region.search')"
               />
             </label>
-            <p class="col-title">{{ t('region.countries') }}</p>
+            <div class="list-head">
+              <p class="col-title">{{ t('region.countries') }}</p>
+              <div class="sort" role="group" :aria-label="t('region.sortLabel')">
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: sortMode === 'name' }"
+                  :aria-pressed="sortMode === 'name'"
+                  @click="sortMode = 'name'"
+                >
+                  {{ t('region.sortName') }}
+                </button>
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: sortMode === 'count' }"
+                  :aria-pressed="sortMode === 'count'"
+                  @click="sortMode = 'count'"
+                >
+                  {{ t('region.sortCount') }}
+                </button>
+              </div>
+            </div>
             <ul class="country-list">
               <li v-for="s in filtered" :key="s.code">
                 <button
@@ -182,20 +228,8 @@ function pickProvince(code: string) {
                   <span class="country-name">{{ countryName(s.code) }}</span>
                   <span class="country-count">{{ t('region.count', { n: s.count }) }}</span>
                 </button>
-                <!-- 二级：省级行政区（无数据则不出；点击国家展开/折叠，见 021 M2/M3） -->
+                <!-- 二级：省级行政区（无数据则不出；点击国家展开/折叠；点击国家本身=全部，见 021） -->
                 <ul v-if="s.code === selected && expanded && provinces.length" class="prov-list">
-                  <li>
-                    <button
-                      type="button"
-                      class="prov-btn"
-                      :class="{ active: !province }"
-                      :aria-pressed="!province"
-                      :data-prov="''"
-                      @click="pickProvince('')"
-                    >
-                      {{ t('region.allProvinces') }}
-                    </button>
-                  </li>
                   <li v-for="p in provinces" :key="p.code">
                     <button
                       type="button"
@@ -205,7 +239,8 @@ function pickProvince(code: string) {
                       :data-prov="p.code"
                       @click="pickProvince(p.code)"
                     >
-                      {{ p.name }}
+                      <span class="prov-name">{{ p.name }}</span>
+                      <span class="prov-count">{{ t('region.count', { n: p.count }) }}</span>
                     </button>
                   </li>
                 </ul>
@@ -334,6 +369,38 @@ function pickProvince(code: string) {
   color: var(--text-light);
   margin: 12px 0 6px;
 }
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.list-head .col-title {
+  margin: 12px 0 6px;
+}
+.sort {
+  display: inline-flex;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sort-btn {
+  padding: 3px 10px;
+  border: none;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.sort-btn + .sort-btn {
+  border-left: 2px solid var(--border);
+}
+.sort-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
 .country-list {
   list-style: none;
   max-height: 420px;
@@ -417,6 +484,10 @@ function pickProvince(code: string) {
   transform: rotate(180deg);
 }
 .prov-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   padding: 4px 8px;
   border: 2px solid transparent;
@@ -426,6 +497,17 @@ function pickProvince(code: string) {
   font-size: 0.78rem;
   text-align: left;
   cursor: pointer;
+}
+.prov-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prov-count {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  color: var(--text-light);
 }
 .prov-btn:hover {
   border-color: var(--primary-light);
