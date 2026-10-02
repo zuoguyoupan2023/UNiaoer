@@ -28,6 +28,14 @@ const client = createClient({
 
 const merged = {}
 const failed = []
+// 合并基础 = 现有 subs.json（部分国家重跑不清掉其他国；踩坑：--countries CN 曾覆盖成只剩 CN，
+// 导致 build-provinces 把 12 国数据全部当 unmatched 丢弃）
+try {
+  const prev = JSON.parse(await fs.readFile(OUT, 'utf8'))
+  Object.assign(merged, prev.subdivisions || {})
+} catch {
+  /* 无旧文件 */
+}
 for (const cc of COUNTRIES) {
   try {
     const data = await client.getJson(`${BASE}/${cc.toLowerCase()}.json`, {

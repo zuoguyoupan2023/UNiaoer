@@ -70,6 +70,12 @@ export const NAME_ALIASES = {
   // 澳大利亚：GBIF 偶见法/荷译名
   'nouvelle galles du sud': 'AU-NSW', 'noordoost australie': 'AU-QLD',
   'west australie': 'AU-WA', 'australia del sur': 'AU-SA',
+  // 中国：旧拼音/历史拼写/后缀变体（GBIF stateProvince 实测值，021 M3）。
+  // 注意消歧：Shanxi 山西 CN-14 ≠ Shaanxi 陕西 CN-61（canon 后本就不同键）。
+  // "Manchuria"（东北历史地区，跨黑吉辽）不映射——无法安全归单省，丢弃不臆造。
+  szechwan: 'CN-51', szechuan: 'CN-51', hopei: 'CN-13', shansi: 'CN-14',
+  shensi: 'CN-61', sinkiang: 'CN-65', 'heilongjiang prov': 'CN-23',
+  tibet: 'CN-54', xizang: 'CN-54', hongkong: 'CN-91', macau: 'CN-92', taiwan: 'CN-71',
 }
 
 /** 英国的 ISO 一级区就是 4 个构成国；把「Scotland - 某郡」「England - 某郡」归属回去 */

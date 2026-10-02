@@ -112,11 +112,12 @@ test.describe('入口与页面', () => {
     await expect(page.getByRole('button', { name: '亚洲' })).toBeVisible()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
 
-    // 物种详情：季节块（021 M1）按需加载，有数据的物种显示直方图与署名
+    // 物种详情：季节块（021 M1/M3）按需加载，有数据的物种显示直方图、居留型与署名
     await page.locator('.species-card').first().click()
     await expect(page.getByText('出现月份')).toBeVisible()
     await expect(page.getByText('基于约 1234 条公开观测记录')).toBeVisible()
     await expect(page.locator('.season')).toContainText('GBIF')
+    await expect(page.locator('.season')).toContainText('留鸟')
 
     await page.goto('/faq')
     await expect(page.getByText('暂时还没有需要说明的条目。')).toBeVisible()
@@ -148,5 +149,25 @@ test.describe('入口与页面', () => {
     // 切回全部：sp-03 重现
     await page.getByRole('button', { name: '全部' }).click()
     await expect(page.getByText('测试鸟3', { exact: true })).toBeVisible()
+  })
+
+  test('地区浏览：中国省级层（021 M3）——默认国即中国，港澳台标注', async ({ page }) => {
+    await page.goto('/region') // 默认亚洲 + 中国（017）
+
+    // CN 省级芯片：中文全称 + 港澳台标注名（铁律 6）
+    await expect(page.getByRole('button', { name: '北京市' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '广东省' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '中国台湾' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '中国香港' })).toBeVisible()
+
+    // 选中国香港：只剩 sp-01（其 CN-91 有存在性记录）；sp-02 不出现
+    await page.getByRole('button', { name: '中国香港' }).click()
+    await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
+    await expect(page.getByText('测试鸟2', { exact: true })).toBeHidden()
+
+    // 选中国台湾：只剩 sp-02
+    await page.getByRole('button', { name: '中国台湾' }).click()
+    await expect(page.getByText('测试鸟2', { exact: true })).toBeVisible()
+    await expect(page.getByText('测试鸟1', { exact: true })).toBeHidden()
   })
 })

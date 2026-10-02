@@ -16,9 +16,14 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { createClient } from '../lib/http.mjs'
 import { loadEnv, mapPool, parseArgs, slug } from '../lib/util.mjs'
 import { buildEntry, countsFromGbifFacet, countsFromMedia } from './seasonality-lib.mjs'
+import { parseSheet, parseSharedStrings, extractBirds } from './adapters/cn-authority.mjs'
+
+const execFileAsync = promisify(execFile)
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 const GBIF = 'https://api.gbif.org/v1'
@@ -84,8 +89,7 @@ async function resolveUsageKey(sp) {
   return match.usageKey
 }
 
-async function gbifMonthCounts(sp) {
-  const usageKey = await resolveUsageKey(sp)
+async function gbifMonthCounts(sp, usageKey) {
   if (!usageKey) return null
   const url =
     `${GBIF}/occurrence/search?taxonKey=${usageKey}&facet=month&facetLimit=12&limit=0` +
@@ -99,9 +103,18 @@ async function gbifMonthCounts(sp) {
 }
 
 /** 单物种失败不炸全程（021 §2.1：失败显式记录，最终汇总打印） */
-async function gbifMonthCountsSafe(sp) {
+async function resolveUsageKeySafe(sp) {
   try {
-    return await gbifMonthCounts(sp)
+    return await resolveUsageKey(sp)
+  } catch (e) {
+    failedIds.push(`${sp.id}: ${e.message}`)
+    return null
+  }
+}
+
+async function gbifMonthCountsSafe(sp, usageKey) {
+  try {
+    return await gbifMonthCounts(sp, usageKey)
   } catch (e) {
     failedIds.push(`${sp.id}: ${e.message}`)
     return null
@@ -119,30 +132,81 @@ function mediaCountsBySource(sp) {
   return { xc: countsFromMedia(bySource.xc), inat: countsFromMedia(bySource.inat) }
 }
 
+/**
+ * M3 附加：郑光美体系数据集（生活史，1445 种）的迁徙状态 → entry.range（L1 定性层）。
+ * xlsx 在 data-cache（手工获取一次，见 adapters/cn-authority.mjs 头注）；缺失则跳过。
+ * 分类对齐：数据集基于旧分类（2017 第 3 版），属移动/拆分导致学名与 manifest 不同
+ * → 数据集学名也过一遍 GBIF species/match，按 accepted usageKey 对齐（精确学名仍优先）。
+ */
+const XLSX = path.join(ROOT, 'data-cache/region/cn-authority/dataset/Chinesebirdsdata.xlsx')
+async function loadCnAuthority() {
+  try {
+    const [ss, sheet] = await Promise.all([
+      execFileAsync('unzip', ['-p', XLSX, 'xl/sharedStrings.xml'], { maxBuffer: 64 * 1024 * 1024 }),
+      execFileAsync('unzip', ['-p', XLSX, 'xl/worksheets/sheet1.xml'], { maxBuffer: 64 * 1024 * 1024 }),
+    ])
+    const { bySci, unknown } = extractBirds(parseSheet(sheet.stdout, parseSharedStrings(ss.stdout)))
+    const byKey = {}
+    let matched = 0
+    for (const sci of Object.keys(bySci)) {
+      try {
+        const m = await client.getJson(`${GBIF}/species/match?name=${encodeURIComponent(sci)}`, {
+          cacheFile: `../gbif-match/${slug(sci)}.json`,
+          force: !!args.refresh,
+        })
+        const key = m && m.matchType !== 'NONE' ? (m.acceptedUsageKey || m.usageKey) : null
+        if (key) {
+          byKey[key] = bySci[sci]
+          matched++
+        }
+      } catch {
+        /* 单条失败跳过 */
+      }
+    }
+    console.log(
+      `cn-authority: 迁徙状态 ${Object.keys(bySci).length} 种（GBIF 对齐 ${matched}）；` +
+        (unknown.length ? `未收录码丢弃：${unknown.slice(0, 5).map((u) => `${u.code}×${u.n}`).join(' ')}` : '无未知码'),
+    )
+    return { bySci, byKey }
+  } catch {
+    console.log('cn-authority: 数据集缺失，跳过 range 层（手工获取见 adapters/cn-authority.mjs 头注）')
+    return null
+  }
+}
+
 const bySpecies = {}
 let gbifOk = 0
 let gbifMiss = 0
 let speciesWithMediaMonths = 0
+let speciesWithRange = 0
 const failedIds = []
 let done = 0
 
-/** 单物种：GBIF + manifest 媒体月份 → bySpecies 条目（并发池单元，保序返回） */
+/** 单物种：GBIF + manifest 媒体月份 + 权威居留型 → bySpecies 条目（并发池单元，保序返回） */
 async function processSpecies(sp) {
-  const gbif = MOCK ? countsFromGbifFacet(await readGbifFixture(sp.id)) : await gbifMonthCountsSafe(sp)
+  const usageKey = MOCK ? null : await resolveUsageKeySafe(sp)
+  const gbif = MOCK ? countsFromGbifFacet(await readGbifFixture(sp.id)) : await gbifMonthCountsSafe(sp, usageKey)
   const counts = {}
   if (gbif !== null) counts.gbif = gbif
   const media = mediaCountsBySource(sp)
   counts.xc = media.xc
   counts.inat = media.inat
   const hasMediaMonth = speciesOfAssets(sp).some((a) => a?.month >= 1 && a?.month <= 12)
+  const entry = buildEntry(counts)
+  const sciKey = String(sp.nameSci || '').trim().toLowerCase().replace(/\s+/g, ' ')
+  const range = cnAuthority?.bySci[sciKey] ?? cnAuthority?.byKey[usageKey]
+  if (entry && range) entry.range = range.range
   if (++done % 100 === 0) console.log(`  … ${done}/${species.length}`)
-  return { id: sp.id, entry: buildEntry(counts), gbifOk: gbif !== null, hasMediaMonth }
+  return { id: sp.id, entry, gbifOk: gbif !== null, hasMediaMonth, hasRange: !!range }
 }
+
+const cnAuthority = await loadCnAuthority()
 
 for (const r of await mapPool(species, CONCURRENCY, processSpecies)) {
   if (r.gbifOk) gbifOk++
   else gbifMiss++
   if (r.hasMediaMonth) speciesWithMediaMonths++
+  if (r.hasRange) speciesWithRange++
   if (r.entry) bySpecies[r.id] = r.entry
 }
 
@@ -162,7 +226,7 @@ const sizeKb = Math.round((await fs.stat(OUT)).size / 1024)
 
 console.log(
   `seasonality: 物种 ${species.length} → 有数据 ${Object.keys(bySpecies).length} ` +
-    `(GBIF ok ${gbifOk} / miss ${gbifMiss}；媒体月份可用物种 ${speciesWithMediaMonths}) → ${OUT} (${sizeKb}KB)`,
+    `(GBIF ok ${gbifOk} / miss ${gbifMiss}；媒体月份可用物种 ${speciesWithMediaMonths}；权威居留型 ${speciesWithRange}) → ${OUT} (${sizeKb}KB)`,
 )
 if (failedIds.length) {
   console.error(`失败 ${failedIds.length} 条（可重跑续传）：`)

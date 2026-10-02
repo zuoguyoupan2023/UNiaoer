@@ -20,6 +20,7 @@ import { loadEnv, mapPool, parseArgs, slug } from '../lib/util.mjs'
 import { facetCounts } from './adapters/gbif.mjs'
 import { buildIndex, displayName, matchSubdivision, NAME_ALIASES } from './adapters/iso3166.mjs'
 import { GBIF_SOURCE, SUBDIVISION_SOURCE, SUPPORTED_COUNTRIES } from './config.mjs'
+import { CN_PROVINCES, CN_SPECIAL_COUNTRY } from './cn-provinces.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 const GBIF = 'https://api.gbif.org/v1'
@@ -148,13 +149,44 @@ for (const r of results) {
   for (const [code] of entries) byCountry[r.cc][code] = nameOf(r.cc, code)
 }
 
+/**
+ * M3 中国省级层：
+ * - 内地 31 省 = GBIF 记录数（与外国同管线，上方 results 已含 CN）；
+ * - 港澳台 = GBIF 里是独立国家码（TW/HK/MO），按铁律 6 并入 CN 省级层并标注
+ *   「中国台湾／中国香港／中国澳门」；count 用 distribution.json 国家层存在性（1），
+ *   不臆造记录数（birdreport.cn 授权后可换真值，见 021 §5）。
+ */
+const cnKey = 'CN'
+let cnSpecialSpecies = 0
+if (byCountry.CN) {
+  for (const [spId, ccs] of Object.entries(distBySpecies)) {
+    let touched = false
+    for (const [cc3, code] of Object.entries(CN_SPECIAL_COUNTRY)) {
+      if (!ccs.includes(cc3)) continue
+      touched = true
+      const byCc = ((bySpecies[spId] ??= {})[cnKey] ??= {})
+      byCc[code] ??= 1
+    }
+    if (touched) cnSpecialSpecies++
+  }
+  // byCountry.CN = zh 展示名（34 区划全量：无记录的省也列出，省级 UI 完整呈现官方清单）
+  byCountry.CN = Object.fromEntries(CN_PROVINCES.map((p) => [p.code, p.zh]))
+}
+
 const out = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  method: 'GBIF facet=stateProvince；自由文本经 ISO 3166-2 名称归一化映射到 code；count=GBIF 该国该省记录数',
+  method:
+    'GBIF facet=stateProvince；自由文本经 ISO 3166-2 名称归一化映射到 code；count=GBIF 该国该省记录数。' +
+    'CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）由 distribution.json 国家层存在性并入（count=1），显示名按铁律 6 标注',
   sources: [GBIF_SOURCE, SUBDIVISION_SOURCE],
   countries: COUNTRIES,
   byCountry: Object.fromEntries(Object.entries(byCountry).map(([cc, m]) => [cc, Object.fromEntries(Object.entries(m).sort())])),
+  // 英文展示名（provincesOf 按 locale 取用）；仅 CN 与 byCountry（zh）不同
+  byCountryAlt:
+    byCountry.CN && Object.keys(byCountry.CN).length
+      ? { CN: Object.fromEntries(CN_PROVINCES.map((p) => [p.code, p.en])) }
+      : undefined,
   bySpecies,
 }
 
@@ -163,7 +195,8 @@ await fs.writeFile(OUT, JSON.stringify(out))
 const sizeKb = Math.round((await fs.stat(OUT)).size / 1024)
 const speciesN = Object.keys(bySpecies).length
 const countryN = Object.keys(byCountry).length
-console.log(`\nregion-provinces: ${countryN} 国 / ${speciesN} 物种 → ${OUT} (${sizeKb}KB)`)
+console.log(`\nregion-provinces: ${countryN} 国 / ${speciesN} 物种 → ${OUT} (${sizeKb}KB)` +
+  (cnSpecialSpecies ? `（CN 港澳台并入物种 ${cnSpecialSpecies}）` : ''))
 if (unmatched.size) {
   const top = [...unmatched.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)
   console.log(`未映射 stateProvince 名 ${unmatched.size} 个（已丢弃，不臆造），Top：`)

@@ -1,6 +1,7 @@
 /**
- * 外国省级层（021 M2）：public/data/region-provinces.json，按需加载、失败静默为 null。
+ * 中国+外国省级层（021 M2/M3）：public/data/region-provinces.json，按需加载、失败静默为 null。
  * 数据由 GBIF stateProvince + ISO 3166-2 归一化构建（见 scripts/region/build-provinces.mjs）。
+ * CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）按铁律 6 并入并标注，存在性来自 distribution.json。
  */
 export interface ProvinceSource {
   key: string
@@ -16,9 +17,11 @@ export interface ProvinceData {
   method: string
   sources: ProvinceSource[]
   countries: string[]
-  /** 国家码 → { ISO 3166-2 code: 展示名 } */
+  /** 国家码 → { code: 展示名 }（CN 为中文全称、含港澳台标注名；其余国家为 ISO 英文名） */
   byCountry: Record<string, Record<string, string>>
-  /** 物种 id → 国家码 → { ISO code: 记录数 } */
+  /** 英文展示名（仅当与 byCountry 不同时提供，当前仅 CN；provincesOf 按 locale 取用） */
+  byCountryAlt?: Record<string, Record<string, string>>
+  /** 物种 id → 国家码 → { code: 记录数 } */
   bySpecies: Record<string, Record<string, Record<string, number>>>
 }
 
@@ -32,9 +35,14 @@ export function loadProvinces(): Promise<ProvinceData | null> {
   return cache
 }
 
-/** 该国省级列表（按展示名排序）；无数据返回 [] */
-export function provincesOf(data: ProvinceData | null, country: string): { code: string; name: string }[] {
-  const map = data?.byCountry?.[country]
+/** 该国省级列表（按展示名排序）；无数据返回 []。en 优先取 byCountryAlt（如 CN 的港澳台标注名） */
+export function provincesOf(
+  data: ProvinceData | null,
+  country: string,
+  locale = 'zh-CN',
+): { code: string; name: string }[] {
+  const map =
+    (locale.startsWith('en') ? data?.byCountryAlt?.[country] : null) ?? data?.byCountry?.[country]
   if (!map) return []
   return Object.entries(map)
     .map(([code, name]) => ({ code, name }))

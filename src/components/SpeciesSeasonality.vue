@@ -56,6 +56,11 @@ const ariaLabel = computed(() => {
   return `${t('season.title')}${peak}; ${t('season.records', { n: props.entry.recordCount })}`
 })
 
+/** 权威居留型（021 M3）：文案复用 species.migrations 词条 */
+const rangeLabels = computed(() =>
+  (props.entry.range || []).map((r) => t(`species.migrations.${r}`)).filter((s) => !s.startsWith('species.')),
+)
+
 function barHeight(v: number): string {
   if (maxShare.value <= 0) return '0%'
   return `${Math.max((v / maxShare.value) * 100, 3)}%`
@@ -78,6 +83,9 @@ function barTitle(i: number): string {
       </div>
     </div>
     <p v-if="peakLabel" class="peak">{{ t('season.peak', { months: peakLabel }) }}</p>
+    <p v-if="rangeLabels.length" class="range-tags">
+      <span v-for="r in rangeLabels" :key="r" class="tag tag-green">{{ r }}</span>
+    </p>
     <p class="meta muted">
       {{ t('season.records', { n: entry.recordCount }) }}
       <span class="src">{{ sourceLabels }}</span>
@@ -148,6 +156,12 @@ function barTitle(i: number): string {
   font-size: 0.84rem;
   font-weight: 700;
   color: var(--primary-dark);
+}
+.range-tags {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .meta {
   margin-top: 4px;

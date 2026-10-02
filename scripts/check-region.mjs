@@ -9,6 +9,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from './lib/util.mjs'
+import { CN_PROVINCES, CN_SENSITIVE } from './region/cn-provinces.mjs'
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const args = parseArgs(process.argv.slice(2))
@@ -59,6 +60,13 @@ function checkSeasonality(name, data) {
       Array.isArray(e.sources) && e.sources.length > 0 && e.sources.every((s) => typeof s === 'string' && s),
       `${name}: ${id} sources（逐条署名）缺失`,
     )
+    const RANGE_CODES = new Set(['resident', 'summer', 'winter', 'passage', 'vagrant'])
+    if (e.range !== undefined) {
+      check(
+        Array.isArray(e.range) && e.range.length > 0 && e.range.every((c) => RANGE_CODES.has(c)),
+        `${name}: ${id} range 必须为居留型枚举（resident/summer/winter/passage/vagrant）`,
+      )
+    }
   }
 }
 
@@ -84,6 +92,26 @@ function checkProvinces(name, data) {
         check(data.byCountry[cc][code] !== undefined, `${name}: ${spId}/${cc} code ${code} 未在 byCountry`)
         check(Number.isInteger(n) && n > 0, `${name}: ${spId}/${cc}/${code} count 必须为正整数`)
       }
+    }
+  }
+  // 021 M3 §2.4：CN 省级清单硬校验（34 官方区划 + 港澳台标注名，铁律 6）
+  if (data.byCountry?.CN) {
+    const cnMap = data.byCountry.CN
+    check(
+      Object.keys(cnMap).length === CN_PROVINCES.length,
+      `${name}: CN 省级清单必须完整等于 ${CN_PROVINCES.length} 个官方区划，实际 ${Object.keys(cnMap).length}`,
+    )
+    const wantCodes = new Set(CN_PROVINCES.map((p) => p.code))
+    for (const code of Object.keys(cnMap)) {
+      check(wantCodes.has(code), `${name}: CN 出现官方清单之外的 code ${code}`)
+    }
+    check(data.byCountryAlt?.CN !== undefined, `${name}: CN 缺 byCountryAlt（英文展示名，含港澳台标注）`)
+    for (const [code, names] of Object.entries(CN_SENSITIVE)) {
+      check(cnMap[code] === names.zh, `${name}: CN/${code} 显示名必须为「${names.zh}」`)
+      check(
+        data.byCountryAlt?.CN?.[code] === names.en,
+        `${name}: CN/${code} 英文名必须为 "${names.en}"`,
+      )
     }
   }
 }

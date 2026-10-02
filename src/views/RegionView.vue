@@ -21,7 +21,7 @@ import {
 } from '@/core/provinces'
 import { currentLocale } from '@/i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
 const provinceData = ref<ProvinceData | null>(null)
@@ -64,7 +64,9 @@ const continents = computed(() => presentContinents(stats.value))
 const continentStats = computed(() => countriesInContinent(stats.value, continent.value))
 const filtered = computed(() => filterCountries(continentStats.value, query.value, countryName))
 const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
-const provinces = computed(() => provincesOf(provinceData.value, selected.value))
+const provinces = computed(() =>
+  provincesOf(provinceData.value, selected.value, locale.value),
+)
 const provinceName = computed(
   () => provinces.value.find((p) => p.code === province.value)?.name ?? '',
 )

@@ -26,25 +26,31 @@ export async function stubApp(page: Page) {
     }),
   )
   await page.route('**/data/faq-changelog.json', (r) => r.fulfill({ json: [] }))
-  // 外国省级层（021 M2）：美国有 CA/WA 两省；sp-03 仅 WA（用于筛选断言）
+  // 省级层（021 M2/M3）：美国 CA/WA；中国 34 区划之一角（含港澳台标注名，铁律 6）
   await page.route('**/data/region-provinces.json', (r) =>
     r.fulfill({
       json: {
         schemaVersion: 1,
         generatedAt: 'e2e-fixture',
-        method: 'gbif stateProvince → ISO 3166-2',
+        method: 'gbif stateProvince → ISO 3166-2；CN 港澳台由 distribution 存在性并入',
         sources: [{ key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' }],
-        countries: ['US'],
-        byCountry: { US: { 'US-CA': 'California', 'US-WA': 'Washington' } },
+        countries: ['CN', 'US'],
+        byCountry: {
+          CN: { 'CN-11': '北京市', 'CN-44': '广东省', 'CN-71': '中国台湾', 'CN-91': '中国香港', 'CN-92': '中国澳门' },
+          US: { 'US-CA': 'California', 'US-WA': 'Washington' },
+        },
+        byCountryAlt: {
+          CN: { 'CN-11': 'Beijing', 'CN-44': 'Guangdong', 'CN-71': 'Taiwan, China', 'CN-91': 'Hong Kong, China', 'CN-92': 'Macao, China' },
+        },
         bySpecies: {
-          'sp-01': { US: { 'US-CA': 120, 'US-WA': 4 } },
-          'sp-02': { US: { 'US-CA': 30 } },
+          'sp-01': { CN: { 'CN-44': 500, 'CN-91': 1 }, US: { 'US-CA': 120, 'US-WA': 4 } },
+          'sp-02': { CN: { 'CN-11': 30, 'CN-71': 1 }, US: { 'US-CA': 30 } },
           'sp-03': { US: { 'US-WA': 8 } },
         },
       },
     }),
   )
-  // 季节性数据（021 M1）：sp-01 有 12 月向量，其余物种无条目（块隐藏）
+  // 季节性数据（021 M1/M3）：sp-01 有 12 月向量 + 权威居留型；其余物种无条目（块隐藏）
   await page.route('**/data/seasonality.json', (r) =>
     r.fulfill({
       json: {
@@ -54,7 +60,12 @@ export async function stubApp(page: Page) {
         sources: ['GBIF'],
         speciesCount: 1,
         bySpecies: {
-          'sp-01': { months: [0, 0, 0, 80, 100, 90, 60, 20, 0, 0, 0, 0], recordCount: 1234, sources: ['gbif'] },
+          'sp-01': {
+            months: [0, 0, 0, 80, 100, 90, 60, 20, 0, 0, 0, 0],
+            recordCount: 1234,
+            sources: ['gbif'],
+            range: ['resident'],
+          },
         },
       },
     }),

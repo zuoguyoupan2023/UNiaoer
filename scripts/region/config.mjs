@@ -2,9 +2,9 @@
  * 021 M2 地区省级层共享常量（build / check / fetch 共用，避免各写各的）。
  */
 
-/** 首批支持的「外国」国家（中国留待 M3 权威层，见 021 §3） */
+/** 省级层支持的国家（M3 起 CN 并入：GBIF 记录层 + 34 官方区划常量，见 cn-provinces.mjs） */
 export const SUPPORTED_COUNTRIES = [
-  'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL',
+  'CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL',
 ]
 
 /** 省级 code/名称基准数据集（用户 2026-10-02 决定：先 ISO 3166-2，eBird 后补） */

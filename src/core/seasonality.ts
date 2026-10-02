@@ -5,6 +5,8 @@ export interface SeasonalityEntry {
   /** 底层记录量（单源最大口径，透明度用） */
   recordCount: number
   sources: string[]
+  /** 权威居留型（021 M3：郑光美体系数据集；resident/summer/winter/passage/vagrant） */
+  range?: string[]
 }
 
 export interface SeasonalityData {
