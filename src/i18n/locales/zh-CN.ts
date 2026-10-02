@@ -175,7 +175,6 @@ export const messages = {
     provinceRecords: '{n} 条记录',
     provinceSource: '省级数据来源：{sources}',
     continentsLabel: '按大洲筛选',
-    note: '仅按国家/地区文本列出，不涉及地图与边界；相关地区标注为「中国香港／中国澳门／中国台湾」。',
     regions: {
       HK: '中国香港',
       MO: '中国澳门',

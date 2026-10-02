@@ -94,7 +94,7 @@ watch(continent, () => {
   }
 })
 
-/** 切换国家：省级筛选重置 */
+/** 切换国家：省级筛选重置（省级二级列表随选中国家自动展开，见模板） */
 watch(selected, () => {
   province.value = ''
 })
@@ -119,7 +119,6 @@ watch(selected, () => {
           {{ t(`region.continents.${c}`) }}
         </button>
       </nav>
-      <p class="note">{{ t('region.note') }}</p>
 
       <div class="layout">
         <aside class="countries">
@@ -145,6 +144,31 @@ watch(selected, () => {
                 <span class="country-name">{{ countryName(s.code) }}</span>
                 <span class="country-count">{{ t('region.count', { n: s.count }) }}</span>
               </button>
+              <!-- 二级：省级行政区（无数据则不出；选中即自动展开，见 021 M2/M3） -->
+              <ul v-if="s.code === selected && provinces.length" class="prov-list">
+                <li>
+                  <button
+                    type="button"
+                    class="prov-btn"
+                    :class="{ active: !province }"
+                    :aria-pressed="!province"
+                    @click="province = ''"
+                  >
+                    {{ t('region.allProvinces') }}
+                  </button>
+                </li>
+                <li v-for="p in provinces" :key="p.code">
+                  <button
+                    type="button"
+                    class="prov-btn"
+                    :class="{ active: p.code === province }"
+                    :aria-pressed="p.code === province"
+                    @click="province = p.code"
+                  >
+                    {{ p.name }}
+                  </button>
+                </li>
+              </ul>
             </li>
           </ul>
         </aside>
@@ -157,31 +181,6 @@ watch(selected, () => {
                 : t('region.speciesTitle', { country: countryName(selected) })
             }}
           </p>
-
-          <!-- 省级层（021 M2）：无数据时整层不显示，自动回退国家级 -->
-          <div v-if="provinces.length" class="provinces">
-            <span class="prov-label">{{ t('region.provinces') }}</span>
-            <button
-              type="button"
-              class="prov-chip"
-              :class="{ active: !province }"
-              :aria-pressed="!province"
-              @click="province = ''"
-            >
-              {{ t('region.allProvinces') }}
-            </button>
-            <button
-              v-for="p in provinces"
-              :key="p.code"
-              type="button"
-              class="prov-chip"
-              :class="{ active: p.code === province }"
-              :aria-pressed="p.code === province"
-              @click="province = p.code"
-            >
-              {{ p.name }}
-            </button>
-          </div>
 
           <ul class="species-grid">
             <li v-for="sp in species" :key="sp.id">
@@ -257,12 +256,6 @@ watch(selected, () => {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
-}
-.note {
-  text-align: center;
-  font-size: 0.72rem;
-  color: var(--text-light);
-  margin-bottom: 12px;
 }
 .layout {
   display: grid;
@@ -342,32 +335,33 @@ watch(selected, () => {
   color: var(--text-light);
   flex-shrink: 0;
 }
-.provinces {
+.prov-list {
+  list-style: none;
+  margin: 4px 0 6px 12px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
 }
-.prov-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin-right: 2px;
-}
-.prov-chip {
-  padding: 3px 10px;
-  border: 2px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
+.prov-btn {
+  width: 100%;
+  padding: 4px 8px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
+  text-align: left;
   cursor: pointer;
 }
-.prov-chip:hover {
+.prov-btn:hover {
   border-color: var(--primary-light);
+  background: #f7faf8;
 }
-.prov-chip.active {
+.prov-btn.active {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;

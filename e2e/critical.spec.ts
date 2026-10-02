@@ -134,7 +134,8 @@ test.describe('入口与页面', () => {
     await page.getByRole('button', { name: '北美洲' }).click()
     await page.getByRole('button', { name: /美国/ }).click()
 
-    // 省级芯片来自 region-provinces.json；含来源署名
+    // 省级二级列表在左侧国家树下（021 M2 修订）；含来源署名
+    await expect(page.locator('.country-list .prov-list')).toBeVisible()
     await expect(page.getByRole('button', { name: 'California' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Washington' })).toBeVisible()
     await expect(page.locator('.prov-source')).toContainText('GBIF')
@@ -154,7 +155,8 @@ test.describe('入口与页面', () => {
   test('地区浏览：中国省级层（021 M3）——默认国即中国，港澳台标注', async ({ page }) => {
     await page.goto('/region') // 默认亚洲 + 中国（017）
 
-    // CN 省级芯片：中文全称 + 港澳台标注名（铁律 6）
+    // 左侧国家树下自动展开 CN 省级：中文全称 + 港澳台标注名（铁律 6）
+    await expect(page.locator('.country-list .prov-list')).toBeVisible()
     await expect(page.getByRole('button', { name: '北京市' })).toBeVisible()
     await expect(page.getByRole('button', { name: '广东省' })).toBeVisible()
     await expect(page.getByRole('button', { name: '中国台湾' })).toBeVisible()

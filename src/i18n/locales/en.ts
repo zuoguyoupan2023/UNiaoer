@@ -180,7 +180,6 @@ const en: typeof zhMessages = {
     provinceRecords: '{n} records',
     provinceSource: 'Subnational data source: {sources}',
     continentsLabel: 'Filter by continent',
-    note: 'Shown as text only — no maps or borders; related regions are labelled "Hong Kong, China / Macao, China / Taiwan, China".',
     regions: {
       HK: 'Hong Kong, China',
       MO: 'Macao, China',

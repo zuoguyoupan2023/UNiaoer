@@ -4,7 +4,7 @@
 
 /** 省级层支持的国家（M3 起 CN 并入：GBIF 记录层 + 34 官方区划常量，见 cn-provinces.mjs） */
 export const SUPPORTED_COUNTRIES = [
-  'CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL',
+  'CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL', 'IN', 'VN',
 ]
 
 /** 省级 code/名称基准数据集（用户 2026-10-02 决定：先 ISO 3166-2，eBird 后补） */
