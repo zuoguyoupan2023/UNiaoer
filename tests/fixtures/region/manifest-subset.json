@@ -1,0 +1,63 @@
+{
+  "generatedAt": "e2e-fixture",
+  "policy": "relaxed",
+  "mediaMode": "remote",
+  "total": 3,
+  "stats": { "withImage": 3, "withAudio": 3 },
+  "species": [
+    {
+      "id": "sp-01",
+      "nameZh": "测试鸟1",
+      "nameEn": "Test Bird 1",
+      "nameSci": "Testus birdus",
+      "taxonId": 900001,
+      "family": "测试科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": { "speciesId": "sp-01", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-01/image-1.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "", "month": 4 },
+      "audio": { "speciesId": "sp-01", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-01/audio-1.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "", "month": 5 },
+      "images": [
+        { "speciesId": "sp-01", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-01/image-1.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "", "month": 4 },
+        { "speciesId": "sp-01", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-01/image-2.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "", "month": 4 }
+      ],
+      "audios": [
+        { "speciesId": "sp-01", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-01/audio-1.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "", "month": 5 },
+        { "speciesId": "sp-01", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-01/audio-2.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "", "month": 6 }
+      ]
+    },
+    {
+      "id": "sp-02",
+      "nameZh": "测试鸟2",
+      "nameEn": "Test Bird 2",
+      "nameSci": "Testus secundus",
+      "taxonId": 900002,
+      "family": "测试科",
+      "commonness": 1,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": { "speciesId": "sp-02", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-02/image-1.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "" },
+      "audio": { "speciesId": "sp-02", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-02/audio-1.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "" },
+      "images": [{ "speciesId": "sp-02", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-02/image-1.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "" }],
+      "audios": [{ "speciesId": "sp-02", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-02/audio-1.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "" }]
+    },
+    {
+      "id": "sp-03",
+      "nameZh": "测试鸟3",
+      "nameEn": "Test Bird 3",
+      "nameSci": "Testus tertius",
+      "taxonId": 900003,
+      "family": "测试科",
+      "commonness": 2,
+      "desc": "",
+      "location": "",
+      "habit": "",
+      "image": { "speciesId": "sp-03", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-03/image-1.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "" },
+      "audio": { "speciesId": "sp-03", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-03/audio-1.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "" },
+      "images": [{ "speciesId": "sp-03", "type": "image", "url": "https://cdn.e2e.invalid/media/sp-03/image-1.png", "license": "CC-BY-4.0", "author": "f", "source": "iNaturalist", "sourceUrl": "" }],
+      "audios": [{ "speciesId": "sp-03", "type": "audio", "url": "https://cdn.e2e.invalid/media/sp-03/audio-1.mp3", "license": "CC-BY-4.0", "author": "f", "source": "Xeno-canto", "sourceUrl": "" }]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "facets": [
+    { "field": "MONTH", "counts": [{ "name": "4", "count": 120 }, { "name": "5", "count": 300 }, { "name": "6", "count": 180 }, { "name": "7", "count": 60 }] }
+  ],
+  "results": []
+}

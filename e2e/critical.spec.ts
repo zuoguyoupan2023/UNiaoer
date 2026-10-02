@@ -129,16 +129,22 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.app-nav a', { hasText: '大众评审' })).toBeHidden()
   })
 
-  test('地区浏览：外国省级层（021 M2）筛选与署名', async ({ page }) => {
+  test('地区浏览：外国省级层（021 M2）筛选/折叠与署名', async ({ page }) => {
     await page.goto('/region')
     await page.getByRole('button', { name: '北美洲' }).click()
-    await page.getByRole('button', { name: /美国/ }).click()
+    const us = page.locator('.country-btn[data-code="US"]')
 
-    // 省级二级列表在左侧国家树下（021 M2 修订）；含来源署名
+    // 切换大洲自动选中并展开美国省级（左侧国家树下）；含来源署名
     await expect(page.locator('.country-list .prov-list')).toBeVisible()
     await expect(page.getByRole('button', { name: 'California' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Washington' })).toBeVisible()
     await expect(page.locator('.prov-source')).toContainText('GBIF')
+
+    // 再次点击已选国家 → 折叠；再点 → 展开（021 UI 修订）
+    await us.click()
+    await expect(page.locator('.country-list .prov-list')).toBeHidden()
+    await us.click()
+    await expect(page.locator('.country-list .prov-list')).toBeVisible()
 
     // 选 California：只剩 sp-01/sp-02；sp-03（仅 WA）不出现
     await page.getByRole('button', { name: 'California' }).click()
@@ -171,5 +177,22 @@ test.describe('入口与页面', () => {
     await page.getByRole('button', { name: '中国台湾' }).click()
     await expect(page.getByText('测试鸟2', { exact: true })).toBeVisible()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeHidden()
+  })
+
+  test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/region')
+
+    // 移动端：选择按钮可见、国家树默认收起（不占屏，鸟种直接可见）
+    await expect(page.locator('.picker-toggle')).toBeVisible()
+    await expect(page.locator('.picker-body')).toBeHidden()
+    await expect(page.locator('.species-grid')).toBeVisible()
+
+    // 展开 → 选省 → 自动收起
+    await page.locator('.picker-toggle').click()
+    await expect(page.locator('.picker-body')).toBeVisible()
+    await page.locator('.prov-btn[data-prov="CN-44"]').click()
+    await expect(page.locator('.picker-body')).toBeHidden()
+    await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
   })
 })

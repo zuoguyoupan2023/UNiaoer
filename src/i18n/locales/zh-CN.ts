@@ -167,6 +167,7 @@ export const messages = {
     search: '搜索国家/地区…',
     searchLabel: '搜索国家/地区',
     countries: '国家/地区',
+    pick: '选择地区',
     count: '{n} 种',
     speciesTitle: '{country} 的鸟种',
     speciesTitleProvince: '{province} 的鸟种',

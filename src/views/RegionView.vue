@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Globe2, Search } from 'lucide-vue-next'
+import { ChevronDown, Globe2, Search } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
 import {
   buildCountryIndex,
@@ -32,6 +32,10 @@ const continent = ref<Continent>('asia')
 const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
+/** 选中国家的省级二级列表是否展开（点击已选国家切换） */
+const expanded = ref(true)
+/** 移动端「选择地区」面板是否展开（桌面端始终显示，见 style 媒体查询） */
+const pickerOpen = ref(false)
 
 onMounted(async () => {
   try {
@@ -86,18 +90,39 @@ const provinceSources = computed(() =>
   (provinceData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
 
-/** 切换大洲：搜索清空；若当前国家不属于该洲，自动选中该洲物种最多的国家 */
+/** 移动端「选择地区」按钮上的当前选择摘要 */
+const selectionLabel = computed(() =>
+  [t(`region.continents.${continent.value}`), countryName(selected.value), provinceName.value]
+    .filter(Boolean)
+    .join(' · '),
+)
+
+/** 切换大洲：搜索清空；若当前国家不属于该洲，自动选中该洲物种最多的国家并展开其省级 */
 watch(continent, () => {
   query.value = ''
   if (!continentStats.value.some((s) => s.code === selected.value)) {
     selected.value = continentStats.value[0]?.code ?? ''
+    expanded.value = true
   }
 })
 
-/** 切换国家：省级筛选重置（省级二级列表随选中国家自动展开，见模板） */
+/** 切换国家：省级筛选重置并展开二级列表 */
 watch(selected, () => {
   province.value = ''
+  expanded.value = true
 })
+
+/** 点击国家：已选则折叠/展开省级；未选则选中并展开 */
+function selectCountry(code: string) {
+  if (code === selected.value) expanded.value = !expanded.value
+  else selected.value = code
+}
+
+/** 选择省级：移动端选完收起面板，便于直接看到下方鸟种 */
+function pickProvince(code: string) {
+  province.value = code
+  pickerOpen.value = false
+}
 </script>
 
 <template>
@@ -122,55 +147,71 @@ watch(selected, () => {
 
       <div class="layout">
         <aside class="countries">
-          <label class="search">
-            <Search class="ic" :size="14" />
-            <input
-              v-model="query"
-              type="search"
-              :aria-label="t('region.searchLabel')"
-              :placeholder="t('region.search')"
-            />
-          </label>
-          <p class="col-title">{{ t('region.countries') }}</p>
-          <ul class="country-list">
-            <li v-for="s in filtered" :key="s.code">
-              <button
-                type="button"
-                class="country-btn"
-                :class="{ active: s.code === selected }"
-                :aria-pressed="s.code === selected"
-                @click="selected = s.code"
-              >
-                <span class="country-name">{{ countryName(s.code) }}</span>
-                <span class="country-count">{{ t('region.count', { n: s.count }) }}</span>
-              </button>
-              <!-- 二级：省级行政区（无数据则不出；选中即自动展开，见 021 M2/M3） -->
-              <ul v-if="s.code === selected && provinces.length" class="prov-list">
-                <li>
-                  <button
-                    type="button"
-                    class="prov-btn"
-                    :class="{ active: !province }"
-                    :aria-pressed="!province"
-                    @click="province = ''"
-                  >
-                    {{ t('region.allProvinces') }}
-                  </button>
-                </li>
-                <li v-for="p in provinces" :key="p.code">
-                  <button
-                    type="button"
-                    class="prov-btn"
-                    :class="{ active: p.code === province }"
-                    :aria-pressed="p.code === province"
-                    @click="province = p.code"
-                  >
-                    {{ p.name }}
-                  </button>
-                </li>
-              </ul>
-            </li>
-          </ul>
+          <!-- 移动端：折叠式「选择地区」，避免上方列表占满屏幕 -->
+          <button
+            type="button"
+            class="picker-toggle"
+            :aria-expanded="pickerOpen"
+            @click="pickerOpen = !pickerOpen"
+          >
+            <span class="picker-label">{{ t('region.pick') }}</span>
+            <span class="picker-current">{{ selectionLabel }}</span>
+            <ChevronDown class="ic" :size="16" :class="{ open: pickerOpen }" />
+          </button>
+          <div class="picker-body" :class="{ open: pickerOpen }">
+            <label class="search">
+              <Search class="ic" :size="14" />
+              <input
+                v-model="query"
+                type="search"
+                :aria-label="t('region.searchLabel')"
+                :placeholder="t('region.search')"
+              />
+            </label>
+            <p class="col-title">{{ t('region.countries') }}</p>
+            <ul class="country-list">
+              <li v-for="s in filtered" :key="s.code">
+                <button
+                  type="button"
+                  class="country-btn"
+                  :class="{ active: s.code === selected }"
+                  :aria-pressed="s.code === selected"
+                  :data-code="s.code"
+                  @click="selectCountry(s.code)"
+                >
+                  <span class="country-name">{{ countryName(s.code) }}</span>
+                  <span class="country-count">{{ t('region.count', { n: s.count }) }}</span>
+                </button>
+                <!-- 二级：省级行政区（无数据则不出；点击国家展开/折叠，见 021 M2/M3） -->
+                <ul v-if="s.code === selected && expanded && provinces.length" class="prov-list">
+                  <li>
+                    <button
+                      type="button"
+                      class="prov-btn"
+                      :class="{ active: !province }"
+                      :aria-pressed="!province"
+                      :data-prov="''"
+                      @click="pickProvince('')"
+                    >
+                      {{ t('region.allProvinces') }}
+                    </button>
+                  </li>
+                  <li v-for="p in provinces" :key="p.code">
+                    <button
+                      type="button"
+                      class="prov-btn"
+                      :class="{ active: p.code === province }"
+                      :aria-pressed="p.code === province"
+                      :data-prov="p.code"
+                      @click="pickProvince(p.code)"
+                    >
+                      {{ p.name }}
+                    </button>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
         </aside>
 
         <div class="species">
@@ -263,11 +304,6 @@ watch(selected, () => {
   gap: 16px;
   text-align: left;
 }
-@media (max-width: 640px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
 .search {
   display: flex;
   align-items: center;
@@ -343,8 +379,42 @@ watch(selected, () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 260px;
-  overflow-y: auto;
+}
+/* 移动端折叠式「选择地区」；桌面端始终展开 */
+.picker-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f7faf8;
+  color: var(--text);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.picker-label {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.picker-current {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--text-light);
+  font-size: 0.8rem;
+}
+.picker-toggle .ic {
+  flex-shrink: 0;
+  color: var(--text-light);
+  transition: transform 0.16s ease;
+}
+.picker-toggle .ic.open {
+  transform: rotate(180deg);
 }
 .prov-btn {
   width: 100%;
@@ -419,5 +489,25 @@ watch(selected, () => {
 }
 .empty {
   margin: 14px 0;
+}
+
+/* 移动端：折叠式选择器（置于末尾以确保覆盖上面的 display:none 基线） */
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .picker-toggle {
+    display: flex;
+  }
+  .picker-body {
+    display: none;
+    margin-top: 8px;
+  }
+  .picker-body.open {
+    display: block;
+  }
+  .country-list {
+    max-height: 46vh;
+  }
 }
 </style>

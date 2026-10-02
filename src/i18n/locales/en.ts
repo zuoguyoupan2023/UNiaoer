@@ -172,6 +172,7 @@ const en: typeof zhMessages = {
     search: 'Search country/region…',
     searchLabel: 'Search country/region',
     countries: 'Countries/regions',
+    pick: 'Choose region',
     count: '{n} spp.',
     speciesTitle: 'Birds of {country}',
     speciesTitleProvince: 'Birds of {province}',
