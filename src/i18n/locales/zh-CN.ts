@@ -178,6 +178,12 @@ export const messages = {
     allProvinces: '全部',
     provinceRecords: '{n} 条记录',
     provinceSource: '省级数据来源：{sources}',
+    hotspotTitle: '观鸟点',
+    hotspotRecords: '{n} 条记录',
+    hotspotSpeciesN: '{n} 种',
+    hotspotObservers: '{n} 位观察者',
+    hotspotTopSpecies: '常见鸟种',
+    hotspotSource: '观鸟点数据来源：{sources}',
     continentsLabel: '按大洲筛选',
     regions: {
       HK: '中国香港',

@@ -187,6 +187,27 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.prov-btn', { hasText: '北京市' })).toBeVisible()
   })
 
+  test('地区浏览：观鸟点（021 M4 腿 B）网格聚合列表/就地详情/署名', async ({ page }) => {
+    await page.goto('/region')
+    await page.getByRole('button', { name: '北美洲' }).click()
+
+    // 默认收起 → 展开；列表为国家内有记录数的观鸟点
+    const toggle = page.locator('.hotspots-toggle')
+    await expect(toggle).toBeVisible()
+    await toggle.click()
+    await expect(page.locator('.hotspot-body')).toBeVisible()
+    const ca = page.locator('.hotspot-btn', { hasText: 'California' })
+    await expect(ca).toBeVisible()
+    await expect(ca).toContainText('条记录')
+
+    // 就地详情：常见鸟种（可跳物种详情）+ 来源署名
+    await ca.click()
+    const detail = page.locator('.hotspot-detail')
+    await expect(detail).toContainText('常见鸟种')
+    await expect(detail).toContainText('测试鸟1')
+    await expect(page.locator('.hotspot-source')).toContainText('GBIF')
+  })
+
   test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/region')

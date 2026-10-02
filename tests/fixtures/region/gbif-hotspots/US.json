@@ -1,0 +1,74 @@
+{
+  "count": 6,
+  "endOfRecords": true,
+  "results": [
+    {
+      "key": 800001,
+      "speciesKey": 900001,
+      "species": "Testus birdus",
+      "scientificName": "Testus birdus (Tester, 1900)",
+      "decimalLatitude": 34.05,
+      "decimalLongitude": -118.25,
+      "countryCode": "US",
+      "stateProvince": "California",
+      "recordedBy": "Alice",
+      "eventDate": "2024-05-01",
+      "license": "http://creativecommons.org/licenses/by/4.0/legalcode"
+    },
+    {
+      "key": 800002,
+      "speciesKey": 900001,
+      "species": "Testus birdus",
+      "decimalLatitude": 34.06,
+      "decimalLongitude": -118.24,
+      "countryCode": "US",
+      "stateProvince": "California",
+      "recordedBy": "Bob",
+      "eventDate": "2024-05-02"
+    },
+    {
+      "key": 800003,
+      "speciesKey": 900001,
+      "species": "Testus birdus",
+      "decimalLatitude": 34.07,
+      "decimalLongitude": -118.23,
+      "countryCode": "US",
+      "stateProvince": "California",
+      "recordedBy": "Carol",
+      "eventDate": "2024-05-03"
+    },
+    {
+      "key": 800004,
+      "speciesKey": 900002,
+      "species": "Testus secundus",
+      "decimalLatitude": 34.04,
+      "decimalLongitude": -118.26,
+      "countryCode": "US",
+      "stateProvince": "California",
+      "recordedBy": "Alice",
+      "eventDate": "2024-05-04"
+    },
+    {
+      "key": 800005,
+      "speciesKey": 900003,
+      "species": "Testus tertius",
+      "decimalLatitude": 47.6,
+      "decimalLongitude": -122.3,
+      "countryCode": "US",
+      "stateProvince": "Washington",
+      "recordedBy": "Dave",
+      "eventDate": "2024-06-01"
+    },
+    {
+      "key": 800006,
+      "speciesKey": 900003,
+      "species": "Testus tertius",
+      "decimalLatitude": null,
+      "decimalLongitude": null,
+      "countryCode": "US",
+      "stateProvince": "Washington",
+      "recordedBy": "Erin",
+      "eventDate": "2024-06-02"
+    }
+  ]
+}

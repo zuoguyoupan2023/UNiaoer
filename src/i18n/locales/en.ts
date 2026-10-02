@@ -183,6 +183,12 @@ const en: typeof zhMessages = {
     allProvinces: 'All',
     provinceRecords: '{n} records',
     provinceSource: 'Subnational data source: {sources}',
+    hotspotTitle: 'Birding spots',
+    hotspotRecords: '{n} records',
+    hotspotSpeciesN: '{n} spp.',
+    hotspotObservers: '{n} observers',
+    hotspotTopSpecies: 'Common species',
+    hotspotSource: 'Birding-spot data source: {sources}',
     continentsLabel: 'Filter by continent',
     regions: {
       HK: 'Hong Kong, China',

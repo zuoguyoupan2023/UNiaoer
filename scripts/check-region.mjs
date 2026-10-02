@@ -116,9 +116,47 @@ function checkProvinces(name, data) {
   }
 }
 
+/** hotspots.json（M4 腿 B 网格聚合观鸟点） */
+function checkHotspots(name, data) {
+  check(typeof data.grid === 'number' && data.grid > 0, `${name}: grid 必须为正数`)
+  const th = data.thresholds || {}
+  for (const k of ['minRecords', 'minSpecies', 'minObservers']) {
+    check(Number.isInteger(th[k]) && th[k] >= 0, `${name}: thresholds.${k} 非法`)
+  }
+  check(Array.isArray(data.hotspots), `${name}: hotspots 必须是数组`)
+  for (const [i, h] of (data.hotspots || []).entries()) {
+    const at = `${name}: hotspot[${i}]`
+    check(typeof h?.id === 'string' && h.id, `${at} id 缺失`)
+    check(Number.isFinite(h?.lat) && h.lat >= -90 && h.lat <= 90, `${at} lat 非法`)
+    check(Number.isFinite(h?.lng) && h.lng >= -180 && h.lng <= 180, `${at} lng 非法`)
+    check(/^[A-Z]{2}$/.test(h?.country || ''), `${at} country 非法`)
+    check(Number.isInteger(h?.recordCount) && h.recordCount > 0, `${at} recordCount 非法`)
+    check(Number.isInteger(h?.speciesCount) && h.speciesCount > 0, `${at} speciesCount 非法`)
+    check(Number.isInteger(h?.observerCount) && h.observerCount >= 0, `${at} observerCount 非法`)
+    check(
+      Number.isInteger(h?.recordCount) && h.recordCount >= (th.minRecords ?? 0) &&
+        Number.isInteger(h?.speciesCount) && h.speciesCount >= (th.minSpecies ?? 0) &&
+        Number.isInteger(h?.observerCount) && h.observerCount >= (th.minObservers ?? 0),
+      `${at} 未达 thresholds（阈值过滤失效）`,
+    )
+    check(
+      Array.isArray(h?.topSpecies) &&
+        h.topSpecies.length > 0 &&
+        h.topSpecies.every((s) => Number.isInteger(s.count) && s.count > 0 && (s.id || s.sci)),
+      `${at} topSpecies 非法`,
+    )
+    check(
+      Array.isArray(h?.sources) && h.sources.length > 0 && h.sources.every((s) => typeof s === 'string' && s),
+      `${at} sources（逐条署名）缺失`,
+    )
+  }
+}
+
 const files = args.file
   ? [path.resolve(ROOT, args.file)]
-  : ['public/data/seasonality.json', 'public/data/region-provinces.json'].map((p) => path.join(ROOT, p))
+  : ['public/data/seasonality.json', 'public/data/region-provinces.json', 'public/data/hotspots.json'].map(
+      (p) => path.join(ROOT, p),
+    )
 
 const present = []
 for (const file of files) {
@@ -135,6 +173,7 @@ for (const file of files) {
   }
   checkCommon(name, raw, data)
   if (data.bySpecies && data.byCountry) checkProvinces(name, data)
+  else if (Array.isArray(data.hotspots)) checkHotspots(name, data)
   else if (data.bySpecies) checkSeasonality(name, data)
   else errors.push(`${name}: 无法识别的产物形状`)
 }

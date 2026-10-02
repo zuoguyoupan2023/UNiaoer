@@ -1,0 +1,50 @@
+{
+  "count": 4,
+  "endOfRecords": true,
+  "results": [
+    {
+      "key": 810001,
+      "speciesKey": 900002,
+      "species": "Testus secundus",
+      "decimalLatitude": 39.9,
+      "decimalLongitude": 116.4,
+      "countryCode": "CN",
+      "stateProvince": "Beijing",
+      "recordedBy": "Fang",
+      "eventDate": "2024-04-10T08:00"
+    },
+    {
+      "key": 810002,
+      "speciesKey": 900002,
+      "species": "Testus secundus",
+      "decimalLatitude": 39.91,
+      "decimalLongitude": 116.41,
+      "countryCode": "CN",
+      "stateProvince": "Beijing",
+      "recordedBy": "Fang",
+      "eventDate": "2024-04-10T17:00"
+    },
+    {
+      "key": 810003,
+      "speciesKey": 900002,
+      "species": "Testus secundus",
+      "decimalLatitude": 39.92,
+      "decimalLongitude": 116.42,
+      "countryCode": "CN",
+      "stateProvince": "Beijing",
+      "recordedBy": "Guo",
+      "eventDate": "2024-04-11"
+    },
+    {
+      "key": 810004,
+      "speciesKey": 900001,
+      "species": "Testus birdus",
+      "decimalLatitude": 23.1,
+      "decimalLongitude": 113.3,
+      "countryCode": "CN",
+      "stateProvince": "Guangdong",
+      "recordedBy": "Hua",
+      "eventDate": "2024-03-01"
+    }
+  ]
+}

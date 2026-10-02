@@ -70,6 +70,26 @@ export async function stubApp(page: Page) {
       },
     }),
   )
+  // 观鸟点（021 M4 腿 B）：网格聚合统计层（US/CN 各若干点）
+  await page.route('**/data/hotspots.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        method: 'gbif occurrence grid aggregation',
+        grid: 0.1,
+        thresholds: { minRecords: 1, minSpecies: 1, minObservers: 0 },
+        sources: [{ key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' }],
+        countries: ['CN', 'US'],
+        hotspotCount: 3,
+        hotspots: [
+          { id: 'US-g0.1-340_-1183', name: 'California', lat: 34.05, lng: -118.25, country: 'US', subnational1: 'California', speciesCount: 2, recordCount: 42, observerCount: 5, topSpecies: [{ id: 'sp-01', count: 20 }, { id: 'sp-02', count: 10 }], sources: ['gbif'] },
+          { id: 'US-g0.1-476_-1223', name: 'Washington', lat: 47.6, lng: -122.3, country: 'US', subnational1: 'Washington', speciesCount: 1, recordCount: 21, observerCount: 3, topSpecies: [{ id: 'sp-03', count: 21 }], sources: ['gbif'] },
+          { id: 'CN-g0.1-399_1164', name: 'Beijing', lat: 39.9, lng: 116.4, country: 'CN', subnational1: 'Beijing', speciesCount: 1, recordCount: 30, observerCount: 4, topSpecies: [{ id: 'sp-02', count: 30 }], sources: ['gbif'] },
+        ],
+      },
+    }),
+  )
   // 环境鸟鸣目录（外部站）：404 → 应用按「无音轨」降级，不播放
   await page.route('**whitenoise.earthtrip.online/**', (r) => r.fulfill({ status: 404, body: '' }))
   await page.route('**cdn.e2e.invalid/**', fulfillMedia)

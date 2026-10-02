@@ -26,6 +26,7 @@
     "check:media": "node scripts/check-media.mjs",
     "region:build": "node scripts/region/build-seasonality.mjs",
     "region:provinces": "node scripts/region/build-provinces.mjs",
+    "region:hotspots": "node scripts/region/build-hotspots.mjs",
     "region:subdiv": "node scripts/region/fetch-subdivisions.mjs",
     "check:region": "node scripts/check-region.mjs",
     "worker:dev": "wrangler dev -c worker/wrangler.toml --remote",

@@ -34,6 +34,28 @@ export function provinceRecords(payload, { speciesId, country, source = 'gbif', 
 }
 
 /**
+ * occurrence/search `results` → 带坐标观测点（021 M4 腿 B 网格聚合输入）。
+ * 只做字段搬运与坐标有效性过滤；物种映射（key/学名 → manifest id）由调用方完成。
+ * 过滤圈养/逃逸/栽培由上游查询参数负责（不在此处推断）。
+ */
+export function occurrencePoints(payload, { source = 'gbif' } = {}) {
+  return (payload?.results || [])
+    .map((r) => ({
+      key: r.key,
+      speciesKey: r.speciesKey ?? r.acceptedTaxonKey ?? r.taxonKey ?? null,
+      sci: r.species || r.acceptedScientificName || r.scientificName || null,
+      lat: r.decimalLatitude,
+      lng: r.decimalLongitude,
+      country: r.countryCode || r.country || null,
+      subnational1: r.stateProvince || null,
+      observer: r.recordedBy || null,
+      date: r.eventDate || null,
+      source,
+    }))
+    .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng))
+}
+
+/**
  * 试点/构建统计：把「物种×国家」查询结果汇总成覆盖率指标。
  * rows: [{ country, present, provinceCount, records }]
  *   present   —— 该国该种总记录数 > 0（GBIF payload.count）

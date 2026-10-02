@@ -19,12 +19,21 @@ import {
   speciesInProvince,
   type ProvinceData,
 } from '@/core/provinces'
+import {
+  hotspotsOf,
+  loadHotspots,
+  type HotspotData,
+  type HotspotTopSpecies,
+} from '@/core/hotspots'
 import { currentLocale } from '@/i18n'
 
 const { t, locale } = useI18n()
 const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
 const provinceData = ref<ProvinceData | null>(null)
+const hotspotData = ref<HotspotData | null>(null)
+const hotspotsOpen = ref(false)
+const expandedHotspot = ref('')
 const failed = ref(false)
 const query = ref('')
 /** 先亚洲、默认中国（017：先中国） */
@@ -49,6 +58,8 @@ onMounted(async () => {
     bySpecies.value = data.bySpecies ?? {}
     // 省级层：缺失则整层不显示（021 §2.5 薄数据回退国家层）
     provinceData.value = await loadProvinces()
+    // 观鸟点（021 M4 腿 B）：缺失则整块不显示
+    hotspotData.value = await loadHotspots()
   } catch {
     failed.value = true
   }
@@ -100,6 +111,20 @@ const provinceSources = computed(() =>
   (provinceData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
 
+/** 该国观鸟点（腿 B 网格聚合；缺失/无数据则为空，整块隐藏） */
+const hotspotList = computed(() => hotspotsOf(hotspotData.value, selected.value))
+const hotspotSources = computed(() =>
+  (hotspotData.value?.sources ?? []).map((s) => s.name).join(' · '),
+)
+function toggleHotspot(id: string) {
+  expandedHotspot.value = expandedHotspot.value === id ? '' : id
+}
+/** 代表鸟种显示名：有 manifest id 用本地化名，否则回退学名 */
+function topSpeciesName(s: HotspotTopSpecies): string {
+  const sp = s.id ? speciesById(s.id) : undefined
+  return sp ? nameOf(sp) : (s.sci ?? s.id ?? '')
+}
+
 /** 移动端「选择地区」按钮上的当前选择摘要 */
 const selectionLabel = computed(() =>
   [t(`region.continents.${continent.value}`), countryName(selected.value), provinceName.value]
@@ -116,10 +141,11 @@ watch(continent, () => {
   }
 })
 
-/** 切换国家：省级筛选重置并展开二级列表 */
+/** 切换国家：省级筛选重置并展开二级列表；观鸟点详情收起 */
 watch(selected, () => {
   province.value = ''
   expanded.value = true
+  expandedHotspot.value = ''
 })
 
 /**
@@ -283,6 +309,58 @@ function pickProvince(code: string) {
           <p v-if="provinces.length" class="prov-source muted">
             {{ t('region.provinceSource', { sources: provinceSources }) }}
           </p>
+
+          <!-- 观鸟点（021 M4 腿 B）：默认收起，展开后列表 + 就地详情 -->
+          <div v-if="hotspotList.length" class="hotspots">
+            <button
+              type="button"
+              class="hotspots-toggle"
+              :aria-expanded="hotspotsOpen"
+              @click="hotspotsOpen = !hotspotsOpen"
+            >
+              <span>{{ t('region.hotspotTitle') }}</span>
+              <span class="hotspot-badge">{{ hotspotList.length }}</span>
+            </button>
+            <div v-if="hotspotsOpen" class="hotspot-body">
+              <ul class="hotspot-list">
+                <li v-for="h in hotspotList" :key="h.id">
+                  <button
+                    type="button"
+                    class="hotspot-btn"
+                    :data-hot="h.id"
+                    :aria-expanded="expandedHotspot === h.id"
+                    @click="toggleHotspot(h.id)"
+                  >
+                    <span class="hotspot-name">
+                      {{ h.name || `${h.lat.toFixed(2)}, ${h.lng.toFixed(2)}` }}
+                    </span>
+                    <span class="hotspot-stat muted">
+                      {{ t('region.hotspotRecords', { n: h.recordCount }) }}
+                    </span>
+                  </button>
+                  <div v-if="expandedHotspot === h.id" class="hotspot-detail">
+                    <p class="hotspot-meta muted">
+                      {{ t('region.hotspotSpeciesN', { n: h.speciesCount }) }} ·
+                      {{ t('region.hotspotObservers', { n: h.observerCount }) }}
+                    </p>
+                    <p class="hotspot-sub">{{ t('region.hotspotTopSpecies') }}</p>
+                    <ul class="hotspot-spp">
+                      <li v-for="(s, si) in h.topSpecies" :key="si">
+                        <RouterLink v-if="s.id && speciesById(s.id)" :to="`/species/${s.id}`">
+                          {{ topSpeciesName(s) }}
+                        </RouterLink>
+                        <span v-else>{{ topSpeciesName(s) }}</span>
+                        <span class="muted"> ×{{ s.count }}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </li>
+              </ul>
+              <p class="hotspot-source muted">
+                {{ t('region.hotspotSource', { sources: hotspotSources }) }}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -522,6 +600,102 @@ function pickProvince(code: string) {
   font-size: 0.68rem;
 }
 .prov-source {
+  margin-top: 10px;
+  font-size: 0.68rem;
+}
+.hotspots {
+  margin-top: 14px;
+}
+.hotspots-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f7faf8;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hotspots-toggle:hover {
+  border-color: var(--primary-light);
+}
+.hotspot-badge {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  padding: 1px 7px;
+}
+.hotspot-body {
+  margin-top: 10px;
+}
+.hotspot-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hotspot-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+}
+.hotspot-btn:hover {
+  border-color: var(--primary-light);
+}
+.hotspot-btn[aria-expanded='true'] {
+  border-color: var(--primary);
+  background: #eaf4ef;
+}
+.hotspot-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.hotspot-stat {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+.hotspot-detail {
+  margin: 6px 0 8px 12px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--border);
+  font-size: 0.78rem;
+}
+.hotspot-meta {
+  margin: 0 0 6px;
+}
+.hotspot-sub {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--text-light);
+  font-size: 0.74rem;
+}
+.hotspot-spp {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.hotspot-spp a {
+  color: var(--primary);
+}
+.hotspot-source {
   margin-top: 10px;
   font-size: 0.68rem;
 }
