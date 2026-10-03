@@ -61,6 +61,7 @@ try {
     let extinct = 0
     let withEbird = 0
     let withBackbone = 0
+    let withInat = 0
     let withZh = 0
     for (const [i, e] of index.species.entries()) {
       const where = `species[${i}]`
@@ -76,7 +77,14 @@ try {
       if (!e.order || !e.family) noOrder++
       if (e.extinct === true) extinct++
       if (e.ebirdCode) withEbird++
-      if (e.backboneTaxonId != null) withBackbone++
+      if (e.backboneTaxonId != null) {
+        if (!Number.isInteger(e.backboneTaxonId) || e.backboneTaxonId <= 0) fail(`${where}:backboneTaxonId 非法值 ${e.backboneTaxonId}`)
+        else withBackbone++
+      }
+      if (e.inatTaxonId != null) {
+        if (!Number.isInteger(e.inatTaxonId) || e.inatTaxonId <= 0) fail(`${where}:inatTaxonId 非法值 ${e.inatTaxonId}`)
+        else withInat++
+      }
       if (e.nameZh != null) {
         if (typeof e.nameZh !== 'string' || !e.nameZh.trim()) fail(`${where}:nameZh 非空字符串`)
         else withZh++
@@ -99,7 +107,7 @@ try {
       if (bad) fail(`${bad} 条骨架中文名与 manifest curated 名不一致(curated 必须优先)`)
     }
     console.log(
-      `· 骨架:species ${index.species.length} · taxonKey 唯一 ✓ · 学名唯一 ✓ · eBird 码 ${withEbird} · backbone ${withBackbone} · 灭绝种 ${extinct} · 中文名 ${withZh}`,
+      `· 骨架:species ${index.species.length} · taxonKey 唯一 ✓ · 学名唯一 ✓ · eBird 码 ${withEbird} · backbone ${withBackbone} · iNat id ${withInat} · 灭绝种 ${extinct} · 中文名 ${withZh}`,
     )
   }
 

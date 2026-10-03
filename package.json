@@ -38,6 +38,7 @@
     "check:region": "node scripts/check-region.mjs",
     "taxonomy:avilist": "node scripts/taxonomy/fetch-avilist.mjs",
     "taxonomy:wikidata-zh": "node scripts/taxonomy/fetch-wikidata-zh.mjs",
+    "taxonomy:gbif-match": "node scripts/taxonomy/fetch-gbif-match.mjs",
     "species-index": "node scripts/taxonomy/build-species-index.mjs",
     "check:index": "node scripts/check-species-index.mjs",
     "worker:dev": "wrangler dev -c worker/wrangler.toml --remote",

@@ -25,6 +25,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
 const MOCK_FIXTURE = path.join(ROOT, 'tests/fixtures/taxonomy/avilist-sample.json')
 const WIKIDATA_CACHE = path.join(ROOT, 'data-cache/taxonomy/wikidata-zh')
+const GBIF_MATCH_CACHE = path.join(ROOT, 'data-cache/taxonomy/gbif-match')
 
 const CITATION = `AviList Core Team. 2026. AviList: The Global Avian Checklist, ${AVILIST_VERSION}. https://doi.org/10.2173/avilist.${AVILIST_VERSION}`
 const SOURCES = [
@@ -97,13 +98,29 @@ try {
     console.log(`manifest 只增字段完成:taxonKey ${matches.length}/${manifest.species.length} · playable 全 true`)
   }
 
-  // 骨架条目:compact 化(null 字段不写);backboneTaxonId 取 manifest 现有 taxonId(1299 才有)。
-  // familyEn/iucn 有意不写(与 family 一一对应可派生 / 需要时从缓存 xlsx 重生成),控制单文件 ≤2MB 预算(021 §2.3)。
-  const backboneById = new Map(matches.map((x) => [x.id, x]))
-  const backboneByKey = new Map()
-  for (const s of manifestSpecies) {
-    const m = backboneById.get(s.id)
-    if (m && s.taxonId != null) backboneByKey.set(m.taxonKey, s.taxonId)
+  // 023 P1-b:backboneTaxonId 统一来自 GBIF v2 批量 match(当前 backbone 键位,全体重建、只认种级/接受名);
+  // iNat 身份 = manifest 的 taxonId(它是 iNaturalist taxon ID,非 GBIF 键)→ 仅精确同学名概念携带 `inatTaxonId`。
+  let backboneStats = null
+  let inatCount = 0
+  const matchByName = new Map()
+  if (!args.mock) {
+    try {
+      const files = (await fs.readdir(GBIF_MATCH_CACHE)).filter((f) => /^batch-.*\.json$/.test(f)).sort()
+      for (const f of files) {
+        const j = JSON.parse(await fs.readFile(path.join(GBIF_MATCH_CACHE, f), 'utf8'))
+        j.names.forEach((n, i) => matchByName.set(normalizeSciName(n), j.results[i]))
+      }
+      console.log(`gbif-match 缓存:${matchByName.size} 名`)
+    } catch {
+      console.log('gbif-match 缓存缺失/不可读,跳过 backbone 填充(npm run taxonomy:gbif-match)')
+    }
+  }
+  const manifestById = new Map(manifestSpecies.map((s) => [s.id, s]))
+  const inatByName = new Map()
+  for (const m of matches) {
+    if (m.via !== 'species') continue
+    const s = manifestById.get(m.id)
+    if (s && s.taxonId != null) inatByName.set(normalizeSciName(s.nameSci), s.taxonId)
   }
 
   const species = taxa.species.map((t) => {
@@ -111,9 +128,28 @@ try {
     if (t.nameEn) e.nameEn = t.nameEn
     if (t.ebirdCode) e.ebirdCode = t.ebirdCode
     if (t.extinct) e.extinct = true
-    if (backboneByKey.get(t.avibaseId) != null) e.backboneTaxonId = backboneByKey.get(t.avibaseId)
+    const k = normalizeSciName(t.nameSci)
+    const hit = matchByName.get(k)
+    if (hit && hit.key != null) e.backboneTaxonId = hit.key
+    const inatId = inatByName.get(k)
+    if (inatId != null) {
+      e.inatTaxonId = inatId
+      inatCount++
+    }
     return e
   })
+  if (!args.mock && matchByName.size) {
+    let matched = 0
+    const via = {}
+    for (const e of species) {
+      if (e.backboneTaxonId != null) {
+        matched++
+        via[matchByName.get(normalizeSciName(e.nameSci)).via] = (via[matchByName.get(normalizeSciName(e.nameSci)).via] || 0) + 1
+      }
+    }
+    backboneStats = { matched, via }
+    console.log(`backbone:${matched}/${species.length}(${JSON.stringify(via)})· inatTaxonId ${inatCount}`)
+  }
 
   // 023 P1-a:中文名 —— curated(manifest,精确同学名才可用)优先,其余走 Wikidata(CC0)缓存。
   // 概念合并物种(bankMappingNotes)的中文名属于旧概念,不得蹭给 AviList 概念 —— 只认 exact-name。
@@ -181,12 +217,13 @@ try {
       species: species.length,
       subspecies: taxa.subspecies.length,
       mappedToBank: matches.length,
-      withBackboneId: [...backboneByKey.keys()].length,
+      mappedToBackbone: backboneStats ? backboneStats.matched : 0,
     },
     species,
   }
   if (bankMappingNotes.length) index.bankMappingNotes = bankMappingNotes
   if (nameZhStats) index.nameZh = nameZhStats
+  if (backboneStats) index.backbone = backboneStats
   // 产物为生成物,紧凑写盘(无缩进)。>2MB 时提醒:本文件是注册表(前端不整载),
   // 真正接入 UI 时再按目/科分片(021 §2.3 的预算针对前端按需加载文件)。
   await fs.writeFile(outPath, JSON.stringify(index))
