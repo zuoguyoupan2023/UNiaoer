@@ -50,6 +50,7 @@
 | 地区 SQL 对照校验（仅报告，不改产物） | `npm run region:verify-provinces` / `region:verify-seasonality` / `region:verify-hotspots` |
 | 地区产物校验（结构/署名/无边界几何；CI 用 `-- --no-net`） | `npm run check:region` |
 | 拉 AviList v2025b（全球名录 xlsx → data-cache/taxonomy，gitignore；CC BY 4.0） | `npm run taxonomy:avilist`（`--refresh` 重下） |
+| 抓 Wikidata 中文名（specieswiki 标题反查，断点缓存；CC0） | `npm run taxonomy:wikidata-zh`（`--limit N` 冒烟 / `--refresh` 重抓） |
 | 构建全球物种骨架（`species-index.json` 11,131 种 + manifest 只增 `taxonKey`/`playable`；023 P0） | `npm run species-index`（`-- --mock --out …` 全离线） |
 | 物种骨架校验（结构/署名/1299 映射/无几何；CI 已接入） | `npm run check:index` |
 | 生成 D1 seed | `npm run d1:seed` |

@@ -29,6 +29,7 @@ function checkGeoKeys(obj, where) {
 
 try {
   const index = JSON.parse(await fs.readFile(INDEX_PATH, 'utf8'))
+  const manifest = JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8'))
   const rel = path.relative(ROOT, INDEX_PATH)
 
   if (index.schemaVersion !== 1) fail(`schemaVersion=${index.schemaVersion},期望 1`)
@@ -60,6 +61,7 @@ try {
     let extinct = 0
     let withEbird = 0
     let withBackbone = 0
+    let withZh = 0
     for (const [i, e] of index.species.entries()) {
       const where = `species[${i}]`
       if (typeof e.taxonKey !== 'string' || !e.taxonKey) fail(`${where}:缺 taxonKey(AvibaseID)`)
@@ -75,12 +77,29 @@ try {
       if (e.extinct === true) extinct++
       if (e.ebirdCode) withEbird++
       if (e.backboneTaxonId != null) withBackbone++
+      if (e.nameZh != null) {
+        if (typeof e.nameZh !== 'string' || !e.nameZh.trim()) fail(`${where}:nameZh 非空字符串`)
+        else withZh++
+      }
       checkGeoKeys(e, where)
     }
     if (noOrder) fail(`${noOrder} 条 species 缺 order/family`)
     if (index.checklistVersion && extinct === 0) fail('0 条 extinct 标记,异常(全球名录必然含灭绝种)')
+    if (index.nameZh) {
+      const total = (index.nameZh.curated || 0) + (index.nameZh.wikidata || 0)
+      if (total !== withZh) fail(`nameZh 计数不一致:curated(${index.nameZh.curated})+wikidata(${index.nameZh.wikidata})=${total} ≠ 条目实际 ${withZh}`)
+      // curated 交叉:骨架中与 manifest 同学名的物种,nameZh 必须等于 manifest(人工审校名不被覆盖)
+      const manifestZh = new Map()
+      for (const s of manifest.species || []) if (s.nameZh && s.nameZh.trim()) manifestZh.set(normalizeSciName(s.nameSci), s.nameZh.trim())
+      let bad = 0
+      for (const e of index.species) {
+        const k = normalizeSciName(e.nameSci)
+        if (e.nameZh && manifestZh.has(k) && manifestZh.get(k) !== e.nameZh) bad++
+      }
+      if (bad) fail(`${bad} 条骨架中文名与 manifest curated 名不一致(curated 必须优先)`)
+    }
     console.log(
-      `· 骨架:species ${index.species.length} · taxonKey 唯一 ✓ · 学名唯一 ✓ · eBird 码 ${withEbird} · backbone ${withBackbone} · 灭绝种 ${extinct}`,
+      `· 骨架:species ${index.species.length} · taxonKey 唯一 ✓ · 学名唯一 ✓ · eBird 码 ${withEbird} · backbone ${withBackbone} · 灭绝种 ${extinct} · 中文名 ${withZh}`,
     )
   }
 
@@ -88,7 +107,6 @@ try {
 
   // manifest 交叉校验:现有 1299 全部 playable=true 且 taxonKey 能对回骨架。
   // 学名不一致仅在 bankMappingNotes 有注记时放行(概念合并:AviList 并入父种,manifest 保留旧学名)。
-  const manifest = JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8'))
   const notes = Array.isArray(index.bankMappingNotes) ? index.bankMappingNotes : []
   const noteByKeyId = new Map(notes.map((n) => [`${n.id}|${n.taxonKey}`, n]))
   if (!Array.isArray(manifest.species) || !manifest.species.length) {

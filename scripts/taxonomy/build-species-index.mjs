@@ -19,11 +19,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from '../lib/util.mjs'
 import { AVILIST_CACHE, AVILIST_VERSION } from './fetch-avilist.mjs'
-import { parseAvilistXlsx, taxaFromRows, buildNameIndex, matchSpecies } from './avilist-lib.mjs'
+import { parseAvilistXlsx, taxaFromRows, buildNameIndex, matchSpecies, normalizeSciName } from './avilist-lib.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
 const MOCK_FIXTURE = path.join(ROOT, 'tests/fixtures/taxonomy/avilist-sample.json')
+const WIKIDATA_CACHE = path.join(ROOT, 'data-cache/taxonomy/wikidata-zh')
 
 const CITATION = `AviList Core Team. 2026. AviList: The Global Avian Checklist, ${AVILIST_VERSION}. https://doi.org/10.2173/avilist.${AVILIST_VERSION}`
 const SOURCES = [
@@ -69,8 +70,10 @@ try {
   // manifest 映射(只增字段;misses 默认 fail-first,不落任何盘)
   let matches = []
   let manifestPatched = false
+  let manifestSpecies = []
   if (!args.mock && !args['no-manifest']) {
     const manifest = JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8'))
+    manifestSpecies = manifest.species
     const { matches: m, misses } = matchSpecies(manifest.species, buildNameIndex(taxa))
     matches = m
     if (misses.length && !args['allow-misses']) {
@@ -97,11 +100,8 @@ try {
   // 骨架条目:compact 化(null 字段不写);backboneTaxonId 取 manifest 现有 taxonId(1299 才有)。
   // familyEn/iucn 有意不写(与 family 一一对应可派生 / 需要时从缓存 xlsx 重生成),控制单文件 ≤2MB 预算(021 §2.3)。
   const backboneById = new Map(matches.map((x) => [x.id, x]))
-  const manifestForBackbone = matches.length
-    ? JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8')).species
-    : []
   const backboneByKey = new Map()
-  for (const s of manifestForBackbone) {
+  for (const s of manifestSpecies) {
     const m = backboneById.get(s.id)
     if (m && s.taxonId != null) backboneByKey.set(m.taxonKey, s.taxonId)
   }
@@ -114,6 +114,52 @@ try {
     if (backboneByKey.get(t.avibaseId) != null) e.backboneTaxonId = backboneByKey.get(t.avibaseId)
     return e
   })
+
+  // 023 P1-a:中文名 —— curated(manifest,精确同学名才可用)优先,其余走 Wikidata(CC0)缓存。
+  // 概念合并物种(bankMappingNotes)的中文名属于旧概念,不得蹭给 AviList 概念 —— 只认 exact-name。
+  let nameZhStats = null
+  if (!args.mock) {
+    const curatedByName = new Map()
+    for (const s of manifestSpecies) {
+      if (!s.nameZh || !s.nameZh.trim()) continue
+      const k = normalizeSciName(s.nameSci)
+      const prev = curatedByName.get(k)
+      if (prev && prev !== s.nameZh.trim()) console.warn(`⚠ curated 中文名冲突 ${s.nameSci}:${prev} vs ${s.nameZh}(取先者)`)
+      else curatedByName.set(k, s.nameZh.trim())
+    }
+    const wikiByName = new Map()
+    try {
+      const files = (await fs.readdir(WIKIDATA_CACHE)).filter((f) => /^batch-.*\.json$/.test(f)).sort()
+      for (const f of files) {
+        const j = JSON.parse(await fs.readFile(path.join(WIKIDATA_CACHE, f), 'utf8'))
+        for (const [sci, pick] of Object.entries(j.labels || {})) wikiByName.set(normalizeSciName(sci), pick)
+      }
+    } catch {
+      console.log('wikidata-zh 缓存缺失/不可读,跳过中文名填充(npm run taxonomy:wikidata-zh 抓取)')
+    }
+    let curatedCount = 0
+    let wikiCount = 0
+    const wikiLang = {}
+    for (const e of species) {
+      const k = normalizeSciName(e.nameSci)
+      const curated = curatedByName.get(k)
+      if (curated) {
+        e.nameZh = curated
+        curatedCount++
+        continue
+      }
+      const wiki = wikiByName.get(k)
+      if (wiki && wiki.zh) {
+        e.nameZh = wiki.zh
+        wikiCount++
+        wikiLang[wiki.lang] = (wikiLang[wiki.lang] || 0) + 1
+      }
+    }
+    if (curatedCount || wikiCount) {
+      nameZhStats = { curated: curatedCount, wikidata: wikiCount }
+      console.log(`中文名:curated ${curatedCount} + wikidata ${wikiCount} = ${curatedCount + wikiCount}/${species.length}` + (Object.keys(wikiLang).length ? `(语言分布 ${JSON.stringify(wikiLang)})` : ''))
+    }
+  }
 
   // 概念合并出处(审计用):现有学名 ≠ AviList 概念学名(别名/亚种归并)的映射记录。
   // manifest 保留旧学名与 id(媒体路径不动),taxonKey 指向 AviList 概念;check:index 按此注记放行学名不一致。
@@ -140,11 +186,14 @@ try {
     species,
   }
   if (bankMappingNotes.length) index.bankMappingNotes = bankMappingNotes
-  // 产物为生成物,紧凑写盘(无缩进);体积预算见 021 §2.3
+  if (nameZhStats) index.nameZh = nameZhStats
+  // 产物为生成物,紧凑写盘(无缩进)。>2MB 时提醒:本文件是注册表(前端不整载),
+  // 真正接入 UI 时再按目/科分片(021 §2.3 的预算针对前端按需加载文件)。
   await fs.writeFile(outPath, JSON.stringify(index))
-  const mb = (Buffer.byteLength(JSON.stringify(index)) / 1e6).toFixed(2)
-  if (Buffer.byteLength(JSON.stringify(index)) > 2_000_000) {
-    console.warn(`⚠ 产物 ${mb}MB 超出 2MB 预算,考虑裁字段或分片(021 §2.3)`)
+  const bytes = Buffer.byteLength(JSON.stringify(index))
+  const mb = (bytes / 1e6).toFixed(2)
+  if (bytes > 2_000_000) {
+    console.warn(`⚠ 产物 ${mb}MB 超出 2MB 参考线(P3 接入 UI 时分片;注册表类产物暂容忍)`)
   }
   console.log(`✓ 骨架已产出:${path.relative(ROOT, outPath)}(species ${species.length},${mb}MB${manifestPatched ? ',manifest 已增 taxonKey/playable' : ''})`)
 } catch (e) {
