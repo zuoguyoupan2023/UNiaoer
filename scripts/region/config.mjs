@@ -73,11 +73,29 @@ export const EBIRD_SOURCE = {
   attribution: 'eBird — Cornell Lab of Ornithology (https://ebird.org/), non-commercial use',
 }
 
-/** 省级统计来源 */
+/** 省级统计来源（GBIF occurrence/search facet 管线：build-provinces / build-hotspots --source gbif） */
 export const GBIF_SOURCE = {
   key: 'gbif',
   name: 'GBIF occurrence search (facet=stateProvince)',
   url: 'https://www.gbif.org/',
   license: 'CC0/CC-BY/CC-BY-NC（逐条，见 GBIF 处理规则）',
   attribution: 'GBIF — https://www.gbif.org/ (occurrence records, CC0/CC-BY/CC-BY-NC)',
+}
+
+/** 022 §1.7：GBIF SQL Download API 管线来源（build-hotspots-gbif / build-hotspots-sql；下载 DOI 见 docs/024 §2.2） */
+export const GBIF_SQL_SOURCE = {
+  key: 'gbif',
+  name: 'GBIF occurrence data (SQL Download API)',
+  url: 'https://www.gbif.org/',
+  license: 'CC0/CC-BY/CC-BY-NC（逐条，见 GBIF 处理规则）',
+  attribution: 'GBIF — https://www.gbif.org/ (occurrence records via SQL Download, CC0/CC-BY/CC-BY-NC)',
+}
+
+/** 021 M3：《中国鸟类的生活史和生态学特征数据集》（seasonality 权威居留型 range 层，1445 种） */
+export const CN_AUTHORITY_SOURCE = {
+  key: 'cn-authority',
+  name: '中国鸟类的生活史和生态学特征数据集（王彦平等 2021，DOI 10.17520/biods.2021201）',
+  url: 'https://www.biodiversity-science.net/CN/10.17520/biods.2021201',
+  license: '开放数据论文（页面未明示 CC 条款；仅非商业学术使用并引用出处）',
+  attribution: '王彦平, 宋云枫, 钟雨茜, 陈传武, 赵郁豪, 曾頔, 吴亦如, 丁平 (2021) 生物多样性 29(9): 1149-1153',
 }

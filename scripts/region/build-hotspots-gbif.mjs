@@ -16,7 +16,7 @@ import { parseArgs } from '../lib/util.mjs'
 import { hotspotRecords } from './adapters/ebird.mjs'
 import { applyEbirdNames } from './hotspots-lib.mjs'
 import { normBinomial } from './verify-provinces-lib.mjs'
-import { EBIRD_SOURCE, GBIF_SOURCE, HOTSPOT_DEFAULTS, SUPPORTED_COUNTRIES } from './config.mjs'
+import { EBIRD_SOURCE, GBIF_SQL_SOURCE, HOTSPOT_DEFAULTS, SUPPORTED_COUNTRIES } from './config.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 const args = parseArgs(process.argv.slice(2))
@@ -120,7 +120,7 @@ const out = {
   source: 'gbif-sql',
   grid: GRID,
   thresholds: { minRecords: MIN_RECORDS, minSpecies: MIN_SPECIES, minObservers: MIN_OBSERVERS },
-  sources: ebirdNamed > 0 ? [GBIF_SOURCE, EBIRD_SOURCE] : [GBIF_SOURCE],
+  sources: ebirdNamed > 0 ? [GBIF_SQL_SOURCE, EBIRD_SOURCE] : [GBIF_SQL_SOURCE],
   countries: [...new Set(hotspots.map((h) => h.country))].sort(),
   hotspotCount: hotspots.length,
   hotspots,

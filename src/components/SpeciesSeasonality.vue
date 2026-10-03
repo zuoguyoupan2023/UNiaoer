@@ -15,9 +15,12 @@ const SOURCE_LABELS: Record<string, string> = {
   inat: 'iNaturalist',
 }
 
-const sourceLabels = computed(() =>
-  props.entry.sources.map((s) => SOURCE_LABELS[s] || s).join(' · '),
-)
+const sourceLabels = computed(() => {
+  const base = props.entry.sources.map((s) => SOURCE_LABELS[s] || s).join(' · ')
+  // 权威居留型（021 M3）来自生活史数据集，署名不可省（docs/024 §2.5）
+  const rangeSrc = props.entry.range?.length ? `；${t('season.rangeSource')}` : ''
+  return base + rangeSrc
+})
 
 const monthNames = computed(() =>
   Array.from({ length: 12 }, (_, i) =>

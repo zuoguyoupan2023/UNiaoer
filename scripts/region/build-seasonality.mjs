@@ -22,6 +22,7 @@ import { createClient } from '../lib/http.mjs'
 import { loadEnv, mapPool, parseArgs, slug } from '../lib/util.mjs'
 import { buildEntry, countsFromGbifFacet, countsFromMedia } from './seasonality-lib.mjs'
 import { parseSheet, parseSharedStrings, extractBirds } from './adapters/cn-authority.mjs'
+import { CN_AUTHORITY_SOURCE } from './config.mjs'
 
 const execFileAsync = promisify(execFile)
 
@@ -215,7 +216,9 @@ const out = {
   generatedAt: new Date().toISOString(),
   // 口径说明（021 §2.5）：逐月份额多源取最大（iNat 记录亦进 GBIF，避免重复计数）
   method: 'max monthly share across sources (0-100); recordCount = max single-source total',
-  sources: ['GBIF', 'Xeno-canto', 'iNaturalist'],
+  // cn-authority（郑光美生活史数据集）仅在数据集实际加载时列入（021 M3 range 层的署名义务；
+  // 顶层 sources 惯例为字符串数组，完整引用见 docs/024 §2.5）
+  sources: ['GBIF', 'Xeno-canto', 'iNaturalist', ...(cnAuthority ? [CN_AUTHORITY_SOURCE.name] : [])],
   speciesCount: Object.keys(bySpecies).length,
   bySpecies,
 }

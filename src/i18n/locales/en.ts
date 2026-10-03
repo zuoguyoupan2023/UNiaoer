@@ -281,6 +281,7 @@ const en: typeof zhMessages = {
     title: 'Monthly presence',
     peak: 'Peak months: {months}',
     records: 'Based on ~{n} public observation records',
+    rangeSource: 'Residency source: Wang et al. (2021), A dataset on the life-history and ecological traits of Chinese birds',
     hint: 'Intensity = share of observations in that month, normalized across sources (0–100).',
   },
   poster: {

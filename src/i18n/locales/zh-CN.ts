@@ -276,6 +276,7 @@ export const messages = {
     title: '出现月份',
     peak: '高峰月份：{months}',
     records: '基于约 {n} 条公开观测记录',
+    rangeSource: '居留型来源：王彦平等（2021）《中国鸟类的生活史和生态学特征数据集》',
     hint: '强度 = 该月观测记录占比，多来源归一化（0–100）。',
   },
   poster: {

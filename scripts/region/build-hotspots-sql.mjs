@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from '../lib/util.mjs'
 import { hotspotRecords } from './adapters/ebird.mjs'
 import { applyEbirdNames } from './hotspots-lib.mjs'
-import { EBIRD_SOURCE, GBIF_SOURCE, HOTSPOT_DEFAULTS } from './config.mjs'
+import { EBIRD_SOURCE, GBIF_SQL_SOURCE, HOTSPOT_DEFAULTS } from './config.mjs'
 import { sqlCellsToHotspots } from './verify-sql-lib.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
@@ -66,7 +66,7 @@ const out = {
   source: 'gbif-sql',
   grid: D.grid,
   thresholds: { minRecords: D.minRecords, minSpecies: D.minSpecies, minObservers: D.minObservers },
-  sources: ebirdNamed > 0 ? [GBIF_SOURCE, EBIRD_SOURCE] : [GBIF_SOURCE],
+  sources: ebirdNamed > 0 ? [GBIF_SQL_SOURCE, EBIRD_SOURCE] : [GBIF_SQL_SOURCE],
   countries: [...new Set(hotspots.map((h) => h.country))].sort(),
   hotspotCount: hotspots.length,
   hotspots,
