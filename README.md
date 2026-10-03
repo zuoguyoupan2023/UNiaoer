@@ -51,7 +51,7 @@ npm run format       # 格式化
 - ✅ 内容：物种档案（类群/分布/居留型）、答疑专栏 `/faq`、地区浏览 `/region`（七大洲→国家/省级→鸟种）
 - ✅ 地区数据层：季节层 `seasonality.json`、15 国省级层 `region-provinces.json`（含中国 34 区划/港澳台标注）、观鸟点 `hotspots.json`（GBIF 源）
 - ✅ i18n（zh-CN / en，532 keys，CI 门禁）· 无障碍（H3）· E2E（Playwright 11 条，全离线）
-- ⏳ 下一大计划：全球全种类扩张（1299 → ~11k，骨架先行）
+- 🚧 下一大计划：全球全种类扩张（1299 → ~11k，骨架先行）——P0 分类骨架已完成：AviList v2025b 全球骨架 `species-index.json`（11,131 种）+ manifest 增 `taxonKey`/`playable`（1299 全映射，只增不改）；P1 名字全球铺 / P2 媒体分层待做
 
 ## 部署（Cloudflare Pages）
 

@@ -1,0 +1,13 @@
+{
+  "note": "023 P0 build-species-index --mock 夹具:AviList xlsx 解析后的行数组(parseSheetRows 形状)。列顺序 = AviList v2025b extended 表头前 26 列(此处只含会用到的列)。数据为示意值。",
+  "rows": [
+    ["Sequence", "Taxon_rank", "Order", "Family", "Family_English_name", "Scientific_name", "Authority", "Bibliographic_details", "English_name_AviList", "English_name_Clements_v2025", "English_name_BirdLife_v10", "Proposal_number", "Decision_summary", "Range", "Extinct_or_possibly_extinct", "IUCN_Red_List_Category", "BirdLife_DataZone_URL", "Species_code_Cornell_Lab", "Birds_of_the_World_URL", "AvibaseID"],
+    ["#", "RANK", "ORDER", "FAMILY", "FAMILY: ENGLISH NAME", "SCIENTIFIC NAME", null, null, "ENGLISH NAME: AVILIST", null, null, null, null, "RANGE", "EXTINCTION STATUS", "IUCN RED LIST CATEGORY", null, "SPECIES CODE CORNELL LAB", null, "AVIBASE ID"],
+    [null, "order", "Passeriformes", null, null, "Passeriformes"],
+    [null, "family", "Passeriformes", "Pycnonotidae", "Bulbuls", "Pycnonotidae"],
+    [null, "genus", "Passeriformes", "Pycnonotidae", "Bulbuls", "Pycnonotus"],
+    [23516, "species", "Passeriformes", "Pycnonotidae", "Bulbuls", "Pycnonotus sinensis", "(Gmelin, JF, 1789)", null, "Light-vented Bulbul", "Light-vented Bulbul", "Light-vented Bulbul", null, null, null, null, "LC", null, "livbul1", null, "avibase-BB5650EB"],
+    [42, "species", "Anseriformes", "Anatidae", "Ducks, Geese, Swans", "Camptorhynchus labradorius", "(Gmelin, JF, 1789)", null, "Labrador Duck", "Labrador Duck", "Labrador Duck", null, null, null, "Extinct", "EX", null, "labduc1", null, "avibase-DECFC39A"],
+    [23517, "subspecies", "Passeriformes", "Pycnonotidae", "Bulbuls", "Pycnonotus sinensis hainanus", null, null, null, null, null, null, null, null, null, null, null, null, null, "avibase-XXXX1111"]
+  ]
+}

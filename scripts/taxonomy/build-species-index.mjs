@@ -1,0 +1,153 @@
+/**
+ * 023 P0:构建「全球物种骨架」public/data/species-index.json(AviList v2025b,~11k 种,不进 manifest),
+ * 并给 manifest.species 增补稳定键 —— 只增不改:
+ *   - species[].taxonKey = AvibaseID(AviList 官方稳定概念 ID,独立于命名)
+ *   - species[].playable = true(现有 1299 全部可玩;未来媒体分层再细化)
+ *   - id / 媒体路径 / 其余字段一律不动;骨架文件与 1299 可玩链路解耦。
+ * 交叉映射:eBird code 直接取 AviList 的 Species_code_Cornell_Lab 列;
+ *   backboneTaxonId 现有 1299 沿用 data/taxa.json 口径(manifest.taxonId),其余留待 P1 GBIF 匹配。
+ *
+ * 用法:
+ *   npm run species-index                     # 读缓存 xlsx(data-cache/taxonomy/,先跑 npm run taxonomy:avilist)
+ *   npm run species-index -- --refresh        # 先重下载再构建
+ *   npm run species-index -- --mock --out /tmp/idx.json   # 夹具全离线(mock 必须显式 --out,防污染真产物)
+ *   npm run species-index -- --no-manifest    # 只产骨架,不动 manifest
+ *   npm run species-index -- --allow-misses   # 有未匹配学名也照常落盘(默认 fail-first)
+ */
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { parseArgs } from '../lib/util.mjs'
+import { AVILIST_CACHE, AVILIST_VERSION } from './fetch-avilist.mjs'
+import { parseAvilistXlsx, taxaFromRows, buildNameIndex, matchSpecies } from './avilist-lib.mjs'
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
+const MOCK_FIXTURE = path.join(ROOT, 'tests/fixtures/taxonomy/avilist-sample.json')
+
+const CITATION = `AviList Core Team. 2026. AviList: The Global Avian Checklist, ${AVILIST_VERSION}. https://doi.org/10.2173/avilist.${AVILIST_VERSION}`
+const SOURCES = [
+  {
+    key: 'avilist',
+    name: `AviList: The Global Avian Checklist, ${AVILIST_VERSION}`,
+    url: 'https://www.avilist.org/',
+    license: 'CC BY 4.0',
+    attribution: 'AviList Core Team',
+    citation: CITATION,
+  },
+]
+
+const args = parseArgs(process.argv.slice(2))
+const outPath = path.resolve(ROOT, args.out || 'public/data/species-index.json')
+
+try {
+  let rows
+  if (args.mock) {
+    if (!args.out) throw new Error('--mock 必须显式指定 --out(防止夹具数据污染真产物)')
+    rows = JSON.parse(await fs.readFile(MOCK_FIXTURE, 'utf8')).rows
+    console.log(`--mock:读夹具 ${path.relative(ROOT, MOCK_FIXTURE)}(${rows.length} 行)`)
+  } else {
+    if (args.refresh) {
+      const { execFileSync } = await import('node:child_process')
+      execFileSync('node', [path.join(ROOT, 'scripts/taxonomy/fetch-avilist.mjs'), '--refresh'], { stdio: 'inherit' })
+    }
+    const buf = await fs.readFile(AVILIST_CACHE).catch(() => {
+      throw new Error(`缓存不存在:${AVILIST_CACHE}(先跑 npm run taxonomy:avilist)`)
+    })
+    rows = parseAvilistXlsx(buf)
+    console.log(`解析 ${path.relative(ROOT, AVILIST_CACHE)}:${rows.length} 行`)
+  }
+
+  const taxa = taxaFromRows(rows)
+  console.log(
+    `AviList ${AVILIST_VERSION}:目 ${taxa.orders.length} · 科 ${taxa.families.length} · 属 ${taxa.genera.length} · 种 ${taxa.species.length} · 亚种 ${taxa.subspecies.length}`,
+  )
+  if (!args.mock && taxa.species.length < 10_000) {
+    throw new Error(`species 行数异常(${taxa.species.length}),疑似解析不全,拒绝产出`)
+  }
+
+  // manifest 映射(只增字段;misses 默认 fail-first,不落任何盘)
+  let matches = []
+  let manifestPatched = false
+  if (!args.mock && !args['no-manifest']) {
+    const manifest = JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8'))
+    const { matches: m, misses } = matchSpecies(manifest.species, buildNameIndex(taxa))
+    matches = m
+    if (misses.length && !args['allow-misses']) {
+      console.error(`✗ ${misses.length} 个现有物种未能在 AviList 中匹配到学名(未写入任何文件):`)
+      for (const x of misses) console.error(`   - ${x.id} (${x.nameSci})`)
+      console.error('   逐个人工核对学名/概念后重跑,或确认无误用 --allow-misses 落盘。')
+      process.exit(1)
+    }
+    if (misses.length) {
+      console.warn(`⚠ --allow-misses:${misses.length} 个物种无 taxonKey(仍写 playable=true)`)
+      for (const x of misses) console.warn(`   - ${x.id} (${x.nameSci})`)
+    }
+    const byId = new Map(matches.map((x) => [x.id, x]))
+    for (const s of manifest.species) {
+      const hit = byId.get(s.id)
+      if (hit) s.taxonKey = hit.taxonKey
+      s.playable = true
+    }
+    await fs.writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
+    manifestPatched = true
+    console.log(`manifest 只增字段完成:taxonKey ${matches.length}/${manifest.species.length} · playable 全 true`)
+  }
+
+  // 骨架条目:compact 化(null 字段不写);backboneTaxonId 取 manifest 现有 taxonId(1299 才有)。
+  // familyEn/iucn 有意不写(与 family 一一对应可派生 / 需要时从缓存 xlsx 重生成),控制单文件 ≤2MB 预算(021 §2.3)。
+  const backboneById = new Map(matches.map((x) => [x.id, x]))
+  const manifestForBackbone = matches.length
+    ? JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8')).species
+    : []
+  const backboneByKey = new Map()
+  for (const s of manifestForBackbone) {
+    const m = backboneById.get(s.id)
+    if (m && s.taxonId != null) backboneByKey.set(m.taxonKey, s.taxonId)
+  }
+
+  const species = taxa.species.map((t) => {
+    const e = { taxonKey: t.avibaseId, nameSci: t.nameSci, order: t.order, family: t.family }
+    if (t.nameEn) e.nameEn = t.nameEn
+    if (t.ebirdCode) e.ebirdCode = t.ebirdCode
+    if (t.extinct) e.extinct = true
+    if (backboneByKey.get(t.avibaseId) != null) e.backboneTaxonId = backboneByKey.get(t.avibaseId)
+    return e
+  })
+
+  // 概念合并出处(审计用):现有学名 ≠ AviList 概念学名(别名/亚种归并)的映射记录。
+  // manifest 保留旧学名与 id(媒体路径不动),taxonKey 指向 AviList 概念;check:index 按此注记放行学名不一致。
+  const nameByKey = new Map(taxa.species.map((t) => [t.avibaseId, t.nameSci]))
+  const bankMappingNotes = matches
+    .filter((m) => m.via !== 'species')
+    .map((m) => ({ id: m.id, nameSci: m.nameSci, via: m.via, taxonKey: m.taxonKey, resolvedTo: nameByKey.get(m.taxonKey) || null }))
+
+  const index = {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    checklistVersion: AVILIST_VERSION,
+    citation: CITATION,
+    sources: SOURCES,
+    counts: {
+      orders: taxa.orders.length,
+      families: taxa.families.length,
+      genera: taxa.genera.length,
+      species: species.length,
+      subspecies: taxa.subspecies.length,
+      mappedToBank: matches.length,
+      withBackboneId: [...backboneByKey.keys()].length,
+    },
+    species,
+  }
+  if (bankMappingNotes.length) index.bankMappingNotes = bankMappingNotes
+  // 产物为生成物,紧凑写盘(无缩进);体积预算见 021 §2.3
+  await fs.writeFile(outPath, JSON.stringify(index))
+  const mb = (Buffer.byteLength(JSON.stringify(index)) / 1e6).toFixed(2)
+  if (Buffer.byteLength(JSON.stringify(index)) > 2_000_000) {
+    console.warn(`⚠ 产物 ${mb}MB 超出 2MB 预算,考虑裁字段或分片(021 §2.3)`)
+  }
+  console.log(`✓ 骨架已产出:${path.relative(ROOT, outPath)}(species ${species.length},${mb}MB${manifestPatched ? ',manifest 已增 taxonKey/playable' : ''})`)
+} catch (e) {
+  console.error(`✗ build-species-index:${e.message}`)
+  process.exit(1)
+}

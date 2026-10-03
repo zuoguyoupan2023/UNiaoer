@@ -49,6 +49,9 @@
 | GBIF SQL 下载（提交/续传/列表；需 GBIF 账号） | `npm run region:gbif-sql -- --sql "..."` / `-- --key <key>` / `-- --list` |
 | 地区 SQL 对照校验（仅报告，不改产物） | `npm run region:verify-provinces` / `region:verify-seasonality` / `region:verify-hotspots` |
 | 地区产物校验（结构/署名/无边界几何；CI 用 `-- --no-net`） | `npm run check:region` |
+| 拉 AviList v2025b（全球名录 xlsx → data-cache/taxonomy，gitignore；CC BY 4.0） | `npm run taxonomy:avilist`（`--refresh` 重下） |
+| 构建全球物种骨架（`species-index.json` 11,131 种 + manifest 只增 `taxonKey`/`playable`；023 P0） | `npm run species-index`（`-- --mock --out …` 全离线） |
+| 物种骨架校验（结构/署名/1299 映射/无几何；CI 已接入） | `npm run check:index` |
 | 生成 D1 seed | `npm run d1:seed` |
 | D1 建表 / 灌数据（务必 `--remote`） | `wrangler d1 execute uniaoer --file=worker/schema.sql --remote` |
 | Worker 本地调试（绑定远端 D1/R2） | `npm run worker:dev` |
