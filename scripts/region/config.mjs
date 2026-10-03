@@ -64,6 +64,15 @@ export const XC_COUNTRY_ISO = {
   'Viet Nam': 'VN',
 }
 
+/** 021 M4 腿 A：eBird Hotspots 名录（非商业，需署名，不得再分发原始数据，见 docs/022 §2.5） */
+export const EBIRD_SOURCE = {
+  key: 'ebird',
+  name: 'eBird (Cornell Lab of Ornithology)',
+  url: 'https://ebird.org/',
+  license: 'eBird Data Access Terms of Use（非商业；需署名；不得再分发原始数据）',
+  attribution: 'eBird — Cornell Lab of Ornithology (https://ebird.org/), non-commercial use',
+}
+
 /** 省级统计来源 */
 export const GBIF_SOURCE = {
   key: 'gbif',

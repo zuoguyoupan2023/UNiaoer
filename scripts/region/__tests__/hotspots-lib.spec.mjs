@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aggregateHotspots, cellKey } from '../hotspots-lib.mjs'
+import { aggregateHotspots, applyEbirdNames, buildHotspotIndex, cellKey, indexedNearest } from '../hotspots-lib.mjs'
 
 const rec = (o) => ({
   key: o.key ?? Math.random().toString(36).slice(2),
@@ -91,5 +91,40 @@ describe('aggregateHotspots', () => {
     )
     expect(out).toHaveLength(1)
     expect(out[0].speciesCount).toBe(1)
+  })
+})
+
+describe('applyEbirdNames', () => {
+  const ebird = [
+    { id: 'L1', name: 'Near Park', country: 'CN', lat: 39.95, lng: 116.05, sourceUrl: 'https://ebird.org/hotspot/L1' },
+    { id: 'L2', name: 'Far Park', country: 'CN', lat: 40.5, lng: 116.5, sourceUrl: 'https://ebird.org/hotspot/L2' },
+  ]
+  it('无名点就近命名并把 ebird 计入 sources；已有名/无近点不动', () => {
+    const out = applyEbirdNames(
+      [
+        { id: 'a', name: undefined, country: 'CN', lat: 39.949, lng: 116.049, sources: ['xeno-canto'] },
+        { id: 'b', name: '已有名', country: 'CN', lat: 39.949, lng: 116.049, sources: ['xeno-canto'] },
+        { id: 'c', name: undefined, country: 'GB', lat: 20, lng: 30, sources: ['gbif'] },
+      ],
+      ebird,
+      { maxKm: 3 },
+    )
+    expect(out[0]).toMatchObject({ name: 'Near Park', ebirdId: 'L1', sources: ['ebird', 'xeno-canto'] })
+    expect(out[1]).toEqual({ id: 'b', name: '已有名', country: 'CN', lat: 39.949, lng: 116.049, sources: ['xeno-canto'] })
+    expect(out[2]).toEqual({ id: 'c', name: undefined, country: 'GB', lat: 20, lng: 30, sources: ['gbif'] })
+  })
+})
+
+describe('buildHotspotIndex / indexedNearest', () => {
+  it('分桶后只在邻近桶找最近点，跨桶也命中', () => {
+    const spots = [
+      { id: 'a', lat: 39.9, lng: 116.4 },
+      { id: 'b', lat: 40.01, lng: 116.4 },
+      { id: 'far', lat: 10, lng: 10 },
+    ]
+    const idx = buildHotspotIndex(spots, { bucketDeg: 0.05 })
+    expect(indexedNearest(idx, 39.949, 116.401, 10)?.id).toBe('a')
+    expect(indexedNearest(idx, 40.005, 116.401, 10)?.id).toBe('b')
+    expect(indexedNearest(idx, 0, 0, 10)).toBeNull()
   })
 })

@@ -43,6 +43,11 @@
 | 媒体完整性全量检查（`--fix` 从本地重传缺失文件） | `npm run check:media` |
 | 抓 ISO 3166-2 省级基准清单（021 M2，缓存到 data-cache） | `npm run region:subdiv` |
 | 构建季节层 / 省级层（`-- --mock` 全离线；产 `public/data/*.json`） | `npm run region:build` / `npm run region:provinces` |
+| 构建观鸟点（XC 源；`-- --mock` 离线） | `npm run region:hotspots` |
+| 构建观鸟点（GBIF SQL 1° 源 + eBird 命名；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names` |
+| 抓 eBird 热点/区划到缓存（需 `EBIRD_API_KEY`） | `npm run region:ebird` |
+| GBIF SQL 下载（提交/续传/列表；需 GBIF 账号） | `npm run region:gbif-sql -- --sql "..."` / `-- --key <key>` / `-- --list` |
+| 地区 SQL 对照校验（仅报告，不改产物） | `npm run region:verify-provinces` / `region:verify-seasonality` / `region:verify-hotspots` |
 | 地区产物校验（结构/署名/无边界几何；CI 用 `-- --no-net`） | `npm run check:region` |
 | 生成 D1 seed | `npm run d1:seed` |
 | D1 建表 / 灌数据（务必 `--remote`） | `wrangler d1 execute uniaoer --file=worker/schema.sql --remote` |

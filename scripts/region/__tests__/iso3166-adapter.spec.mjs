@@ -12,13 +12,21 @@ const dataset = {
   US: { 'US-CA': 'California', 'US-WA': 'Washington', 'US-DC': 'District of Columbia' },
   GB: { 'GB-ENG': 'England', 'GB-SCT': 'Scotland', 'GB-NIR': 'Northern Ireland' },
   JP: { 'JP-13': 'Tōkyō [Tokyo]', 'JP-23': 'Aiti', 'JP-04': 'Miyagi' },
-  CN: { 'CN-15': 'Nei Mongol (mn)\n(Inner Mongolia)', 'CN-54': 'Xizang\n(Tibet)' },
+  CN: { 'CN-15': 'Nei Mongol (mn)\n(Inner Mongolia)', 'CN-54': 'Xizang\n(Tibet)', 'CN-65': 'Xinjiang' },
+  ES: { 'ES-CT': 'Catalunya', 'ES-MD': 'Madrid' },
+  NL: { 'NL-FR': 'Fryslân' },
+  IN: { 'IN-OR': 'Odisha[note 2]' },
 }
 
 describe('canonName / nameKeys', () => {
   it('去变音符、小写、折叠分隔符', () => {
     expect(canonName('Tōkyō [Tokyo]')).toBe('tokyo tokyo')
     expect(canonName('  São Paulo ')).toBe('sao paulo')
+  })
+  it('折叠 NFD 无法拆的拉丁变体字母（越南 Đ、Ø、Ł 等）', () => {
+    expect(canonName('Đồng Nai')).toBe('dong nai')
+    expect(canonName('Đắk Lắk')).toBe('dak lak')
+    expect(canonName('Østfold')).toBe('ostfold')
   })
   it('展开方括号/圆括号/换行/感叹号为候选键', () => {
     const k = nameKeys('Tōkyō [Tokyo]')
@@ -29,6 +37,13 @@ describe('canonName / nameKeys', () => {
   it('去行政后缀与逗号后注', () => {
     expect(nameKeys('Miyagi Prefecture').has('miyagi')).toBe(true)
     expect(nameKeys('Michigan, Captive').has('michigan')).toBe(true)
+  })
+  it('多语种行政词序（西语 comunidad/principado、越南 thanh pho、中文 sheng）', () => {
+    expect(nameKeys('Madrid Comunidad de').has('madrid')).toBe(true)
+    expect(nameKeys('Comunidad de Madrid').has('madrid')).toBe(true)
+    expect(nameKeys('Asturias Principado de').has('asturias')).toBe(true)
+    expect(nameKeys('Ha Noi thanh pho').has('ha noi')).toBe(true)
+    expect(nameKeys('Yunnan Prov.').has('yunnan')).toBe(true)
   })
 })
 
@@ -61,6 +76,13 @@ describe('buildIndex / matchSubdivision', () => {
   it('英国「郡 - 前缀」归入构成国', () => {
     expect(matchSubdivision(index, 'GB', 'Scotland - Highland')).toBe('GB-SCT')
     expect(matchSubdivision(index, 'GB', 'England - Norfolk')).toBe('GB-ENG')
+  })
+  it('新增别名：西语变体 / 荷兰英语名 / 中国历史拼写 / 印度旧名', () => {
+    expect(matchSubdivision(index, 'ES', 'Cataluña')).toBe('ES-CT')
+    expect(matchSubdivision(index, 'ES', 'Comunidad de Madrid')).toBe('ES-MD')
+    expect(matchSubdivision(index, 'NL', 'Friesland')).toBe('NL-FR')
+    expect(matchSubdivision(index, 'CN', 'Xinjiang Uygur')).toBe('CN-65')
+    expect(matchSubdivision(index, 'IN', 'Orissa')).toBe('IN-OR')
   })
   it('未知名返回 null，不臆造', () => {
     expect(matchSubdivision(index, 'US', 'Atlantis')).toBeNull()

@@ -8,6 +8,7 @@
  * - 阈值：`--min-records N --min-species M --min-observers K` 全部满足才成点。
  * - 不知情不编造：缺 observer / date 的字段如实计，不推断补齐。
  */
+import { distanceKm } from './adapters/ebird.mjs'
 
 /** 网格单元键（floor，负坐标同样成立）；toFixed 规避 39.9/0.1 = 398.99… 的浮点误差 */
 export function cellKey(lat, lng, size) {
@@ -135,4 +136,80 @@ export function aggregateHotspots(records, opts) {
       a.id.localeCompare(b.id),
   )
   return out
+}
+
+/**
+ * 021 M4 腿 A：用 eBird 热点名录给**无名**网格点就近命名（020 §3.3）。
+ * 仅补 name/ebirdId/ebirdUrl 并把 'ebird' 计入 sources；已有名字的点不动（不覆盖 XC loc）。
+ * 找不到 ≤maxKm 的最近热点则原样返回（不臆造名字）。
+ * @param {Array} hotspots aggregateHotspots 的输出
+ * @param {Array} ebirdHotspots adapters/ebird.hotspotRecords 的输出
+ */
+/** 空间分桶索引：bucketDeg 度一桶 → Map<bucketKey, hotspots[]>；配合 indexedNearest 用 */
+export function buildHotspotIndex(hotspots, { bucketDeg = 0.05 } = {}) {
+  const map = new Map()
+  for (const h of hotspots || []) {
+    if (!Number.isFinite(h?.lat) || !Number.isFinite(h?.lng)) continue
+    const k = `${Math.floor(h.lat / bucketDeg)}_${Math.floor(h.lng / bucketDeg)}`
+    if (!map.has(k)) map.set(k, [])
+    map.get(k).push(h)
+  }
+  return { map, bucketDeg }
+}
+
+/** 在分桶索引里找 ≤maxKm 的最近点（只扫邻近桶，避免 O(n) 全量） */
+export function indexedNearest(index, lat, lng, maxKm) {
+  const { map, bucketDeg } = index
+  const dLat = Math.ceil(maxKm / 111 / bucketDeg) + 1
+  const cos = Math.max(0.1, Math.cos((Number(lat) * Math.PI) / 180))
+  const dLng = Math.ceil(maxKm / (111 * cos) / bucketDeg) + 1
+  const la0 = Math.floor(lat / bucketDeg)
+  const ln0 = Math.floor(lng / bucketDeg)
+  let best = null
+  let bestD = Infinity
+  for (let i = la0 - dLat; i <= la0 + dLat; i++) {
+    for (let j = ln0 - dLng; j <= ln0 + dLng; j++) {
+      const bucket = map.get(`${i}_${j}`)
+      if (!bucket) continue
+      for (const h of bucket) {
+        const d = distanceKm(lat, lng, h.lat, h.lng)
+        if (d <= maxKm && d < bestD) {
+          best = h
+          bestD = d
+        }
+      }
+    }
+  }
+  return best ? { ...best, distanceKm: Math.round(bestD * 1000) / 1000 } : null
+}
+
+export function applyEbirdNames(hotspots, ebirdHotspots, { maxKm = 3 } = {}) {
+  // 按国家预分组 + 分桶索引：只与同国邻近热点比较（全量几十万点时 O(n) 两两会卡死）
+  const byCountry = new Map()
+  for (const e of ebirdHotspots || []) {
+    if (!e.country) continue
+    if (!byCountry.has(e.country)) byCountry.set(e.country, [])
+    byCountry.get(e.country).push(e)
+  }
+  const idxCache = new Map()
+  const idxFor = (cc) => {
+    if (!idxCache.has(cc)) {
+      idxCache.set(cc, buildHotspotIndex(byCountry.get(cc) || [], { bucketDeg: Math.max(0.01, maxKm / 111) }))
+    }
+    return idxCache.get(cc)
+  }
+  return (hotspots || []).map((h) => {
+    if (h.name) return h
+    if (!byCountry.has(h.country)) return h
+    const near = indexedNearest(idxFor(h.country), h.lat, h.lng, maxKm)
+    if (!near) return h
+    return {
+      ...h,
+      name: near.name,
+      subnational1: h.subnational1 ?? near.subnational1 ?? undefined,
+      ebirdId: near.id,
+      ebirdUrl: near.sourceUrl,
+      sources: [...new Set([...(h.sources || []), 'ebird'])].sort(),
+    }
+  })
 }

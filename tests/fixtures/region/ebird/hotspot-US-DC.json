@@ -1,0 +1,38 @@
+[
+  {
+    "locId": "L609925",
+    "locName": "Alexandria Waterfront (DC waters)",
+    "countryCode": "US",
+    "subnational1Code": "US-DC",
+    "subnational2Code": "US-DC-001",
+    "lat": 38.8070755,
+    "lng": -77.0326996,
+    "latestObsDt": "2026-08-09 13:45",
+    "numSpeciesAllTime": 170,
+    "numChecklistsAllTime": 593
+  },
+  {
+    "locId": "L451233",
+    "locName": "Anacostia Park",
+    "countryCode": "US",
+    "subnational1Code": "US-DC",
+    "subnational2Code": "US-DC-001",
+    "lat": 38.87179,
+    "lng": -76.9848474,
+    "latestObsDt": "2026-09-27 17:38",
+    "numSpeciesAllTime": 193,
+    "numChecklistsAllTime": 1082
+  },
+  {
+    "locId": "L30332398",
+    "locName": "Anacostia Park West - Poplar Point",
+    "countryCode": "US",
+    "subnational1Code": "US-DC",
+    "subnational2Code": "US-DC-001",
+    "lat": 38.8690585,
+    "lng": -77.0017581,
+    "latestObsDt": "2026-09-24 07:48",
+    "numSpeciesAllTime": 134,
+    "numChecklistsAllTime": 215
+  }
+]

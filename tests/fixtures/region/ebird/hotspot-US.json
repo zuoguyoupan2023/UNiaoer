@@ -1,0 +1,26 @@
+[
+  {
+    "locId": "L0000001",
+    "locName": "Los Angeles River (mock)",
+    "countryCode": "US",
+    "subnational1Code": "US-CA",
+    "subnational2Code": "US-CA-037",
+    "lat": 34.06,
+    "lng": -118.24,
+    "latestObsDt": "2026-09-01 08:00",
+    "numSpeciesAllTime": 210,
+    "numChecklistsAllTime": 900
+  },
+  {
+    "locId": "L0000002",
+    "locName": "Seattle Waterfront (mock)",
+    "countryCode": "US",
+    "subnational1Code": "US-WA",
+    "subnational2Code": "US-WA-033",
+    "lat": 47.605,
+    "lng": -122.34,
+    "latestObsDt": "2026-08-20 07:30",
+    "numSpeciesAllTime": 180,
+    "numChecklistsAllTime": 700
+  }
+]

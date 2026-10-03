@@ -7,18 +7,30 @@
  * 名称含多语言变体，以换行 `\n` 或 `!` 分隔，括号/方括号为别名，已在本模块统一展开。
  */
 
-/** 归一化：去变音符、小写、非字母数字折叠为空格 */
+/**
+ * 归一化：去变音符、**折叠不可分解的拉丁变体字母**（đ/ø/ł/ð/æ/þ 等，NFD 无法拆）、
+ * 小写、非字母数字折叠为空格。越南 `Đồng Nai` 的 `Đ` 即此类（否则会变成 `ong nai`）。
+ */
 export function canonName(s) {
   return String(s || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[øØ]/g, 'o')
+    .replace(/[łŁ]/g, 'l')
+    .replace(/[ðÐ]/g, 'd')
+    .replace(/[æÆ]/g, 'ae')
+    .replace(/[þÞ]/g, 'th')
+    .replace(/[ß]/g, 'ss')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
     .replace(/\s+/g, ' ')
 }
 
-const SUFFIX = /\b(state|province|prefecture|territory|region|county|district|city|of|the)\b/g
+// 行政后缀/连接词：多语种（含西语 comunidad/foral/principado、越南 thanh pho、中文 sheng、英语 prov）
+const SUFFIX =
+  /\b(state|province|prov|prefecture|territory|region|county|district|city|comunidad|foral|autonoma|principado|ciudad|thanh|pho|sheng|of|the|de|del|la|el)\b/g
 
 /**
  * 一个名称（ISO 名或 GBIF 自由文本）→ 可能的匹配键集合。
@@ -76,6 +88,19 @@ export const NAME_ALIASES = {
   szechwan: 'CN-51', szechuan: 'CN-51', hopei: 'CN-13', shansi: 'CN-14',
   shensi: 'CN-61', sinkiang: 'CN-65', 'heilongjiang prov': 'CN-23',
   tibet: 'CN-54', xizang: 'CN-54', hongkong: 'CN-91', macau: 'CN-92', taiwan: 'CN-71',
+  // 中国历史拼写补充（GBIF stateProvince 实测，2026-10-03）
+  kiangsu: 'CN-32', shantung: 'CN-37', chekiang: 'CN-33', fukien: 'CN-35',
+  heilungkiang: 'CN-23', kirin: 'CN-22', kweichow: 'CN-52',
+  xinjiang: 'CN-65', 'xinjiang uygur': 'CN-65', ningxia: 'CN-64', 'ningxia hui': 'CN-64',
+  // 西班牙：加泰语/英语变体（ISO 数据集用 Catalunya，GBIF 常用 Cataluña/Catalonia）
+  cataluna: 'ES-CT', catalonia: 'ES-CT', 'illes baleares': 'ES-IB',
+  // 荷兰：英语/旧拼写（数据集 Fryslân/Zuid-Holland）
+  friesland: 'NL-FR', frisia: 'NL-FR', drente: 'NL-DR',
+  'south holland': 'NL-ZH', 'north holland': 'NL-NH', 'north brabant': 'NL-NB',
+  // 印度：旧名/拼写/缩写（数据集 Odisha/Delhi/Andaman and Nicobar Islands；Ladakh 数据集暂无，跳过不臆造）
+  'nct delhi': 'IN-DL', 'new delhi': 'IN-DL', orissa: 'IN-OR', bombay: 'IN-MH',
+  maharastra: 'IN-MH', 'west benga': 'IN-WB',
+  'andaman and nicobar': 'IN-AN', 'andaman nicobar': 'IN-AN',
 }
 
 /** 英国的 ISO 一级区就是 4 个构成国；把「Scotland - 某郡」「England - 某郡」归属回去 */

@@ -12,6 +12,7 @@
  * CLI：npm run region:hotspots -- [--source gbif|xc] [--mock] [--countries US,CN]
  *        [--grid 0.1] [--min-records 20] [--min-species 5] [--min-observers 3]
  *        [--max-pages 10] [--years 2021,2026] [--concurrency 4] [--dir path] [--refresh] [--out path]
+ *        [--ebird-names] [--ebird-max-km 3]   # 用 eBird 热点给无名网格点就近命名（先跑 region:ebird）
  *  - --mock：gbif 读 tests/fixtures/region/gbif-hotspots/<CC>.json；xc 读 tests/fixtures/region/xc/
  *    默认输出 data-cache/region/out/hotspots.mock.json（绝不覆盖正式文件）
  *  - 正式输出 public/data/hotspots.json
@@ -22,8 +23,10 @@ import { fileURLToPath } from 'node:url'
 import { createClient } from '../lib/http.mjs'
 import { loadEnv, mapPool, parseArgs, slug } from '../lib/util.mjs'
 import { occurrencePoints } from './adapters/gbif.mjs'
-import { aggregateHotspots } from './hotspots-lib.mjs'
+import { hotspotRecords } from './adapters/ebird.mjs'
+import { aggregateHotspots, applyEbirdNames } from './hotspots-lib.mjs'
 import {
+  EBIRD_SOURCE,
   GBIF_AVES_TAXON_KEY,
   GBIF_SOURCE,
   HOTSPOT_DEFAULTS,
@@ -250,30 +253,63 @@ async function gatherXc() {
   return records
 }
 
+/** eBird 热点名录（本地缓存/夹具）→ 给无名网格点就近命名（021 M4 腿 A） */
+async function loadEbirdHotspots(countryList = null) {
+  const dir = MOCK
+    ? path.join(ROOT, 'tests/fixtures/region/ebird')
+    : path.join(ROOT, 'data-cache/region/ebird')
+  const files = (await fs.readdir(dir).catch(() => [])).filter((f) => /^hotspot-.*\.json$/.test(f))
+  const out = []
+  for (const f of files) {
+    const cc = f.slice('hotspot-'.length, -'.json'.length)
+    if (countryList && !countryList.includes(cc)) continue
+    try {
+      // 逐个 push：热点可达十几万条，展开进 push(...arr) 会超参数上限被静默吞掉
+      for (const r of hotspotRecords(await readJson(path.join(dir, f)))) out.push(r)
+    } catch (e) {
+      console.error(`region-hotspots: eBird 文件读取失败，跳过 ${f}：${e.message}`)
+    }
+  }
+  return out
+}
+
 const raw = SOURCE === 'xc' ? await gatherXc() : await gatherGbif()
 const allRecords = normalize(raw)
-const hotspots = aggregateHotspots(allRecords, {
+let hotspots = aggregateHotspots(allRecords, {
   grid: GRID,
   minRecords: MIN_RECORDS,
   minSpecies: MIN_SPECIES,
   minObservers: MIN_OBSERVERS,
 })
 
+const EBIRD_NAMES = !!args['ebird-names']
+const EBIRD_MAX_KM = num(args['ebird-max-km'], 3)
+let ebirdNamed = 0
+if (EBIRD_NAMES) {
+  const ebirdSpots = await loadEbirdHotspots()
+  hotspots = applyEbirdNames(hotspots, ebirdSpots, { maxKm: EBIRD_MAX_KM })
+  ebirdNamed = hotspots.filter((h) => h.ebirdId).length
+  console.log(`region-hotspots: eBird 命名 ${ebirdNamed} 个网格点（≤${EBIRD_MAX_KM}km，名录 ${ebirdSpots.length} 个）`)
+}
+
 const srcObj = SOURCE === 'xc' ? XC_SOURCE : GBIF_SOURCE
+const sources = ebirdNamed > 0 ? [srcObj, EBIRD_SOURCE] : [srcObj]
+const method =
+  (SOURCE === 'xc'
+    ? `Xeno-canto 录音坐标（data-cache/xc，含 lat/lon/loc/date/rec）；${GRID}° 网格聚合，` +
+      `同 observer 同日同格去重；阈值 recordCount≥${MIN_RECORDS} 且 speciesCount≥${MIN_SPECIES} 且 observerCount≥${MIN_OBSERVERS}`
+    : `GBIF occurrence/search（class Aves，带坐标，近 ${YEARS}，按国家分页 ≤${MAX_PAGES} 页/国，` +
+      `pageSize=${PAGE_SIZE}）抽样；${GRID}° 网格聚合，同 observer 同日同格去重；` +
+      `阈值 recordCount≥${MIN_RECORDS} 且 speciesCount≥${MIN_SPECIES} 且 observerCount≥${MIN_OBSERVERS}`) +
+  (ebirdNamed ? `；其中 ${ebirdNamed} 个点由 eBird 热点就近（≤${EBIRD_MAX_KM}km）命名` : '')
 const out = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  method:
-    SOURCE === 'xc'
-      ? `Xeno-canto 录音坐标（data-cache/xc，含 lat/lon/loc/date/rec）；${GRID}° 网格聚合，` +
-        `同 observer 同日同格去重；阈值 recordCount≥${MIN_RECORDS} 且 speciesCount≥${MIN_SPECIES} 且 observerCount≥${MIN_OBSERVERS}`
-      : `GBIF occurrence/search（class Aves，带坐标，近 ${YEARS}，按国家分页 ≤${MAX_PAGES} 页/国，` +
-        `pageSize=${PAGE_SIZE}）抽样；${GRID}° 网格聚合，同 observer 同日同格去重；` +
-        `阈值 recordCount≥${MIN_RECORDS} 且 speciesCount≥${MIN_SPECIES} 且 observerCount≥${MIN_OBSERVERS}`,
+  method,
   source: SOURCE,
   grid: GRID,
   thresholds: { minRecords: MIN_RECORDS, minSpecies: MIN_SPECIES, minObservers: MIN_OBSERVERS },
-  sources: [srcObj],
+  sources,
   countries: [...new Set(hotspots.map((h) => h.country))].sort(),
   hotspotCount: hotspots.length,
   hotspots,
