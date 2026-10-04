@@ -91,7 +91,10 @@ try {
     for (const s of manifest.species) {
       const hit = byId.get(s.id)
       if (hit) s.taxonKey = hit.taxonKey
-      s.playable = true
+      // D-023-3(拆维度方案):构建期静态基线;许可过滤仍由前端 licenseGuard 运行时处理
+      s.playableImage = (s.images ? s.images.length : 0) >= 1
+      s.playableAudio = (s.audios ? s.audios.length : 0) >= 1
+      s.playable = true // bank 1299 均有素材(≥1 图),playable=图或音可用 → 全 true
     }
     await fs.writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
     manifestPatched = true

@@ -98,12 +98,21 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
   const seenIds = new Set()
   let missOriginal = 0
   let missSourceId = 0
+  let badPlayable = 0
   for (const sp of manifest.species) {
     if (!sp.id || !sp.nameZh || !sp.nameSci || !sp.family) {
       fail(`物种缺少基础字段：${sp.id || sp.nameZh || JSON.stringify(sp).slice(0, 60)}`)
     }
     if (seenIds.has(sp.id)) fail(`物种 id 重复：${sp.id}`)
     seenIds.add(sp.id)
+
+    // 023 P2(D-023-3 拆维度):playable* 静态基线与素材计数一致(playable=图或音可用)
+    const pi = (sp.images ? sp.images.length : 0) >= 1
+    const pa = (sp.audios ? sp.audios.length : 0) >= 1
+    if (sp.playableImage !== undefined && (sp.playableImage !== pi || sp.playableAudio !== pa || sp.playable !== (pi || pa))) {
+      badPlayable++
+      if (badPlayable <= 5) fail(`playable* 与素材不一致：${sp.id}(image ${sp.playableImage}/${pi} audio ${sp.playableAudio}/${pa})`)
+    }
 
     // 答疑专栏说明（011 §9）：出现时四字段（中英标题+正文）必须为非空字符串
     if (sp.notes) {
@@ -143,6 +152,9 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
   }
   if (missSourceId) {
     warn.push(`有 ${missSourceId} 个素材缺少 sourceId（覆盖表/无 id 源，可接受但建议补）`)
+  }
+  if (badPlayable > 5) {
+    fail(`playable* 与素材不一致共 ${badPlayable} 处（仅列前 5）`)
   }
 }
 

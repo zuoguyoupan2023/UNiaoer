@@ -63,6 +63,7 @@ const OPT = {
   xcKey: args['xc-key'] || process.env.XC_API_KEY || '',
   publicBase: (args['public-base'] || process.env.R2_PUBLIC_BASE || '').replace(/\/$/, ''),
   taxa: !!args.taxa, // 以 data/taxa.json 为物种清单（M1+）
+  global: !!args.global, // 023 P2:全球增量采集(物种来自 species-index.json,台账 data/manifest-global.json,不碰主 manifest)
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
   out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
@@ -126,6 +127,7 @@ function stub(sp) {
   return {
     id: sp.id || slug(sp.nameSci),
     taxonId: sp.taxonId ?? null,
+    taxonKey: sp.taxonKey ?? null,
     nameZh: sp.nameZh,
     nameSci: sp.nameSci,
     nameEn: sp.nameEn || '',
@@ -195,9 +197,37 @@ async function main() {
   }
   AVIF_ENCODER = await detectAvifEncoder()
 
-  const source = OPT.taxa ? 'data/taxa.json' : 'data/species.json'
-  const raw = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
-  const species = Array.isArray(raw) ? raw : raw.species || []
+  const source = OPT.global ? 'public/data/species-index.json' : OPT.taxa ? 'data/taxa.json' : 'data/species.json'
+  let species
+  if (OPT.global) {
+    // 023 P2:待采池 = 骨架 − bank 已收录(id=slug(学名));优先级代理排序:有中文名 → 有 eBird 码 → 学名字母序
+    const index = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
+    const bankManifest = JSON.parse(await fs.readFile(path.join(PUBLIC_DATA, 'manifest.json'), 'utf8'))
+    const bankIds = new Set((bankManifest.species || []).map((s) => s.id))
+    const pool = index.species
+      .filter((e) => !bankIds.has(slug(e.nameSci)))
+      .sort(
+        (a, b) =>
+          Number(!!b.nameZh) - Number(!!a.nameZh) ||
+          Number(!!b.ebirdCode) - Number(!!a.ebirdCode) ||
+          a.nameSci.localeCompare(b.nameSci),
+      )
+    species = pool.map((e) => ({
+      id: slug(e.nameSci),
+      nameZh: e.nameZh || '',
+      nameEn: e.nameEn || '',
+      nameSci: e.nameSci,
+      family: e.family || '',
+      taxonId: e.inatTaxonId ?? null,
+      taxonKey: e.taxonKey,
+      commonness: 2,
+    }))
+    if (!OPT.out) OPT.out = 'data/manifest-global.json' // 全球台账:绝不覆盖主 manifest
+    console.log(`\n🌐 全球增量池:${species.length} 种(骨架 ${index.species.length} − bank ${bankIds.size})`)
+  } else {
+    const raw = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
+    species = Array.isArray(raw) ? raw : raw.species || []
+  }
   OVERRIDES = await loadOverrides()
   NOTES = await loadSpeciesNotes(ROOT)
   DIST_BY_TAXON = await loadDistribution(ROOT)
@@ -217,9 +247,19 @@ async function main() {
     const prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
     list = species.filter((sp) => needsRepair(prevById.get(sp.id)))
     console.log(`\n🔧 定向修复：${fromRel} → 待修 ${list.length} 个物种`)
+  } else if (OPT.global) {
+    // 023 P2:增量台账——已完成的种跳过(断点续跑),结果合并回台账
+    const fromAbs = path.resolve(ROOT, OPT.out)
+    prevManifest = JSON.parse(await fs.readFile(fromAbs, 'utf8').catch(() => null))
+    if (prevManifest) {
+      const prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
+      const pending = list.filter((sp) => needsRepair(prevById.get(sp.id)))
+      console.log(`\n🌐 全球台账:${(prevManifest.species || []).length} 种已完成,本次待采 ${pending.length}`)
+      list = pending
+    }
   }
 
-  console.log(`\n🐦 UNiaoer 题库构建`)
+  console.log(`\n🐦 UNiaoer 题库构建${OPT.global ? '（🌐 全球增量模式）' : ''}`)
   console.log(`   清单: ${source}  物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
   console.log(`   每物种: 图≤${OPT.per} 音≤${OPT.per}${OPT.taxa ? '（taxa 模式：default_photo 优先）' : ''}  覆盖表: ${Object.keys(OVERRIDES).length} 条`)
   console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : '（未提供 XC_API_KEY，仅 iNat）'}`)
@@ -289,6 +329,12 @@ async function main() {
 
   const withImage = outputSpecies.filter((r) => r.image).length
   const withAudio = outputSpecies.filter((r) => r.audio).length
+  // 023 P2(D-023-3 拆维度方案):playable* 为构建期静态基线,许可过滤仍由前端 licenseGuard 运行时处理
+  for (const r of outputSpecies) {
+    r.playableImage = (r.images ? r.images.length : 0) >= 1
+    r.playableAudio = (r.audios ? r.audios.length : 0) >= 1
+    r.playable = r.playableImage || r.playableAudio
+  }
   const manifest = {
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
