@@ -43,6 +43,9 @@ export interface BankSpecies {
   nameEn?: string
   /** iNat taxon id（稳定主键，manifest v2 起） */
   taxonId?: number
+  /** AviList 稳定概念键（AvibaseID，023 P0 只增字段）；playable=素材可玩的构建期基线 */
+  taxonKey?: string
+  playable?: boolean
   family: string
   commonness: number
   /** 榜单排名 / 是否中国榜（manifest v2 起） */

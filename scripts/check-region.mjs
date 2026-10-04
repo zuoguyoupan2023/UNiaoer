@@ -10,6 +10,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from './lib/util.mjs'
 import { CN_PROVINCES, CN_SENSITIVE } from './region/cn-provinces.mjs'
+import { COUNTRY_DENY } from './region/config.mjs'
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const args = parseArgs(process.argv.slice(2))
@@ -33,9 +34,9 @@ function findGeo(node, at = '$', hits = []) {
   return hits
 }
 
-/** 顶层通用校验 */
-function checkCommon(name, raw, data) {
-  check(raw.length < MAX_BYTES, `${name}: 体积超预算（021 §2.3 上限 2MB）：${Math.round(raw.length / 1024)}KB`)
+/** 顶层通用校验(budget:体积上限,默认 2MB;species-distribution 3MB,见 025 §5) */
+function checkCommon(name, raw, data, budget = MAX_BYTES) {
+  check(raw.length < budget, `${name}: 体积超预算（021 §2.3 上限 ${Math.round(budget / 1024 / 1024)}MB）：${Math.round(raw.length / 1024)}KB`)
   check(data.schemaVersion === 1, `${name}: schemaVersion 必须为 1，得到 ${data.schemaVersion}`)
   check(typeof data.generatedAt === 'string' && data.generatedAt, `${name}: generatedAt 缺失`)
   check(typeof data.method === 'string' && data.method, `${name}: method（口径说明）缺失`)
@@ -152,13 +153,67 @@ function checkHotspots(name, data) {
   }
 }
 
+/** species-distribution.json(025 M1,全球区系按国倒排;短码=AvibaseID 去 avibase- 前缀) */
+function checkDistributionGlobal(name, data, indexCodes) {
+  check(data.byCountry && typeof data.byCountry === 'object', `${name}: byCountry 缺失`)
+  if (!indexCodes) {
+    errors.push(`${name}: 无法加载 species-index.json 做短码闭环校验(先跑 npm run species-index)`)
+    return
+  }
+  let pairs = 0
+  for (const [cc, codes] of Object.entries(data.byCountry || {})) {
+    if (!/^[A-Z]{2}$/.test(cc)) {
+      errors.push(`${name}: 非法国家码键 ${cc}`)
+      continue
+    }
+    if (COUNTRY_DENY.has(cc)) {
+      errors.push(`${name}: 排除码 ${cc}(ZZ/XK/XZ)不得出现在产物(铁律 6 / 非国家码)`)
+      continue
+    }
+    if (!Array.isArray(codes) || !codes.length) {
+      errors.push(`${name}: ${cc} 必须是非空短码数组`)
+      continue
+    }
+    let prev = ''
+    for (const code of codes) {
+      if (!/^[A-Z0-9]{6,10}$/.test(code)) {
+        errors.push(`${name}: ${cc} 含非法短码 ${code}`)
+        break
+      }
+      if (!indexCodes.has(code)) errors.push(`${name}: ${cc} 短码 ${code} 不在 species-index(闭环失败)`)
+      if (code === prev) errors.push(`${name}: ${cc} 短码重复 ${code}`)
+      if (code < prev) errors.push(`${name}: ${cc} 短码未按升序排序(产物须确定性)`)
+      prev = code
+      pairs++
+    }
+  }
+  check(Number.isInteger(data.counts?.countries) && data.counts.countries === Object.keys(data.byCountry || {}).length, `${name}: counts.countries 与 byCountry 不一致`)
+  check(Number.isInteger(data.counts?.pairs) && data.counts.pairs === pairs, `${name}: counts.pairs(${data.counts?.pairs})与实际(${pairs})不一致`)
+  const gbif = (data.sources || []).find((s) => s.key === 'gbif')
+  check(!!gbif, `${name}: sources 缺 gbif 条目(署名义务)`)
+  if (data.counts?.unmatchedNames != null) {
+    check(Number.isInteger(data.counts.unmatchedNames) && data.counts.unmatchedNames >= 0, `${name}: counts.unmatchedNames 非法`)
+  }
+}
+
 const files = args.file
   ? [path.resolve(ROOT, args.file)]
-  : ['public/data/seasonality.json', 'public/data/region-provinces.json', 'public/data/hotspots.json'].map(
-      (p) => path.join(ROOT, p),
-    )
+  : [
+      'public/data/seasonality.json',
+      'public/data/region-provinces.json',
+      'public/data/hotspots.json',
+      'public/data/species-distribution.json',
+    ].map((p) => path.join(ROOT, p))
 
 const present = []
+// 025 M1:species-distribution 闭环校验需要骨架短码全集(缺骨架时报错,由 checkDistributionGlobal 呈现)
+let indexCodes = null
+try {
+  const index = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
+  indexCodes = new Set(index.species.map((e) => String(e.taxonKey || '').replace(/^avibase-/, '')))
+} catch {
+  indexCodes = null
+}
 for (const file of files) {
   const raw = await fs.readFile(file, 'utf8').catch(() => null)
   if (raw === null) continue
@@ -171,10 +226,11 @@ for (const file of files) {
     errors.push(`${name}: 不是合法 JSON`)
     continue
   }
-  checkCommon(name, raw, data)
+  checkCommon(name, raw, data, /species-distribution/.test(name) ? 3 * 1024 * 1024 : MAX_BYTES)
   if (data.bySpecies && data.byCountry) checkProvinces(name, data)
   else if (Array.isArray(data.hotspots)) checkHotspots(name, data)
   else if (data.bySpecies) checkSeasonality(name, data)
+  else if (data.byCountry && data.counts?.pairs != null) checkDistributionGlobal(name, data, indexCodes)
   else errors.push(`${name}: 无法识别的产物形状`)
 }
 

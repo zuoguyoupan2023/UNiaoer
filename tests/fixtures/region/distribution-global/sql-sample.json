@@ -1,0 +1,11 @@
+{
+  "note": "025 M1 build-distribution-global --mock 夹具:GBIF SQL 国家矩阵行对象(真实下载为同名形状)。含亚种/未收录学名/非法国家码等边界行。",
+  "rows": [
+    { "scientificname": "Pycnonotus sinensis (Gmelin, 1789)", "countrycode": "CN", "n": 10 },
+    { "scientificname": "Pycnonotus sinensis hainanus", "countrycode": "CN", "n": 2 },
+    { "scientificname": "Pycnonotus sinensis", "countrycode": "JP", "n": 1 },
+    { "scientificname": "Corvus corone", "countrycode": "DE", "n": 5 },
+    { "scientificname": "Nonsense weirdus", "countrycode": "FR", "n": 1 },
+    { "scientificname": "Corvus corone", "countrycode": "XX1", "n": 2 }
+  ]
+}

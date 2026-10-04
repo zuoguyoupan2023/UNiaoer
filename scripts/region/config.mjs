@@ -91,6 +91,14 @@ export const GBIF_SQL_SOURCE = {
   attribution: 'GBIF — https://www.gbif.org/ (occurrence records via SQL Download, CC0/CC-BY/CC-BY-NC)',
 }
 
+/**
+ * 025 M1:全球国家矩阵的排除码(出现即丢弃并计数,不臆造归属)。
+ *  - ZZ:GBIF「未知/不适用」桶,非国家
+ *  - XK:科索沃(部分承认地区)——按 AGENTS 铁律 6 不作为独立国家呈现
+ *  - XZ:GBIF 非国家码(非 ISO 3166-1)
+ */
+export const COUNTRY_DENY = new Set(['ZZ', 'XK', 'XZ'])
+
 /** 021 M3：《中国鸟类的生活史和生态学特征数据集》（seasonality 权威居留型 range 层，1445 种） */
 export const CN_AUTHORITY_SOURCE = {
   key: 'cn-authority',

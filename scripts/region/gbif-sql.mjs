@@ -40,7 +40,14 @@ async function api(url, opts = {}) {
       const body = await res.text().catch(() => '')
       throw new Error(`HTTP ${res.status} ${url.split('?')[0]}${body ? `: ${body.slice(0, 300)}` : ''}`)
     }
-    return opts.raw ? res : res.json()
+    // 提交接口偶发返回裸文本 key（非 JSON）——尝试 JSON，失败回退原文（2026-10-03 实测 0009710）
+    if (opts.raw) return res
+    const text = await res.text()
+    try {
+      return JSON.parse(text)
+    } catch {
+      return text.trim().replace(/^"|"$/g, '')
+    }
   } finally {
     clearTimeout(timer)
   }

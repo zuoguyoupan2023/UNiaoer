@@ -90,6 +90,36 @@ export async function stubApp(page: Page) {
       },
     }),
   )
+  // 025 M2/M3:全球骨架与区系夹具(1 个 bank 种回桥 + 1 个全球未收录种)
+  await page.route('**/data/species-index.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        checklistVersion: 'v2025b',
+        citation: 'AviList Core Team. 2026. https://doi.org/10.2173/avilist.v2025b',
+        sources: [
+          { key: 'avilist', name: 'AviList v2025b', url: 'https://www.avilist.org/', license: 'CC BY 4.0', attribution: 'AviList Core Team', citation: 'AviList Core Team. 2026.' },
+        ],
+        counts: { species: 2 },
+        species: [
+          { taxonKey: 'avibase-TEST0001', nameSci: 'Testus birdus 1', order: 'Testiformes', family: 'Testidae', nameEn: 'Test Bird 1', nameZh: '测试鸟1', ebirdCode: 'tesbir1', backboneTaxonId: 900001, inatTaxonId: 700001 },
+          { taxonKey: 'avibase-GLOB0001', nameSci: 'Globus testus', order: 'Testiformes', family: 'Testidae', nameEn: 'Global Testbird', nameZh: '全球测试鸟', ebirdCode: 'globtes1', backboneTaxonId: 900002 },
+        ],
+      },
+    }),
+  )
+  await page.route('**/data/species-distribution.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        method: 'e2e fixture',
+        sources: [{ key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' }],
+        counts: { countries: 2, pairs: 3, unmatchedNames: 0, badCountry: 0, deniedCountry: 0 },
+        byCountry: { CN: ['GLOB0001', 'TEST0001'], BR: ['GLOB0001'] },
+      },
+    }),
+  )
   // 环境鸟鸣目录（外部站）：404 → 应用按「无音轨」降级，不播放
   await page.route('**whitenoise.earthtrip.online/**', (r) => r.fulfill({ status: 404, body: '' }))
   await page.route('**cdn.e2e.invalid/**', fulfillMedia)

@@ -29,6 +29,7 @@
     "region:hotspots": "node scripts/region/build-hotspots.mjs",
     "region:hotspots-sql": "node scripts/region/build-hotspots-sql.mjs",
     "region:hotspots-gbif": "node scripts/region/build-hotspots-gbif.mjs",
+    "region:distribution": "node scripts/region/build-distribution-global.mjs",
     "region:subdiv": "node scripts/region/fetch-subdivisions.mjs",
     "region:gbif-sql": "node scripts/region/gbif-sql.mjs",
     "region:ebird": "node scripts/region/fetch-ebird.mjs",

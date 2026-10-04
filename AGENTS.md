@@ -45,6 +45,7 @@
 | 构建季节层 / 省级层（`-- --mock` 全离线；产 `public/data/*.json`） | `npm run region:build` / `npm run region:provinces` |
 | 构建观鸟点（XC 源；`-- --mock` 离线） | `npm run region:hotspots` |
 | 构建观鸟点（GBIF SQL 1° 源 + eBird 命名；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names` |
+| 构建全球区系层（GBIF SQL 国家矩阵 → `species-distribution.json`；025 M1） | `npm run region:distribution`（`-- --mock --out …` 离线） |
 | 抓 eBird 热点/区划到缓存（需 `EBIRD_API_KEY`） | `npm run region:ebird` |
 | GBIF SQL 下载（提交/续传/列表；需 GBIF 账号） | `npm run region:gbif-sql -- --sql "..."` / `-- --key <key>` / `-- --list` |
 | 地区 SQL 对照校验（仅报告，不改产物） | `npm run region:verify-provinces` / `region:verify-seasonality` / `region:verify-hotspots` |

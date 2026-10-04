@@ -68,6 +68,8 @@ export function buildBank(count = 12): FixtureManifest {
       nameZh,
       nameEn: `Test Bird ${i + 1}`,
       nameSci: `Testus birdus ${i + 1}`,
+      // 025:骨架桥接字段(真实 manifest 只增字段;全球区系合并按此换算短码)
+      taxonKey: `avibase-TEST000${i + 1}`,
       family: '测试科',
       commonness: i < 8 ? 1 : 2,
       desc: '',

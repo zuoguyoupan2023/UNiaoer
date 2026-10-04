@@ -26,6 +26,14 @@ import {
   type HotspotTopSpecies,
 } from '@/core/hotspots'
 import { currentLocale } from '@/i18n'
+import {
+  entryDisplayName,
+  loadSpeciesDistribution,
+  loadSpeciesIndex,
+  shortCodeOf,
+  slugifySci,
+  type SpeciesIndex,
+} from '@/core/speciesIndex'
 
 const { t, locale } = useI18n()
 const bank = ref<Manifest | null>(null)
@@ -36,6 +44,11 @@ const hotspotsOpen = ref(false)
 const expandedHotspot = ref('')
 const failed = ref(false)
 const query = ref('')
+/** 025 M2:全球骨架与区系(懒加载,失败降级为 bank 视图) */
+const speciesIdx = ref<SpeciesIndex | null>(null)
+const globalByCountry = ref<Record<string, string[]> | null>(null)
+/** 网格分段渲染:单国种数可达上千,每次 200 + 显示更多 */
+const visibleCount = ref(200)
 /** 先亚洲、默认中国（017：先中国） */
 const continent = ref<Continent>('asia')
 const selected = ref('CN')
@@ -63,6 +76,9 @@ onMounted(async () => {
   } catch {
     failed.value = true
   }
+  // 025 M2:全球层非致命——失败则保持现状 bank 视图
+  void loadSpeciesIndex().then((idx) => (speciesIdx.value = idx))
+  void loadSpeciesDistribution().then((d) => (globalByCountry.value = d?.byCountry ?? null))
 })
 
 /** ISO 3166-1 alpha-2 → 本地化地区名（Intl.DisplayNames；港澳台走特别标注；不支持时回退代码） */
@@ -76,7 +92,30 @@ function countryName(code: string): string {
   }
 }
 
-const stats = computed(() => (bySpecies.value ? countryStats(bySpecies.value) : []))
+/** 025 M2:全球区系 ∪ bank distribution(合并到「短码 → 国家数组」,与 bySpecies 同构;
+ * countryStats/buildCountryIndex 原样可用)——骨架未加载则 null 降级 */
+const mergedBySpecies = computed<Record<string, string[]> | null>(() => {
+  const idx = speciesIdx.value
+  if (!idx) return null
+  const merged = new Map<string, Set<string>>() // shortCode → countries
+  for (const [cc, codes] of Object.entries(globalByCountry.value ?? {})) {
+    for (const code of codes) {
+      if (!merged.has(code)) merged.set(code, new Set())
+      merged.get(code)!.add(cc)
+    }
+  }
+  for (const s of bank.value?.species ?? []) {
+    if (!s.taxonKey) continue
+    const code = shortCodeOf(s.taxonKey)
+    if (!merged.has(code)) merged.set(code, new Set())
+    for (const cc of bySpecies.value?.[s.id] ?? []) merged.get(code)!.add(cc)
+  }
+  return Object.fromEntries([...merged.entries()].map(([code, set]) => [code, [...set].sort()]))
+})
+const stats = computed(() => {
+  const src = mergedBySpecies.value ?? bySpecies.value
+  return src ? countryStats(src) : []
+})
 const continents = computed(() => presentContinents(stats.value))
 const continentStats = computed(() => countriesInContinent(stats.value, continent.value))
 /** 名称排序用本地化 collator：zh-CN 按拼音，en 按字母（首字母） */
@@ -86,6 +125,8 @@ const filtered = computed(() => {
   if (sortMode.value === 'count') return list // countryStats 已按鸟种数降序
   return [...list].sort((a, b) => collator.value.compare(countryName(a.code), countryName(b.code)))
 })
+/** 合并索引(国家 → 短码)与 bank 索引(降级路径与省级过滤用) */
+const mergedIndex = computed(() => (mergedBySpecies.value ? buildCountryIndex(mergedBySpecies.value) : {}))
 const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
 const provinces = computed(() => {
   const list = provinceStats(provinceData.value, selected.value, locale.value)
@@ -98,15 +139,68 @@ const provinceName = computed(
 const provinceSet = computed(() =>
   province.value ? speciesInProvince(provinceData.value, selected.value, province.value) : null,
 )
-const species = computed<BankSpecies[]>(() =>
-  (index.value[selected.value] ?? [])
-    .filter((id) => !provinceSet.value || provinceSet.value.has(id))
+/** 统一网格条目:bank 物种(可玩,带头图)+ 全球骨架物种(未收录媒体,轻量详情) */
+interface GridItem {
+  slug: string
+  name: string
+  nameSci: string
+  playable: boolean
+  thumb: string | null
+  bankId: string | null
+}
+/** bank 物种按学名索引(骨架条目 ↔ bank 的桥;夹具 id 非 slug 形式也稳) */
+const bankBySci = computed<Map<string, BankSpecies>>(() => {
+  const m = new Map<string, BankSpecies>()
+  for (const s of bank.value?.species ?? []) if (s.nameSci) m.set(s.nameSci.toLowerCase(), s)
+  return m
+})
+const gridItems = computed<GridItem[]>(() => {
+  const idx = speciesIdx.value
+  const ps = provinceSet.value
+  if (idx) {
+    // bank 物种按 taxonKey 短码直查(骨架条目缺失也照常渲染;真实产物中 1299 全在骨架)
+    const codeOfSp = new Map<string, BankSpecies>()
+    for (const s of bank.value?.species ?? []) if (s.taxonKey) codeOfSp.set(shortCodeOf(s.taxonKey), s)
+    const items: GridItem[] = []
+    for (const code of mergedIndex.value[selected.value] ?? []) {
+      let sp: BankSpecies | null | undefined = codeOfSp.get(code)
+      const e = idx.byShortCode.get(code) ?? null
+      if (!sp && e) sp = bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
+      if (!e && !sp) continue
+      items.push({
+        slug: sp ? sp.id : slugifySci(e!.nameSci),
+        name: sp ? nameOf(sp) : entryDisplayName(e!, currentLocale()),
+        nameSci: sp?.nameSci ?? e!.nameSci,
+        playable: !!sp,
+        thumb: sp?.images?.[0]?.thumbUrl || sp?.images?.[0]?.url || null,
+        bankId: sp?.id ?? null,
+      })
+    }
+    // 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种
+    const list = ps ? items.filter((it) => it.bankId && ps.has(it.bankId)) : items
+    return [...list].sort((a, b) => collator.value.compare(a.name, b.name))
+  }
+  // 降级:bank-only(现行为)
+  return (index.value[selected.value] ?? [])
+    .filter((id) => !ps || ps.has(id))
     .map((id) => speciesById(id))
-    .filter((sp): sp is BankSpecies => !!sp),
-)
+    .filter((sp): sp is BankSpecies => !!sp)
+    .map((sp) => ({
+      slug: sp.id,
+      name: nameOf(sp),
+      nameSci: sp.nameSci,
+      playable: true,
+      thumb: sp.images?.[0]?.thumbUrl || sp.images?.[0]?.url || null,
+      bankId: sp.id,
+    }))
+})
+const visibleItems = computed(() => gridItems.value.slice(0, visibleCount.value))
+watch([selected, province], () => {
+  visibleCount.value = 200
+})
 const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
-const countInProvince = (sp: BankSpecies) =>
-  province.value ? provinceCount(provinceData.value, sp.id, selected.value, province.value) : 0
+const countInProvince = (id: string) =>
+  province.value ? provinceCount(provinceData.value, id, selected.value, province.value) : 0
 const provinceSources = computed(() =>
   (provinceData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
@@ -285,26 +379,32 @@ function pickProvince(code: string) {
           </p>
 
           <ul class="species-grid">
-            <li v-for="sp in species" :key="sp.id">
-              <RouterLink class="species-card" :to="`/species/${sp.id}`">
+            <li v-for="gi in visibleItems" :key="gi.slug">
+              <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
                 <img
-                  v-if="sp.images?.length"
+                  v-if="gi.thumb"
                   class="thumb"
-                  :src="sp.images[0]!.thumbUrl || sp.images[0]!.url"
+                  :src="gi.thumb"
                   alt=""
                   loading="lazy"
                   decoding="async"
                 />
                 <span class="sp-text">
-                  <span class="sp-name">{{ nameOf(sp) }}</span>
-                  <span class="sp-sci">{{ sp.nameSci }}</span>
-                  <span v-if="province" class="sp-count muted">
-                    {{ t('region.provinceRecords', { n: countInProvince(sp) }) }}
+                  <span class="sp-name">{{ gi.name }}</span>
+                  <span class="sp-sci">{{ gi.nameSci }}</span>
+                  <span v-if="province && gi.bankId" class="sp-count muted">
+                    {{ t('region.provinceRecords', { n: countInProvince(gi.bankId) }) }}
                   </span>
+                  <span v-else-if="!gi.playable" class="sp-badge">{{ t('region.notInBank') }}</span>
                 </span>
               </RouterLink>
             </li>
           </ul>
+          <div v-if="gridItems.length > visibleItems.length" class="grid-more">
+            <button class="btn btn-sm" type="button" @click="visibleCount += 200">
+              {{ t('region.showMore') }}
+            </button>
+          </div>
 
           <p v-if="provinces.length" class="prov-source muted">
             {{ t('region.provinceSource', { sources: provinceSources }) }}
@@ -598,6 +698,21 @@ function pickProvince(code: string) {
 }
 .sp-count {
   font-size: 0.68rem;
+}
+.sp-badge {
+  align-self: flex-start;
+  font-size: 0.62rem;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-light);
+}
+.not-in-bank .sp-name {
+  color: var(--text-light);
+}
+.grid-more {
+  margin-top: 12px;
+  text-align: center;
 }
 .prov-source {
   margin-top: 10px;

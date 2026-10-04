@@ -13,6 +13,13 @@ import {
 } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { loadSeasonality, seasonalityOf, type SeasonalityData } from '@/core/seasonality'
+import { REGION_LABEL_KEY } from '@/core/region'
+import {
+  loadSpeciesDistribution,
+  loadSpeciesIndex,
+  shortCodeOf,
+  type SpeciesIndexEntry,
+} from '@/core/speciesIndex'
 import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
@@ -52,6 +59,69 @@ const audios = computed<MediaAsset[]>(() => species.value?.audios ?? [])
 const hero = computed<MediaAsset | null>(() => images.value[0] ?? null)
 /** 全部素材 → 逐条署名（任何展示媒体的页面署名不可省） */
 const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
+
+/** 025 M4:轻量详情——bank 未命中的 slug 回退骨架(全球种无媒体,有页可看) */
+const liteEntry = ref<SpeciesIndexEntry | null>(null)
+const liteCountries = ref<string[]>([])
+const liteResolved = ref(false)
+
+async function resolveLite(id: string) {
+  liteResolved.value = false
+  liteEntry.value = null
+  liteCountries.value = []
+  if (!id) return
+  const idx = await loadSpeciesIndex()
+  const entry = idx?.bySlug.get(id) ?? null
+  liteEntry.value = entry
+  liteResolved.value = true
+  if (!entry) return
+  const dist = await loadSpeciesDistribution()
+  if (!dist) return
+  const code = shortCodeOf(entry.taxonKey)
+  const countries: string[] = []
+  for (const [cc, codes] of Object.entries(dist.byCountry)) {
+    if (codes.includes(code)) countries.push(cc)
+  }
+  liteCountries.value = countries
+}
+
+watch(
+  [() => route.params.speciesId, bank],
+  ([id]) => {
+    if (species.value) {
+      liteEntry.value = null
+      liteResolved.value = true
+      return
+    }
+    if (bank.value) void resolveLite(String(id ?? ''))
+  },
+  { immediate: true },
+)
+
+/** 国家码 → 本地化名(与 RegionView 同规则:Intl.DisplayNames + 港澳台特别标注) */
+function liteCountryName(code: string): string {
+  const key = REGION_LABEL_KEY[code]
+  if (key) return t(key)
+  try {
+    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+const liteName = computed(() =>
+  liteEntry.value ? (currentLocale().startsWith('zh') ? liteEntry.value.nameZh || liteEntry.value.nameEn || liteEntry.value.nameSci : liteEntry.value.nameEn || liteEntry.value.nameSci) : '',
+)
+const liteLinks = computed(() => {
+  const e = liteEntry.value
+  if (!e) return []
+  const links: { label: string; url: string }[] = []
+  if (e.backboneTaxonId) links.push({ label: t('species.lite.gbif'), url: `https://www.gbif.org/species/${e.backboneTaxonId}` })
+  if (e.taxonKey) links.push({ label: t('species.lite.avibase'), url: `https://avibase.bsc-eoc.org/species.jsp?avibaseid=${shortCodeOf(e.taxonKey)}` })
+  if (e.ebirdCode) links.push({ label: t('species.lite.ebird'), url: `https://ebird.org/species/${e.ebirdCode}` })
+  if (e.nameSci) links.push({ label: t('species.lite.xc'), url: `https://xeno-canto.org/species/${e.nameSci.toLowerCase().replace(/\s+/g, '-')}` })
+  if (e.inatTaxonId) links.push({ label: t('species.lite.inat'), url: `https://www.inaturalist.org/taxa/${e.inatTaxonId}` })
+  return links
+})
 </script>
 
 <template>
@@ -97,6 +167,35 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
       </section>
     </template>
 
+    <!-- 025 M4:轻量详情(bank 未命中 → 骨架;全球种无媒体,有页可看) -->
+    <template v-else-if="liteEntry">
+      <h2 class="name">
+        {{ liteName }}<span class="sci">{{ liteEntry.nameSci }}</span>
+      </h2>
+      <p v-if="liteEntry.extinct" class="lite-extinct">{{ t('species.lite.extinct') }}</p>
+      <p class="lite-meta muted">
+        {{ t('species.lite.order', { name: liteEntry.order }) }} ·
+        {{ t('species.lite.family', { name: liteEntry.family }) }}
+      </p>
+      <p class="lite-note muted">{{ t('species.lite.noMedia') }}</p>
+
+      <section v-if="liteCountries.length" class="lite-section">
+        <h3>{{ t('species.lite.countries', { n: liteCountries.length }) }}</h3>
+        <p class="lite-countries">
+          <span v-for="cc in liteCountries" :key="cc" class="lite-cc">{{ liteCountryName(cc) }}</span>
+        </p>
+      </section>
+
+      <section v-if="liteLinks.length" class="lite-section">
+        <h3>{{ t('species.lite.links') }}</h3>
+        <p class="lite-links">
+          <a v-for="l in liteLinks" :key="l.url" :href="l.url" target="_blank" rel="noopener noreferrer">
+            {{ l.label }}
+          </a>
+        </p>
+        <p class="lite-src muted">{{ t('species.lite.source') }}</p>
+      </section>
+    </template>
     <p v-else class="muted not-found">
       {{ t('faq.notFound') }}
       <RouterLink to="/region">{{ t('species.backToRegion') }}</RouterLink>
@@ -171,6 +270,51 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
   padding-top: 6px;
   border-top: none;
   text-align: left;
+}
+.lite-extinct {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid #c0392b;
+  border-radius: 999px;
+  color: #c0392b;
+  font-size: 0.72rem;
+}
+.lite-meta {
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+.lite-note {
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+.lite-section {
+  margin-top: 14px;
+}
+.lite-section h3 {
+  font-size: 0.86rem;
+  color: var(--primary-dark);
+}
+.lite-countries {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lite-cc {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+}
+.lite-links {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lite-src {
+  margin-top: 6px;
+  font-size: 0.68rem;
 }
 .not-found {
   margin-top: 8px;

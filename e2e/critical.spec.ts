@@ -224,4 +224,32 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.picker-body')).toBeHidden()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
   })
+
+  test('全球物种层（025）：未收录标记、轻量详情与 bank 回归', async ({ page }) => {
+    await page.goto('/region') // 默认亚洲 + 中国
+
+    // 全球未收录种:网格显示「未收录媒体」标记;bank 种仍带头图可玩
+    const globus = page.locator('.species-card', { hasText: 'Globus testus' })
+    await expect(globus).toBeVisible()
+    await expect(globus.locator('.sp-badge')).toHaveText('未收录媒体')
+    const bankCard = page.locator('.species-card', { hasText: '测试鸟1' })
+    await expect(bankCard.locator('img.thumb')).toBeVisible()
+
+    // 轻量详情:名称/目科/分布/外链(全球种有页可看)
+    await globus.click()
+    await expect(page.getByText('全球测试鸟')).toBeVisible()
+    await expect(page.getByText('目：Testiformes')).toBeVisible()
+    await expect(page.getByText(/记录分布/)).toBeVisible()
+    const links = page.locator('.lite-links')
+    await expect(links).toContainText('GBIF')
+    await expect(links).toContainText('Avibase')
+    await expect(links).toContainText('eBird')
+    await expect(page.locator('.lite-src')).toContainText('AviList v2025b')
+
+    // 省级选中时全球种不出现(省级层仅覆盖 bank 物种)
+    await page.goto('/region')
+    await page.locator('.country-list .prov-btn[data-prov="CN-44"]').click()
+    await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
+    await expect(page.getByText('Globus testus', { exact: true })).toBeHidden()
+  })
 })
