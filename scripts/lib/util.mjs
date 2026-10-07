@@ -39,8 +39,8 @@ export async function loadEnv(file = '.env') {
 
 const UA = 'UNiaoer-build/0.1 (open-source non-commercial bird quiz)'
 
-/** 带超时与重试的 JSON 请求 */
-export async function fetchJson(url, { retries = 3, timeout = 45000, headers = {} } = {}) {
+/** 带超时与重试的 JSON 请求（429 感知：尊重 Retry-After，指数长退避；023 P2 全量采集实测 iNat 会持续限流） */
+export async function fetchJson(url, { retries = 3, timeout = 45000, headers = {}, retryOn429 = true } = {}) {
   let lastErr
   for (let attempt = 0; attempt <= retries; attempt++) {
     const ctrl = new AbortController()
@@ -51,12 +51,33 @@ export async function fetchJson(url, { retries = 3, timeout = 45000, headers = {
         signal: ctrl.signal,
         headers: { 'User-Agent': UA, Accept: 'application/json', ...headers },
       })
-      if (res.status === 429) throw new Error('HTTP 429 (rate limited)')
+      if (res.status === 429) {
+        // 限流退避：优先服务端 Retry-After，否则指数（15s 起，封顶 150s）
+        const ra = Number(res.headers.get('retry-after'))
+        const hasRa = Number.isFinite(ra) && ra > 0
+        let host = '?'
+        try {
+          host = new URL(url).host
+        } catch {
+          /* 相对 URL 忽略 */
+        }
+        const wait = hasRa ? ra * 1000 : Math.min(150_000, 15_000 * 2 ** attempt)
+        // 429 诊断(2026-10-07):记录主机/尝试次数/服务端 Retry-After,定位限流来源
+        console.warn(
+          `      ↳ 429 ${host} (第 ${attempt + 1}/${retries + 1} 次尝试, Retry-After ${hasRa ? ra + 's' : '无'}, 退避 ${Math.round(wait / 1000)}s)`,
+        )
+        lastErr = new Error(`HTTP 429 ${host} (rate limited, backoff ${Math.round(wait / 1000)}s)`)
+        lastErr.wait = wait
+        lastErr.rateLimited = true
+        throw lastErr
+      }
       if (!res.ok) throw new Error('HTTP ' + res.status)
       return await res.json()
     } catch (e) {
       lastErr = e
-      if (attempt < retries) await sleep(1200 * (attempt + 1))
+      // retryOn429=false：429 立即上抛给调用方（由全局熔断/暂停处理，避免在封禁期内重试继续敲门）
+      if (e.rateLimited && !retryOn429) throw e
+      if (attempt < retries) await sleep(e.wait != null ? e.wait : 1200 * (attempt + 1))
     } finally {
       clearTimeout(timer)
     }

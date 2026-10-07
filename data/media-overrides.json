@@ -6,5 +6,20 @@
     "excludeUrls": ["https://…要从自动结果里剔除的 url"]
   },
   "_note": "覆盖项会排在同物种自动结果之前；许可仍需通过 licenseAllowed（ND 不转码）。",
-  "overrides": {}
+  "overrides": {
+    "hypocnemis-subflava": {
+      "_reason": "2026-10-08: 首选录音 14494（A/0:16/CC BY-NC-ND）XC 下载端点持续 500（三次重试均失败），改选同缓存下一条 A 级可下载记录 705478（0:27/CC BY-NC-SA）。",
+      "excludeUrls": ["https://xeno-canto.org/14494/download", "https://xeno-canto.org/14494"],
+      "audios": [
+        {
+          "url": "https://xeno-canto.org/705478/download",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Fernando Igor de Godoy",
+          "source": "Xeno-canto",
+          "sourceUrl": "https://xeno-canto.org/705478",
+          "sourceId": "705478"
+        }
+      ]
+    }
+  }
 }

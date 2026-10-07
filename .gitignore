@@ -68,3 +68,4 @@ __screenshots__/
 test-results/
 playwright-report/
 blob-report/
+/nohup.out

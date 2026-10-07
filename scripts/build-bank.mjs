@@ -9,7 +9,7 @@
  *
  * 环境变量：XC_API_KEY（也可写在 .env 中）
  */
-import { promises as fs } from 'node:fs'
+import { promises as fs, rmSync as fsRmSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -53,6 +53,7 @@ const PUBLIC_MEDIA = path.join(ROOT, 'public/media')
 const TMP = path.join(os.tmpdir(), 'uniaoer-bank')
 
 const args = parseArgs(process.argv.slice(2))
+let RATE429 = 0 // 本轮 429 计数(可见性;退避已内建)
 const OPT = {
   limit: args.limit ? Number(args.limit) : Infinity,
   policy: args.policy || 'relaxed',
@@ -64,6 +65,9 @@ const OPT = {
   publicBase: (args['public-base'] || process.env.R2_PUBLIC_BASE || '').replace(/\/$/, ''),
   taxa: !!args.taxa, // 以 data/taxa.json 为物种清单（M1+）
   global: !!args.global, // 023 P2:全球增量采集(物种来自 species-index.json,台账 data/manifest-global.json,不碰主 manifest)
+  slow: !!args.slow, // 假期模式:大幅放宽对外限速(429 高发期用)
+  inatGap: args['inat-gap'] ? Number(args['inat-gap']) : args.slow ? 5000 : 1050, // iNat 全局最小间隔 ms(--slow=5s:假期/429 高发期)
+  xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 1200, // XC 检索冷却下限 ms
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
   out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
@@ -97,9 +101,47 @@ let IUCN_SYNONYMS = null
 let XC_TAIL = Promise.resolve()
 function xcQueue(fn) {
   const result = XC_TAIL.then(fn, fn)
-  const coolDown = () => sleep(1200 + Math.random() * 1200)
+  const coolDown = () => sleep(OPT.xcGap + Math.random() * OPT.xcGap)
   XC_TAIL = result.then(coolDown, coolDown)
   return result
+}
+
+/**
+ * iNat 限速器：全局最小间隔(默认 1.05s;--slow 5s / --inat-gap 可调;官方建议 <1 req/s)。
+ * 2026-10-07 修复竞态：旧实现「先查 INAT_LAST 再 await 再更新」——每物种 photos+sounds 成对并发调用时
+ * 双双通过检查、同时放行，实际速率≈设计 2 倍（实测约 15-24 req/min，8 分钟打满 iNat 配额触发 429）。
+ * 现改为「闸门链内同步预约发车时刻」：并发调用在链内依次拿到互不重叠的 slot，再各自 sleep 到点发车；
+ * 请求仍可并行在途（预约只保证**发起时刻**间隔）。429 由 note429() 触发全局暂停，闸门会集体等待。
+ */
+let INAT_GATE = Promise.resolve() // 预约链（只串行化「预约+等待」，不阻塞请求在途）
+let INAT_NEXT = 0 // 下一个可发车时刻（epoch ms）
+let RATE_PAUSE_UNTIL = 0 // 429 熔断:全局暂停窗口(所有 worker 共享),避免在惩罚期内持续敲打
+function inatGet(url, opts = {}) {
+  const gate = INAT_GATE.then(async () => {
+    if (Date.now() < RATE_PAUSE_UNTIL) await sleep(RATE_PAUSE_UNTIL - Date.now())
+    const at = Math.max(Date.now(), INAT_NEXT)
+    INAT_NEXT = at + OPT.inatGap // 同步预约：并发调用各自错开
+    const wait = at - Date.now()
+    if (wait > 0) await sleep(wait)
+    // 等待期间可能被别的请求触发 429 熔断：醒来再核对一次，不在惩罚窗内发车
+    if (Date.now() < RATE_PAUSE_UNTIL) await sleep(RATE_PAUSE_UNTIL - Date.now())
+  })
+  INAT_GATE = gate.then(
+    () => {},
+    () => {},
+  )
+  // retryOn429:false —— 429 不在此处重试(否则重试会绕过闸门继续敲门),交给全局熔断
+  return gate.then(() => fetchJson(url, { retryOn429: false, ...opts }))
+}
+
+/** 429 观测点(buildSpecies 捕获处调用):触发全局熔断窗口 */
+function note429() {
+  RATE429++
+  const until = Date.now() + (OPT.slow ? 20 : 10) * 60_000
+  if (until > RATE_PAUSE_UNTIL) {
+    RATE_PAUSE_UNTIL = until
+    console.warn(`   🛑 连续 429:全局暂停至 ${new Date(until).toLocaleTimeString()}(iNat 限流窗口,之后自动继续)`)
+  }
 }
 
 async function loadIucnSynonyms() {
@@ -121,6 +163,13 @@ async function freeBytes() {
   } catch {
     return Infinity
   }
+}
+
+/** 原子写 JSON:tmp + rename,防并发写/中断产生半截文件(2026-10-06 台账损坏事故) */
+async function writeJsonAtomic(file, text) {
+  const tmp = `${file}.tmp-${process.pid}`
+  await fs.writeFile(tmp, text)
+  await fs.rename(tmp, file)
 }
 
 function stub(sp) {
@@ -175,6 +224,29 @@ async function loadOverrides() {
 
 async function main() {
   await loadEnv(path.join(ROOT, '.env'))
+  // 023 P2:单实例锁——双进程并发写台账曾致 JSON 损坏(2026-10-06);死 PID 的陈旧锁自动接管
+  const LOCK = path.join(ROOT, 'data-cache/bank-global.lock')
+  if (OPT.global) {
+    const locked = await fs
+      .readFile(LOCK, 'utf8')
+      .then((t) => {
+        const pid = Number(t.trim())
+        if (!Number.isFinite(pid) || pid === process.pid) return false
+        try {
+          process.kill(pid, 0)
+          return true
+        } catch {
+          return false
+        }
+      })
+      .catch(() => false)
+    if (locked) {
+      console.error(`❌ 已有 bank:global 实例在运行(锁 data-cache/bank-global.lock,PID 见文件内容)。先停旧进程再跑;若确认已停可删除锁文件。`)
+      process.exit(1)
+    }
+    await fs.writeFile(LOCK, String(process.pid))
+    process.on('exit', () => fsRmSync(LOCK, { force: true }))
+  }
   OPT.xcKey = OPT.xcKey || process.env.XC_API_KEY || ''
   // .env 在模块加载后才读取，这里补读并规范化 R2_PUBLIC_BASE
   OPT.publicBase = OPT.publicBase || (process.env.R2_PUBLIC_BASE || '').replace(/\/$/, '')
@@ -236,6 +308,12 @@ async function main() {
   // 定向修复：只挑有问题的物种，结果合并回旧 manifest（不破坏其余物种）
   let prevManifest = null
   let list = species.slice(0, OPT.limit)
+  // 023 P2:全球模式在**任何**分支(--ids/全量/续跑)都先加载台账——结果一律合并,绝不整写覆盖
+  // (2026-10-06 事故:--ids 冒烟未加载台账,最终写盘把 2,664 种进度抹成 1 种;媒体文件无损,重走即恢复)
+  if (OPT.global) {
+    const fromAbs = path.resolve(ROOT, OPT.out)
+    prevManifest = JSON.parse(await fs.readFile(fromAbs, 'utf8').catch(() => null))
+  }
   if (OPT.ids.length) {
     const set = new Set(OPT.ids)
     list = species.filter((s) => set.has(s.id) || set.has(s.nameSci))
@@ -249,13 +327,12 @@ async function main() {
     console.log(`\n🔧 定向修复：${fromRel} → 待修 ${list.length} 个物种`)
   } else if (OPT.global) {
     // 023 P2:增量台账——已完成的种跳过(断点续跑),结果合并回台账
-    const fromAbs = path.resolve(ROOT, OPT.out)
-    prevManifest = JSON.parse(await fs.readFile(fromAbs, 'utf8').catch(() => null))
     if (prevManifest) {
       const prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
       const pending = list.filter((sp) => needsRepair(prevById.get(sp.id)))
-      console.log(`\n🌐 全球台账:${(prevManifest.species || []).length} 种已完成,本次待采 ${pending.length}`)
+      const done = list.length - pending.length
       list = pending
+      console.log(`\n🌐 全球台账:已完成 ${done} 种(本地文件秒过),本次待采 ${list.length}`)
     }
   }
 
@@ -271,9 +348,63 @@ async function main() {
   let done = 0
   let skipped = 0
   let lowDisk = false
+  const pendingSkip = new Set() // 因预算/磁盘未尝试的 id(不算失败,下轮照常)
+
+  // 023 P2:增量台账检查点——记录完成后节流落盘(30s),SIGINT/SIGTERM 先落盘再退出。
+  // 进程被杀最多丢最近 30s 的进度元数据;媒体文件本身即用即存,不丢。
+  const ledgerPath = path.resolve(ROOT, OPT.out)
+  const ledgerById = new Map()
+  if (OPT.global) for (const s of prevManifest?.species || []) ledgerById.set(s.id, s)
+  let lastFlush = 0
+  let flushChain = Promise.resolve()
+  function flushLedger(force = false) {
+    if (!OPT.global) return flushChain
+    const now = Date.now()
+    if (!force && now - lastFlush < 30_000) return flushChain
+    lastFlush = now
+    flushChain = flushChain.then(async () => {
+      const sp = [...ledgerById.values()]
+      const m = {
+        schemaVersion: 2,
+        generatedAt: new Date().toISOString(),
+        policy: OPT.policy,
+        mediaMode: OPT.media,
+        source,
+        perSpecies: OPT.per,
+        total: sp.length,
+        stats: {
+          withImage: sp.filter((r) => r.image).length,
+          withAudio: sp.filter((r) => r.audio).length,
+          imageCount: sp.reduce((n, r) => n + (r.images ? r.images.length : 0), 0),
+          audioCount: sp.reduce((n, r) => n + (r.audios ? r.audios.length : 0), 0),
+        },
+        species: sp,
+      }
+      await writeJsonAtomic(ledgerPath, JSON.stringify(m, null, 2))
+    })
+    flushChain.catch((e) => console.warn(`   ⚠️ 台账检查点写入失败:${e.message}`))
+    return flushChain
+  }
+  if (OPT.global) {
+    let signaled = false
+    const onSignal = (sig) => {
+      if (signaled) {
+        console.log('\n   (再次收到信号,强制退出;检查点已尽力写入)')
+        process.exit(1)
+      }
+      signaled = true
+      console.log(`\n⏹️ 收到 ${sig}:写入台账检查点后退出(再按一次 ${sig} 强制退出)…`)
+      flushLedger(true)
+      Promise.race([flushChain, sleep(8000)]).then(() => process.exit(0))
+    }
+    process.on('SIGINT', () => onSignal('SIGINT'))
+    process.on('SIGTERM', () => onSignal('SIGTERM'))
+  }
+
   const records = await mapPool(list, OPT.concurrency, async (sp) => {
     if (Date.now() > deadline) {
       skipped++
+      pendingSkip.add(sp.id)
       return stub(sp)
     }
     if (!lowDisk) {
@@ -285,15 +416,25 @@ async function main() {
     }
     if (lowDisk) {
       skipped++
+      pendingSkip.add(sp.id)
       return stub(sp)
     }
     const rec = await buildSpecies(sp, useXc)
     done++
+    // D-023-3:playable* 按素材计数逐条写入(检查点落盘即携带;收尾主写入兜底)
+    rec.playableImage = (rec.images ? rec.images.length : 0) >= 1
+    rec.playableAudio = (rec.audios ? rec.audios.length : 0) >= 1
+    rec.playable = rec.playableImage || rec.playableAudio
     const flags = [rec.image ? '图' : '·', rec.audio ? '音' : '·'].join('')
-    console.log(`   [${String(done).padStart(3)}/${list.length}] ${flags} ${sp.nameZh} (${sp.nameSci})`)
+    console.log(`   [${String(done).padStart(3)}/${list.length}] ${flags} ${sp.nameZh || sp.nameSci} (${sp.nameSci})`)
+    if (OPT.global) {
+      ledgerById.set(rec.id, rec)
+      flushLedger()
+    }
     await sleep(OPT.taxa ? 500 + Math.random() * 900 : 200)
     return rec
   })
+  await flushLedger(true)
 
   // 修复模式：把重跑结果按 id 合并回旧 manifest，保持原顺序
   let outputSpecies = records
@@ -308,7 +449,12 @@ async function main() {
       }
       return s
     })
-    for (const r of records) if (!seen.has(r.id)) outputSpecies.push(r)
+    for (const r of records) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id) // 防 id 重复入账(同 id 双记录会让台账出现重名)
+        outputSpecies.push(r)
+      }
+    }
   }
 
   // 答疑专栏说明并入（011 §9）：按物种 id 写 species[].notes
@@ -358,13 +504,24 @@ async function main() {
 
   const outFile = OPT.out ? path.resolve(ROOT, OPT.out) : path.join(PUBLIC_DATA, 'manifest.json')
   await ensureDir(path.dirname(outFile))
-  await fs.writeFile(outFile, JSON.stringify(manifest, null, 2))
+  await writeJsonAtomic(outFile, JSON.stringify(manifest, null, 2))
 
   console.log(`\n✅ 完成：处理 ${records.length} 种，输出 ${outputSpecies.length} 种（图片 ${withImage}，音频 ${withAudio}）`)
   if (skipped) console.log(`   ⏱️ 因时间预算跳过 ${skipped} 种（下次构建会补齐）`)
   console.log(`   写入 ${path.relative(ROOT, outFile)}`)
-  const failed = records.filter((r) => !r.image && !r.audio && !skipped).map((r) => r.nameZh)
-  if (failed.length) console.log(`   ⚠️ 无任何素材: ${failed.join('、')}`)
+  const failedRecords = records.filter((r) => !r.image && !r.audio && !pendingSkip.has(r.id))
+  if (failedRecords.length) {
+    console.log(`   ⚠️ 无任何素材 ${failedRecords.length} 种(下轮自动重试)${RATE429 ? `,其中 429 限流告警 ${RATE429} 次` : ''}`)
+    if (OPT.global) {
+      const report = {
+        generatedAt: new Date().toISOString(),
+        note: '本轮无素材物种清单;下轮 bank:global 经 needsRepair 自动重试,本文件仅供查看',
+        failed: failedRecords.map((r) => ({ id: r.id, nameSci: r.nameSci, nameZh: r.nameZh || '' })),
+      }
+      await fs.writeFile(path.join(ROOT, 'data-cache/bank-global-failed.json'), JSON.stringify(report, null, 2))
+      console.log(`   失败清单 → data-cache/bank-global-failed.json`)
+    }
+  }
 }
 
 async function buildSpecies(sp, useXc) {
@@ -378,7 +535,8 @@ async function buildSpecies(sp, useXc) {
     const [photos, sounds, detail] = await Promise.all([
       fetchInat(taxon.id, 'photos'),
       fetchInat(taxon.id, 'sounds'),
-      fetchTaxon(taxon.id),
+      // --slow(假期模式):跳过 default_photo 详情调用,省 1/4 iNat 配额(023 P2)
+      OPT.slow ? Promise.resolve(null) : fetchTaxon(taxon.id),
     ])
 
     // M3：每物种 ≤per 图/音；图以 iNat taxon.default_photo 为首选（011 §4.1）
@@ -408,7 +566,8 @@ async function buildSpecies(sp, useXc) {
       await materialize(base, id)
     }
   } catch (e) {
-    console.warn(`   ⚠️ ${sp.nameZh}: ${e.message}`)
+    if (/429/.test(e.message)) note429()
+    console.warn(`   ⚠️ ${sp.nameZh || sp.nameSci}: ${e.message}`)
   }
   return base
 }
@@ -422,7 +581,7 @@ async function resolveTaxon(sp) {
     async () => {
       const tryQuery = async (q) => {
         const url = `${INAT}/taxa?q=${encodeURIComponent(q)}&rank=species&locale=zh-CN&per_page=5`
-        const d = await fetchJson(url)
+        const d = await inatGet(url)
         return (d.results || []).filter((r) => r.rank === 'species')
       }
       let found = await tryQuery(sp.nameSci)
@@ -450,7 +609,7 @@ async function fetchInat(taxonId, kind) {
       const url =
         `${INAT}/observations?taxon_id=${taxonId}&${licenseParam}=${inatLicenseQuery(OPT.policy)}` +
         `&quality_grade=research&${flag}&order_by=votes&per_page=10&locale=zh-CN`
-      const d = await fetchJson(url)
+      const d = await inatGet(url)
       // 只缓存选材所需字段，避免原始观察 JSON 撑爆磁盘（1299 种量级）
       // month：观测月份（021 M1，季节性数据源；旧缓存无此字段，--force 重建后生效）
       return (d.results || []).map((o) => ({
@@ -480,7 +639,7 @@ async function fetchTaxon(taxonId) {
   return cachedJson(
     cacheFile,
     async () => {
-      const d = await fetchJson(`${INAT}/taxa/${taxonId}?locale=en`)
+      const d = await inatGet(`${INAT}/taxa/${taxonId}?locale=en`)
       return (d.results && d.results[0]) || null
     },
     { force: OPT.force },
@@ -991,6 +1150,9 @@ async function download(url, dest, tries = 5) {
         throw err
       }
       const buf = Buffer.from(await res.arrayBuffer())
+      // 防御:写盘前重建父目录(2026-10-04 实测偶发 ENOENT——并发/环境层瞬态删除了
+      // 刚 ensureDir 的目录;mkdir 幂等且廉价,整类 ENOENT 免疫)
+      await fs.mkdir(path.dirname(dest), { recursive: true })
       await fs.writeFile(dest, buf)
       return dest
     } catch (e) {
