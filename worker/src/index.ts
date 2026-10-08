@@ -243,14 +243,33 @@ async function handleManifest(env: Env, name = 'manifest.json'): Promise<Respons
  *
  * `/api/questions` 的响应在**同一档位/题型/地区**下是可复用的（题库是静态的，
  * 随机性只影响"抽到哪几题"——用户明确接受题目可重复）。用 Cache API 在边缘
- * 缓存 300 秒：同一时间窗内的并发/重复请求直接命中缓存，不落到 D1。
+ * 缓存 30 分钟：同一时间窗内的并发/重复请求直接命中缓存，不落到 D1。
  *
  * 效果（100 日活的测算）：D1 读从 940 次查询 / ~680 万行 → 十几回源，降幅 >98%。
  * 缓存键含 tier/type/region/count，故不同档位互不干扰；地区过滤结果也各自缓存。
+ *
+ * TTL 300s → 1800s（031 D-031-1）：当前体量下 D1 读已 <1% 额度，收益是**余量**——
+ * 突发并发时把回源次数按窗口再压缩 6 倍；日活上千后（030 §5.2）这是最便宜的一档
+ * 免费额度杠杆。代价是题库重建后边缘池最多陈旧 30 分钟：需立即生效时把
+ * QUESTIONS_CACHE_VERSION +1 重新部署（缓存键含版本段，旧条目自然失联）。
+ *
+ * 新鲜度不依赖 Cache API 对 Cache-Control 的解释：命中时按 x-cached-at 自行校验
+ * 年龄（超龄视为 MISS 回源覆盖），保证 TTL 语义确定、可观测（x-cache-age 头）。
+ *
+ * 写入必须 `ctx.waitUntil`：响应返回后 Worker 的待处理任务会被取消，
+ * 裸的 `cache.put(...)`（不 await）会被丢弃——那正是 2026-10-08 首版边缘缓存
+ * 上线后每次仍 MISS 的原因（本地测不出，只有远端连续请求才暴露）。
  */
-const QUESTIONS_CACHE_TTL = 300
+const QUESTIONS_CACHE_TTL = 1800
+/** 缓存版本：需要强制失效旧缓存时 +1（随 Worker 重新部署生效）。 */
+const QUESTIONS_CACHE_VERSION = 2
 
-async function handleQuestionsCached(request: Request, env: Env, url: URL): Promise<Response> {
+async function handleQuestionsCached(
+  request: Request,
+  env: Env,
+  url: URL,
+  ctx: ExecutionContext,
+): Promise<Response> {
   // 只缓存 GET（无 cookie/鉴权参与,题库对所有用户相同）
   const cache = await caches.open('uniaoer-api-questions')
   // 规范化缓存键：排除无关查询参数顺序差异（按固定顺序重建）
@@ -259,22 +278,30 @@ async function handleQuestionsCached(request: Request, env: Env, url: URL): Prom
     const v = url.searchParams.get(k)
     if (v) keyUrl.searchParams.set(k, v)
   }
+  keyUrl.searchParams.set('v', String(QUESTIONS_CACHE_VERSION))
   const cacheKey = new Request(keyUrl.toString(), { method: 'GET' })
 
   const hit = await cache.match(cacheKey)
   if (hit) {
-    const res = new Response(hit.body, hit)
-    res.headers.set('x-cache', 'HIT')
-    return res
+    const cachedAt = Number(hit.headers.get('x-cached-at') || 0)
+    const age = (Date.now() - cachedAt) / 1000
+    if (cachedAt > 0 && age < QUESTIONS_CACHE_TTL) {
+      const res = new Response(hit.body, hit)
+      res.headers.set('x-cache', 'HIT')
+      res.headers.set('x-cache-age', String(Math.round(age)))
+      return res
+    }
+    // 超龄：落到下面的回源（cache.put 覆盖旧条目）
   }
 
   const res = await handleQuestions(env, url)
   if (!res.ok) return res
   const forCache = new Response(res.body, res)
   forCache.headers.set('cache-control', `public, max-age=${QUESTIONS_CACHE_TTL}`)
+  forCache.headers.set('x-cached-at', String(Date.now()))
   forCache.headers.set('x-cache', 'MISS')
-  // 写缓存不阻塞响应（clone 一次性 tee；响应体约几十 KB）
-  cache.put(cacheKey, forCache.clone()).catch(() => {})
+  // 写缓存不阻塞响应，但必须挂到 waitUntil——否则响应返回后写操作被运行时取消
+  ctx.waitUntil(cache.put(cacheKey, forCache.clone()))
   return forCache
 }
 
@@ -615,7 +642,7 @@ async function handleAdminPatch(request: Request, env: Env, id: string): Promise
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     const path = url.pathname.replace(/\/+$/, '') || '/'
     const method = request.method.toUpperCase()
@@ -631,7 +658,7 @@ export default {
         }
         if (path === '/api/manifest') return await handleManifest(env)
         if (path === '/api/manifest-core') return await handleManifest(env, 'manifest-core.json')
-        if (path === '/api/questions') return await handleQuestionsCached(request, env, url)
+        if (path === '/api/questions') return await handleQuestionsCached(request, env, url, ctx)
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
         if (path === '/api/reports') return await handlePublicReports(env, url)
