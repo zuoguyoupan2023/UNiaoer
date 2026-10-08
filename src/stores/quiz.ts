@@ -203,9 +203,15 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
 
       // 029 M4(D-029-4):在线出题优先——由 D1 按档位/题型/地区出候选池(服务端已过滤),
       // 前端本地组装题面;失败/离线回退本地核心库+全球池(功能不降级)。
+      // 030 措施 5:**仅会话首轮**走在线——「再来一轮」等后续轮次直接用本地全量池
+      //   （10,844 种，质量已足够），从源头避免连续请求 D1。
+      // 030 措施 3:在线路径自带 sessionStorage 缓存（10 分钟 / 30 条候选），
+      //   客户端命中即零网络；一次取 30 条也够本轮多次取材。
       const count = opts.count ?? 10
       const settings = useSettingsStore()
-      const online = await fetchOnlinePool(type, tier.value, settings.region, count)
+      const online = opts.keepSession
+        ? null
+        : await fetchOnlinePool(type, tier.value, settings.region)
 
       let speciesForBuild: BankSpecies[]
       let distractorPool: BankSpecies[] | undefined
