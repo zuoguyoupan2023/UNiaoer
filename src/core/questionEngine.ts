@@ -11,6 +11,12 @@ export interface BuildOptions {
   speciesPool?: ReadonlySet<string>
   /** 出题语种（015 §6.1）：'en' 时答案/选项优先 nameEn，缺失回退学名；缺省中文 */
   locale?: string
+  /**
+   * 029 M4:干扰项来源池（缺省 = 从 bank 的素材池取）。
+   * 在线出题（/api/questions）时传入「服务端返回的目标种 + 名字候选」——
+   * 名字候选无素材、只用于选项，故不能走 mediaPool 过滤。
+   */
+  distractorPool?: BankSpecies[]
 }
 
 
@@ -111,9 +117,11 @@ export function pickMedia(sp: BankSpecies, type: MediaType, poolSize: number): M
  * - speciesPool（A2 赛制）：题目只取池内物种，池上仍按档位筛常见度（不足放宽到池）
  */
 export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
-  const { type, count = 10, tier = 2, speciesPool, locale } = opts
+  const { type, count = 10, tier = 2, speciesPool, locale, distractorPool } = opts
   const cfg = TIERS[tier]
   const full = mediaPool(bank, type)
+  // 干扰项池：默认与出题池同源（本地模式）；在线模式传入服务端候选（含无素材的名字条目）
+  const dPool = distractorPool && distractorPool.length ? distractorPool : full
 
   let pool: BankSpecies[]
   if (speciesPool) {
@@ -132,7 +140,7 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractorPairs(
       sp,
-      full,
+      dPool,
       Math.max(0, cfg.optionCount - 1),
       cfg.distractor,
       (s) => speciesName(s, locale),

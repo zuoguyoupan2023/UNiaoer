@@ -297,7 +297,33 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     })
     .filter((s) => (type === 'audio' ? s.audio : s.image))
 
-  return json({ tier, type, region, count: species.length, species })
+  // 029 M4:干扰项名字候选(无素材,仅选项用;前端据此离线组装题面)。
+  // 同档位常见度范围,随机 240 条,排除已选目标——小体积(约 20KB)换取选项多样性。
+  const targetIds = new Set(species.map((s) => s.id))
+  let distractors: Record<string, unknown>[] = []
+  try {
+    const d = await env.DB.prepare(
+      `SELECT id,name_zh,name_sci,name_en,family,commonness
+       FROM species WHERE commonness IN (${placeholders}) AND quiz_excluded = 0
+       ORDER BY RANDOM() LIMIT ?`,
+    )
+      .bind(...commonness, 240)
+      .all<Pick<SpeciesRow, 'id' | 'name_zh' | 'name_sci' | 'name_en' | 'family' | 'commonness'>>()
+    distractors = d.results
+      .filter((r) => !targetIds.has(r.id))
+      .map((r) => ({
+        id: r.id,
+        nameZh: r.name_zh ?? '',
+        nameSci: r.name_sci,
+        nameEn: r.name_en ?? undefined,
+        family: r.family ?? '',
+        commonness: r.commonness,
+      }))
+  } catch {
+    distractors = [] // 候选查询失败:前端回退用本地池
+  }
+
+  return json({ tier, type, region, count: species.length, species, distractors })
 }
 
 /**

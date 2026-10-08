@@ -38,6 +38,7 @@ const en: typeof zhMessages = {
     title: 'Time for a challenge!',
     lead: 'Sharpen your ID skills with real bird photos and recordings. 10 questions per round.',
     bankStats: 'Bank: {total} species · {image} photos · {audio} recordings',
+    bankStatsFull: 'Playable: {total} species (core {core} + global {global}) · {image} photos · {audio} recordings',
     modeImageSub: 'Openly licensed photos from iNaturalist',
     modeAudioSub: 'Real bird recordings from Xeno-canto',
     regionSub: 'Browse birds by country/region',

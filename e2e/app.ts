@@ -23,6 +23,11 @@ export async function stubApp(page: Page) {
   // 029 M1:前端优先请求分层 core(夹具直接复用同一份 bank;分片请求回 404 → 走 core 首图首音回退)
   await page.route('**/data/manifest-core.json', (r) => r.fulfill({ json: bank }))
   await page.route('**/data/assets/*.json', (r) => r.fulfill({ status: 404, body: '' }))
+  // 029 M2:全球池与区系层不加载真实产物（e2e 纯夹具,保持离线与速度）
+  await page.route('**/data/manifest-global.min.json', (r) => r.fulfill({ status: 404, body: '' }))
+  await page.route('**/data/species-distribution.json', (r) =>
+    r.fulfill({ json: { schemaVersion: 1, sources: [], counts: {}, byCountry: {} } }),
+  )
   await page.route('**/data/distribution.json', (r) =>
     r.fulfill({
       json: { bySpecies: { 'sp-01': ['CN', 'US'], 'sp-02': ['CN', 'JP', 'US'], 'sp-03': ['US'] } },

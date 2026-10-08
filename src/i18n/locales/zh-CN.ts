@@ -33,6 +33,7 @@ export const messages = {
     title: '是时候挑战一下自己了！',
     lead: '用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。',
     bankStats: '题库：{total} 种 · 图片 {image} · 音频 {audio}',
+    bankStatsFull: '题库：{total} 种可玩（核心 {core} + 全球 {global}）· 图片 {image} · 音频 {audio}',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
     regionSub: '按国家/地区浏览鸟种',

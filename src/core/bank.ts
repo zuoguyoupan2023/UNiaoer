@@ -85,6 +85,14 @@ export interface Manifest {
   layer?: 'core' | 'global'
   buckets?: string[]
   schemaVersion?: number
+  /** 029 M2:全量可玩口径(核心+全球,构建期烘焙;旧部署无此字段时回退本层 stats) */
+  universe?: {
+    coreTotal: number
+    globalTotal: number
+    total: number
+    withImage: number
+    withAudio: number
+  }
 }
 
 let cache: Manifest | null = null
@@ -152,10 +160,14 @@ export function cachedSpeciesAssets(
   return assetCache.get(id) ?? null
 }
 
-/** 物种显示名（015 §6.1）：en 优先 nameEn，缺失回退学名；zh 用 nameZh */
+/**
+ * 物种显示名（015 §6.1）：en 优先 nameEn，缺失回退学名；zh 用 nameZh。
+ * 029 M2:全球长尾种约半数无中文名（Wikidata 覆盖缺口）——zh 下依次回退
+ * nameEn → nameSci，避免出现**空选项/空答案**（与 speciesIndex.entryDisplayName 同规则）。
+ */
 export function speciesName(sp: BankSpecies, locale?: string): string {
-  if (locale === 'en') return sp.nameEn || sp.nameSci
-  return sp.nameZh
+  if (locale === 'en') return sp.nameEn || sp.nameSci || sp.nameZh
+  return sp.nameZh || sp.nameEn || sp.nameSci
 }
 
 /** speciesId → 物种索引（loadBank 后构建；旧记录 speciesId 可能是媒体 URL，查不到即回退） */

@@ -83,6 +83,23 @@ export async function writeManifestLayers(manifest, opts = {}) {
       stats_note.commonness = 0
     }
     await writeJsonAtomic(path.join(dataDir, 'manifest-global.min.json'), JSON.stringify(global))
+    // 全量可玩口径(首页展示用):核心 + 全球,含图/音计数。
+    // 烘焙进 core 避免前端为了显示统计再多拉 10MB 全球池。
+    const countMedia = (list) => ({
+      total: list.length,
+      withImage: list.filter((sp) => sp.image).length,
+      withAudio: list.filter((sp) => sp.audio).length,
+    })
+    const coreStats = countMedia(core.species)
+    const globalStats = countMedia(global.species)
+    core.universe = {
+      coreTotal: coreStats.total,
+      globalTotal: globalStats.total,
+      total: coreStats.total + globalStats.total,
+      withImage: coreStats.withImage + globalStats.withImage,
+      withAudio: coreStats.withAudio + globalStats.withAudio,
+    }
+    await writeJsonAtomic(path.join(dataDir, 'manifest-core.json'), JSON.stringify(core))
   } catch {
     global = null // 无台账:跳过(不报错)
   }

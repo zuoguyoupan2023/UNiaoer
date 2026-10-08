@@ -5,18 +5,31 @@ import { AlertTriangle, AudioLines, Globe2, Image as ImageIcon, Library } from '
 import { loadBank, BankError } from '@/core/bank'
 
 const { t } = useI18n()
-const stats = ref<{ total: number; image: number; audio: number } | null>(null)
+const stats = ref<{
+  total: number
+  image: number
+  audio: number
+  core?: number
+  global?: number
+} | null>(null)
 /** 题库错误码（errors.* 渲染，015 §6.5） */
 const bankErrorCode = ref<{ code: string; status?: number; url?: string } | null>(null)
 
 onMounted(async () => {
   try {
     const bank = await loadBank()
-    stats.value = {
-      total: bank.total,
-      image: bank.stats.withImage,
-      audio: bank.stats.withAudio,
-    }
+    // 029 M2：优先展示「全量可玩口径」（核心 + 全球,构建期烘焙进 core）；
+    // 旧部署（无 universe）回退本层统计。
+    const u = bank.universe
+    stats.value = u
+      ? {
+          total: u.total,
+          image: u.withImage,
+          audio: u.withAudio,
+          core: u.coreTotal,
+          global: u.globalTotal,
+        }
+      : { total: bank.total, image: bank.stats.withImage, audio: bank.stats.withAudio }
   } catch (e) {
     bankErrorCode.value =
       e instanceof BankError ? { code: e.code, status: e.status, url: e.url } : { code: 'unknown' }
@@ -31,7 +44,12 @@ onMounted(async () => {
 
     <p v-if="stats" class="bank-stats">
       <Library class="ic" :size="14" />
-      {{ t('home.bankStats', { total: stats.total, image: stats.image, audio: stats.audio }) }}
+      <template v-if="stats.core && stats.global">
+        {{ t('home.bankStatsFull', { total: stats.total, core: stats.core, global: stats.global, image: stats.image, audio: stats.audio }) }}
+      </template>
+      <template v-else>
+        {{ t('home.bankStats', { total: stats.total, image: stats.image, audio: stats.audio }) }}
+      </template>
     </p>
     <p v-else-if="bankErrorCode" class="bank-error">
       <AlertTriangle class="ic" :size="14" />

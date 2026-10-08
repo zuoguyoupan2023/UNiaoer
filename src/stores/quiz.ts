@@ -4,6 +4,7 @@ import type { MediaType, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, registerSpecies, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
 import { assetsOf, buildQuestions } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
+import { fetchOnlinePool } from '@/core/onlinePool'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
@@ -199,13 +200,45 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         source.value = regime.value === 'revival' ? 'wrong-practice' : 'normal'
       }
       escapedQuit.value = false
-      const species = (await poolData(type, tier.value)).species
-      const qs = buildQuestions(species, {
+
+      // 029 M4(D-029-4):在线出题优先——由 D1 按档位/题型/地区出候选池(服务端已过滤),
+      // 前端本地组装题面;失败/离线回退本地核心库+全球池(功能不降级)。
+      const count = opts.count ?? 10
+      const settings = useSettingsStore()
+      const online = await fetchOnlinePool(type, tier.value, settings.region, count)
+
+      let speciesForBuild: BankSpecies[]
+      let distractorPool: BankSpecies[] | undefined
+      let speciesPool = poolResult.pool
+      if (online) {
+        speciesForBuild = online.species
+        distractorPool = online.distractors.length ? online.distractors : undefined
+        // 赛制池（复习/强化/错题本依赖本地练习史）仍需按 id 过滤在线候选；
+        // 标准赛的"未练过"过滤同样适用
+        if (speciesPool) {
+          const filtered = online.species.filter((sp) => speciesPool!.has(sp.id))
+          if (!filtered.length) {
+            // 在线候选与本地赛制池无交集（如全球种尚未练过）：回退本地池
+            speciesForBuild = (await poolData(type, tier.value)).species
+            distractorPool = undefined
+            speciesPool = poolResult.pool
+          } else {
+            speciesForBuild = filtered
+          }
+        }
+        registerSpecies(online.species)
+        if (online.distractors.length) registerSpecies(online.distractors)
+      } else {
+        speciesForBuild = (await poolData(type, tier.value)).species
+      }
+
+      const qs = buildQuestions(speciesForBuild, {
         type,
-        count: opts.count ?? 10,
+        count,
         tier: tier.value,
-        speciesPool: poolResult.pool,
+        speciesPool,
         locale: currentLocale(),
+        distractorPool,
       })
       if (!qs.length) {
         // 无素材（池内物种都缺对应媒体）：错误码入 store，文案由组件按 locale 渲染（015 §6.5）
