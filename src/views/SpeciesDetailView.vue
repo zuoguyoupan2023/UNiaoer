@@ -25,6 +25,7 @@ import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
 import SpeciesSeasonality from '@/components/SpeciesSeasonality.vue'
+import SpeciesProvinces from '@/components/SpeciesProvinces.vue'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -173,6 +174,9 @@ const liteLinks = computed(() => {
       <!-- 季节性（021 M1）：出现月份直方图；无数据不显示 -->
       <SpeciesSeasonality v-if="seasonEntry" class="season-block" :entry="seasonEntry" />
 
+      <!-- 省级出现强度（036 热力条，非地图）：无省级数据（如全球池物种）时整块不显示 -->
+      <SpeciesProvinces class="prov-block" :species-id="species.id" />
+
       <section v-if="note" class="note">
         <h3>{{ note.title }}</h3>
         <p class="body">{{ note.body }}</p>
@@ -279,6 +283,9 @@ const liteLinks = computed(() => {
 }
 .facts-block {
   margin-top: 12px;
+}
+.prov-block {
+  margin-top: 14px;
 }
 .credits {
   margin-top: 16px;

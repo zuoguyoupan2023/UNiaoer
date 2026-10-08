@@ -27,6 +27,11 @@ export interface ProvinceData {
 
 let cache: Promise<ProvinceData | null> | null = null
 
+/** 测试用：清空加载缓存（与其他 core 模块的 _reset 惯例一致） */
+export function _resetProvincesCache(): void {
+  cache = null
+}
+
 /** 加载省级数据；失败/不存在返回 null，不阻塞页面 */
 export function loadProvinces(): Promise<ProvinceData | null> {
   cache ??= fetch(`${import.meta.env.BASE_URL}data/region-provinces.json`)

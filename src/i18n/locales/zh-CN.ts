@@ -358,6 +358,15 @@ export const messages = {
     distribution: '分布',
     countries: '{n} 个国家/地区',
     showCountries: '查看国家/地区列表',
+    // 036 省份热力条（非地图：边界零风险，见 docs/037）
+    provinces: {
+      title: '各省出现强度',
+      count: '{n} 个省级区划有记录',
+      showAll: '展开全部 {n} 个',
+      collapse: '收起',
+      scaleNote: '条形长度为平方根缩放（记录数跨度极大，线性会看不见小值）；数值为 GBIF 公开记录条数，受观测努力影响，仅供相对比较。',
+      source: '省级数据来源：{sources}',
+    },
     iucn: 'IUCN {code}',
     groups: { waterbird: '水鸟', raptor: '猛禽', landbird: '林鸟' },
     migrations: {

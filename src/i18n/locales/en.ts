@@ -364,6 +364,15 @@ const en: typeof zhMessages = {
     distribution: 'Range',
     countries: '{n} countries/regions',
     showCountries: 'Show country list',
+    // 036 province intensity bars (not a map: zero boundary risk, see docs/037)
+    provinces: {
+      title: 'Records by province',
+      count: '{n} provinces/regions with records',
+      showAll: 'Show all {n}',
+      collapse: 'Collapse',
+      scaleNote: 'Bar length uses a square-root scale (counts span orders of magnitude); values are GBIF public record counts and are affected by observer effort — compare relatively.',
+      source: 'Province data: {sources}',
+    },
     iucn: 'IUCN {code}',
     groups: { waterbird: 'Waterbird', raptor: 'Raptor', landbird: 'Landbird' },
     migrations: {

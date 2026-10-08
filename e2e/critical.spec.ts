@@ -197,6 +197,15 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.season')).toContainText('GBIF')
     await expect(page.locator('.season')).toContainText('留鸟')
 
+    // 省份热力条（036，非地图）：sp-01 夹具含 CN-44(500)/US-CA(120)/US-WA(4)/CN-91(1)
+    const bars = page.locator('.prov .bar-row')
+    await expect(bars).toHaveCount(4)
+    // 降序：广东省(500) 在首
+    await expect(bars.first()).toContainText('广东省')
+    await expect(bars.first()).toContainText('500')
+    // 铁律 6：港澳台标注（CN-91 → 中国香港）
+    await expect(page.locator('.prov')).toContainText('中国香港')
+
     await page.goto('/faq')
     await expect(page.getByText('暂时还没有需要说明的条目。')).toBeVisible()
 
