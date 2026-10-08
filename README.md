@@ -1,6 +1,6 @@
 # UNiaoer · 鸟语识别
 
-开源 · 非商业的观鸟学习与识别练习项目。用真实的鸟类照片与鸟鸣，练习「看图找鸟」与「听音找鸟」。
+开源的观鸟学习与认鸟练习项目：用真实的鸟类照片与鸟鸣，练习「看图认鸟」与「听音认鸟」，并提供全球鸟类名录与分布浏览。面向全球观鸟者，中文用户优先起步。
 
 ## 技术栈
 
@@ -12,15 +12,18 @@
 
 ## 数据来源与许可
 
+**代码**以 [MIT](./LICENSE) 许可发布。**媒体素材与开放数据不随代码许可**，各自遵循下列声明：
+
 | 来源 | 用途 | 许可 |
 |---|---|---|
-| [iNaturalist](https://api.inaturalist.org/v1/docs/) | 鸟类照片 / 音频 | 逐条 CC，仅取开放许可（可配置为含 NC） |
-| [Xeno-canto](https://xeno-canto.org/explore/api) | 鸟鸣音频 | 逐条 CC，仅取开放许可（可配置为含 NC） |
-| [GBIF](https://www.gbif.org/) | 分布 / 省级 / 季节 / 观鸟点 | 逐条 CC0/CC-BY/CC-BY-NC |
+| [iNaturalist](https://api.inaturalist.org/v1/docs/) | 鸟类照片 / 音频 | 逐条 CC，仅取开放许可（可含 NC）；每条素材页面均署名（作者/许可/来源） |
+| [Xeno-canto](https://xeno-canto.org/explore/api) | 鸟鸣音频 | 逐条 CC，仅取开放许可（可含 NC）；每条素材页面均署名 |
+| [AviList v2025b](https://www.avilist.org/) | 全球名录骨架 | CC BY 4.0（署名见产物 `sources`） |
+| [GBIF](https://www.gbif.org/) | 分布 / 省级 / 季节 / 观鸟点 | 逐条 CC0/CC-BY/CC-BY-NC；下载含 DOI 署名 |
 | [eBird](https://ebird.org/)（Cornell Lab） | 观鸟点名录 / 区划（就近命名） | 非商业；需署名；不再分发原始数据 |
 | ISO 3166-2（alexander-schranz） | 一级行政区基准 | MIT |
 
-- 代码以开源许可发布；**媒体素材仍遵循各自原始 CC 许可，均保留署名**。
+- **具体图像/音频数据以每条素材自带的声明为准**（如某条音频为 CC BY-NC，则该条适用该许可）；ND（禁止演绎）素材一律原样提供、不转码不派生。
 - 许可策略可在「设置」中切换：宽松（含 CC-BY-NC，非商业可用）/ 严格（仅 CC0/BY/BY-SA）。
 - 许可过滤与署名逻辑见 `src/core/licenseGuard.ts`；地区/季节/观鸟点逐条署名见 `scripts/check-region.mjs`。
 
@@ -41,7 +44,7 @@ npm run format       # 格式化
 
 - ✅ P0 脚手架：Vite + Vue3 + TS + Pinia + 路由 + 测试 + Lint
 - ✅ P1 静态题库：`scripts/build-bank.mjs` 抓 iNat/XC → 许可过滤 → `manifest.json`（1299 种 / 5 图 5 音）
-- ✅ P2 核心玩法：看图找鸟 / 听音找鸟（选项、反馈、逐题署名、结果回顾、同种多素材切换）
+- ✅ P2 核心玩法：看图认鸟 / 听音认鸟（选项、反馈、逐题署名、结果回顾、同种多素材切换）
 - ✅ P3 体验：预加载、懒加载、Service Worker 持久化
 - ✅ P4 难度梯度 L1–L5（选项数、限时、常见度、取材池、L5 随机干扰音）
 - ✅ P5 音频自动播放（可在设置调整）
@@ -51,7 +54,9 @@ npm run format       # 格式化
 - ✅ 内容：物种档案（类群/分布/居留型）、答疑专栏 `/faq`、地区浏览 `/region`（七大洲→国家/省级→鸟种）
 - ✅ 地区数据层：季节层 `seasonality.json`、15 国省级层 `region-provinces.json`（含中国 34 区划/港澳台标注）、观鸟点 `hotspots.json`（GBIF 源）
 - ✅ i18n（zh-CN / en，532 keys，CI 门禁）· 无障碍（H3）· E2E（Playwright 11 条，全离线）
-- 🚧 下一大计划：全球全种类扩张（1299 → ~11k，骨架先行）——P0 分类骨架已完成：AviList v2025b 全球骨架 `species-index.json`（11,131 种）+ manifest 增 `taxonKey`/`playable`（1299 全映射，只增不改）；P1-a 中文名已填充（curated 优先 + Wikidata CC0，覆盖 5,808 种）；P1-b backbone 映射已完成（GBIF v2，10,892/11,131）；P1-c 全球区系已完成：`/region` 全球浏览（249 国，覆盖 99.4% 物种）+ 无媒体全球种轻量详情页；P2 playable 机制（图/音拆维度）与全球媒体采集管线已落地（台账增量，试跑通过），全量采集待启动
+- ✅ 全球扩张（数据层）：AviList v2025b 全球骨架 `species-index.json`（11,131 种）+ manifest 增 `taxonKey`/`playable`；中文名 5,808 种（curated 优先 + Wikidata CC0）；backbone 映射 10,892/11,131；全球区系层 `/region`（249 国）+ 无媒体种轻量详情页
+- ✅ 全球媒体采集：**9,839 种**（图 9,349 / 音 9,060，1 图 1 音/种）已全部上传 R2，逐条署名，ND 不转码
+- 🚧 进行中：玩法集成（P3）——全球池进题、manifest 分层加载、常见度分档、媒体质量反馈闭环（规划见 `docs/029`）
 
 ## 部署（Cloudflare Pages）
 
