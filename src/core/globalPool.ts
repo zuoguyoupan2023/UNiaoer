@@ -44,7 +44,22 @@ export function globalPoolReady(): BankSpecies[] | null {
 }
 
 /**
- * 按地区（ISO 3166-1 alpha-2；'ALL'=不过滤）取全球池子集。
+ * 地区键 → 区系层用的**国家码**。
+ * 036：出题地区支持省码（如 `CN-11`），但「该地区有哪些鸟」的区系层是**国家级**数据，
+ * 故取省码前两位（`CN-11` → `CN`）。语义分工：
+ *   · 区系层（有没有这种鸟）→ 国家码；
+ *   · 地区档位（这种鸟多常见）→ 省码（见 provinceCommonness.ts）。
+ * 不归一化的话，省码查 `byCountry['CN-11']` 得到空集 → 全球池被清空、题池骤减。
+ */
+export function countryOfRegion(region: string): string {
+  const v = String(region || '').trim().toUpperCase()
+  if (!v || v === 'ALL') return 'ALL'
+  return v.includes('-') ? (v.split('-')[0] ?? v) : v
+}
+
+/**
+ * 按地区（ISO 3166-1 alpha-2 国家码，或 `XX-NN` 省码；'ALL'=不过滤）取全球池子集。
+ * - 省码按**国家**过滤（区系数据是国家级的，见 countryOfRegion）；
  * - 区系数据**加载失败**（离线/未部署）→ 返回 null，调用方按「无地区过滤」降级；
  * - 区系数据**存在但该地区无记录** → 返回空数组（用户选了没数据的地区，应得空池而非全量）。
  */
@@ -56,19 +71,20 @@ export async function loadRegionalPool(region: string): Promise<BankSpecies[] | 
   if (hit) return hit
   const dist = await loadSpeciesDistribution()
   if (!dist?.byCountry) return null // 区系层不可用:降级为不过滤
-  const codes = dist.byCountry[region]
+  const codes = dist.byCountry[countryOfRegion(region)]
   const set = new Set(Array.isArray(codes) ? codes : [])
   const subset = pool.filter((sp) => sp.taxonKey && set.has(shortCodeOf(sp.taxonKey)))
   regionalCache.set(region, subset)
   return subset
 }
 
-/** 某物种是否出现在某国的区系里（区系数据缺失时返回 null = 未知） */
+/** 某物种是否出现在某国（或省码所属国）的区系里（区系数据缺失时返回 null = 未知） */
 export async function speciesInRegion(taxonKey: string | undefined, region: string): Promise<boolean | null> {
   if (!taxonKey) return null
   if (!region || region === 'ALL') return true
   const dist = await loadSpeciesDistribution()
-  const codes = dist?.byCountry?.[region]
+  // 省码 → 所属国（区系层是国家级的；见 countryOfRegion）
+  const codes = dist?.byCountry?.[countryOfRegion(region)]
   if (!Array.isArray(codes)) return null
   return codes.includes(shortCodeOf(taxonKey))
 }

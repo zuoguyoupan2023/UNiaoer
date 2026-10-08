@@ -3,7 +3,14 @@
  * 关注:加载并发去重、地区过滤正确性、区系缺失降级、缓存清空。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { _resetGlobalPoolCache, globalPoolReady, loadGlobalPool, loadRegionalPool, speciesInRegion } from '../globalPool'
+import {
+  _resetGlobalPoolCache,
+  countryOfRegion,
+  globalPoolReady,
+  loadGlobalPool,
+  loadRegionalPool,
+  speciesInRegion,
+} from '../globalPool'
 import { _resetSpeciesIndexCaches } from '../speciesIndex'
 
 /** 最小池条目(带 taxonKey;短码 = 去 avibase- 前缀) */
@@ -121,6 +128,33 @@ describe('loadRegionalPool', () => {
     stubFetch({ fail: true })
     expect(await loadRegionalPool('CN')).toBeNull()
   })
+
+  /**
+   * 036：出题地区支持**省码**（CN-11）。
+   * 区系层只有国家级数据，故省码必须归一到国家再过滤——
+   * 否则 byCountry['CN-11'] 查不到 → 空集 → 全球池被清空（题池骤减）。
+   */
+  it('省码按所属国家过滤（与国家级结果一致）', async () => {
+    stubFetch()
+    const byCountry = await loadRegionalPool('CN')
+    _resetGlobalPoolCache()
+    _resetSpeciesIndexCaches()
+    stubFetch()
+    const byProvince = await loadRegionalPool('CN-11')
+    expect(byProvince?.map((s) => s.id).sort()).toEqual(byCountry?.map((s) => s.id).sort())
+    expect(byProvince?.length).toBeGreaterThan(0)
+  })
+})
+
+describe('countryOfRegion（省码 → 国家码）', () => {
+  it('国家码原样；省码取前两位；ALL/空值归一', () => {
+    expect(countryOfRegion('CN')).toBe('CN')
+    expect(countryOfRegion('cn-11')).toBe('CN')
+    expect(countryOfRegion('GB-ENG')).toBe('GB')
+    expect(countryOfRegion('US-CA')).toBe('US')
+    expect(countryOfRegion('ALL')).toBe('ALL')
+    expect(countryOfRegion('')).toBe('ALL')
+  })
 })
 
 describe('speciesInRegion', () => {
@@ -130,5 +164,11 @@ describe('speciesInRegion', () => {
     expect(await speciesInRegion('avibase-AAA00001', 'US')).toBe(false)
     expect(await speciesInRegion('avibase-AAA00001', 'ALL')).toBe(true)
     expect(await speciesInRegion(undefined, 'CN')).toBeNull()
+  })
+
+  it('省码按所属国家判断（036）', async () => {
+    stubFetch()
+    expect(await speciesInRegion('avibase-AAA00001', 'CN-11')).toBe(true)
+    expect(await speciesInRegion('avibase-AAA00001', 'US-CA')).toBe(false)
   })
 })
