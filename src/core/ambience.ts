@@ -149,6 +149,9 @@ class AmbiencePlayer {
   private ensureAudio(): HTMLAudioElement {
     if (this.audio) return this.audio
     const a = new Audio()
+    // CORS 模式（必须在 src 之前；Safari 只读取设置 src 时的值）：
+    // 音轨经 SW 缓存，iOS 只能消费可读的 CORS 响应（见 docs/033）
+    a.crossOrigin = 'anonymous'
     a.volume = 0.5
     a.addEventListener('ended', () => {
       this.failCount = 0
@@ -274,7 +277,9 @@ class InterferencePlayer {
     prewarmBirdTracks() // 后台预热其余音轨（R25）：切题时干扰即时出声
     const picked = pickRandomTracks(all, count)
     this.audios = picked.map((t) => {
-      const a = new Audio(t.url)
+      const a = new Audio()
+      a.crossOrigin = 'anonymous' // 先于 src（Safari）；iOS 播放 SW 缓存音频的前提，见 docs/033
+      a.src = t.url
       a.loop = true
       a.volume = volume
       return a

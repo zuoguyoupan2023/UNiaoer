@@ -73,7 +73,8 @@ function closeZoom() {
         <div v-if="mode === 'browse'" class="sg-audios">
           <div v-for="(m, i) in audios" :key="m.url" class="sg-audio-row">
             <span class="sg-num">{{ i + 1 }}</span>
-            <audio :src="m.url" controls preload="none"></audio>
+            <!-- crossorigin 先于 src（Safari 只读取设置 src 前的值）；iOS 播放 SW 缓存音频的前提 -->
+            <audio crossorigin="anonymous" :src="m.url" controls preload="none"></audio>
           </div>
         </div>
         <div v-else class="sg-row">

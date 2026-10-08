@@ -74,6 +74,18 @@ test.describe('核心答题链路', () => {
     await panel.getByRole('button', { name: '提交' }).click()
     await expect(panel.getByText('已记录，感谢反馈！')).toBeVisible()
   })
+
+  test('听音答题：音频播放器带 crossorigin（iPhone 播放前提，docs/033）', async ({ page }) => {
+    await page.goto('/quiz/audio')
+    await expect(page.locator('.wizard-panel')).toBeVisible()
+    await page.getByRole('button', { name: '直接开始' }).click()
+    await page.getByRole('button', { name: /L1 入门/ }).click()
+    await page.getByRole('button', { name: '开始答题' }).click()
+    // 属性必须是 crossorigin="anonymous"；缺失/为空时 WebKit 无法消费 SW 缓存的音频
+    const audio = page.locator('.media audio, .audio-row audio').first()
+    await expect(audio).toBeAttached({ timeout: 10_000 })
+    await expect(audio).toHaveAttribute('crossorigin', 'anonymous')
+  })
 })
 
 test.describe('入口与页面', () => {

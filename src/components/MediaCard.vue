@@ -127,7 +127,16 @@ function closeZoom() {
 
     <template v-else>
       <div class="audio-row">
-        <audio ref="audioEl" :src="media.url" controls preload="auto" @play="emit('audio-play')"></audio>
+        <!-- crossorigin 必须在 src 之前：Safari 只在设置 src 前读取它。
+             CORS 模式（R2 已配 ACAO:*）是 iOS 能播放 SW 缓存音频的前提——见 docs/033 -->
+        <audio
+          ref="audioEl"
+          crossorigin="anonymous"
+          :src="media.url"
+          controls
+          preload="auto"
+          @play="emit('audio-play')"
+        ></audio>
       </div>
       <div class="audio-under">
         <slot name="media-corner" />

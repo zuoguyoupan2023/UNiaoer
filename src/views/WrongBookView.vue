@@ -172,6 +172,7 @@ function fmt(at: number) {
           <audio
             v-else-if="e.type === 'audio' && e.mediaUrl"
             class="audio"
+            crossorigin="anonymous"
             :src="e.mediaUrl"
             controls
             preload="none"
@@ -233,6 +234,7 @@ function fmt(at: number) {
           <audio
             v-else-if="e.type === 'audio' && e.mediaUrl"
             class="audio"
+            crossorigin="anonymous"
             :src="e.mediaUrl"
             controls
             preload="none"

@@ -32,6 +32,7 @@
     "d1:usage": "node scripts/d1-usage.mjs",
     "quality:export": "node scripts/export-quality-exclusions.mjs",
     "check:media": "node scripts/check-media.mjs",
+    "check:media-webkit": "node scripts/check-media-webkit.mjs",
     "region:build": "node scripts/region/build-seasonality.mjs",
     "region:provinces": "node scripts/region/build-provinces.mjs",
     "region:hotspots": "node scripts/region/build-hotspots.mjs",

@@ -42,6 +42,9 @@ export function preloadAsset(type: MediaType, url: string) {
   } else {
     const a = document.createElement('audio')
     a.preload = 'auto'
+    // CORS 模式：与播放路径一致（iOS 播放 SW 缓存音频的前提，见 docs/033）。
+    // 必须在 src 之前设置——Safari 只读取设置 src 那一刻的 crossorigin。
+    a.crossOrigin = 'anonymous'
     a.src = url
   }
 }

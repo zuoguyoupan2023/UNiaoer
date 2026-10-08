@@ -7,7 +7,9 @@
  *   - 构建后的同源 /assets/：cache-first（内容哈希，可长缓存）
  *   - 页面导航：network-first，断网回退缓存的首页
  */
-const VERSION = 'uniaoer-v2'
+// v3（2026-10-08）：媒体缓存策略修复（去 Range 取全量 + CORS 模式音频，见 docs/033）
+// —— 版本号必须随本次变更递增：activate 时按前缀清理旧缓存，把历史不透明/206 片段清干净。
+const VERSION = 'uniaoer-v3'
 const MEDIA_CACHE = `${VERSION}-media`
 const RUNTIME_CACHE = `${VERSION}-runtime`
 /** 构建版本标记的存储键（存放最近一次见到的 manifest-core.generatedAt） */
@@ -114,20 +116,50 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
+/**
+ * cache-first（媒体：R2 域名 / 同源 /media/、data/assets 分片）。
+ *
+ * 033（2026-10-08）：修 iPhone/Safari 音频无法播放。Safari 的媒体加载器**总会带 Range 请求**
+ * （先 bytes=0-1 探针，再分段），而 Cache API **拒绝存储 206 响应**（put 抛错，此前被
+ * `.catch(() => {})` 静默吞掉）→ 音频永远进不了缓存、离线不可用；更致命的是 WebKit 无法
+ * 消费 SW 返回的 opaque 媒体响应（安卓正常、iPhone 卡在加载态）。对策：
+ *   ① 上游统一去掉 Range 取全量（媒体文件约几十 KB～1.5MB，全量对本项目可接受），
+ *      这样缓存里是完整 200，既能在线播也能离线播；
+ *   ② 客户端音频一律走 CORS 模式（crossOrigin="anonymous"；R2 已配 ACAO:*），
+ *      响应可读、可缓存；旧的不透明条目对 CORS 请求自动旁路并在下次取数时覆盖。
+ * 映射约定：媒体 URL 与 R2 的 CORS 配置是此项修复的前提（新增媒体源时须确认 ACAO）。
+ */
 async function cacheFirst(req, cacheName) {
   const cache = await caches.open(cacheName)
-  const hit = await cache.match(req)
-  // CORS 请求不能复用不透明（opaque）缓存，否则 canvas 会判定跨域失败
-  const usableHit = hit && !(req.mode === 'cors' && hit.type === 'opaque')
+  // 缓存键一律去掉 Range：Range 是播放器的取数细节，不是资源身份。
+  // 实测（Chromium + WebKit，2026-10-08）：带 Range 的请求能命中无 Range 的完整 200 条目，
+  // 故统一用「无 Range 键」读写，规避 206 无法入缓存/无法跨版本复用的坑。
+  const hasRange = req.headers.has('range')
+  const cacheKey = hasRange ? stripRange(req) : req
+  const hit = await cache.match(cacheKey)
+  // CORS 请求不能复用不透明（opaque）缓存，否则 canvas/媒体会判定跨域失败
+  const usableHit = hit && !(req.mode === 'cors' && hit.type === 'opaque') && hit.status !== 206
   if (usableHit) return hit
-  const res = await fetch(req)
-  if (res && (res.ok || res.type === 'opaque')) {
+  const res = await fetch(hasRange ? stripRange(req) : req)
+  if (res && (res.ok || res.type === 'opaque') && res.status !== 206) {
     // 不要把不透明响应覆盖到已有的 CORS 缓存上
     if (!(req.mode === 'cors' && res.type === 'opaque')) {
-      cache.put(req, res.clone()).catch(() => {})
+      cache.put(cacheKey, res.clone()).catch(() => {})
     }
   }
   return res
+}
+
+/** 复制请求但去掉 Range 头（Cache API 拒绝存 206；全量响应才能兼顾在线与离线重放）。 */
+function stripRange(req) {
+  const headers = new Headers(req.headers)
+  headers.delete('range')
+  return new Request(req.url, {
+    method: 'GET',
+    mode: req.mode,
+    credentials: req.credentials,
+    headers,
+  })
 }
 
 /**

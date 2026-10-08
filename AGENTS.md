@@ -26,6 +26,10 @@
      否则被 Worker 运行时取消（边缘缓存曾因此静默失效半日，见 `docs/032`）。
 
 5. **涉及媒体许可的改动**，必须保持署名（作者/许可证/来源）与 `canTranscode()`（ND 不转码）。
+   - **跨域媒体必须走 CORS 模式**：`<audio>`/`new Audio()`/预加载都要 `crossorigin`（**先于 `src` 设置**，Safari 只读设置 src 那一刻的值）。
+     WebKit 无法消费 SW 返回的 opaque 媒体响应——2026-10-08 iPhone 音频全挂即此因，见 `docs/033`。
+   - **不要把 206 片段写缓存**（Cache API 拒绝存储 206，且 Safari 永远发 Range 请求）：媒体缓存统一"去 Range 取全量"。
+   - 改动 SW 媒体策略后跑 `npm run check:media-webkit`（Chromium 的 lint/单测/e2e 覆盖不到这类引擎差异）。
 
 6. **地图与地区展示（政治敏感性）。**
    - 当前只做**国家/地区文本**，不含地图/边界；未来若上地图，边界须按官方立场处理，**逐项复核后再合并**。
@@ -65,6 +69,7 @@
 | 生成 D1 seed | `npm run d1:seed` |
 | D1 建表 / 灌数据（务必 `--remote`） | `wrangler d1 execute uniaoer --file=worker/schema.sql --remote` |
 | D1 用量取证（按天/按小时读写，Cloudflare GraphQL；需已 `wrangler login`） | `npm run d1:usage -- --days 3`（`--db uniaoer` / `--hourly-only`） |
+| 媒体 WebKit 回归（iPhone Safari/Edge 音频播放 + SW 缓存形态；需 `npm run build` + 首次 `npx playwright install webkit`） | `npm run check:media-webkit`（`-- --all` 含对照组） |
 | 三源一致性校验（仓库/R2/D1/Pages；**改完 D1 相关代码必须手动跑**，CI 不跑） | `npm run check:sync` |
 | Worker 本地调试（绑定远端 D1/R2） | `npm run worker:dev` |
 | Worker 编译自检（不部署） | `npm run worker:check` |
