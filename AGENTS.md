@@ -36,6 +36,12 @@
    - 港澳台**单独列出**，显示名必须是「中国香港／中国澳门／中国台湾」（英文 `Hong Kong, China / Macao, China / Taiwan, China`），见 `src/core/region.ts` 的 `REGION_LABEL_KEY` + i18n `region.regions.*`。
    - 南海诸岛、藏南及一切边界归属，按官方表述；不得把有争议地区作为独立国家呈现。
 
+7. **i18n 文案的 `{x}` 由 vue-i18n 插值，不是自定义占位符。**
+   - `t(key)` **不带参**取值会把 `{name}` 替换成**空串**；"先取模板、再 `.replace('{x}', …)`" 的写法必然失效
+     （海报错题行曾因此渲染成空括号「」——见 `docs/034`）。
+   - 一律**带参一步到位**：`t(key, { name })`；`grep -rn "replace('{" src/` 应为空。
+   - 画布类渲染（`poster.ts`）沿用**函数式注入**模式（如 `PosterStrings.mistakenAs: (name) => string`）。
+
 ## 速查命令
 
 | 目的 | 命令 |
