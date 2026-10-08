@@ -285,6 +285,7 @@ const en: typeof zhMessages = {
     empty: 'No reports match.',
     reportCount: '{n} report(s)',
     saved: 'Updated',
+    saveFailed: 'Action failed, please retry',
     openMedia: 'Open media',
     publish: 'Publish',
     markFixed: 'Mark fixed',

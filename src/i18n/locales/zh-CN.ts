@@ -279,6 +279,7 @@ export const messages = {
     empty: '没有符合条件的反馈。',
     reportCount: '共 {n} 条',
     saved: '已更新',
+    saveFailed: '操作失败，请重试',
     openMedia: '查看素材',
     publish: '发布',
     markFixed: '标记已修正',
