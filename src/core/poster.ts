@@ -47,7 +47,8 @@ export interface PosterImage {
 
 /**
  * 海报界面文案（015 §6.4/i18n-4）：core 不 import i18n，由调用方（PosterEditor）
- * 用 t() 按 locale 构造后注入；带 {n}/{name} 占位的模板在绘制时替换。
+ * 由 PosterEditor 用 t() 按 locale **带参**构造后注入；本模块不再做占位符替换
+ * （vue-i18n 已在 t() 阶段完成插值——不带参会把 {x} 变成空串，见 mistakenAs 注释）。
  */
 export interface PosterStrings {
   /** 多轮时的轮次标签，如「第 2 轮」 */
@@ -68,8 +69,16 @@ export interface PosterStrings {
   overflow: string
   /** 「超时未作答」 */
   timedOut: string
-  /** 错选模板，含 {name} 占位 */
-  mistakenAs: string
+  /**
+   * 错选行文案：**必须带参构造**（名字 → 完整句子）。
+   *
+   * 为什么是函数而不是含 `{name}` 的字符串：这条文案经 vue-i18n 的 `t()` 取值，
+   * 而 vue-i18n 会把 `{name}` 当**插值变量**——不带参调用时它被替换成空串
+   * （实测 `t('poster.canvas.mistakenAs')` → `认成了「」`，占位符已不存在），
+   * 画布侧再 `.replace('{name}', …)` 永远匹配不到 → 渲染出空括号。
+   * 故插值交给 i18n 带参完成，画布侧不再做字符串替换（2026-10-08 修复，见 docs/034）。
+   */
+  mistakenAs: (name: string) => string
   /** 页脚数据来源 */
   sourceLine: string
   /** 二维码下方提示 */
@@ -530,9 +539,7 @@ export function drawPoster(
         return
       }
       const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
-      const mineText = w.timedOut
-        ? strings.timedOut
-        : strings.mistakenAs.replace('{name}', w.chosen ?? '—')
+      const mineText = w.timedOut ? strings.timedOut : strings.mistakenAs(w.chosen ?? '—')
       ctx.font = `600 26px ${FONT}`
       const headW = ctx.measureText(head.text).width
       const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))

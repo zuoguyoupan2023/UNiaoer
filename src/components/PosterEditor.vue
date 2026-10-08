@@ -76,7 +76,8 @@ const strings = computed<PosterStrings>(() => {
     allCorrect: t('poster.canvas.allCorrect'),
     overflow: t('poster.canvas.overflow'),
     timedOut: t('result.timedOut'),
-    mistakenAs: t('poster.canvas.mistakenAs'),
+    // 带参构造：{name} 由 i18n 插值（不带参调用会把占位符替换成空串——2026-10-08 空括号 bug，见 docs/034）
+    mistakenAs: (name: string) => t('poster.canvas.mistakenAs', { name }),
     sourceLine: t('poster.canvas.sourceLine'),
     scanCta: t('poster.canvas.scanCta'),
   }
