@@ -53,9 +53,10 @@ npm run format       # 格式化
 - ✅ P7 自适应难度（最近 5 轮滚动正确率升降档）
 - ✅ 内容：物种档案（类群/分布/居留型）、答疑专栏 `/faq`、地区浏览 `/region`（七大洲→国家/省级→鸟种）
 - ✅ 地区数据层：季节层 `seasonality.json`、15 国省级层 `region-provinces.json`（含中国 34 区划/港澳台标注）、观鸟点 `hotspots.json`（GBIF 源）
-- ✅ i18n（zh-CN / en，532 keys，CI 门禁）· 无障碍（H3）· E2E（Playwright 11 条，全离线）
+- ✅ i18n（zh-CN / en，586 keys，CI 门禁）· 无障碍（H3）· E2E（Playwright 13 条，全离线）
 - ✅ 全球扩张（数据层）：AviList v2025b 全球骨架 `species-index.json`（11,131 种）+ manifest 增 `taxonKey`/`playable`；中文名 5,808 种（curated 优先 + Wikidata CC0）；backbone 映射 10,892/11,131；全球区系层 `/region`（249 国）+ 无媒体种轻量详情页
 - ✅ 全球媒体采集：**9,839 种**（图 9,349 / 音 9,060，1 图 1 音/种）已全部上传 R2，逐条署名，ND 不转码
+- ✅ 全量名录 `/catalog`：10,844 种按目 → 科 → 种浏览；**分类序 / 拼音 / 常见度**三态排序（拼音键与常见度档位构建期预计算）+ A–Z 字母跳转 + 拼音搜索
 - 🚧 进行中：玩法集成（P3）——全球池进题、manifest 分层加载、常见度分档、媒体质量反馈闭环（规划见 `docs/029`）
 
 ## 部署（Cloudflare Pages）
