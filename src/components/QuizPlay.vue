@@ -114,6 +114,8 @@ const REPORT_REASONS: { id: ReportReason; labelKey: string }[] = [
   { id: 'image', labelKey: 'report.reasons.image' },
   { id: 'audio', labelKey: 'report.reasons.audio' },
   { id: 'answer', labelKey: 'report.reasons.answer' },
+  // 029 M3:质量问题（素材没错但不适合当考题）→ 隔离/降级链路
+  { id: 'quality', labelKey: 'report.reasons.quality' },
   { id: 'other', labelKey: 'report.reasons.other' },
 ]
 const showReport = ref(false)

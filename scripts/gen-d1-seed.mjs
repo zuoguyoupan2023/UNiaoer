@@ -2,6 +2,12 @@
 /**
  * 029 M5:从分层产物生成 D1 种子 SQL（worker/seed.sql）。
  *
+ * 形态：**一物种一行 + 首图首音内联**（2026-10-08 调整）。
+ * 题目生成只需 1 图 1 音（完整 5+5 由前端 assets 分片提供，D-029-3），
+ * 内联后可把独立 media 表的 31,347 行压缩成 species 的 21 个列，
+ * 一次全量重建的写入行数从 22.2 万降到约 3.3 万（D1 免费额度 10 万行/天，
+ * 且索引维护也按行计费）。
+ *
  * 数据源（= 构建产物的"可玩层"，唯一事实源）：
  *   public/data/manifest.json            核心 1299 种（5+5 媒体、档案字段）
  *   public/data/manifest-global.min.json 全球池（1+1 媒体，约 9.5k 种）
@@ -27,52 +33,62 @@ const core = JSON.parse(await fs.readFile(CORE_PATH, 'utf8'))
 const global = JSON.parse(await fs.readFile(GLOBAL_PATH, 'utf8').catch(() => '{"species":[]}'))
 const globalSpecies = Array.isArray(global.species) ? global.species : []
 
-/** 素材数组（兼容旧单值 image/audio） */
-function mediaOf(sp) {
-  const imgs = sp.images && sp.images.length ? sp.images : sp.image ? [sp.image] : []
-  const auds = sp.audios && sp.audios.length ? sp.audios : sp.audio ? [sp.audio] : []
+const SPECIES_COLS =
+  'id,name_zh,name_sci,name_en,taxon_id,taxon_key,family,commonness,rank_world,rank_cn,in_cn,' +
+  'group_name,migration,iucn_category,distribution_count,playable_image,playable_audio,quiz_excluded,' +
+  'desc,location,habit,' +
+  'img_url,img_thumb_url,img_xl_url,img_avif_url,img_thumbhash,img_original_url,img_source_id,' +
+  'img_license,img_license_raw,img_author,img_source,img_source_url,img_transcode,' +
+  'aud_url,aud_original_url,aud_source_id,aud_license,aud_license_raw,aud_author,' +
+  'aud_source,aud_source_url,aud_quality,aud_transcode'
+
+/** 首图的内联取值（无素材则整组 NULL；共 13 列） */
+function inlineMedia(m) {
+  if (!m) return Array.from({ length: 13 }, () => 'NULL')
   return [
-    ['image', imgs],
-    ['audio', auds],
+    q(m.url),
+    q(m.thumbUrl),
+    q(m.xlUrl),
+    q(m.avifUrl),
+    q(m.thumbhash),
+    q(m.originalUrl),
+    q(m.sourceId),
+    q(m.license),
+    q(m.licenseRaw),
+    q(m.author),
+    q(m.source),
+    q(m.sourceUrl),
+    m.transcode ? 1 : 0,
   ]
 }
-
-function mediaRow(speciesId, type, m, i) {
-  const id = `${speciesId}-${type}-${i + 1}`
-  return (
-    'INSERT INTO media (id,species_id,type,url,thumb_url,xl_url,avif_url,original_url,source_id,license,license_raw,author,source,source_url,quality,transcode,quiz_excluded) VALUES (' +
-    [
-      q(id),
-      q(speciesId),
-      q(type),
-      q(m.url),
-      q(m.thumbUrl),
-      q(m.xlUrl),
-      q(m.avifUrl),
-      q(m.originalUrl),
-      q(m.sourceId),
-      q(m.license),
-      q(m.licenseRaw),
-      q(m.author),
-      q(m.source),
-      q(m.sourceUrl),
-      q(m.quality || null),
-      m.transcode ? 1 : 0,
-      b(!!m.quizExcluded),
-    ].join(',') +
-    ');\n'
-  )
+function inlineAudio(m) {
+  if (!m) return Array.from({ length: 11 }, () => 'NULL')
+  return [
+    q(m.url),
+    q(m.originalUrl),
+    q(m.sourceId),
+    q(m.license),
+    q(m.licenseRaw),
+    q(m.author),
+    q(m.source),
+    q(m.sourceUrl),
+    q(m.quality || null),
+    m.transcode ? 1 : 0,
+  ]
 }
 
 // D1 execute 不允许显式 BEGIN TRANSACTION/COMMIT（会自动按事务执行），故不包裹
 let sql = '-- 由 scripts/gen-d1-seed.mjs 生成，请勿手改（重跑：npm run d1:seed）\n'
-let mediaRows = 0
+let withImg = 0
+let withAud = 0
 
 // ---- 核心层：1299 种，完整 5+5 素材 + 档案字段 ----
 for (const s of core.species) {
   const p = s.profile || {}
+  const img = (s.images && s.images[0]) || s.image || null
+  const aud = (s.audios && s.audios[0]) || s.audio || null
   sql +=
-    'INSERT INTO species (id,name_zh,name_sci,name_en,taxon_id,taxon_key,family,commonness,rank_world,rank_cn,in_cn,group_name,migration,iucn_category,distribution_count,playable_image,playable_audio,quiz_excluded,desc,location,habit) VALUES (' +
+    `INSERT INTO species (${SPECIES_COLS}) VALUES (` +
     [
       q(s.id),
       q(s.nameZh),
@@ -95,22 +111,21 @@ for (const s of core.species) {
       q(s.desc),
       q(s.location),
       q(s.habit),
+      ...inlineMedia(img),
+      ...inlineAudio(aud),
     ].join(',') +
     ');\n'
-
-  for (const [type, arr] of mediaOf(s)) {
-    arr.forEach((m, i) => {
-      sql += mediaRow(s.id, type, m, i)
-      mediaRows++
-    })
-  }
+  if (img) withImg++
+  if (aud) withAud++
 }
 
 // ---- 全球池：1+1 素材，无档案字段（name_zh 可能为空） ----
 let globalRows = 0
 for (const s of globalSpecies) {
+  const img = (s.images && s.images[0]) || s.image || null
+  const aud = (s.audios && s.audios[0]) || s.audio || null
   sql +=
-    'INSERT INTO species (id,name_zh,name_sci,name_en,taxon_id,taxon_key,family,commonness,rank_world,rank_cn,in_cn,group_name,migration,iucn_category,distribution_count,playable_image,playable_audio,quiz_excluded,desc,location,habit) VALUES (' +
+    `INSERT INTO species (${SPECIES_COLS}) VALUES (` +
     [
       q(s.id),
       q(s.nameZh),
@@ -127,21 +142,19 @@ for (const s of globalSpecies) {
       'NULL',
       'NULL',
       'NULL',
-      b(!!s.image),
-      b(!!s.audio),
+      b(!!img),
+      b(!!aud),
       b(!!s.quizExcluded),
       q(s.desc),
       q(s.location),
       q(s.habit),
+      ...inlineMedia(img),
+      ...inlineAudio(aud),
     ].join(',') +
     ');\n'
   globalRows++
-  for (const [type, arr] of mediaOf(s)) {
-    arr.forEach((m, i) => {
-      sql += mediaRow(s.id, type, m, i)
-      mediaRows++
-    })
-  }
+  if (img) withImg++
+  if (aud) withAud++
 }
 
 // ---- meta 指纹（check:sync 的三源比对锚点） ----
@@ -153,7 +166,8 @@ const metaRows = [
   ['global_generatedAt', global.generatedAt || ''],
   ['global_total', String(globalRows)],
   ['seed_species', String(speciesRows)],
-  ['seed_media', String(mediaRows)],
+  ['seed_with_img', String(withImg)],
+  ['seed_with_aud', String(withAud)],
   ['seed_at', seedAt],
 ]
 sql += '\n'
@@ -164,5 +178,5 @@ for (const [k, v] of metaRows) {
 await fs.writeFile(path.join(ROOT, 'worker/seed.sql'), sql)
 const mb = (Buffer.byteLength(sql) / 1e6).toFixed(1)
 console.log(
-  `✅ 写入 worker/seed.sql（${mb}MB）：物种 ${speciesRows}（核心 ${core.species.length} + 全球 ${globalRows}）、媒体 ${mediaRows} 条、meta ${metaRows.length} 项`,
+  `✅ 写入 worker/seed.sql（${mb}MB）：物种 ${speciesRows}（核心 ${core.species.length} + 全球 ${globalRows}）、有图 ${withImg} / 有音 ${withAud}、meta ${metaRows.length} 项`,
 )

@@ -114,6 +114,13 @@ if (!Array.isArray(manifest.species) || !manifest.species.length) {
       if (badPlayable <= 5) fail(`playable* 与素材不一致：${sp.id}(image ${sp.playableImage}/${pi} audio ${sp.playableAudio}/${pa})`)
     }
 
+    // 029 M3(D-029-5):quizExcluded 必须是布尔且只在"有素材"时出现
+    // （无素材的种本就 playable=false，不属于"降级"；降级语义 = 有素材但不进题库）
+    if (sp.quizExcluded !== undefined) {
+      if (typeof sp.quizExcluded !== 'boolean') fail(`quizExcluded 非布尔：${sp.id}`)
+      else if (sp.quizExcluded && !pi && !pa) fail(`quizExcluded 但本就无素材（应省略该字段）：${sp.id}`)
+    }
+
     // 答疑专栏说明（011 §9）：出现时四字段（中英标题+正文）必须为非空字符串
     if (sp.notes) {
       for (const f of ['titleZh', 'titleEn', 'bodyZh', 'bodyEn']) {

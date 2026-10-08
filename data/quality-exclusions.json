@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-08T04:56:47.532Z",
+  "source": "local",
+  "note": "质量隔离台账（029 M3）。构建期映射进 media-overrides.excludeUrls：有替补则换下一条候选，无替补则该物种 quizExcluded（仅展示、不进题库）。由 npm run quality:export 从 D1 生成，请勿手改。",
+  "counts": {
+    "species": 0,
+    "media": 0
+  },
+  "bySpecies": {}
+}

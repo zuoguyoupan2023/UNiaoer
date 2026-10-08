@@ -42,6 +42,7 @@ import {
   unmatchedProfileIds,
 } from './lib/profiles.mjs'
 import { rgbaToThumbHash } from 'thumbhash'
+import { isDegraded } from './lib/quality.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -214,9 +215,33 @@ function needsRepair(prev) {
 
 /** 人工覆盖表 data/media-overrides.json（可选）：{ "<id 或学名>": { images:[], audios:[], excludeUrls:[] } } */
 async function loadOverrides() {
+  let overrides = {}
   try {
     const d = JSON.parse(await fs.readFile(path.join(ROOT, 'data/media-overrides.json'), 'utf8'))
-    return (d && d.overrides) || {}
+    overrides = { ...(d && d.overrides) }
+  } catch {
+    overrides = {}
+  }
+  // 029 M3:把质量隔离台账（data/quality-exclusions.json，由 npm run quality:export 从 D1 生成）
+  // 合并进 excludeUrls —— 复用既有"排除 + 取下一条候选"机制，零新管线。
+  try {
+    const q = JSON.parse(await fs.readFile(path.join(ROOT, 'data/quality-exclusions.json'), 'utf8'))
+    for (const [id, v] of Object.entries(q.bySpecies || {})) {
+      const cur = overrides[id] || {}
+      const merged = new Set([...(cur.excludeUrls || []), ...(v.image || []), ...(v.audio || [])])
+      overrides[id] = { ...cur, excludeUrls: [...merged] }
+    }
+  } catch {
+    /* 无隔离台账:跳过 */
+  }
+  return overrides
+}
+
+/** 029 M3：质量隔离台账（data/quality-exclusions.json，npm run quality:export 生成） */
+async function loadQualityExclusions() {
+  try {
+    const d = JSON.parse(await fs.readFile(path.join(ROOT, 'data/quality-exclusions.json'), 'utf8'))
+    return d.bySpecies || {}
   } catch {
     return {}
   }
@@ -338,7 +363,7 @@ async function main() {
 
   console.log(`\n🐦 UNiaoer 题库构建${OPT.global ? '（🌐 全球增量模式）' : ''}`)
   console.log(`   清单: ${source}  物种: ${list.length}/${species.length}  策略: ${OPT.policy}  媒体: ${OPT.media}`)
-  console.log(`   每物种: 图≤${OPT.per} 音≤${OPT.per}${OPT.taxa ? '（taxa 模式：default_photo 优先）' : ''}  覆盖表: ${Object.keys(OVERRIDES).length} 条`)
+  console.log(`   每物种: 图≤${OPT.per} 音≤${OPT.per}${OPT.taxa ? '（taxa 模式：default_photo 优先）' : ''}  覆盖表: ${Object.keys(OVERRIDES).length} 条（含质量隔离）`)
   console.log(`   音频源: iNaturalist sounds${useXc ? ' + Xeno-canto' : '（未提供 XC_API_KEY，仅 iNat）'}`)
   console.log(`   图像: large 母版 → thumb/full/xl${AVIF_ENCODER ? ' + AVIF(' + AVIF_ENCODER + ')' : '（无 AV1 编码器，跳过 AVIF）'}`)
   console.log(`   时间预算: ${OPT.maxMinutes === Infinity ? '不限' : OPT.maxMinutes + ' 分钟'}`)
@@ -481,6 +506,25 @@ async function main() {
     r.playableAudio = (r.audios ? r.audios.length : 0) >= 1
     r.playable = r.playableImage || r.playableAudio
   }
+  // 029 M3:质量降级（无替补的隔离素材）。
+  // 隔离台账里的 URL 已被 loadOverrides() 映射进 excludeUrls（构建期已换过替补）；
+  // 若某物种的**全部**素材都出现在其隔离清单里，说明确实没有替补可用 → quizExcluded:
+  // 素材照常展示（`/region` / 详情页 / 名录），但不进题库（前端按字段过滤，见 docs/029 §4）。
+  const quarantined = await loadQualityExclusions()
+  let quizExcludedCount = 0
+  for (const r of outputSpecies) {
+    const q = quarantined[r.id]
+    if (!q) continue
+    const banned = new Set([...(q.image || []), ...(q.audio || [])])
+    if (!banned.size) continue
+    // 判定抽成纯函数（scripts/lib/quality.mjs，有单测）：
+    // 仅当"某类型有素材但全被隔离"才算降级；无素材的种本就 playable=false。
+    if (isDegraded(r, banned)) {
+      r.quizExcluded = true
+      quizExcludedCount++
+    }
+  }
+  if (quizExcludedCount) console.log(`   ⚠️ 质量降级（仅展示、不进题库）${quizExcludedCount} 种（隔离台账命中）`)
   const manifest = {
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),

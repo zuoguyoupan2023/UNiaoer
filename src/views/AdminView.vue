@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CheckCheck, RefreshCw, ShieldCheck, Undo2, X } from 'lucide-vue-next'
+import { CheckCheck, RefreshCw, ShieldCheck, ShieldOff, Undo2, X } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName } from '@/core/bank'
 import {
   AdminAuthError,
   listAdminReports,
+  listQuarantine,
   patchReportStatus,
+  quarantineReportMedia,
   type AdminReport,
   type ReportStatus,
 } from '@/core/reportsApi'
@@ -41,6 +43,7 @@ async function load() {
   try {
     await loadBank().catch(() => null)
     reports.value = await listAdminReports(key.value, { status: filter.value, limit: 100 })
+    void refreshQuarantine()
     authed.value = true
     rememberKey(key.value)
   } catch (e) {
@@ -60,6 +63,38 @@ function logout() {
   authed.value = false
   reports.value = []
   rememberKey('')
+}
+
+/** 029 M3：隔离台账键（与 Worker 端一致：`<species_id>|<type>|<url>`） */
+const quarantinedKeys = ref<Set<string>>(new Set())
+const mediaKeyOf = (r: AdminReport) =>
+  `${r.species_id ?? ''}|${r.question_type === 'audio' ? 'audio' : 'image'}|${r.media_url ?? ''}`
+
+async function refreshQuarantine() {
+  try {
+    const items = await listQuarantine(key.value)
+    quarantinedKeys.value = new Set(items.filter((x) => !x.resolved_at).map((x) => x.media_key))
+  } catch {
+    /* 管理端拉取失败不阻塞主流程 */
+  }
+}
+
+async function quarantine(r: AdminReport) {
+  busy.value = { ...busy.value, [r.id]: true }
+  savedMsg.value = ''
+  try {
+    await quarantineReportMedia(r.id, key.value, {
+      speciesId: r.species_id ?? undefined,
+      mediaType: r.question_type === 'audio' ? 'audio' : 'image',
+      mediaUrl: r.media_url ?? undefined,
+    })
+    savedMsg.value = t('admin.quarantinedMsg')
+    await refreshQuarantine()
+  } catch {
+    savedMsg.value = t('admin.saveFailed')
+  } finally {
+    busy.value = { ...busy.value, [r.id]: false }
+  }
 }
 
 async function setStatus(r: AdminReport, status: ReportStatus) {
@@ -201,6 +236,18 @@ const count = computed(() => reports.value.length)
             >
               {{ t('admin.markFixed') }}
             </button>
+            <!-- 029 M3：质量隔离（素材不适合当考题；有替补换替补，无替补降级为仅展示） -->
+            <button
+              v-if="r.media_url && !quarantinedKeys.has(mediaKeyOf(r))"
+              class="btn btn-secondary btn-sm"
+              type="button"
+              :disabled="busy[r.id]"
+              :title="t('admin.quarantineHint')"
+              @click="quarantine(r)"
+            >
+              <ShieldOff class="ic" :size="13" /> {{ t('admin.quarantine') }}
+            </button>
+            <span v-else-if="r.media_url" class="quar">✓ {{ t('admin.quarantined') }}</span>
             <button
               v-if="r.status !== 'rejected'"
               class="btn btn-secondary btn-sm"
@@ -331,6 +378,22 @@ const count = computed(() => reports.value.length)
   border-radius: 8px;
   background: #fdf3d8;
   color: #8a6d00;
+}
+/* 029 M3：隔离态标记 */
+.quar {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--primary);
+  align-self: center;
+  padding: 0 4px;
+}
+/* 029 M3：隔离态标记 */
+.quar {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--primary);
+  align-self: center;
+  padding: 0 4px;
 }
 .status {
   font-size: 0.7rem;

@@ -63,26 +63,31 @@ interface SpeciesRow {
   desc: string | null
   location: string | null
   habit: string | null
-}
-
-interface MediaRow {
-  id: string
-  species_id: string
-  type: 'image' | 'audio'
-  url: string
-  thumb_url: string | null
-  xl_url: string | null
-  avif_url: string | null
-  original_url: string | null
-  source_id: string | null
-  license: string
-  license_raw: string | null
-  author: string
-  source: string
-  source_url: string | null
-  quality: string | null
-  transcode: number
-  quiz_excluded: number
+  // 首图（内联；完整 5+5 由前端 assets 分片提供）
+  img_url: string | null
+  img_thumb_url: string | null
+  img_xl_url: string | null
+  img_avif_url: string | null
+  img_thumbhash: string | null
+  img_original_url: string | null
+  img_source_id: string | null
+  img_license: string | null
+  img_license_raw: string | null
+  img_author: string | null
+  img_source: string | null
+  img_source_url: string | null
+  img_transcode: number | null
+  // 首音
+  aud_url: string | null
+  aud_original_url: string | null
+  aud_source_id: string | null
+  aud_license: string | null
+  aud_license_raw: string | null
+  aud_author: string | null
+  aud_source: string | null
+  aud_source_url: string | null
+  aud_quality: string | null
+  aud_transcode: number | null
 }
 
 /** 档位 → 允许的常见度（与 src/core/difficulty.ts TIERS 对齐） */
@@ -153,24 +158,46 @@ function toSpeciesBase(r: SpeciesRow): Record<string, unknown> {
   }
 }
 
-function toMedia(m: MediaRow): Record<string, unknown> {
+/** 行内首图 → 前端 MediaAsset（字段名与前端一致；id 供错题本等引用） */
+function inlineImage(r: SpeciesRow): Record<string, unknown> | null {
+  if (!r.img_url) return null
   return {
-    id: m.id,
-    speciesId: m.species_id,
-    type: m.type,
-    url: m.url,
-    thumbUrl: m.thumb_url ?? undefined,
-    xlUrl: m.xl_url ?? undefined,
-    avifUrl: m.avif_url ?? undefined,
-    originalUrl: m.original_url ?? undefined,
-    sourceId: m.source_id ?? undefined,
-    license: m.license,
-    licenseRaw: m.license_raw ?? undefined,
-    author: m.author,
-    source: m.source,
-    sourceUrl: m.source_url ?? undefined,
-    quality: m.quality ?? undefined,
-    transcode: m.transcode === 1,
+    id: `${r.id}-image-1`,
+    speciesId: r.id,
+    type: 'image',
+    url: r.img_url,
+    thumbUrl: r.img_thumb_url ?? undefined,
+    xlUrl: r.img_xl_url ?? undefined,
+    avifUrl: r.img_avif_url ?? undefined,
+    thumbhash: r.img_thumbhash ?? undefined,
+    originalUrl: r.img_original_url ?? undefined,
+    sourceId: r.img_source_id ?? undefined,
+    license: r.img_license ?? undefined,
+    licenseRaw: r.img_license_raw ?? undefined,
+    author: r.img_author ?? undefined,
+    source: r.img_source ?? undefined,
+    sourceUrl: r.img_source_url ?? undefined,
+    transcode: r.img_transcode === 1,
+  }
+}
+
+/** 行内首音 → 前端 MediaAsset */
+function inlineAudio(r: SpeciesRow): Record<string, unknown> | null {
+  if (!r.aud_url) return null
+  return {
+    id: `${r.id}-audio-1`,
+    speciesId: r.id,
+    type: 'audio',
+    url: r.aud_url,
+    originalUrl: r.aud_original_url ?? undefined,
+    sourceId: r.aud_source_id ?? undefined,
+    license: r.aud_license ?? undefined,
+    licenseRaw: r.aud_license_raw ?? undefined,
+    author: r.aud_author ?? undefined,
+    source: r.aud_source ?? undefined,
+    sourceUrl: r.aud_source_url ?? undefined,
+    quality: r.aud_quality ?? undefined,
+    transcode: r.aud_transcode === 1,
   }
 }
 
@@ -227,7 +254,7 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
   const region = (url.searchParams.get('region') || 'ALL').toUpperCase()
 
   const commonness = TIER_COMMONNESS[tier] ?? TIER_COMMONNESS[2]!
-  const playableCol = type === 'audio' ? 'playable_audio' : 'playable_image'
+  const playableCol = type === 'audio' ? 'aud_url' : 'img_url'
   const placeholders = commonness.map(() => '?').join(',')
 
   // 地区过滤（仅 L1–L3；L4/L5 全球开放,与前端 D-029-2 一致）
@@ -236,69 +263,34 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     shortCodes = await regionShortCodes(env, region)
   }
 
-  const where = [
-    `commonness IN (${placeholders})`,
-    `${playableCol} = 1`,
-    'quiz_excluded = 0',
-  ]
-  const binds: (string | number)[] = [...commonness]
-
+  // 单表查询（内联媒体列）——每题只需 1 图 1 音，完整 5+5 由前端 assets 分片提供
   const sp = await env.DB.prepare(
-    `SELECT id,name_zh,name_sci,name_en,taxon_id,taxon_key,family,commonness,rank_world,rank_cn,in_cn,group_name,migration,iucn_category,distribution_count,playable_image,playable_audio,quiz_excluded,desc,location,habit
-     FROM species WHERE ${where.join(' AND ')} ORDER BY RANDOM() LIMIT ?`,
+    `SELECT * FROM species
+     WHERE commonness IN (${placeholders}) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0
+     ORDER BY RANDOM() LIMIT ?`,
   )
-    .bind(...binds, shortCodes ? Math.max(count * 8, 200) : count)
+    .bind(...commonness, shortCodes ? Math.max(count * 8, 200) : count)
     .all<SpeciesRow>()
 
   let rows = sp.results
   if (shortCodes) {
-    // 短码 = AvibaseID 去 avibase- 前缀；区系矩阵未命中/无 taxon_key 的种丢弃
     const set = new Set(shortCodes)
-    rows = rows.filter((r) => {
-      const key = r.taxon_key || ''
-      const code = key.startsWith('avibase-') ? key.slice(8) : ''
-      return code && set.has(code)
-    })
-    rows = rows.slice(0, count)
+    rows = rows
+      .filter((r) => {
+        const key = r.taxon_key || ''
+        const code = key.startsWith('avibase-') ? key.slice(8) : ''
+        return code && set.has(code)
+      })
+      .slice(0, count)
   }
 
-  const ids = rows.map((r) => r.id)
-  if (ids.length === 0) return json({ tier, type, region, count: 0, species: [] })
+  const species = rows.map((r) => {
+    const image = inlineImage(r)
+    const audio = inlineAudio(r)
+    return { ...toSpeciesBase(r), images: image ? [image] : [], audios: audio ? [audio] : [], image, audio }
+  })
 
-  const media = await env.DB.prepare(
-    `SELECT id,species_id,type,url,thumb_url,xl_url,avif_url,original_url,source_id,license,license_raw,author,source,source_url,quality,transcode,quiz_excluded
-     FROM media WHERE species_id IN (${ids.map(() => '?').join(',')}) AND quiz_excluded = 0`,
-  )
-    .bind(...ids)
-    .all<MediaRow>()
-
-  const byId = new Map<string, { images: ReturnType<typeof toMedia>[]; audios: ReturnType<typeof toMedia>[] }>()
-  for (const m of media.results) {
-    let bucket = byId.get(m.species_id)
-    if (!bucket) {
-      bucket = { images: [], audios: [] }
-      byId.set(m.species_id, bucket)
-    }
-    if (m.type === 'image') bucket.images.push(toMedia(m))
-    else bucket.audios.push(toMedia(m))
-  }
-
-  // 媒体全被隔离(quiz_excluded)的物种从候选里剔除——否则前端拿到空素材
-  const species = rows
-    .map((r) => {
-      const bucket = byId.get(r.id) ?? { images: [], audios: [] }
-      return {
-        ...toSpeciesBase(r),
-        images: bucket.images,
-        audios: bucket.audios,
-        image: bucket.images[0] ?? null,
-        audio: bucket.audios[0] ?? null,
-      }
-    })
-    .filter((s) => (type === 'audio' ? s.audio : s.image))
-
-  // 029 M4:干扰项名字候选(无素材,仅选项用;前端据此离线组装题面)。
-  // 同档位常见度范围,随机 240 条,排除已选目标——小体积(约 20KB)换取选项多样性。
+  // 029 M4:干扰项名字候选（无素材，仅选项用；小体积换选项多样性）
   const targetIds = new Set(species.map((s) => s.id))
   let distractors: Record<string, unknown>[] = []
   try {
@@ -320,7 +312,7 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
         commonness: r.commonness,
       }))
   } catch {
-    distractors = [] // 候选查询失败:前端回退用本地池
+    distractors = []
   }
 
   return json({ tier, type, region, count: species.length, species, distractors })
@@ -350,22 +342,17 @@ async function regionShortCodes(env: Env, region: string): Promise<string[] | nu
   return codes
 }
 
-async function handleMedia(env: Env, id: string): Promise<Response> {
-  const row = await env.DB.prepare('SELECT url FROM media WHERE id = ?').bind(id).first<{ url: string }>()
-  if (!row) return json({ error: 'not_found', id }, { status: 404 })
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location: row.url,
-      'cache-control': 'public, max-age=86400',
-      ...CORS,
-    },
-  })
+/**
+ * 媒体重定向（历史端点）。2026-10-08 起媒体直连 R2（manifest/内联字段给的是绝对地址），
+ * 前端已不再调用本端点；D1 的 media 表同步移除（写入额度优化,见 schema.sql 说明）。
+ */
+async function handleMedia(_env: Env, id: string): Promise<Response> {
+  return json({ error: 'gone', id, hint: 'media is served directly from R2' }, { status: 410 })
 }
 
 // ---------- B6 报错 / 大众评审 ----------
 
-const REPORT_REASONS = new Set(['image', 'audio', 'answer', 'other'])
+const REPORT_REASONS = new Set(['image', 'audio', 'answer', 'quality', 'other'])
 const REPORT_STATUSES = new Set(['open', 'published', 'fixed', 'rejected'])
 
 function str(v: unknown, max: number): string | null {
@@ -511,8 +498,49 @@ async function handleAdminList(env: Env, url: URL): Promise<Response> {
 }
 
 /** 管理：改状态（纠正/驳回/发布） */
+/**
+ * 029 M3:管理动作。
+ * - `{ status }`：常规状态流转（open/published/fixed/rejected）
+ * - `{ action: 'quarantine', mediaKey?, mediaType?, mediaUrl? }`：把该报错涉及的素材加入质量隔离台账
+ * - `{ action: 'unquarantine', mediaKey }`：解除隔离（素材已修复/替换）
+ * 隔离是**管理方判定**，不自动生效；下次构建时由导出脚本落到题库（见 docs/029 §4）。
+ */
 async function handleAdminPatch(request: Request, env: Env, id: string): Promise<Response> {
   const body = await readBody(request)
+  const action = typeof body.action === 'string' ? body.action : ''
+
+  if (action === 'quarantine') {
+    const row = await env.DB.prepare(
+      'SELECT species_id, question_type, media_url, reason, note FROM reports WHERE id = ?',
+    )
+      .bind(id)
+      .first<{ species_id: string | null; question_type: string | null; media_url: string | null }>()
+    if (!row) return json({ error: 'not_found' }, { status: 404 })
+    const speciesId = str(body.speciesId, 80) || row.species_id || ''
+    const mediaType = (str(body.mediaType, 10) || row.question_type || 'image') === 'audio' ? 'audio' : 'image'
+    const mediaUrl = str(body.mediaUrl, 500) || row.media_url || ''
+    if (!speciesId || !mediaUrl) return json({ error: 'missing_media' }, { status: 400 })
+    const key = `${speciesId}|${mediaType}|${mediaUrl}`
+    const res = await env.DB.prepare(
+      `INSERT INTO media_quarantine (media_key,species_id,media_type,media_url,report_id,note,created_at)
+       VALUES (?,?,?,?,?,?,?)
+       ON CONFLICT(media_key) DO UPDATE SET resolved_at = NULL, report_id = excluded.report_id, note = excluded.note`,
+    )
+      .bind(key, speciesId, mediaType, mediaUrl, id, str(body.note, 300) || null, Date.now())
+      .run()
+    if (!res.success) return json({ error: 'quarantine_failed' }, { status: 500 })
+    return json({ ok: true, id, action, mediaKey: key })
+  }
+
+  if (action === 'unquarantine') {
+    const key = str(body.mediaKey, 500)
+    if (!key) return json({ error: 'missing_media_key' }, { status: 400 })
+    await env.DB.prepare('UPDATE media_quarantine SET resolved_at = ? WHERE media_key = ?')
+      .bind(Date.now(), key)
+      .run()
+    return json({ ok: true, action, mediaKey: key })
+  }
+
   const status = typeof body.status === 'string' ? body.status : ''
   if (!REPORT_STATUSES.has(status)) return json({ error: 'invalid_status' }, { status: 400 })
   const res = await env.DB.prepare('UPDATE reports SET status = ?, updated_at = ? WHERE id = ?')
@@ -543,6 +571,14 @@ export default {
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
         if (path === '/api/reports') return await handlePublicReports(env, url)
+        // 029 M3:质量隔离台账（管理端读取,供 /admin 展示与导出脚本拉取）
+        if (path === '/api/quarantine') {
+          if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
+          const rows = await env.DB.prepare(
+            'SELECT * FROM media_quarantine ORDER BY created_at DESC LIMIT 500',
+          ).all<Record<string, unknown>>()
+          return json({ items: rows.results })
+        }
         if (path === '/api/reports/admin') {
           if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
           return await handleAdminList(env, url)

@@ -109,7 +109,45 @@ if (!SKIP_D1) {
   if (DRY) {
     console.log(`  [dry] wrangler d1 execute ${DB} --file=worker/schema.sql --remote`)
   } else {
-    process.stdout.write(`  · schema.sql（重建 species/media/questions，保留 reports/meta）… `)
+    // 写入预检（2026-10-08 事故：DROP 成功后才在 seed 处撞上 D1 每日写入额度，
+    // 留下"表结构在、数据空"的状态）——先写一行 meta 试探可写性，不可写就整段跳过，
+    // 绝不在无法完成重建时先删旧数据。
+    process.stdout.write('  · 写入预检（meta 探针）… ')
+    try {
+      // 探针自带建表（DDL 不占"行写入"额度），对全新库同样成立
+      await wrangler([
+        'd1', 'execute', DB, '--command',
+        "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);" +
+          "INSERT OR REPLACE INTO meta (key,value) VALUES ('sync_probe', strftime('%s','now'));",
+        '--remote',
+      ])
+      console.log('ok')
+    } catch (e) {
+      // wrangler 的错误对象结构不定（stderr/stdout/message 都可能为空），
+      // 故对整个错误做一次字符串化再匹配关键词。
+      let msg = ''
+      try {
+        msg = [e?.stderr, e?.stdout, e?.message].filter(Boolean).join('\n')
+        if (!msg) msg = JSON.stringify(e) ?? ''
+      } catch {
+        msg = String(e)
+      }
+      console.log('✗')
+      if (/RESET_DO|daily|exceed|over|limit/i.test(msg)) {
+        const now = new Date()
+        const nextUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+        const hours = ((nextUtc - now.getTime()) / 3.6e6).toFixed(1)
+        console.error(
+          `\n❌ D1 每日写入额度已用尽（免费额度 10 万行/天，00:00 UTC 重置）。\n` +
+            `   当前库仍是上一次同步的内容，**未做任何破坏性操作**。\n` +
+            `   约 ${hours} 小时后（UTC ${new Date(nextUtc).toISOString().slice(0, 16)}）重跑：npm run sync:prod -- --skip-r2\n` +
+            `   另请运行 wrangler d1 info ${DB} 查看 rows_written_24h 确认消耗来源。`,
+        )
+        process.exit(2)
+      }
+      throw e
+    }
+    process.stdout.write(`  · schema.sql（重建 species/questions，保留 reports/meta）… `)
     await wrangler(['d1', 'execute', DB, '--file=worker/schema.sql', '--remote'])
     console.log('ok')
 

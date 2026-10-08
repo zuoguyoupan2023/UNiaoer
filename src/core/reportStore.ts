@@ -5,7 +5,13 @@
  */
 import type { MediaType } from '@/types'
 
-export type ReportReason = 'image' | 'audio' | 'answer' | 'other'
+/**
+ * 反馈类型。029 M3 起新增 `quality`：
+ *   · image/audio/answer = **正确性问题**（内容错了，必须纠正）
+ *   · quality = **质量问题**（内容没错，但素材不适合当考题：模糊/远景/嘈杂/主体不清）
+ *     处理链路不同：quality 走"隔离 → 换替补 → 无替补则降级为仅展示"（docs/029 §4）。
+ */
+export type ReportReason = 'image' | 'audio' | 'answer' | 'quality' | 'other'
 
 export interface ReportEntry {
   id: string

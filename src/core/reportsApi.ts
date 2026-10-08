@@ -123,3 +123,53 @@ export async function patchReportStatus(
   if (res.status === 401) throw new AdminAuthError()
   if (!res.ok) throw new Error(`patch failed: ${res.status}`)
 }
+
+/**
+ * 029 M3:质量隔离——把该报错涉及的素材加入隔离台账（管理方判定）。
+ * 生效链路：隔离 → npm run quality:export → 下次构建把它映射进 excludeUrls →
+ * 有替补换替补，无替补则该物种 quizExcluded（仅展示、不进题库）。
+ */
+export async function quarantineReportMedia(
+  id: string,
+  key: string,
+  opts: { speciesId?: string; mediaType?: string; mediaUrl?: string; note?: string } = {},
+): Promise<void> {
+  const res = await fetch(`/api/reports/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', 'x-admin-key': key },
+    body: JSON.stringify({ action: 'quarantine', ...opts }),
+  })
+  if (res.status === 401) throw new AdminAuthError()
+  if (!res.ok) throw new Error(`quarantine failed: ${res.status}`)
+}
+
+/** 隔离台账（管理端读取；含已复原项） */
+export interface QuarantineItem {
+  media_key: string
+  species_id: string
+  media_type: string
+  media_url: string
+  report_id: string | null
+  note: string | null
+  created_at: number
+  resolved_at: number | null
+}
+
+export async function listQuarantine(key: string): Promise<QuarantineItem[]> {
+  const res = await fetch('/api/quarantine', { headers: { 'x-admin-key': key } })
+  if (res.status === 401) throw new AdminAuthError()
+  if (!res.ok) throw new Error(`quarantine list failed: ${res.status}`)
+  const data = (await res.json()) as { items?: QuarantineItem[] }
+  return data.items ?? []
+}
+
+/** 解除隔离（素材已修复/替换） */
+export async function unquarantine(key: string, mediaKey: string, reportId = 'manual'): Promise<void> {
+  const res = await fetch(`/api/reports/${encodeURIComponent(reportId)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', 'x-admin-key': key },
+    body: JSON.stringify({ action: 'unquarantine', mediaKey }),
+  })
+  if (res.status === 401) throw new AdminAuthError()
+  if (!res.ok) throw new Error(`unquarantine failed: ${res.status}`)
+}

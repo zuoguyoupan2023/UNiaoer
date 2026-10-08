@@ -54,11 +54,12 @@ console.log(`① 本地   core ${core.total} 种 · ${assetFiles.length} 分片 
 
 // 期望的 D1 行数（从本地产物直接算）
 const expectSpecies = core.total + (global?.species?.length || 0)
-const countMedia = (sp) =>
-  ((sp.images?.length || 0) || (sp.image ? 1 : 0)) + ((sp.audios?.length || 0) || (sp.audio ? 1 : 0))
-const expectMedia =
-  full.species.reduce((n, sp) => n + countMedia(sp), 0) +
-  (global?.species?.reduce((n, sp) => n + countMedia(sp), 0) || 0)
+// 内联形态（2026-10-08 起）：D1 一物种一行，只存首图首音 → 校验「有图/有音的行数」
+const hasImg = (sp) => !!((sp.images && sp.images.length) || sp.image)
+const hasAud = (sp) => !!((sp.audios && sp.audios.length) || sp.audio)
+const allPool = [...full.species, ...(global?.species ?? [])]
+const expectWithImg = allPool.filter(hasImg).length
+const expectWithAud = allPool.filter(hasAud).length
 
 // ── ② R2 发布通道 ───────────────────────────────────────────
 if (NO_NET) {
@@ -100,7 +101,8 @@ if (NO_NET) {
         '--yes', 'wrangler', 'd1', 'execute', 'uniaoer',
         '--command',
         "SELECT 'count_species' AS k, CAST(COUNT(*) AS TEXT) AS v FROM species " +
-          "UNION ALL SELECT 'count_media', CAST(COUNT(*) AS TEXT) FROM media " +
+          "UNION ALL SELECT 'count_with_img', CAST(COUNT(*) AS TEXT) FROM species WHERE img_url IS NOT NULL " +
+          "UNION ALL SELECT 'count_with_aud', CAST(COUNT(*) AS TEXT) FROM species WHERE aud_url IS NOT NULL " +
           'UNION ALL SELECT key, value FROM meta',
         '--remote', '--json',
       ],
@@ -113,9 +115,9 @@ if (NO_NET) {
       ['manifest_generatedAt', core.generatedAt],
       ['global_generatedAt', global?.generatedAt || ''],
       ['count_species', String(expectSpecies)],
-      ['count_media', String(expectMedia)],
+      ['count_with_img', String(expectWithImg)],
+      ['count_with_aud', String(expectWithAud)],
       ['seed_species', String(expectSpecies)],
-      ['seed_media', String(expectMedia)],
     ]
     let ok = true
     for (const [k, want] of checks) {
@@ -127,7 +129,7 @@ if (NO_NET) {
     }
     if (ok) {
       console.log(
-        `③ D1     species ${kv.count_species} · media ${kv.count_media} · seed_at ${kv.seed_at}`,
+        `③ D1     species ${kv.count_species}（有图 ${kv.count_with_img} / 有音 ${kv.count_with_aud}）· seed_at ${kv.seed_at}`,
       )
     }
   } catch (e) {
