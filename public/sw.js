@@ -98,6 +98,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
     return
   }
+  // 036 省级常见度分片：内容随构建更新（URL 不含版本号），故 stale-while-revalidate
+  // （首屏立刻可用 + 后台更新；构建版本变更时由 refreshBuildTag 清缓存兜底）
+  if (url.pathname.includes('/data/province-commonness')) {
+    event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
+    return
+  }
   // 其余题库 JSON（含完整层 manifest.json）：network-first（口径与旧行为一致）
   if (url.pathname.includes('/data/')) {
     event.respondWith(manifestFetch(req))

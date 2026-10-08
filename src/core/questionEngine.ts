@@ -17,6 +17,14 @@ export interface BuildOptions {
    * 名字候选无素材、只用于选项，故不能走 mediaPool 过滤。
    */
   distractorPool?: BankSpecies[]
+  /**
+   * 036：**地区档位表**（省级常见度，见 core/provinceCommonness.ts）。
+   * 提供时用它替代全局 `sp.commonness` 做档位筛选——同一只鸟在不同省份的
+   * "常见/稀有"不同（北京天天见的鸟，在某县可能是罕见旅鸟）。
+   * 语义：表里有该物种 → 用地区档位；表里没有（未匹配到骨架/被守卫剔除）
+   * → 回退全局 commonness（**绝不出空池**，docs/036 §2.3 降级链）。
+   */
+  regionTiers?: Map<string, number> | null
 }
 
 
@@ -117,20 +125,29 @@ export function pickMedia(sp: BankSpecies, type: MediaType, poolSize: number): M
  * - speciesPool（A2 赛制）：题目只取池内物种，池上仍按档位筛常见度（不足放宽到池）
  */
 export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
-  const { type, count = 10, tier = 2, speciesPool, locale, distractorPool } = opts
+  const { type, count = 10, tier = 2, speciesPool, locale, distractorPool, regionTiers } = opts
   const cfg = TIERS[tier]
   const full = mediaPool(bank, type)
   // 干扰项池：默认与出题池同源（本地模式）；在线模式传入服务端候选（含无素材的名字条目）
   const dPool = distractorPool && distractorPool.length ? distractorPool : full
 
+  /**
+   * 036：档位取值——地区档位表优先（省级常见度），缺失则回退全局 commonness。
+   * 这样"有没有地区数据"都不会让题池变空：表里没命中的物种按全局档位处理。
+   */
+  const tierOf = (s: BankSpecies): number => {
+    const t = regionTiers?.get(s.id)
+    return Number.isInteger(t) ? t! : s.commonness
+  }
+
   let pool: BankSpecies[]
   if (speciesPool) {
     const inPool = full.filter((s) => speciesPool.has(s.id))
     // 池上仍按档位筛常见度；样本不足放宽到池内全部（013 §4.2 标准赛也允许难度筛选）
-    const tiered = inPool.filter((s) => cfg.commonness.includes(s.commonness))
+    const tiered = inPool.filter((s) => cfg.commonness.includes(tierOf(s)))
     pool = tiered.length >= Math.min(count, 4) ? tiered : inPool
   } else {
-    const tiered = full.filter((s) => cfg.commonness.includes(s.commonness))
+    const tiered = full.filter((s) => cfg.commonness.includes(tierOf(s)))
     pool = tiered.length >= Math.min(count, 4) ? tiered : full
   }
   const picked = shuffle(pool).slice(0, Math.min(count, pool.length))

@@ -63,3 +63,19 @@ export function parseSqlZip(buf, opts) {
   const { data } = readZipEntry(buf, opts)
   return tsvToObjects(parseTsv(data.toString('utf8')))
 }
+
+/**
+ * 分块下载计划（纯函数，供单测）：把 [0, total) 切成若干 [start, end] 闭区间。
+ *
+ * 背景：GBIF 结果 zip 的长连接会被中途截断（2026-10-08 实测 8.3MB 只拿到 4.2MB，
+ * 落盘成坏 zip → parseSqlZip 报"找不到 EOCD"）。改为按 Range 分块下载后可靠，
+ * 而分块的边界（末块不足一块）容易写错，故抽成纯函数并测。
+ */
+export function planChunks(total, chunk = 1024 * 1024) {
+  const out = []
+  if (!Number.isFinite(total) || total <= 0 || chunk <= 0) return out
+  for (let start = 0; start < total; start += chunk) {
+    out.push([start, Math.min(start + chunk - 1, total - 1)])
+  }
+  return out
+}

@@ -72,6 +72,76 @@ function checkSeasonality(name, data) {
 }
 
 /** region-provinces.json（M2） */
+/**
+ * 036 省级常见度索引：结构/档位值域/署名/敏感性（铁律 6：不得出现排除码）。
+ * 注意索引**不含 tiers**（在分片里），此处只校验元数据与口径字段。
+ */
+function checkProvinceCommonness(name, data) {
+  check(data.schemaVersion === 1, `${name}: schemaVersion 应为 1`)
+  check(Array.isArray(data.sources) && data.sources.length > 0, `${name}: sources 缺失（署名不可省）`)
+  check(data.coverage && typeof data.coverage === 'object', `${name}: coverage 缺失`)
+  check(data.guards && typeof data.guards === 'object', `${name}: guards 缺失（口径需可追溯）`)
+  check(data.provenance && typeof data.provenance === 'object', `${name}: provenance 缺失（留痕要求）`)
+  const scope = data.scope?.countries
+  check(Array.isArray(scope) && scope.length > 0, `${name}: scope.countries 缺失`)
+  for (const cc of scope || []) {
+    if (!/^[A-Z]{2}$/.test(cc)) errors.push(`${name}: 非法国家码 ${cc}`)
+    // 铁律 6：排除码不得出现在任何地区产物里
+    if (['ZZ', 'XK', 'XZ'].includes(cc)) errors.push(`${name}: 出现排除码 ${cc}（铁律 6）`)
+  }
+  // 档位配置合理性（防止误配成"全是 1 档"之类）
+  for (const k of ['dominanceShare', 'spikeShare', 'minProvinceRecords', 'minBandSize']) {
+    const v = data.guards?.[k]
+    check(Number.isFinite(v) && v >= 0, `${name}: guards.${k} 非法`)
+  }
+  check(Number.isFinite(data.coverage.species) && data.coverage.species >= 0, `${name}: coverage.species 非法`)
+  check(Number.isFinite(data.coverage.pairs) && data.coverage.pairs >= 0, `${name}: coverage.pairs 非法`)
+}
+
+/**
+ * 036 分片：
+ *   province 级 —— { country, level:'province', tiersByCode: { code: { speciesId: tier } } }
+ *   country 级  —— { country, level:'country',  tiers: { speciesId: tier } }
+ * 注意 province 级**必须保留 code 层**（同物种各省档位不同；压平会静默丢数据，见构建脚本注释）。
+ */
+function checkProvinceCommonnessShard(name, shard) {
+  check(/^[A-Z]{2}$/.test(String(shard.country || '')), `${name}: country 非法`)
+  if (['ZZ', 'XK', 'XZ'].includes(shard.country)) errors.push(`${name}: 出现排除码（铁律 6）`)
+  check(shard.level === 'province' || shard.level === 'country', `${name}: level 非法`)
+
+  const checkTierMap = (label, map) => {
+    let n = 0
+    for (const [spId, tier] of Object.entries(map || {})) {
+      if (!spId) errors.push(`${name}: ${label} 存在空 speciesId`)
+      if (!Number.isInteger(tier) || tier < 1 || tier > 5) {
+        errors.push(`${name}: ${label} ${spId} 档位非法（${tier}，应为 1..5）`)
+        if (errors.length > 20) return n
+      }
+      n++
+    }
+    return n
+  }
+
+  if (shard.level === 'province') {
+    // 省级分片必须带 tiersByCode（省码 → { 物种: 档位 }）。
+    // 若只有压平后的 tiers，说明是**旧结构/构建脚本回归**（同物种多省档位会被覆盖 → 静默丢数据）。
+    if (shard.tiers && !shard.tiersByCode) {
+      errors.push(`${name}: 旧结构（省级分片缺少 tiersByCode，见构建脚本 shardByCountry 注释）`)
+    }
+    check(shard.tiersByCode && typeof shard.tiersByCode === 'object', `${name}: tiersByCode 缺失`)
+    let total = 0
+    for (const [code, map] of Object.entries(shard.tiersByCode || {})) {
+      check(String(code).startsWith(shard.country + '-'), `${name}: 省码 ${code} 与国家 ${shard.country} 不匹配`)
+      total += checkTierMap(code, map)
+    }
+    check(total > 0, `${name}: 无任何档位`)
+  } else {
+    check(shard.tiers && typeof shard.tiers === 'object', `${name}: tiers 缺失`)
+    checkTierMap('tiers', shard.tiers)
+    check(Object.keys(shard.tiers || {}).length > 0, `${name}: 分片为空`)
+  }
+}
+
 function checkProvinces(name, data) {
   check(data.byCountry && typeof data.byCountry === 'object', `${name}: byCountry 缺失`)
   check(data.bySpecies && typeof data.bySpecies === 'object', `${name}: bySpecies 缺失`)
@@ -203,6 +273,7 @@ const files = args.file
       'public/data/region-provinces.json',
       'public/data/hotspots.json',
       'public/data/species-distribution.json',
+      'public/data/province-commonness.json',
     ].map((p) => path.join(ROOT, p))
 
 const present = []
@@ -227,7 +298,30 @@ for (const file of files) {
     continue
   }
   checkCommon(name, raw, data, /species-distribution/.test(name) ? 3 * 1024 * 1024 : MAX_BYTES)
-  if (data.bySpecies && data.byCountry) checkProvinces(name, data)
+  if (Array.isArray(data.tiers)) errors.push(`${name}: tiers 必须是对象`)
+  else if (data.tiers || data.sharding) {
+    // 036 省级常见度（分片产物）：索引 + 分片
+    checkProvinceCommonness(name, data)
+    if (data.sharding) {
+      const dir = path.join(path.dirname(file), data.sharding.dir)
+      for (const f of data.sharding.files || []) {
+        const raw2 = await fs.readFile(path.join(dir, f), 'utf8').catch(() => null)
+        if (raw2 === null) {
+          errors.push(`${name}: 缺少分片 ${data.sharding.dir}/${f}`)
+          continue
+        }
+        present.push(`${data.sharding.dir}/${f}`)
+        let shard = null
+        try {
+          shard = JSON.parse(raw2)
+        } catch {
+          errors.push(`分片 ${f}: 不是合法 JSON`)
+          continue
+        }
+        checkProvinceCommonnessShard(`${data.sharding.dir}/${f}`, shard)
+      }
+    }
+  } else if (data.bySpecies && data.byCountry) checkProvinces(name, data)
   else if (Array.isArray(data.hotspots)) checkHotspots(name, data)
   else if (data.bySpecies) checkSeasonality(name, data)
   else if (data.byCountry && data.counts?.pairs != null) checkDistributionGlobal(name, data, indexCodes)

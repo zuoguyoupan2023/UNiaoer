@@ -87,6 +87,7 @@ const en: typeof zhMessages = {
     stepRegion: 'Region',
     regionAll: 'Global',
     regionHint: 'Low tiers prioritise species common in the selected region',
+    regionProvinceCap: 'Narrow to a province (optional; uses local frequency)',
     stepForm: 'Mode',
     start: 'Start',
     preparing: 'Preparing questions…',

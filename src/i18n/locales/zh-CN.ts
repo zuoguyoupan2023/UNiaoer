@@ -82,6 +82,7 @@ export const messages = {
     stepRegion: '地区',
     regionAll: '全球',
     regionHint: '选择地区后，低难度优先出该地区常见鸟',
+    regionProvinceCap: '细分到省（可选，按该省常见度出题）',
     stepForm: '形式',
     start: '开始答题',
     preparing: '正在准备题目…',

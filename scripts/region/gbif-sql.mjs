@@ -16,7 +16,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadEnv, parseArgs, sleep } from '../lib/util.mjs'
-import { parseSqlZip } from './gbif-sql-lib.mjs'
+import { parseSqlZip, planChunks } from './gbif-sql-lib.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 const API = 'https://api.gbif.org/v1'
@@ -95,9 +95,69 @@ async function poll(key, { intervalSec = 30, timeoutSec = 2400 } = {}) {
   }
 }
 
+/**
+ * 下载结果 zip —— **分块（Range）下载 + 逐块校验 + 断点重试**。
+ *
+ * ⚠️ 2026-10-08 三个连续暴露的问题（本次全量省级查询 8.3MB 结果时踩到）：
+ *   1. 原实现走 `api(..., { timeout: 300_000 })`，而 `api` 的超时是**对整段请求（含 body）**
+ *      生效的 AbortController → 大结果中途被 abort，落盘成**截断 zip**；
+ *   2. 改流式读取后仍复现：GBIF 下载是 **302 → occurrence-download.gbif.org**，
+ *      长连接在大文件上仍会被中途掐断（实测只拿到 4.2MB / 8.3MB）；
+ *   3. `parseSqlZip` 报"找不到 EOCD"——正是上面截断的表现。
+ *
+ * 现行做法（对服务端友好且抗断流）：先 HEAD 拿 `content-length`，再按 1MB 分块用
+ * `Range` 请求逐块下载；每块校验长度，失败重试 3 次；全部到齐后拼装并校验 zip 魔数。
+ * GBIF 的下载端点支持 `accept-ranges: bytes`（实测 206），故这条路可靠。
+ */
+async function headContentLength(url) {
+  const res = await fetch(url, { method: 'HEAD', headers: json, redirect: 'follow' })
+  if (!res.ok) throw new Error(`HEAD 失败 HTTP ${res.status}`)
+  return Number(res.headers.get('content-length') || 0)
+}
+
+async function fetchRange(url, start, end, attempts = 3) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        headers: { ...json, range: `bytes=${start}-${end}` },
+        redirect: 'follow',
+      })
+      if (!(res.status === 206 || res.status === 200)) throw new Error(`HTTP ${res.status}`)
+      const buf = Buffer.from(await res.arrayBuffer())
+      const want = end - start + 1
+      // 末尾块可能小于 CHUNK；200（无 Range 支持）时只接受"整文件一次拿全"
+      if (res.status === 206 && buf.length !== want) {
+        throw new Error(`分块长度不符：${buf.length} / ${want}`)
+      }
+      if (res.status === 200 && buf.length !== want) {
+        throw new Error(`服务端未按 Range 返回（${buf.length} 字节）`)
+      }
+      return buf
+    } catch (e) {
+      if (i === attempts) throw new Error(`Range ${start}-${end} 重试 ${attempts} 次失败：${e.message}`)
+      await sleep(1500)
+    }
+  }
+  throw new Error('unreachable')
+}
+
 async function fetchZip(key) {
-  const res = await api(`${API}/occurrence/download/request/${key}.zip`, { raw: true, timeout: 300_000 })
-  return Buffer.from(await res.arrayBuffer())
+  const url = `${API}/occurrence/download/request/${key}.zip`
+  const total = await headContentLength(url)
+  if (!total) throw new Error('无法取得 zip 大小（content-length 为空）')
+  const parts = []
+  const chunks = planChunks(total)
+  for (const [i, [start, end]] of chunks.entries()) {
+    process.stdout.write(`  下载 ${Math.floor((i / chunks.length) * 100)}%…\r`)
+    parts.push(await fetchRange(url, start, end))
+  }
+  process.stdout.write('  '.repeat(20) + '\r')
+  const buf = Buffer.concat(parts)
+  if (buf.length !== total) throw new Error(`拼装后长度不符：${buf.length} / ${total}`)
+  if (buf.length < 4 || buf.readUInt32LE(0) !== 0x04034b50) {
+    throw new Error(`不是 zip（魔数不符，共 ${buf.length} 字节）`)
+  }
+  return buf
 }
 
 const outArg = args.out ? path.resolve(ROOT, args.out) : null

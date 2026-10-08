@@ -5,6 +5,7 @@ import { loadBank, registerSpecies, BankError, type BankErrorCode, type BankSpec
 import { assetsOf, buildQuestions } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
+import { regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
@@ -238,6 +239,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         speciesForBuild = (await poolData(type, tier.value)).species
       }
 
+      // 036：L1–L3 用「该省/该国档位」出题（与 D-029-2 的地区策略一致）；
+      // L4–L5 保持全球口径（"省里稀有=高手题"是语义错位）。取不到档位表 → null → 回退全局 commonness。
+      let regionTiers: Map<string, number> | null = null
+      if (tier.value <= 3) {
+        const settingsForRegion = useSettingsStore()
+        const rm = await regionTierMap(settingsForRegion.region).catch(() => null)
+        regionTiers = rm?.tiers ?? null
+      }
       const qs = buildQuestions(speciesForBuild, {
         type,
         count,
@@ -245,6 +254,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         speciesPool,
         locale: currentLocale(),
         distractorPool,
+        regionTiers,
       })
       if (!qs.length) {
         // 无素材（池内物种都缺对应媒体）：错误码入 store，文案由组件按 locale 渲染（015 §6.5）

@@ -39,6 +39,7 @@ import { submitReport as uploadReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
+import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
@@ -208,12 +209,16 @@ function chooseTier(v: Tier) {
 /** 029 M2:地区偏好(仅 L1-L3 生效;L4/L5 全球开放)。
  * 候选项 = 「全球」+ 观鸟热区(按物种数排名靠前的国家,数据来自区系层;加载失败只显示「全球」)。 */
 const REGION_CHOICES_FALLBACK = ['CN', 'US', 'GB', 'AU', 'JP', 'BR', 'IN', 'ZA']
+/** 036 省级细分数据（懒加载；失败静默 → 只显示国家级） */
+const provinceData = ref<ProvinceData | null>(null)
 const regionOptions = ref<{ code: string; label: string }[]>([{ code: 'ALL', label: '' }])
 const regionChoice = computed({
   get: () => settings.region,
   set: (v: string) => { settings.region = v },
 })
 onMounted(async () => {
+  // 036：省级细分（可选；失败不影响国家级选择）
+  void loadProvinces().then((d) => (provinceData.value = d))
   try {
     const dist = await loadSpeciesDistribution()
     const codes = dist ? Object.keys(dist.byCountry) : []
@@ -238,8 +243,38 @@ onMounted(async () => {
 })
 function chooseRegion(v: string) {
   regionChoice.value = v
+  // 换国家时清掉省选择（省码属于原国家）
+  regionProvince.value = ''
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
+
+/**
+ * 036：省级细分（可选）。选中后 region 变成省码（如 CN-11），出题走**该省**的地区档位；
+ * 不选则用国家级档位（降级链：省 → 国家 → 全局 commonness）。
+ * 仅在所选国家有省级数据（15 国）时显示。
+ */
+const regionProvince = ref('')
+const provinceChoices = computed(() => {
+  const data = provinceData.value
+  const cc = regionChoice.value
+  if (!data || !cc || cc === 'ALL') return []
+  return provincesOf(data, cc, currentLocale())
+})
+watch(regionChoice, (cc) => {
+  if (cc === 'ALL' || !regionProvince.value) return
+  // 省份必须属于当前国家，否则清空（防止跨国残留）
+  if (!regionProvince.value.startsWith(cc + '-')) regionProvince.value = ''
+})
+function chooseRegionProvince(code: string) {
+  regionProvince.value = regionProvince.value === code ? '' : code
+  regionChoice.value = regionProvince.value || selectedCountry.value
+  void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
+}
+/** 当前所选国家（省选择被清空时回退到它） */
+const selectedCountry = computed(() => {
+  const r = regionChoice.value
+  return r.includes('-') ? r.split('-')[0]! : r
+})
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
   persistRegime(r)
@@ -796,6 +831,21 @@ function onTouchEnd(e: TouchEvent) {
           <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : opt.label }}</strong>
         </button>
       </div>
+      <!-- 036：省级细分（可选）。选中后按**该省**的地区常见度出题 -->
+      <div v-if="provinceChoices.length" class="provinces">
+        <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
+        <div class="prov-wrap">
+          <button
+            v-for="p in provinceChoices"
+            :key="p.code"
+            class="prov-pill"
+            :class="{ on: regionProvince === p.code }"
+            @click="chooseRegionProvince(p.code)"
+          >
+            {{ p.name }}
+          </button>
+        </div>
+      </div>
     </template>
     <p v-if="adaptiveHint" class="adaptive-hint">
       {{
@@ -1093,6 +1143,36 @@ function onTouchEnd(e: TouchEvent) {
   margin: 0 auto 10px;
 }
 /* 029 M2：地区偏好（chips 自动换行；仅 L1–L3 显示） */
+.provinces {
+  margin-top: 8px;
+  text-align: left;
+}
+.prov-cap {
+  display: block;
+  margin-bottom: 4px;
+}
+.prov-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+.prov-pill {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.prov-pill.on {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 700;
+}
 .regions {
   display: flex;
   flex-wrap: wrap;

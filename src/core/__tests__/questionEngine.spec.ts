@@ -96,6 +96,46 @@ describe('buildQuestions', () => {
   })
 })
 
+/**
+ * 036：地区档位（省级常见度）参与档位筛选。
+ * 语义：表里有该物种 → 用地区档位；表里没有 → 回退全局 commonness（绝不出空池）。
+ */
+describe('buildQuestions · regionTiers（036 地区档位）', () => {
+  it('地区档位覆盖全局档位：同一只鸟在"本地稀有"时不被 L1 选中', () => {
+    // 全部 5 种全局都是 commonness=2（L1 允许 [1,2]）→ 不加 regionTiers 时 L1 都有资格
+    const noRegion = buildQuestions(bank, { type: 'image', count: 4, tier: 1 })
+    expect(noRegion.length).toBeGreaterThan(0)
+
+    // 给 e 标成"本地 5 档（稀有）"→ L1（[1,2]）不该再选到它
+    const regionTiers = new Map([['e', 5]])
+    for (let i = 0; i < 12; i++) {
+      const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
+      expect(qs.some((q) => q.media.speciesId === 'e')).toBe(false)
+    }
+  })
+
+  it('表里没有的物种回退全局档位（不被静默排除）', () => {
+    // 只给 'a' 一个地区档位；其余走全局（commonness=2，L2 允许 [1,2,3]）
+    const regionTiers = new Map([['a', 3]])
+    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 2, regionTiers })
+    expect(qs.length).toBeGreaterThan(0)
+    // 'a' 变 3 档，L2 允许 [1,2,3] → 仍在池里
+    expect(new Set(qs.map((q) => q.media.speciesId)).size).toBeGreaterThan(1)
+  })
+
+  it('regionTiers 全把物种标为稀有 → 池不足时放宽，仍能出题（绝不出空）', () => {
+    const regionTiers = new Map(bank.map((s) => [s.id, 5]))
+    const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
+    expect(qs.length).toBeGreaterThan(0) // 放宽到全池
+  })
+
+  it('null / 缺省等价于不使用地区档位', () => {
+    const a = buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: null })
+    const b = buildQuestions(bank, { type: 'image', count: 4, tier: 2 })
+    expect(a.length).toBe(b.length)
+  })
+})
+
 describe('分档取材 (mediaPoolSize)', () => {
   function multi(size: number): BankSpecies {
     return {
