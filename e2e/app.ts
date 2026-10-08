@@ -128,6 +128,44 @@ export async function stubApp(page: Page) {
       },
     }),
   )
+  // 名录目录（031 D-031-2）：小型确定性夹具（真实产物 1.5MB，e2e 只验证排序/跳转接线）
+  await page.route('**/data/catalog.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        counts: { total: 4, withImage: 4, withAudio: 4, orders: 2, families: 2 },
+        orders: [
+          {
+            sci: 'Strigiformes',
+            zh: '鸮形目',
+            families: [
+              {
+                sci: 'Strigidae',
+                species: [
+                  { id: 'bubo-bubo', sci: 'Bubo bubo', zh: '雕鸮', py: 'diaoxiao', cm: 3, image: true, audio: true },
+                  { id: 'athene-noctua', sci: 'Athene noctua', zh: '纵纹腹小鸮', py: 'zongwenfuxiaoxiao', cm: 1, image: true, audio: true },
+                ],
+              },
+            ],
+          },
+          {
+            sci: 'Passeriformes',
+            zh: '雀形目',
+            families: [
+              {
+                sci: 'Hirundinidae',
+                species: [
+                  { id: 'hirundo-rustica', sci: 'Hirundo rustica', zh: '家燕', py: 'jiayan', cm: 4, image: true, audio: true },
+                  { id: 'delichon-dasypus', sci: 'Delichon dasypus', zh: '烟腹毛脚燕', py: 'yanfumaojiaoyan', cm: 1, image: true, audio: true },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  )
   // 环境鸟鸣目录（外部站）：404 → 应用按「无音轨」降级，不播放
   await page.route('**whitenoise.earthtrip.online/**', (r) => r.fulfill({ status: 404, body: '' }))
   await page.route('**cdn.e2e.invalid/**', fulfillMedia)

@@ -225,6 +225,59 @@ test.describe('入口与页面', () => {
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
   })
 
+  test('名录排序（031 D-031-2）：分类序 / 拼音 + 字母跳转 / 常见度 / 拼音搜索', async ({
+    page,
+  }) => {
+    await page.goto('/catalog')
+    const rowIds = () => page.locator('.cat-sp').evaluateAll((els) => els.map((e) => e.id))
+    const orderNames = () => page.locator('.cat-order-name').allTextContents()
+
+    // 夹具为 4 种(每目 1 科 2 种);分类序 = 构建期顺序,字母条不显示
+    await expect(page.locator('.cat-sp')).toHaveCount(4)
+    expect(await rowIds()).toEqual([
+      'cat-sp-bubo-bubo',
+      'cat-sp-athene-noctua',
+      'cat-sp-hirundo-rustica',
+      'cat-sp-delichon-dasypus',
+    ])
+    expect(await orderNames()).toEqual(['鸮形目 Strigiformes', '雀形目 Passeriformes'])
+    await expect(page.locator('.letter-btn')).toHaveCount(0)
+
+    // 拼音:目内重排（d<z、j<y）,目层级不动;字母条出现
+    await page.locator('.sort-btn', { hasText: '拼音' }).click()
+    expect(await rowIds()).toEqual([
+      'cat-sp-bubo-bubo',
+      'cat-sp-athene-noctua',
+      'cat-sp-hirundo-rustica',
+      'cat-sp-delichon-dasypus',
+    ])
+    expect(await orderNames()).toEqual(['鸮形目 Strigiformes', '雀形目 Passeriformes'])
+    await expect(page.locator('.letter-btn')).toHaveText(['D', 'J', 'Y', 'Z'])
+
+    // 字母跳转:J → 展开雀形目并滚到家燕
+    await page.locator('.letter-btn', { hasText: 'J' }).click()
+    await expect(page.locator('details[open] .cat-sp-link[href="/species/hirundo-rustica"]')).toBeVisible()
+
+    // 常见度:目内 1 档在前（小鸮 cm1 < 雕鸮 cm3;烟腹 cm1 < 家燕 cm4）
+    await page.locator('.sort-btn', { hasText: '常见度' }).click()
+    expect(await rowIds()).toEqual([
+      'cat-sp-athene-noctua',
+      'cat-sp-bubo-bubo',
+      'cat-sp-delichon-dasypus',
+      'cat-sp-hirundo-rustica',
+    ])
+
+    // 回到分类序:字母条隐藏,顺序复原
+    await page.locator('.sort-btn', { hasText: '分类序' }).click()
+    await expect(page.locator('.letter-btn')).toHaveCount(0)
+    expect((await rowIds())[0]).toBe('cat-sp-bubo-bubo')
+
+    // 拼音直达:搜索「jiayan」命中家燕（拼音键参与搜索）
+    await page.locator('.cat-search').fill('jiayan')
+    await expect(page.locator('.cat-sp')).toHaveCount(1)
+    await expect(page.locator('.cat-sp')).toContainText('家燕')
+  })
+
   test('全球物种层（025）：未收录标记、轻量详情与 bank 回归', async ({ page }) => {
     await page.goto('/region') // 默认亚洲 + 中国
 

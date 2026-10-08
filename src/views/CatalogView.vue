@@ -3,36 +3,28 @@
  * 029 数据透明度:全量名录目录（/catalog）。
  * 按目 → 科 → 种（学名）组织，列出学名/英文名/中文名（有则给）与图/音可得性标记。
  * 数据源 public/data/catalog.json（构建期产物，懒加载 ~1.3MB）。
+ *
+ * 031 D-031-2:三种排序视图——
+ *   分类序（默认）:AviList 目 → 科 → 学名,构建期已是此序,零成本;
+ *   拼音:直接用构建期预计算的 s.py 键排序（无中文名回退英文名,再无则学名）,
+ *        并在底部给出 A–Z 首字母跳转;
+ *   常见度:按 s.cm（1 最常见 … 5 稀有）升序,无值者排末位。
+ * 排序只重排**目内**的科与种（并显示目级提示）,不重组层级——大目录下用户仍能借搜索定位。
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { AudioLines, ChevronRight, ImageOff, Image as ImageIcon, Library, VolumeX } from 'lucide-vue-next'
+import {
+  letterAnchors,
+  sortCatalogOrders,
+  type CatalogData,
+  type CatalogFamily,
+  type CatalogOrder,
+  type CatalogSortMode,
+  type CatalogSpecies,
+} from '@/core/catalog'
 
 const { t } = useI18n()
-
-interface CatalogSpecies {
-  id: string
-  sci: string
-  en?: string
-  zh?: string
-  image: boolean
-  audio: boolean
-  extinct?: boolean
-}
-interface CatalogFamily {
-  sci: string
-  species: CatalogSpecies[]
-}
-interface CatalogOrder {
-  sci: string
-  zh?: string
-  families: CatalogFamily[]
-}
-interface CatalogData {
-  generatedAt: string
-  counts: { total: number; withImage: number; withAudio: number; orders: number; families: number }
-  orders: CatalogOrder[]
-}
 
 const data = ref<CatalogData | null>(null)
 const failed = ref(false)
@@ -41,6 +33,7 @@ const openOrders = ref<Set<string>>(new Set())
 /** 科级展开（目展开后科仍收起，避免一次渲染上万行） */
 const openFamilies = ref<Set<string>>(new Set())
 const query = ref('')
+const sortMode = ref<CatalogSortMode>('taxo')
 
 onMounted(async () => {
   try {
@@ -67,7 +60,8 @@ const matched = computed(() => {
         (s) =>
           s.sci.toLowerCase().includes(q) ||
           s.zh?.toLowerCase().includes(q) ||
-          s.en?.toLowerCase().includes(q),
+          s.en?.toLowerCase().includes(q) ||
+          s.py?.includes(q),
       )
       if (species.length) families.push({ ...f, species })
     }
@@ -76,7 +70,44 @@ const matched = computed(() => {
   return { orders, total: orders.reduce((n, o) => n + o.families.reduce((m, f) => m + f.species.length, 0), 0) }
 })
 
-const visibleOrders = computed(() => (matched.value ? matched.value.orders : (data.value?.orders ?? [])))
+const visibleOrders = computed(() => {
+  const orders = matched.value ? matched.value.orders : (data.value?.orders ?? [])
+  // 搜索命中时保持分类序（结果集小、层级已自动展开，重排反而破坏定位感）
+  return sortCatalogOrders(orders, matched.value ? 'taxo' : sortMode.value)
+})
+
+/** A–Z 首字母跳转锚点（仅拼音视图显示） */
+const letterIndex = computed(() =>
+  !data.value || sortMode.value !== 'pinyin' || matched.value ? [] : letterAnchors(visibleOrders.value),
+)
+
+/** 跳到字母锚点：展开该种所在的目与科，并滚动到行 */
+function jumpTo(letter: string) {
+  const anchor = letterIndex.value.find(([l]) => l === letter)?.[1]
+  if (!anchor) return
+  for (const o of visibleOrders.value) {
+    for (const f of o.families) {
+      if (f.species.some((s) => s.id === anchor)) {
+        const os = new Set(openOrders.value)
+        os.add(o.sci)
+        openOrders.value = os
+        const fs = new Set(openFamilies.value)
+        fs.add(`${o.sci}|${f.sci}`)
+        openFamilies.value = fs
+        requestAnimationFrame(() => {
+          document.getElementById(`cat-sp-${anchor}`)?.scrollIntoView({ block: 'center' })
+        })
+        return
+      }
+    }
+  }
+}
+
+const sortOptions: { mode: CatalogSortMode; label: () => string }[] = [
+  { mode: 'taxo', label: () => t('catalog.sortTaxo') },
+  { mode: 'pinyin', label: () => t('catalog.sortPinyin') },
+  { mode: 'common', label: () => t('catalog.sortCommon') },
+]
 
 function toggleOrder(sci: string) {
   const s = new Set(openOrders.value)
@@ -111,17 +142,46 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
       {{ t('catalog.mediaCounts', { image: counts.withImage, audio: counts.withAudio }) }}
     </p>
 
-    <input
-      v-if="data"
-      v-model="query"
-      class="cat-search"
-      type="search"
-      :placeholder="t('catalog.search')"
-      :aria-label="t('catalog.search')"
-    />
+    <div v-if="data" class="cat-toolbar">
+      <input
+        v-model="query"
+        class="cat-search"
+        type="search"
+        :placeholder="t('catalog.search')"
+        :aria-label="t('catalog.search')"
+      />
+      <div class="sort" role="group" :aria-label="t('catalog.sortLabel')">
+        <button
+          v-for="opt in sortOptions"
+          :key="opt.mode"
+          type="button"
+          class="sort-btn"
+          :class="{ active: sortMode === opt.mode }"
+          :aria-pressed="sortMode === opt.mode"
+          @click="sortMode = opt.mode"
+        >
+          {{ opt.label() }}
+        </button>
+      </div>
+    </div>
     <p v-if="query" class="cat-hit">
       {{ t('catalog.hits', { n: matched?.total ?? 0 }) }}
     </p>
+    <p v-else-if="sortMode !== 'taxo'" class="cat-hit">
+      {{ sortMode === 'pinyin' ? t('catalog.sortPinyinHint') : t('catalog.sortCommonHint') }}
+    </p>
+
+    <div v-if="letterIndex.length" class="letter-bar" role="group" :aria-label="t('catalog.jumpLabel')">
+      <button
+        v-for="[letter] in letterIndex"
+        :key="letter"
+        type="button"
+        class="letter-btn"
+        @click="jumpTo(letter)"
+      >
+        {{ letter }}
+      </button>
+    </div>
 
     <div v-if="data" class="cat-tree">
       <details
@@ -148,7 +208,13 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
               <span class="cat-n muted">{{ f.species.length }}</span>
             </summary>
             <ul class="cat-species">
-              <li v-for="s in f.species" :key="s.id" class="cat-sp" :class="{ 'flags-empty': !hasAny(s) }">
+              <li
+                v-for="s in f.species"
+                :id="`cat-sp-${s.id}`"
+                :key="s.id"
+                class="cat-sp"
+                :class="{ 'flags-empty': !hasAny(s) }"
+              >
                 <RouterLink class="cat-sp-link" :to="`/species/${s.id}`">
                   <span class="cat-sp-names">
                     <span class="cat-sp-main">{{ speciesLabel(s) }}</span>
@@ -206,6 +272,14 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
   display: inline-block;
   margin-bottom: 14px;
 }
+.cat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
 .cat-search {
   width: 100%;
   max-width: 420px;
@@ -213,12 +287,57 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 0.88rem;
-  margin-bottom: 10px;
+}
+/* 排序切换:与 /region 的胶囊按钮同形制 */
+.sort {
+  display: inline-flex;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sort-btn {
+  padding: 6px 12px;
+  border: none;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.sort-btn + .sort-btn {
+  border-left: 2px solid var(--border);
+}
+.sort-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
 }
 .cat-hit {
   font-size: 0.78rem;
   color: var(--text-light);
   margin-bottom: 8px;
+}
+.letter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.letter-btn {
+  min-width: 24px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 6px;
+  background: #f2f7f4;
+  color: var(--text-light);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.letter-btn:hover {
+  background: var(--primary);
+  color: #fff;
 }
 .cat-tree {
   text-align: left;

@@ -117,14 +117,17 @@ describe('evaluateBadges（rounds 派生规则，R28）', () => {
   })
 
   it('稳定输出：连续 5 轮 ≥80%', () => {
-    const good = round({ accuracy: 85 })
-    const bad = round({ accuracy: 40 })
+    // 显式 at 递增：规则按 at 排序，而默认 Date.now() 在毫秒边界处会让构造顺序与时间顺序错位（偶发假绿）
+    const good = (i: number) => round({ accuracy: 85, at: 1000 + i * 10 })
+    const bad = round({ accuracy: 40, at: 1030 })
     const s = stats({ rounds: 5 })
-    expect(evaluateBadges(s, [good, good, good, good, good], new Set()).map((b) => b.id)).toContain(
-      'stable-five',
-    )
     expect(
-      evaluateBadges(s, [good, good, bad, good, good, good], new Set()).map((b) => b.id),
+      evaluateBadges(s, [1, 2, 3, 4, 5].map(good), new Set()).map((b) => b.id),
+    ).toContain('stable-five')
+    expect(
+      evaluateBadges(s, [good(1), good(2), bad, good(4), good(5), good(6)], new Set()).map(
+        (b) => b.id,
+      ),
     ).not.toContain('stable-five')
   })
 

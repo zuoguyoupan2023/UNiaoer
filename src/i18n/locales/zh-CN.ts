@@ -189,6 +189,13 @@ export const messages = {
     mediaCounts: '图片 {image} · 音频 {audio}',
     search: '搜索学名 / 中文名 / 英文名',
     hits: '匹配 {n} 种',
+    sortLabel: '排序方式',
+    sortTaxo: '分类序',
+    sortPinyin: '拼音',
+    sortCommon: '常见度',
+    sortPinyinHint: '按各目内的科与种重排（中文名拼音序）。可用下方字母跳转。',
+    sortCommonHint: '按各目内的科与种重排：常见的鸟排在前面。',
+    jumpLabel: '按拼音首字母跳转',
     loading: '正在加载名录…',
     flags: '图片与音频可得性',
     footnote:

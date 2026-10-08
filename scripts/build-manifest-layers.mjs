@@ -16,6 +16,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { toCore, toAssetBuckets, toGlobalPool, splitLargeBuckets } from './lib/manifest-layers.mjs'
+import { pinyinKey } from './lib/pinyin-key.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -82,8 +83,17 @@ const ORDER_ZH = {
  * 029 数据透明度:构建全量目录（/catalog 页懒加载）。
  * 按 AviList 目顺序 → 科（拉丁名，字母序）→ 种（学名字母序）；
  * 物种条目带学名/英文名/中文名（有则给）与图/音标记（extinct 仅标记为 true）。
+ *
+ * 031 D-031-2:另带两个**构建期预计算**的排序键,前端排序零运行时成本:
+ *   cm 常见度档位(1 最常见 … 5 稀有;无值时省略,前端排末位)
+ *   py 中文名拼音键(纯 a-z;无中文名/读音时省略,前端回退英文名再学名)
+ * 由 unknownPy 回调统计拼音库未收录的字,供构建日志发现新增脏数据。
  */
 function buildCatalog(poolEntries, idx) {
+  const unknownPy = new Map()
+  const onUnknown = (chars) => chars.forEach((ch) => unknownPy.set(ch, (unknownPy.get(ch) || 0) + 1))
+  /** 无值返回 undefined(JSON 中省略键),避免 catalog 里塞满 null */
+  const optInt = (v) => (Number.isInteger(v) ? v : undefined)
   const byKey = new Map()
   for (const sp of poolEntries) {
     if (!sp.taxonKey) continue
@@ -110,7 +120,13 @@ function buildCatalog(poolEntries, idx) {
     }
     const rec = { id: sp.id, sci: sp.nameSci, image: !!sp.image, audio: !!sp.audio }
     if (sp.nameEn) rec.en = sp.nameEn
-    if (sp.nameZh) rec.zh = sp.nameZh
+    if (sp.nameZh) {
+      rec.zh = sp.nameZh
+      const py = pinyinKey(sp.nameZh, onUnknown)
+      if (py) rec.py = py
+    }
+    const cm = optInt(sp.commonness)
+    if (cm) rec.cm = cm
     if (e?.extinct) rec.extinct = true
     f.species.push(rec)
   }
@@ -135,17 +151,28 @@ function buildCatalog(poolEntries, idx) {
   }
   const withImage = poolEntries.filter((s) => s.image).length
   const withAudio = poolEntries.filter((s) => s.audio).length
+  const pinyin = {
+    keys: orders.reduce(
+      (n, o) => n + o.families.reduce((m, f) => m + f.species.filter((s) => s.py).length, 0),
+      0,
+    ),
+    zh: poolEntries.filter((s) => s.nameZh).length,
+    unknownChars: [...unknownPy.keys()].join(''),
+  }
   return {
-    schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
-    counts: {
-      total: poolEntries.length,
-      withImage,
-      withAudio,
-      orders: orders.length,
-      families: familyCount,
+    catalog: {
+      schemaVersion: 1,
+      generatedAt: new Date().toISOString(),
+      counts: {
+        total: poolEntries.length,
+        withImage,
+        withAudio,
+        orders: orders.length,
+        families: familyCount,
+      },
+      orders,
     },
-    orders,
+    pinyin,
   }
 }
 
@@ -231,12 +258,13 @@ export async function writeManifestLayers(manifest, opts = {}) {
     }
     await writeJsonAtomic(path.join(dataDir, 'manifest-core.json'), JSON.stringify(core))
 
-    const catalog = buildCatalog(poolEntries, idx)
+    const { catalog, pinyin } = buildCatalog(poolEntries, idx)
     const text = JSON.stringify(catalog)
     await writeJsonAtomic(path.join(dataDir, 'catalog.json'), text)
     catalogBytes = Buffer.byteLength(text)
     catalogTotal = catalog.counts.total
     stats_note.catalog = catalogTotal
+    stats_note.pinyin = pinyin
   } catch (e) {
     if (!quiet) console.warn(`⚠ 目录/统计产物跳过：${e.message}`)
   }
@@ -262,6 +290,13 @@ export async function writeManifestLayers(manifest, opts = {}) {
           : ' · 无全球台账,global.min 跳过') +
         (stats.catalogTotal ? ` · catalog ${MB(stats.catalogBytes)}(${stats.catalogTotal} 种)` : ''),
     )
+    const py = stats_note.pinyin
+    if (py) {
+      console.log(
+        `  名录拼音键:${py.keys}/${py.zh} 个中文名已转写` +
+          (py.unknownChars ? ` · ⚠ 未收录字:「${py.unknownChars}」(见 scripts/lib/pinyin-key.mjs CHAR_OVERRIDES)` : ''),
+      )
+    }
   }
   return stats
 }

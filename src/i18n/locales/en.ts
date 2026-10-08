@@ -195,6 +195,13 @@ const en: typeof zhMessages = {
     mediaCounts: '{image} photos · {audio} recordings',
     search: 'Search scientific / English / Chinese name',
     hits: '{n} matches',
+    sortLabel: 'Sort by',
+    sortTaxo: 'Taxonomy',
+    sortPinyin: 'Pinyin',
+    sortCommon: 'Commonness',
+    sortPinyinHint: 'Re-sorts families and species within each order (by Chinese-name pinyin). Use the letter bar below to jump.',
+    sortCommonHint: 'Re-sorts families and species within each order: the most commonly seen birds come first.',
+    jumpLabel: 'Jump by pinyin initial',
     loading: 'Loading catalogue…',
     flags: 'Photo & audio availability',
     footnote:
