@@ -27,6 +27,129 @@ async function writeJsonAtomic(file, text) {
 }
 
 /**
+ * 46 目的中文名（AviList 目级名，用于 /catalog 目录显示；无条目时回退只显示拉丁名）。
+ */
+const ORDER_ZH = {
+  Struthioniformes: '鸵鸟目',
+  Casuariiformes: '鹤鸵目',
+  Apterygiformes: '无翼鸟目',
+  Rheiformes: '美洲鸵目',
+  Tinamiformes: '䳍形目',
+  Anseriformes: '雁形目',
+  Galliformes: '鸡形目',
+  Phoenicopteriformes: '红鹳目',
+  Podicipediformes: '䴙䴘目',
+  Musophagiformes: '蕉鹃目',
+  Otidiformes: '鸨形目',
+  Cuculiformes: '鹃形目',
+  Mesitornithiformes: '拟鹑目',
+  Pterocliformes: '沙鸡目',
+  Columbiformes: '鸽形目',
+  Opisthocomiformes: '麝雉目',
+  Gruiformes: '鹤形目',
+  Charadriiformes: '鸻形目',
+  Eurypygiformes: '日鳽目',
+  Phaethontiformes: '鹲形目',
+  Gaviiformes: '潜鸟目',
+  Sphenisciformes: '企鹅目',
+  Procellariiformes: '鹱形目',
+  Ciconiiformes: '鹳形目',
+  Suliformes: '鲣鸟目',
+  Pelecaniformes: '鹈形目',
+  Caprimulgiformes: '夜鹰目',
+  Steatornithiformes: '油鸱目',
+  Nyctibiiformes: '林鸱目',
+  Podargiformes: '蟆口鸱目',
+  Aegotheliformes: '裸鼻鸱目',
+  Apodiformes: '雨燕目',
+  Strigiformes: '鸮形目',
+  Cathartiformes: '美洲鹫目',
+  Accipitriformes: '鹰形目',
+  Coliiformes: '鼠鸟目',
+  Leptosomiformes: '鹃鴗目',
+  Trogoniformes: '咬鹃目',
+  Bucerotiformes: '犀鸟目',
+  Coraciiformes: '佛法僧目',
+  Galbuliformes: '鹟䴕目',
+  Piciformes: '䴕形目',
+  Cariamiformes: '叫鹤目',
+  Falconiformes: '隼形目',
+  Psittaciformes: '鹦形目',
+  Passeriformes: '雀形目',
+}
+
+/**
+ * 029 数据透明度:构建全量目录（/catalog 页懒加载）。
+ * 按 AviList 目顺序 → 科（拉丁名，字母序）→ 种（学名字母序）；
+ * 物种条目带学名/英文名/中文名（有则给）与图/音标记（extinct 仅标记为 true）。
+ */
+function buildCatalog(poolEntries, idx) {
+  const byKey = new Map()
+  for (const sp of poolEntries) {
+    if (!sp.taxonKey) continue
+    if (!byKey.has(sp.taxonKey)) byKey.set(sp.taxonKey, [])
+    byKey.get(sp.taxonKey).push(sp)
+  }
+  const orders = []
+  const orderMap = new Map()
+  const seen = new Set()
+  function addEntry(sp, e) {
+    const orderSci = e?.order || 'Incertae sedis'
+    const familySci = e?.family || sp.family || '—'
+    let o = orderMap.get(orderSci)
+    if (!o) {
+      o = { sci: orderSci, zh: ORDER_ZH[orderSci], families: [], _fm: new Map() }
+      orderMap.set(orderSci, o)
+      orders.push(o)
+    }
+    let f = o._fm.get(familySci)
+    if (!f) {
+      f = { sci: familySci, species: [] }
+      o._fm.set(familySci, f)
+      o.families.push(f)
+    }
+    const rec = { id: sp.id, sci: sp.nameSci, image: !!sp.image, audio: !!sp.audio }
+    if (sp.nameEn) rec.en = sp.nameEn
+    if (sp.nameZh) rec.zh = sp.nameZh
+    if (e?.extinct) rec.extinct = true
+    f.species.push(rec)
+  }
+  // 按骨架顺序遍历（目序 = AviList 顺序）；同概念多条目（概念合并别名）保持并列
+  for (const e of idx.species) {
+    for (const sp of byKey.get(e.taxonKey) ?? []) {
+      addEntry(sp, e)
+      seen.add(sp.id)
+    }
+  }
+  for (const sp of poolEntries) {
+    if (!seen.has(sp.id)) addEntry(sp, null) // 兜底：骨架未命中的池条目
+  }
+  let familyCount = 0
+  for (const o of orders) {
+    delete o._fm
+    o.families.sort((a, b) => a.sci.localeCompare(b.sci))
+    for (const f of o.families) {
+      f.species.sort((a, b) => a.sci.localeCompare(b.sci))
+      familyCount++
+    }
+  }
+  const withImage = poolEntries.filter((s) => s.image).length
+  const withAudio = poolEntries.filter((s) => s.audio).length
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    counts: {
+      total: poolEntries.length,
+      withImage,
+      withAudio,
+      orders: orders.length,
+      families: familyCount,
+    },
+    orders,
+  }
+}
+
+/**
  * 写三层产物。返回统计(供 build-bank / CLI 打印)。
  * @param {{dataDir?:string, globalLedger?:string, quiet?:boolean}} opts
  */
@@ -83,25 +206,39 @@ export async function writeManifestLayers(manifest, opts = {}) {
       stats_note.commonness = 0
     }
     await writeJsonAtomic(path.join(dataDir, 'manifest-global.min.json'), JSON.stringify(global))
-    // 全量可玩口径(首页展示用):核心 + 全球,含图/音计数。
-    // 烘焙进 core 避免前端为了显示统计再多拉 10MB 全球池。
-    const countMedia = (list) => ({
-      total: list.length,
-      withImage: list.filter((sp) => sp.image).length,
-      withAudio: list.filter((sp) => sp.audio).length,
-    })
-    const coreStats = countMedia(core.species)
-    const globalStats = countMedia(global.species)
-    core.universe = {
-      coreTotal: coreStats.total,
-      globalTotal: globalStats.total,
-      total: coreStats.total + globalStats.total,
-      withImage: coreStats.withImage + globalStats.withImage,
-      withAudio: coreStats.withAudio + globalStats.withAudio,
-    }
-    await writeJsonAtomic(path.join(dataDir, 'manifest-core.json'), JSON.stringify(core))
   } catch {
     global = null // 无台账:跳过(不报错)
+  }
+
+  // 统计与全量目录：依赖 species-index（order/family/extinct）；缺失则跳过(不阻塞分层产物)。
+  // 统计烘焙进 core（首页/答疑页展示),避免前端为显示数字多拉 10MB 全球池。
+  let catalogBytes = 0
+  let catalogTotal = 0
+  try {
+    const idx = JSON.parse(await fs.readFile(path.join(dataDir, 'species-index.json'), 'utf8'))
+    const poolEntries = [...core.species, ...(global ? global.species : [])]
+    const uniqueConcepts = new Set(poolEntries.map((s) => s.taxonKey).filter(Boolean)).size
+    core.universe = {
+      coreTotal: core.species.length,
+      globalTotal: global ? global.species.length : 0,
+      total: poolEntries.length,
+      withImage: poolEntries.filter((s) => s.image).length,
+      withAudio: poolEntries.filter((s) => s.audio).length,
+      imageOnly: poolEntries.filter((s) => s.image && !s.audio).length,
+      audioOnly: poolEntries.filter((s) => !s.image && s.audio).length,
+      withNameZh: poolEntries.filter((s) => s.nameZh).length,
+      notCovered: Math.max(0, idx.species.length - uniqueConcepts),
+    }
+    await writeJsonAtomic(path.join(dataDir, 'manifest-core.json'), JSON.stringify(core))
+
+    const catalog = buildCatalog(poolEntries, idx)
+    const text = JSON.stringify(catalog)
+    await writeJsonAtomic(path.join(dataDir, 'catalog.json'), text)
+    catalogBytes = Buffer.byteLength(text)
+    catalogTotal = catalog.counts.total
+    stats_note.catalog = catalogTotal
+  } catch (e) {
+    if (!quiet) console.warn(`⚠ 目录/统计产物跳过：${e.message}`)
   }
 
   const stats = {
@@ -113,6 +250,8 @@ export async function writeManifestLayers(manifest, opts = {}) {
     globalBytes: global ? Buffer.byteLength(JSON.stringify(global)) : 0,
     globalTotal: global ? global.total : 0,
     globalCommonnessMerged: stats_note.commonness || 0,
+    catalogBytes,
+    catalogTotal,
   }
   if (!quiet) {
     const MB = (b) => `${(b / 1e6).toFixed(2)}MB`
@@ -120,7 +259,8 @@ export async function writeManifestLayers(manifest, opts = {}) {
       `分层产物:core ${MB(stats.coreBytes)}(${stats.coreTotal} 种,${stats.buckets} 桶) · assets ${MB(stats.bucketBytes)}(最大桶 ${stats.maxBucket.name} ${(stats.maxBucket.bytes / 1024).toFixed(0)}KB)` +
         (global
           ? ` · global.min ${MB(stats.globalBytes)}(${stats.globalTotal} 种,commonness 联表 ${stats.globalCommonnessMerged})`
-          : ' · 无全球台账,global.min 跳过'),
+          : ' · 无全球台账,global.min 跳过') +
+        (stats.catalogTotal ? ` · catalog ${MB(stats.catalogBytes)}(${stats.catalogTotal} 种)` : ''),
     )
   }
   return stats

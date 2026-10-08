@@ -10,6 +10,7 @@ import {
   type Manifest,
 } from '@/core/bank'
 import { currentLocale } from '@/i18n'
+import { loadSpeciesIndex } from '@/core/speciesIndex'
 
 const { t } = useI18n()
 const bank = ref<Manifest | null>(null)
@@ -47,6 +48,26 @@ function pick(zh: string, en: string): string {
   return currentLocale() === 'en' ? en || zh : zh || en
 }
 
+/**
+ * 029 数据透明度：题库覆盖说明（数字来自 core.universe，构建期烘焙）。
+ * 骨架总数（未收录基数）来自 species-index。
+ */
+const universe = computed(() => bank.value?.universe ?? null)
+const skeletonTotal = ref(0)
+void loadSpeciesIndex().then((idx) => {
+  skeletonTotal.value = idx?.bySlug.size ?? 0
+})
+const coverage = computed(() => {
+  const u = universe.value
+  if (!u) return null
+  const zhPct = u.total ? Math.round((u.withNameZh / u.total) * 100) : 0
+  return {
+    ...u,
+    skeleton: skeletonTotal.value || u.total + u.notCovered,
+    zhPct,
+  }
+})
+
 /** 有答疑说明的物种（保持 manifest 顺序） */
 const entries = computed<BankSpecies[]>(
   () => bank.value?.species.filter((sp) => sp.notes) ?? [],
@@ -63,6 +84,55 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
     <p v-if="entries.length" class="count">
       <Library class="ic" :size="14" /> {{ t('faq.count', { n: entries.length }) }}
     </p>
+
+    <!-- 029 数据透明度：题库覆盖说明（缺图/缺音/未收录/中文名覆盖） -->
+    <section v-if="coverage" class="coverage">
+      <h3 class="cov-title">{{ t('faq.coverageTitle') }}</h3>
+      <p class="cov-lead muted">
+        {{
+          t('faq.coverageLead', {
+            total: coverage.total,
+            image: coverage.withImage,
+            audio: coverage.withAudio,
+          })
+        }}
+      </p>
+      <dl class="cov-list">
+        <div class="cov-item">
+          <dt>{{ t('faq.coverageNoImageTitle', { n: coverage.audioOnly }) }}</dt>
+          <dd>{{ t('faq.coverageNoImageBody', { n: coverage.audioOnly }) }}</dd>
+        </div>
+        <div class="cov-item">
+          <dt>{{ t('faq.coverageNoAudioTitle', { n: coverage.imageOnly }) }}</dt>
+          <dd>{{ t('faq.coverageNoAudioBody', { n: coverage.imageOnly }) }}</dd>
+        </div>
+        <div class="cov-item">
+          <dt>{{ t('faq.coverageUncoveredTitle', { n: coverage.notCovered }) }}</dt>
+          <dd>
+            {{
+              t('faq.coverageUncoveredBody', {
+                n: coverage.notCovered,
+                skeleton: coverage.skeleton,
+              })
+            }}
+          </dd>
+        </div>
+        <div class="cov-item">
+          <dt>
+            {{
+              t('faq.coverageNameTitle', { zh: coverage.withNameZh, total: coverage.total })
+            }}
+          </dt>
+          <dd>
+            {{ t('faq.coverageNameBody', { zh: coverage.withNameZh, total: coverage.total, pct: coverage.zhPct }) }}
+          </dd>
+        </div>
+      </dl>
+      <RouterLink class="cov-link" to="/catalog">
+        <Library class="ic" :size="14" /> {{ t('faq.coverageCatalog') }}
+      </RouterLink>
+      <p class="cov-note muted">{{ t('faq.coverageNote') }}</p>
+    </section>
 
     <ul v-if="entries.length" class="faq-list">
       <li v-for="sp in entries" :key="sp.id">
@@ -192,6 +262,55 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
 }
 .empty {
   margin: 14px 0 18px;
+}
+/* 029 数据透明度：题库覆盖说明块 */
+.coverage {
+  max-width: 640px;
+  margin: 0 auto 20px;
+  text-align: left;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  background: #fbfdfc;
+}
+.cov-title {
+  font-size: 0.98rem;
+  color: var(--primary-dark);
+  margin-bottom: 6px;
+}
+.cov-lead {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.cov-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cov-item dt {
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+.cov-item dd {
+  margin: 2px 0 0;
+  font-size: 0.79rem;
+  line-height: 1.6;
+  color: var(--text-light);
+}
+.cov-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.cov-note {
+  margin-top: 8px;
+  font-size: 0.73rem;
 }
 .changelog {
   max-width: 640px;

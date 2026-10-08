@@ -23,6 +23,7 @@ const en: typeof zhMessages = {
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
     region: 'Regions',
+    catalog: 'Catalogue',
     reports: 'Review',
     profile: 'Profile',
     settings: 'Settings',
@@ -38,7 +39,7 @@ const en: typeof zhMessages = {
     title: 'Time for a challenge!',
     lead: 'Sharpen your ID skills with real bird photos and recordings. 10 questions per round.',
     bankStats: 'Bank: {total} species · {image} photos · {audio} recordings',
-    bankStatsFull: 'Playable: {total} species (core {core} + global {global}) · {image} photos · {audio} recordings',
+    bankStatsFull: '{image} photos · {audio} recordings ({total} species)',
     modeImageSub: 'Openly licensed photos from iNaturalist',
     modeAudioSub: 'Real bird recordings from Xeno-canto',
     regionSub: 'Browse birds by country/region',
@@ -169,6 +170,35 @@ const en: typeof zhMessages = {
     attributionHeading: 'Media credits',
     changelogTitle: 'Changelog',
     changelogSpecies: 'View species',
+    coverageTitle: 'About our coverage',
+    coverageLead:
+      'The bank covers {total} species: {image} with photos and {audio} with recordings. Here is where the gaps are and why.',
+    coverageNoImageTitle: 'Audio only: {n} species',
+    coverageNoImageBody:
+      '{n} species have recordings but no photos — mostly nocturnal (owls), extremely secretive or rare forest birds (mainly Passeriformes). No openly licensed image exists; these appear in audio quizzes only.',
+    coverageNoAudioTitle: 'Photo only: {n} species',
+    coverageNoAudioBody:
+      '{n} species have photos but no recordings — mostly rare species, raptors, parrots and seabirds (pelagic/polar recordings are scarce) or species whose calls are rarely captured. These appear in image quizzes only.',
+    coverageUncoveredTitle: 'Not covered: {n} species',
+    coverageUncoveredBody:
+      'The global checklist contains {skeleton} species. The remaining {n} are not yet included — mostly extinct or critically endangered species, or species with no compliant media available under open licences (we do not fabricate).',
+    coverageNameTitle: 'Chinese names: {zh} / {total}',
+    coverageNameBody:
+      '{zh} species have a Chinese name (~{pct}%). Long-tail global species often lack a common Chinese name in open data; the UI falls back to English or the scientific name.',
+    coverageCatalog: 'Browse the full catalogue (order → family → species)',
+    coverageNote: 'Sources: iNaturalist, Xeno-canto (per-item attribution shown on every question).',
+  },
+  catalog: {
+    title: 'Full catalogue',
+    lead: 'Every species in the bank, organised by order → family → species, with scientific, English and Chinese names (where available) and photo/audio availability.',
+    counts: '{total} species · {orders} orders · {families} families',
+    mediaCounts: '{image} photos · {audio} recordings',
+    search: 'Search scientific / English / Chinese name',
+    hits: '{n} matches',
+    loading: 'Loading catalogue…',
+    flags: 'Photo & audio availability',
+    footnote:
+      'An empty Chinese name means no common Chinese name exists in open data (the UI falls back to English or the scientific name). Grey icons mark missing media (see the Explainer, "About our coverage").',
   },
   region: {
     title: 'Find birds by region',

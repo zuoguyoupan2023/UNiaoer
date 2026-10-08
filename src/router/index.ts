@@ -42,6 +42,12 @@ const router = createRouter({
       component: () => import('../views/FaqDetailView.vue'),
     },
     {
+      // 029 数据透明度：全量名录目录（目→科→种；懒加载 catalog.json）
+      path: '/catalog',
+      name: 'catalog',
+      component: () => import('../views/CatalogView.vue'),
+    },
+    {
       // C7 地区浏览（017）：国家/地区 → 鸟种
       path: '/region',
       name: 'region',

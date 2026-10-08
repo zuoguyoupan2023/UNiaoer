@@ -105,6 +105,7 @@ const immersive = computed(
         <RouterLink to="/quiz/image">{{ t('nav.imageQuiz') }}</RouterLink>
         <RouterLink to="/quiz/audio">{{ t('nav.audioQuiz') }}</RouterLink>
         <RouterLink to="/region">{{ t('nav.region') }}</RouterLink>
+        <RouterLink to="/catalog">{{ t('nav.catalog') }}</RouterLink>
       </span>
       <span class="nav-group nav-utility">
         <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports">

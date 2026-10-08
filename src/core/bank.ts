@@ -92,6 +92,14 @@ export interface Manifest {
     total: number
     withImage: number
     withAudio: number
+    /** 有图无音（只出看图题） */
+    imageOnly: number
+    /** 有音无图（只出听音题） */
+    audioOnly: number
+    /** 有中文名的种数（长尾种约半数无中文名） */
+    withNameZh: number
+    /** 骨架中尚未收录的概念数（灭绝/无合规素材） */
+    notCovered: number
   }
 }
 

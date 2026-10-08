@@ -18,6 +18,7 @@ export const messages = {
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
     region: '地区浏览',
+    catalog: '名录',
     reports: '大众评审',
     profile: '我的',
     settings: '设置',
@@ -33,7 +34,7 @@ export const messages = {
     title: '是时候挑战一下自己了！',
     lead: '用真实的鸟类照片与鸟鸣，练习辨识能力。每轮 10 题。',
     bankStats: '题库：{total} 种 · 图片 {image} · 音频 {audio}',
-    bankStatsFull: '题库：{total} 种可玩（核心 {core} + 全球 {global}）· 图片 {image} · 音频 {audio}',
+    bankStatsFull: '图片 {image} · 音频 {audio}（共 {total} 种）',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
     regionSub: '按国家/地区浏览鸟种',
@@ -164,6 +165,34 @@ export const messages = {
     attributionHeading: '素材署名',
     changelogTitle: '更新日志',
     changelogSpecies: '查看该鸟种',
+    coverageTitle: '关于题库覆盖',
+    coverageLead: '题库共收录 {total} 种鸟类，其中图片 {image} 种、音频 {audio} 种。以下说明缺口在哪、为什么。',
+    coverageNoImageTitle: '有音无图：{n} 种',
+    coverageNoImageBody:
+      '{n} 种只有录音、没有照片——多为夜行性（鸮形目等）、极隐蔽或极罕见的林鸟（雀形目占多数），开放许可来源中确实没有可用图像；这些物种只出现在听音题里。',
+    coverageNoAudioTitle: '有图无音：{n} 种',
+    coverageNoAudioBody:
+      '{n} 种只有照片、没有录音——多为罕见种、猛禽、鹦鹉与海鸟（远洋/极地录音稀少），或叫声极难得；这些物种只出现在看图题里。',
+    coverageUncoveredTitle: '未收录：{n} 种',
+    coverageUncoveredBody:
+      '全球名录骨架共 {skeleton} 种。其余 {n} 种尚未收录——主要是已灭绝或极危种、以及开放许可来源完全没有合规图/音记录的种类（不做人工伪造）。',
+    coverageNameTitle: '名称覆盖：{zh} / {total}',
+    coverageNameBody:
+      '中文名覆盖 {zh} 种（约占 {pct}%）。全球长尾种在开放数据源中常无通行中文名，界面会回退显示英文名或学名。',
+    coverageCatalog: '查看全量名录（目 → 科 → 种）',
+    coverageNote: '数据来源：iNaturalist、Xeno-canto（逐条署名，见每道题的署名行）。',
+  },
+  catalog: {
+    title: '全量名录',
+    lead: '题库收录的全部鸟类，按目 → 科 → 种组织。列出学名、英文名与中文名（有则给出），并标注图片/音频可得性。',
+    counts: '{total} 种 · {orders} 目 · {families} 科',
+    mediaCounts: '图片 {image} · 音频 {audio}',
+    search: '搜索学名 / 中文名 / 英文名',
+    hits: '匹配 {n} 种',
+    loading: '正在加载名录…',
+    flags: '图片与音频可得性',
+    footnote:
+      '中文名为空表示该种在开放数据源中暂无通行中文名（界面回退显示英文名或学名）。灰色图标表示该素材缺失（原因见答疑专栏「关于题库覆盖」）。',
   },
   region: {
     title: '按地区找鸟',
