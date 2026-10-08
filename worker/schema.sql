@@ -149,3 +149,25 @@ CREATE TABLE IF NOT EXISTS report_votes (
   PRIMARY KEY (report_id, client_id)
 );
 CREATE INDEX IF NOT EXISTS idx_report_votes_report ON report_votes(report_id);
+
+-- 035 单轮成绩分享（用户主动分享；D-035-1~6 已拍板）
+-- 生命周期：结果页点「分享」→ POST /api/shares（写入 payload 快照）→ 海报二维码指向 /s/:id
+--          → 任何人可读（GET，默认不缓存：撤回需即时生效）→ 分享者凭管理令牌撤回（hidden=1，公开读 404）。
+-- 隐私口径：**首个上传用户数据的功能**，仅"该轮记录"、仅用户主动触发、可撤回（见 docs/035 §2.5）。
+-- token 只存哈希（SHA-256），明文仅下发一次给创建者本地保存（跨设备凭令牌仍可撤回）。
+CREATE TABLE IF NOT EXISTS round_shares (
+  id            TEXT PRIMARY KEY,        -- 不可猜测短 id（base62 12 位）
+  created_at    INTEGER NOT NULL,
+  mode          TEXT NOT NULL,           -- image | audio
+  tier          INTEGER NOT NULL,
+  total         INTEGER NOT NULL,
+  correct       INTEGER NOT NULL,
+  accuracy      INTEGER NOT NULL,
+  nickname      TEXT,                    -- 分享者昵称快照（D-035-4：默认带上；可勾选隐藏=null）
+  payload       TEXT NOT NULL,           -- JSON：一轮全量 items（见 docs/035 §2.3）
+  token_hash    TEXT NOT NULL,           -- 管理令牌 SHA-256（撤回凭据；明文不落库）
+  client_id     TEXT,                    -- 仅用于限流与管理，不公开
+  hidden        INTEGER NOT NULL DEFAULT 0 -- 1 = 分享者已撤回（公开读 404）
+);
+CREATE INDEX IF NOT EXISTS idx_shares_created ON round_shares(created_at);
+CREATE INDEX IF NOT EXISTS idx_shares_client  ON round_shares(client_id, created_at);

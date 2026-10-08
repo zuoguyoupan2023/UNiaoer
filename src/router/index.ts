@@ -72,6 +72,12 @@ const router = createRouter({
       component: () => import('../views/AdminView.vue'),
     },
     {
+      // 035 单轮成绩分享：公开只读（任何人持链接可见）；不可猜 id + 可撤回（docs/035）
+      path: '/s/:id',
+      name: 'share',
+      component: () => import('../views/ShareView.vue'),
+    },
+    {
       // 错题本并入 /profile/wrong 后保留旧路径重定向（导航入口已移除，R31）
       path: '/wrong',
       redirect: { name: 'profile-wrong' },
@@ -120,6 +126,26 @@ const router = createRouter({
       redirect: '/',
     },
   ],
+})
+
+/**
+ * 035：分享页不鼓励搜索引擎收录（个人成绩，仅凭链接传播）。
+ * 无 head 管理库，故在路由钩子里动态增删 robots meta。
+ */
+const ROBOTS_META_ID = 'uniaoer-robots-noindex'
+router.afterEach((to) => {
+  const existing = document.getElementById(ROBOTS_META_ID)
+  if (to.name === 'share') {
+    if (!existing) {
+      const meta = document.createElement('meta')
+      meta.id = ROBOTS_META_ID
+      meta.name = 'robots'
+      meta.content = 'noindex'
+      document.head.appendChild(meta)
+    }
+  } else {
+    existing?.remove()
+  }
 })
 
 export default router

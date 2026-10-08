@@ -10,6 +10,7 @@ import {
   Flame,
   HelpCircle,
   PartyPopper,
+  Share2,
   Sparkles,
   Star,
   ThumbsUp,
@@ -19,6 +20,19 @@ import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
+import { getClientId } from '@/core/anonymousId'
+import {
+  buildShareDraft,
+  createShare,
+  fetchShare,
+  markShareRevoked,
+  rememberShare,
+  revokeShare,
+  shareOfRound,
+  shareUrlOf,
+  type ShareView,
+} from '@/core/shareRound'
+import type { RoundRecord } from '@/core/historyDb'
 import { getActiveArchive, getStats, listRounds } from '@/core/historyDb'
 import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
 import { ALL_SPECIES_TOTAL, BADGES, type BadgeDef } from '@/core/badges'
@@ -75,6 +89,103 @@ const wornTitleIcon = ref('')
 const wornBadgeIcon = ref('')
 const settings = useSettingsStore()
 const showPoster = ref(false)
+
+// ── 035 成绩分享：创建 → 复制链接 → 撤回；二维码在创建成功后指向分享页 ──
+/** 本轮落库记录（分享的数据源；persistRound 返回，未落库时 null） */
+const roundRecord = ref<RoundRecord | null>(null)
+/** 分享链接（创建成功后填充 → 海报二维码与复制按钮都用它） */
+const shareUrl = ref('')
+/** 已分享但被撤回 */
+const shareRevoked = ref(false)
+const shareBusy = ref(false)
+/** 默认带上昵称（D-035-4）；勾选 = 隐藏 */
+const hideNickname = ref(false)
+const shareMsg = ref('')
+const shareMsgKind = ref<'ok' | 'err'>('ok')
+let shareMsgTimer: number | undefined
+
+function flashShareMsg(text: string, kind: 'ok' | 'err' = 'ok') {
+  shareMsg.value = text
+  shareMsgKind.value = kind
+  if (shareMsgTimer) clearTimeout(shareMsgTimer)
+  shareMsgTimer = window.setTimeout(() => (shareMsg.value = ''), 4000)
+}
+
+/** 该轮历史里已分享的记录（用于进页面就显示"已分享 / 已撤回"） */
+const existingShare = ref<{ shareId: string; token: string; revoked?: boolean } | null>(null)
+
+async function doShare() {
+  if (shareBusy.value || !roundRecord.value) return
+  shareBusy.value = true
+  shareMsg.value = ''
+  try {
+    const draft = buildShareDraft(roundRecord.value, {
+      clientId: getClientId(),
+      // 勾选「隐藏昵称」时提交 null（服务端不再写昵称快照）
+      nickname: hideNickname.value ? null : archiveNickname.value || settings.nickname || null,
+      locale: currentLocale(),
+    })
+    if ('error' in draft) {
+      flashShareMsg(t('share.noMedia'), 'err')
+      return
+    }
+    const { id, token } = await createShare(draft)
+    rememberShare({ roundId: roundRecord.value.id, shareId: id, token, at: Date.now() })
+    existingShare.value = { shareId: id, token }
+    shareRevoked.value = false
+    shareUrl.value = shareUrlOf(id)
+    flashShareMsg(t('share.created'))
+  } catch {
+    flashShareMsg(t('share.createFailed'), 'err')
+  } finally {
+    shareBusy.value = false
+  }
+}
+
+async function copyShareLink() {
+  if (!shareUrl.value) return
+  try {
+    await navigator.clipboard.writeText(shareUrl.value)
+    flashShareMsg(t('share.copied'))
+  } catch {
+    flashShareMsg(t('share.copyFailed'), 'err')
+  }
+}
+
+async function doRevoke() {
+  const entry = existingShare.value
+  if (!entry || shareBusy.value) return
+  if (!window.confirm(t('share.revokeConfirm'))) return
+  shareBusy.value = true
+  try {
+    await revokeShare(entry.shareId, entry.token)
+    markShareRevoked(entry.shareId)
+    shareRevoked.value = true
+    shareUrl.value = ''
+    flashShareMsg(t('share.revoked'))
+  } catch {
+    flashShareMsg(t('share.revokeFailed'), 'err')
+  } finally {
+    shareBusy.value = false
+  }
+}
+
+/** 校验一条已存在的分享仍可访问（撤回后链接失效 → 更新界面状态） */
+async function refreshExistingShare(shareId: string, token: string, revokedFlag?: boolean) {
+  if (revokedFlag) {
+    shareRevoked.value = true
+    return
+  }
+  const view: ShareView | null = await fetchShare(shareId).catch(() => null)
+  if (view) {
+    shareUrl.value = shareUrlOf(shareId)
+    existingShare.value = { shareId, token }
+  } else {
+    // 链接已失效（撤回/被清理）
+    shareRevoked.value = true
+    markShareRevoked(shareId)
+  }
+}
 /** 活动档案的昵称快照（旧档海报署名不随身份改昵称而变，013 §3.3） */
 const archiveNickname = ref('')
 /** 答疑专栏入口（011 §9）：bank 就绪后按物种查说明 */
@@ -184,6 +295,12 @@ onMounted(async () => {
   const res = await persistRound(quiz)
   newBadges.value = res.badges
   newTitleTexts.value = res.newTitles.map((x) => x.text)
+  roundRecord.value = res.record
+  // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
+  if (res.record) {
+    const prior = shareOfRound(res.record.id)
+    if (prior) void refreshExistingShare(prior.shareId, prior.token, prior.revoked)
+  }
   // 佩戴称号/徽章 → 海报（R30/R31/R38：含独特图标）
   const [stats, rounds] = await Promise.all([getStats(), listRounds()])
   const wornTitle = evaluateTitles(stats, rounds).find((x) => x.trackId === settings.wornTitle)
@@ -228,12 +345,54 @@ async function again() {
       <button class="btn btn-secondary" @click="showPoster = true">{{ t('result.makePoster') }}</button>
       <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
     </div>
+
+    <!-- 035 成绩分享：默认带昵称（可勾选隐藏）；创建后链接同时供海报二维码使用 -->
+    <div v-if="roundRecord" class="share-block">
+      <div class="share-head">
+        <Share2 class="ic" :size="15" />
+        <span>{{ t('share.title') }}</span>
+      </div>
+      <p class="muted small share-lead">{{ t('share.lead') }}</p>
+
+      <template v-if="!shareUrl && !shareRevoked">
+        <label class="share-opt">
+          <input v-model="hideNickname" type="checkbox" />
+          {{ t('share.hideNickname') }}
+        </label>
+        <button class="btn btn-secondary" :disabled="shareBusy" @click="doShare">
+          {{ shareBusy ? t('share.creating') : t('share.create') }}
+        </button>
+      </template>
+
+      <template v-else-if="shareUrl">
+        <div class="share-link">
+          <input :value="shareUrl" readonly :aria-label="t('share.linkLabel')" @focus="($event.target as HTMLInputElement).select()" />
+          <button class="btn btn-secondary" type="button" @click="copyShareLink">
+            {{ t('share.copy') }}
+          </button>
+        </div>
+        <p class="muted small">{{ t('share.qrHint') }}</p>
+        <button class="btn-link" type="button" :disabled="shareBusy" @click="doRevoke">
+          {{ t('share.revoke') }}
+        </button>
+      </template>
+
+      <template v-else>
+        <p class="muted small">{{ t('share.revokedHint') }}</p>
+        <button class="btn btn-secondary" :disabled="shareBusy" @click="doShare">
+          {{ t('share.create') }}
+        </button>
+      </template>
+
+      <p v-if="shareMsg" class="share-msg" :class="shareMsgKind" role="status">{{ shareMsg }}</p>
+    </div>
   </section>
 
   <PosterEditor
     :open="showPoster"
     :data="posterData"
     :images="posterImages"
+    :qr-url="shareUrl || undefined"
     @close="showPoster = false"
   />
 

@@ -28,6 +28,7 @@ interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement
   all<T = Record<string, unknown>>(): Promise<D1Result<T>>
   first<T = Record<string, unknown>>(): Promise<T | null>
+  run(): Promise<{ success: boolean }>
 }
 interface D1Database {
   prepare(query: string): D1PreparedStatement
@@ -102,7 +103,7 @@ const TIER_COMMONNESS: Record<number, number[]> = {
 
 const CORS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, x-admin-key',
 }
 
@@ -568,6 +569,200 @@ async function handleVote(request: Request, env: Env, reportId: string): Promise
   return json({ ok: true, up, down, myVote: value })
 }
 
+/**
+ * ── 035 单轮成绩分享（用户主动分享；D-035-1~6 已拍板）────────────────────
+ *
+ * 设计要点：
+ *  · 载荷**白名单化**：客户端只能提交固定形状（一轮 items），服务端逐字段裁剪长度，
+ *    并强制 mediaUrl 属于本站媒体域——避免被当成任意图床/跳转跳板（docs/035 §2.3）。
+ *  · id 不可猜测：base62 12 位（≈71 bit）；**不用自增**（否则可枚举他人成绩）。
+ *  · 撤回凭据：创建时下发 32 位 hex 管理令牌，库内**只存 SHA-256**；
+ *    撤回时比对哈希（跨设备凭令牌仍可撤回，D-035-6）。
+ *  · 无 expires_at（D-035-3 永久有效）；撤回 = hidden=1（软删，公开读 404）。
+ *  · 写入成本：1 行 + 2 索引 = 3 行/次（docs/032 额度纪律）。
+ */
+const SHARE_MEDIA_PREFIX = 'https://bird.wewalk.world/media/'
+const SHARE_MAX_ITEMS = 20
+const SHARE_MAX_BYTES = 32 * 1024
+
+/** 不可猜测短 id：12 位 base62（crypto 随机；去掉易混字符） */
+function shareId(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const bytes = new Uint8Array(12)
+  crypto.getRandomValues(bytes)
+  let out = ''
+  for (const b of bytes) out += alphabet[b % alphabet.length]
+  return out
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/** 单条 item 的白名单裁剪（返回 null = 该条不可用，整单拒绝） */
+function sanitizeShareItem(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== 'object') return null
+  const it = raw as Record<string, unknown>
+  const mediaUrl = str(it.mediaUrl, 600)
+  // 必须是本站 R2 媒体域（防任意图床/跳转）
+  if (!mediaUrl || !mediaUrl.startsWith(SHARE_MEDIA_PREFIX)) return null
+  const type = it.type === 'audio' ? 'audio' : it.type === 'image' ? 'image' : null
+  if (!type) return null
+  const answer = str(it.answer, 120)
+  if (!answer) return null
+  return {
+    speciesId: str(it.speciesId, 100),
+    answer,
+    sci: str(it.sci, 160),
+    family: str(it.family, 120),
+    type,
+    chosen: str(it.chosen, 120),
+    chosenId: str(it.chosenId, 100),
+    correct: it.correct === true,
+    timedOut: it.timedOut === true,
+    mediaUrl,
+    thumbUrl: str(it.thumbUrl, 600),
+    source: str(it.source, 60),
+    author: str(it.author, 200),
+    license: str(it.license, 60),
+  }
+}
+
+/** 创建分享：公开可访问（D-035-1）；返回 id + 管理令牌（仅此一次明文下发） */
+async function handleCreateShare(request: Request, env: Env): Promise<Response> {
+  const body = await readBody(request)
+  const clientId = clientIdOf(body.clientId)
+  if (!clientId) return json({ error: 'invalid_client' }, { status: 400 })
+
+  const mode = body.mode === 'audio' ? 'audio' : body.mode === 'image' ? 'image' : null
+  if (!mode) return json({ error: 'invalid_mode' }, { status: 400 })
+  const tier = Number(body.tier)
+  const total = Number(body.total)
+  const correct = Number(body.correct)
+  if (!Number.isInteger(tier) || tier < 1 || tier > 5) return json({ error: 'invalid_tier' }, { status: 400 })
+  if (!Number.isInteger(total) || total < 1 || total > SHARE_MAX_ITEMS) {
+    return json({ error: 'invalid_total' }, { status: 400 })
+  }
+  if (!Number.isInteger(correct) || correct < 0 || correct > total) {
+    return json({ error: 'invalid_correct' }, { status: 400 })
+  }
+  const itemsRaw = Array.isArray(body.items) ? body.items : []
+  if (!itemsRaw.length || itemsRaw.length > SHARE_MAX_ITEMS) {
+    return json({ error: 'invalid_items' }, { status: 400 })
+  }
+  const items: Record<string, unknown>[] = []
+  for (const raw of itemsRaw) {
+    const it = sanitizeShareItem(raw)
+    if (!it) return json({ error: 'invalid_item' }, { status: 400 })
+    items.push(it)
+  }
+
+  const payload = JSON.stringify({
+    v: 1,
+    mode,
+    tier,
+    total,
+    correct,
+    accuracy: Math.round((correct / total) * 100),
+    durationMs: Number.isFinite(Number(body.durationMs)) ? Number(body.durationMs) : null,
+    locale: str(body.locale, 12) ?? 'zh-CN',
+    items,
+  })
+  if (payload.length > SHARE_MAX_BYTES) return json({ error: 'payload_too_large' }, { status: 413 })
+
+  const now = Date.now()
+  // 防刷：同设备每天最多 30 条（远高于正常使用；见 docs/035 §2.2）
+  const recent = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM round_shares WHERE client_id = ? AND created_at > ?',
+  )
+    .bind(clientId, now - 86_400_000)
+    .first<{ n: number }>()
+  if ((recent?.n ?? 0) >= 30) return json({ error: 'rate_limited' }, { status: 429 })
+
+  const id = shareId()
+  const token = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+  const tokenHash = await sha256Hex(token)
+  await env.DB.prepare(
+    `INSERT INTO round_shares
+       (id,created_at,mode,tier,total,correct,accuracy,nickname,payload,token_hash,client_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+  )
+    .bind(
+      id,
+      now,
+      mode,
+      tier,
+      total,
+      correct,
+      Math.round((correct / total) * 100),
+      str(body.nickname, 24),
+      payload,
+      tokenHash,
+      clientId,
+    )
+    .run()
+  return json({ ok: true, id, token }, { status: 201 })
+}
+
+/** 公开读取：hidden=1 → 404（撤回）；边缘缓存见路由包装 */
+async function handleGetShare(env: Env, id: string): Promise<Response> {
+  const row = await env.DB.prepare(
+    'SELECT id,created_at,mode,tier,total,correct,accuracy,nickname,payload,hidden FROM round_shares WHERE id = ?',
+  )
+    .bind(id)
+    .first<{
+      id: string
+      created_at: number
+      mode: string
+      tier: number
+      total: number
+      correct: number
+      accuracy: number
+      nickname: string | null
+      payload: string
+      hidden: number
+    }>()
+  if (!row || row.hidden === 1) return json({ error: 'not_found' }, { status: 404 })
+  let payload: unknown = null
+  try {
+    payload = JSON.parse(row.payload)
+  } catch {
+    return json({ error: 'corrupt_payload' }, { status: 500 })
+  }
+  return json({
+    ok: true,
+    share: {
+      id: row.id,
+      at: row.created_at,
+      mode: row.mode,
+      tier: row.tier,
+      total: row.total,
+      correct: row.correct,
+      accuracy: row.accuracy,
+      nickname: row.nickname,
+      payload,
+    },
+  })
+}
+
+/** 撤回：凭管理令牌（只比对 SHA-256；不依赖设备）→ 软删 */
+async function handleDeleteShare(request: Request, env: Env, id: string): Promise<Response> {
+  const body = await readBody(request)
+  const token = str(body.token, 128)
+  if (!token) return json({ error: 'invalid_token' }, { status: 400 })
+  const tokenHash = await sha256Hex(token)
+  const row = await env.DB.prepare('SELECT id, token_hash FROM round_shares WHERE id = ?')
+    .bind(id)
+    .first<{ id: string; token_hash: string }>()
+  if (!row) return json({ error: 'not_found' }, { status: 404 })
+  if (row.token_hash !== tokenHash) return json({ error: 'unauthorized' }, { status: 401 })
+  await env.DB.prepare('UPDATE round_shares SET hidden = 1 WHERE id = ?').bind(id).run()
+  return json({ ok: true, id, hidden: true })
+}
+
 function isAdmin(request: Request, env: Env): boolean {
   const key = request.headers.get('x-admin-key') ?? ''
   return Boolean(env.ADMIN_KEY) && key.length > 0 && key === env.ADMIN_KEY
@@ -662,6 +857,9 @@ export default {
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
         if (path === '/api/reports') return await handlePublicReports(env, url)
+        // 035：分享读取（公开；不加边缘缓存——撤回需即时生效，D1 仅 1 行读）
+        const shareGet = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})$/)
+        if (shareGet) return await handleGetShare(env, shareGet[1]!)
         // 029 M3:质量隔离台账（管理端读取,供 /admin 展示与导出脚本拉取）
         if (path === '/api/quarantine') {
           if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
@@ -678,6 +876,14 @@ export default {
 
       if (method === 'POST' && path === '/api/reports') {
         return await handleSubmitReport(request, env)
+      }
+      if (method === 'POST' && path === '/api/shares') {
+        return await handleCreateShare(request, env)
+      }
+      // 035：撤回（凭管理令牌；软删）
+      const shareDel = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})$/)
+      if (method === 'DELETE' && shareDel) {
+        return await handleDeleteShare(request, env, shareDel[1]!)
       }
       const voteMatch = path.match(/^\/api\/reports\/([^/]+)\/vote$/)
       if (method === 'POST' && voteMatch) {

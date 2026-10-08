@@ -22,15 +22,16 @@ export interface PersistResult {
   badges: BadgeDef[]
   /** 本次新解锁的称号级（每轨道只提示最高新级） */
   newTitles: EarnedTitle[]
+  /**
+   * 本轮落库记录（035：成绩分享直接复用，避免在视图里重复一遍映射逻辑）。
+   * 未落库（无 roundId / 已落库）时为 null。
+   */
+  record: RoundRecord | null
 }
 
-/** 把当前一轮结果写入本地，并返回本次新获得的徽章与称号 */
-export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
-  if (!quiz.roundId || !quiz.questions.length || persisted.has(quiz.roundId)) {
-    return { badges: [], newTitles: [] }
-  }
-  persisted.add(quiz.roundId)
-
+/** 当前一轮 → 本地记录（纯映射；persistRound 与成绩分享共用同一份语义） */
+export function buildRoundRecord(quiz: QuizStore): RoundRecord | null {
+  if (!quiz.roundId || !quiz.questions.length) return null
   const items: RoundItem[] = quiz.questions.map((q, i) => {
     const raw = quiz.chosen[i] ?? null
     const timedOut = raw === TIMEOUT
@@ -56,7 +57,7 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
     }
   })
 
-  const record: RoundRecord = {
+  return {
     id: quiz.roundId,
     at: Date.now(),
     category: 'bird',
@@ -70,6 +71,15 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
     source: quiz.source,
     ...(quiz.escapedQuit ? { escapedQuit: true } : {}),
   }
+}
+
+/** 把当前一轮结果写入本地，并返回本次新获得的徽章与称号 */
+export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
+  const record = buildRoundRecord(quiz)
+  if (!record || persisted.has(record.id)) {
+    return { badges: [], newTitles: [], record: null }
+  }
+  persisted.add(record.id)
 
   try {
     await saveRound(record)
@@ -118,10 +128,11 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
       settings.titleAutoWorn = true
     }
 
-    return { badges: newBadges, newTitles }
+    return { badges: newBadges, newTitles, record }
   } catch (e) {
     console.warn('failed to persist round:', e)
-    return { badges: [], newTitles: [] }
+    // 落库失败仍返回 record：成绩分享不依赖本地持久化（035）
+    return { badges: [], newTitles: [], record }
   }
 }
 
