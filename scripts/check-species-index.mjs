@@ -18,6 +18,16 @@ const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
 const problems = []
 const fail = (msg) => problems.push(msg)
 
+/** 029 M0:常见度人工覆盖表（豁免 curated 一致性断言用；读取失败按空表）。 */
+async function loadOverrides() {
+  try {
+    const d = JSON.parse(await fs.readFile(path.join(ROOT, 'data/commonness-overrides.json'), 'utf8'))
+    return (d && d.overrides) || {}
+  } catch {
+    return {}
+  }
+}
+
 /** 坐标/几何类字段黑名单(精确键名,大小写不敏感)。 */
 const GEO_KEYS = new Set(['lat', 'lng', 'lon', 'latitude', 'longitude', 'coordinates', 'coordinate', 'geometry', 'geojson', 'bbox', 'bounds'])
 
@@ -63,6 +73,7 @@ try {
     let withBackbone = 0
     let withInat = 0
     let withZh = 0
+    let withCommonness = 0
     for (const [i, e] of index.species.entries()) {
       const where = `species[${i}]`
       if (typeof e.taxonKey !== 'string' || !e.taxonKey) fail(`${where}:缺 taxonKey(AvibaseID)`)
@@ -89,6 +100,12 @@ try {
         if (typeof e.nameZh !== 'string' || !e.nameZh.trim()) fail(`${where}:nameZh 非空字符串`)
         else withZh++
       }
+      if (e.commonness != null) {
+        withCommonness++
+        if (!Number.isInteger(e.commonness) || e.commonness < 1 || e.commonness > 5) {
+          fail(`${where}:commonness 非法值 ${e.commonness}(期望 1-5 整数;029 M0)`)
+        }
+      }
       checkGeoKeys(e, where)
     }
     if (noOrder) fail(`${noOrder} 条 species 缺 order/family`)
@@ -106,8 +123,36 @@ try {
       }
       if (bad) fail(`${bad} 条骨架中文名与 manifest curated 名不一致(curated 必须优先)`)
     }
+    // 029 M0:常见度覆盖与计数一致性 + curated 优先不变量(commonness-overrides 显式覆盖者豁免)
+    if (!index.commonness) {
+      fail('缺 index.commonness 统计块(029 M0:重建骨架 npm run species-index)')
+    } else {
+      const total = (index.commonness.synthesized || 0) + (index.commonness.curated || 0) + (index.commonness.overridden || 0)
+      if (total !== withCommonness) {
+        fail(`commonness 计数不一致:synthesized+curated+overridden=${total} ≠ 条目实际 ${withCommonness}`)
+      }
+      if (withCommonness !== index.species.length) {
+        fail(`commonness 覆盖不全:${withCommonness}/${index.species.length}`)
+      }
+      const overrides = await loadOverrides()
+      const manifestCommonness = new Map()
+      for (const s of manifest.species || []) {
+        if (Number.isInteger(s.commonness) && s.nameSci) manifestCommonness.set(normalizeSciName(s.nameSci), s.commonness)
+      }
+      let badCurated = 0
+      for (const e of index.species) {
+        const k = normalizeSciName(e.nameSci)
+        if (!manifestCommonness.has(k)) continue
+        const exempt =
+          overrides[e.taxonKey] != null || overrides[e.nameSci] != null || overrides[k] != null
+        if (!exempt && e.commonness !== manifestCommonness.get(k)) badCurated++
+      }
+      if (badCurated) {
+        fail(`${badCurated} 条常见度与 manifest curated 不一致(curated 优先;人工修正请走 data/commonness-overrides.json)`)
+      }
+    }
     console.log(
-      `· 骨架:species ${index.species.length} · taxonKey 唯一 ✓ · 学名唯一 ✓ · eBird 码 ${withEbird} · backbone ${withBackbone} · iNat id ${withInat} · 灭绝种 ${extinct} · 中文名 ${withZh}`,
+      `· 骨架:species ${index.species.length} · taxonKey 唯一 ✓ · 学名唯一 ✓ · eBird 码 ${withEbird} · backbone ${withBackbone} · iNat id ${withInat} · 灭绝种 ${extinct} · 中文名 ${withZh} · 常见度 ${withCommonness}`,
     )
   }
 

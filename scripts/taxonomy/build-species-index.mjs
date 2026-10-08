@@ -17,15 +17,29 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseArgs } from '../lib/util.mjs'
+import { parseArgs, slug } from '../lib/util.mjs'
 import { AVILIST_CACHE, AVILIST_VERSION } from './fetch-avilist.mjs'
 import { parseAvilistXlsx, taxaFromRows, buildNameIndex, matchSpecies, normalizeSciName } from './avilist-lib.mjs'
+import { scoreSignals, tierOf, binomialName } from './commonness-lib.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
 const MOCK_FIXTURE = path.join(ROOT, 'tests/fixtures/taxonomy/avilist-sample.json')
 const WIKIDATA_CACHE = path.join(ROOT, 'data-cache/taxonomy/wikidata-zh')
 const GBIF_MATCH_CACHE = path.join(ROOT, 'data-cache/taxonomy/gbif-match')
+const GBIF_RECORDS_CACHE = path.join(ROOT, 'data-cache/region/gbif-records-by-species.json')
+const XC_CACHE = path.join(ROOT, 'data-cache/xc')
+const COMMONNESS_OVERRIDES = path.join(ROOT, 'data/commonness-overrides.json')
+
+/** 029 M0:人工常见度覆盖表(可选):{ "<taxonKey 或学名>": 1..5 } */
+async function loadCommonnessOverrides() {
+  try {
+    const d = JSON.parse(await fs.readFile(COMMONNESS_OVERRIDES, 'utf8'))
+    return (d && d.overrides) || {}
+  } catch {
+    return {}
+  }
+}
 
 const CITATION = `AviList Core Team. 2026. AviList: The Global Avian Checklist, ${AVILIST_VERSION}. https://doi.org/10.2173/avilist.${AVILIST_VERSION}`
 const SOURCES = [
@@ -200,6 +214,105 @@ try {
     }
   }
 
+  // 029 M0:常见度(1 极常见 → 5 稀有)——难度分档池筛选的地基。
+  // 信号:GBIF 记录数(热度) + 分布国家数(广度) + XC 录音数(音频可得性);权重/上限见 commonness-lib。
+  // 优先级:commonness-overrides(人工兜底) > curated(manifest 人工值,精确学名) > 合成。
+  let commonnessStats = null
+  if (!args.mock) {
+    let gbifByName = null
+    try {
+      gbifByName = new Map()
+      for (const r of JSON.parse(await fs.readFile(GBIF_RECORDS_CACHE, 'utf8'))) {
+        const k = binomialName(r.scientificname)
+        if (k) gbifByName.set(k, (gbifByName.get(k) || 0) + Number(r.n || 0))
+      }
+      console.log(`commonness 信号 gbifRecords:${gbifByName.size} 个双名`)
+    } catch {
+      gbifByName = null
+      console.log('⚠ commonness:GBIF 记录数缓存缺失,该信号跳过(npm run region:gbif-sql 补齐,见 docs/029 M0)')
+    }
+    let countriesByShort = null
+    try {
+      countriesByShort = new Map()
+      const dist = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/species-distribution.json'), 'utf8'))
+      for (const codes of Object.values(dist.byCountry || {})) {
+        for (const sc of codes) countriesByShort.set(sc, (countriesByShort.get(sc) || 0) + 1)
+      }
+      console.log(`commonness 信号 countries:${countriesByShort.size} 个短码`)
+    } catch {
+      countriesByShort = null
+      console.log('⚠ commonness:区系层缺失,该信号跳过(npm run region:distribution)')
+    }
+    let xcBySlug = null
+    try {
+      xcBySlug = new Map()
+      for (const f of await fs.readdir(XC_CACHE)) {
+        if (!f.endsWith('.json')) continue
+        try {
+          const d = JSON.parse(await fs.readFile(path.join(XC_CACHE, f), 'utf8'))
+          const n = Number(d.numRecordings)
+          if (Number.isFinite(n)) xcBySlug.set(f.slice(0, -5), n)
+        } catch {
+          /* 单条缓存损坏:跳过 */
+        }
+      }
+      console.log(`commonness 信号 xcRecordings:${xcBySlug.size} 个缓存`)
+    } catch {
+      xcBySlug = null
+      console.log('⚠ commonness:XC 缓存缺失,该信号跳过')
+    }
+    if (gbifByName || countriesByShort || xcBySlug) {
+      const curatedByName = new Map()
+      for (const s of manifestSpecies) {
+        const v = Number(s.commonness)
+        if (Number.isInteger(v) && v >= 1 && v <= 5 && s.nameSci) curatedByName.set(normalizeSciName(s.nameSci), v)
+      }
+      const overrides = await loadCommonnessOverrides()
+      let curatedCount = 0
+      let overriddenCount = 0
+      let synthesizedCount = 0
+      const tierCount = {}
+      for (const e of species) {
+        const sig = {}
+        if (gbifByName) sig.gbifRecords = gbifByName.get(binomialName(e.nameSci)) || 0
+        if (countriesByShort) sig.countries = countriesByShort.get(e.taxonKey.replace(/^avibase-/, '')) || 0
+        if (xcBySlug) sig.xcRecordings = xcBySlug.get(slug(e.nameSci)) || 0
+        let tier = tierOf(scoreSignals(sig))
+        let src = 'synthesized'
+        const curated = curatedByName.get(normalizeSciName(e.nameSci))
+        if (curated) {
+          tier = curated
+          src = 'curated'
+        }
+        const ovRaw = overrides[e.taxonKey] ?? overrides[e.nameSci] ?? overrides[normalizeSciName(e.nameSci)]
+        const ov = Number(ovRaw)
+        if (Number.isInteger(ov) && ov >= 1 && ov <= 5) {
+          tier = ov
+          src = 'overridden'
+        }
+        e.commonness = tier
+        if (src === 'curated') curatedCount++
+        else if (src === 'overridden') overriddenCount++
+        else synthesizedCount++
+        tierCount[tier] = (tierCount[tier] || 0) + 1
+      }
+      commonnessStats = {
+        synthesized: synthesizedCount,
+        curated: curatedCount,
+        overridden: overriddenCount,
+        signals: [
+          ...(gbifByName ? ['gbifRecords'] : []),
+          ...(countriesByShort ? ['countries'] : []),
+          ...(xcBySlug ? ['xcRecordings'] : []),
+        ],
+      }
+      const tierDist = [1, 2, 3, 4, 5].map((t) => `${t}:${tierCount[t] || 0}`).join(' ')
+      console.log(`常见度:curated ${curatedCount} + 合成 ${synthesizedCount} + 覆盖 ${overriddenCount} | 档位分布 ${tierDist}`)
+    } else {
+      console.log('⚠ commonness:三个信号均不可用,骨架不带 commonness(可跑通但 check:index 会拦)')
+    }
+  }
+
   // 概念合并出处(审计用):现有学名 ≠ AviList 概念学名(别名/亚种归并)的映射记录。
   // manifest 保留旧学名与 id(媒体路径不动),taxonKey 指向 AviList 概念;check:index 按此注记放行学名不一致。
   const nameByKey = new Map(taxa.species.map((t) => [t.avibaseId, t.nameSci]))
@@ -227,6 +340,7 @@ try {
   if (bankMappingNotes.length) index.bankMappingNotes = bankMappingNotes
   if (nameZhStats) index.nameZh = nameZhStats
   if (backboneStats) index.backbone = backboneStats
+  if (commonnessStats) index.commonness = commonnessStats
   // 产物为生成物,紧凑写盘(无缩进)。>2MB 时提醒:本文件是注册表(前端不整载),
   // 真正接入 UI 时再按目/科分片(021 §2.3 的预算针对前端按需加载文件)。
   await fs.writeFile(outPath, JSON.stringify(index))

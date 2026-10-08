@@ -1,0 +1,5 @@
+{
+  "_comment": "029 M0:常见度人工覆盖表（最高优先于 curated 与合成值）。键 = taxonKey(AvibaseID，如 avibase-BB5650EB)或学名（原样或双名）；值 = 1..5 整数（1 极常见 → 5 稀有）。",
+  "_note": "用途：修正合成明显偏差（如中国常见但因 GBIF 采样努力偏差被低估的种）。改动后重跑 npm run species-index 生效；check:index 会校验与 manifest curated 的一致性（本表显式覆盖的除外）。",
+  "overrides": {}
+}
