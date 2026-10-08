@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MediaType, Question, QuizRegime, Tier } from '@/types'
-import { loadBank, BankError, type BankErrorCode } from '@/core/bank'
+import { loadBank, registerSpecies, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
 import { assetsOf, buildQuestions } from '@/core/questionEngine'
+import { loadRegionalPool } from '@/core/globalPool'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
@@ -89,16 +90,38 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
   return suggestTier(await safeListRounds(), type, currentTier)
 }
 
+/**
+ * 029 M2:合入全球池（懒加载；失败静默回退核心 1299）。
+ * 只收「可玩」物种（图/音任一有素材，且未被质量降级 quizExcluded）。
+ * 地区过滤（D-029-2）：L1–L3 走地区包（用户地区偏好），L4–L5 全球开放。
+ */
+async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
+  const bank = await loadBank()
+  const core = bank.species.filter(
+    (sp) => assetsOf(sp, type).length > 0 && !sp.quizExcluded,
+  )
+  const settings = useSettingsStore()
+  const region = tier <= 3 ? settings.region : 'ALL'
+  const global = await loadRegionalPool(region).catch(() => null)
+  if (!global?.length) return core
+  const usable = global.filter(
+    (sp) =>
+      !sp.quizExcluded &&
+      (type === 'image' ? sp.playableImage !== false && !!sp.image : sp.playableAudio !== false && !!sp.audio),
+  )
+  registerSpecies(usable) // 历史/错题本的名字解析需要
+  const seen = new Set(core.map((s) => s.id))
+  return [...core, ...usable.filter((sp) => !seen.has(sp.id))]
+}
+
 /** 各赛制的派生集合（按「物种 × 媒体类型」；computePool 与 regimeCounts 共用） */
-async function poolData(type: MediaType) {
-  const [bank, rounds, wrong] = await Promise.all([
-    loadBank(),
+async function poolData(type: MediaType, tier: Tier = 2) {
+  const [species, rounds, wrong] = await Promise.all([
+    mergedSpecies(type, tier),
     safeListRounds(),
     safeWrongBook(),
   ])
-  const withMedia = new Set(
-    bank.species.filter((sp) => assetsOf(sp, type).length > 0).map((sp) => sp.id),
-  )
+  const withMedia = new Set(species.map((sp) => sp.id))
   const practiced = new Set<string>()
   const correctSet = new Set<string>()
   for (const round of rounds) {
@@ -111,12 +134,12 @@ async function poolData(type: MediaType) {
   const wrongSet = new Set(
     wrong.map((w) => w.speciesId).filter((id) => withMedia.has(id)),
   )
-  return { withMedia, practiced, correctSet, wrongSet }
+  return { withMedia, practiced, correctSet, wrongSet, species }
 }
 
 /** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
-async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>> {
-  const { withMedia, practiced, correctSet, wrongSet } = await poolData(type)
+async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizRegime, number>> {
+  const { withMedia, practiced, correctSet, wrongSet } = await poolData(type, tier)
   return {
     standard: [...withMedia].filter((id) => !practiced.has(id)).length,
     review: practiced.size,
@@ -130,9 +153,10 @@ async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>
   async function computePool(
     r: QuizRegime,
     type: MediaType,
+    tier: Tier,
   ): Promise<{ pool?: ReadonlySet<string>; errorCode?: QuizErrorCode }> {
     if (r === 'random') return {}
-    const { withMedia, practiced, correctSet, wrongSet } = await poolData(type)
+    const { withMedia, practiced, correctSet, wrongSet } = await poolData(type, tier)
     if (r === 'standard') {
       const pool = new Set([...withMedia].filter((id) => !practiced.has(id)))
       return pool.size ? { pool } : { errorCode: 'standardPoolEmpty' }
@@ -159,10 +183,11 @@ async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>
     loading.value = true
     error.value = ''
     try {
-      const bank = await loadBank()
+      await loadBank()
       // A2 赛制选题池（013 §4）：standard=未练过 / review=练过 / reinforce=练对过 /
       // revival=错题本 / random=全库；按「物种 × 媒体类型」记练过（013 P2 粒度）
-      const poolResult = await computePool(regime.value, type)
+      // 029 M2：池含全球种（L1–L3 按地区偏好过滤，L4–L5 全球开放），出题用合并后的物种表
+      const poolResult = await computePool(regime.value, type, tier.value)
       if (poolResult.errorCode) {
         error.value = poolResult.errorCode
         questions.value = []
@@ -174,7 +199,8 @@ async function regimeCounts(type: MediaType): Promise<Record<QuizRegime, number>
         source.value = regime.value === 'revival' ? 'wrong-practice' : 'normal'
       }
       escapedQuit.value = false
-      const qs = buildQuestions(bank.species, {
+      const species = (await poolData(type, tier.value)).species
+      const qs = buildQuestions(species, {
         type,
         count: opts.count ?? 10,
         tier: tier.value,

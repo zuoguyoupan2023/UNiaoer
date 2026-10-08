@@ -34,6 +34,8 @@ export async function writeManifestLayers(manifest, opts = {}) {
   const dataDir = opts.dataDir || path.join(ROOT, 'public/data')
   const globalLedger = opts.globalLedger || path.join(ROOT, 'data/manifest-global.json')
   const quiet = !!opts.quiet
+  /** 附注统计(commonness 合并数等),随 stats 返回 */
+  const stats_note = {}
 
   const core = toCore(manifest)
   const buckets = splitLargeBuckets(toAssetBuckets(manifest))
@@ -63,6 +65,23 @@ export async function writeManifestLayers(manifest, opts = {}) {
   try {
     const g = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
     global = toGlobalPool(g)
+    // 029 M2:全球池的 commonness 用骨架合成值覆盖台账占位值(台账采集期统一填 2)。
+    // 按 nameSci 精确联表(骨架 11,131 种全覆盖,含台账全部物种)。
+    try {
+      const idx = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
+      const byName = new Map(idx.species.map((s) => [s.nameSci, s]))
+      let merged = 0
+      for (const sp of global.species) {
+        const e = byName.get(sp.nameSci)
+        if (e && Number.isInteger(e.commonness)) {
+          sp.commonness = e.commonness
+          merged++
+        }
+      }
+      stats_note.commonness = merged
+    } catch {
+      stats_note.commonness = 0
+    }
     await writeJsonAtomic(path.join(dataDir, 'manifest-global.min.json'), JSON.stringify(global))
   } catch {
     global = null // 无台账:跳过(不报错)
@@ -76,12 +95,15 @@ export async function writeManifestLayers(manifest, opts = {}) {
     maxBucket,
     globalBytes: global ? Buffer.byteLength(JSON.stringify(global)) : 0,
     globalTotal: global ? global.total : 0,
+    globalCommonnessMerged: stats_note.commonness || 0,
   }
   if (!quiet) {
     const MB = (b) => `${(b / 1e6).toFixed(2)}MB`
     console.log(
       `分层产物:core ${MB(stats.coreBytes)}(${stats.coreTotal} 种,${stats.buckets} 桶) · assets ${MB(stats.bucketBytes)}(最大桶 ${stats.maxBucket.name} ${(stats.maxBucket.bytes / 1024).toFixed(0)}KB)` +
-        (global ? ` · global.min ${MB(stats.globalBytes)}(${stats.globalTotal} 种)` : ' · 无全球台账,global.min 跳过'),
+        (global
+          ? ` · global.min ${MB(stats.globalBytes)}(${stats.globalTotal} 种,commonness 联表 ${stats.globalCommonnessMerged})`
+          : ' · 无全球台账,global.min 跳过'),
     )
   }
   return stats

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown, Globe2, Search } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
+import { loadGlobalPool } from '@/core/globalPool'
 import {
   buildCountryIndex,
   countriesInContinent,
@@ -148,6 +149,20 @@ interface GridItem {
   thumb: string | null
   bankId: string | null
 }
+/**
+ * 029 M2:全球池懒加载(11k 可玩池,1 图 1 音/种)。
+ * 「可玩」判定改用合并后的 playable——核心库或全球池任一带素材即可玩。
+ */
+const globalPool = ref<BankSpecies[] | null>(null)
+void loadGlobalPool().then((p) => (globalPool.value = p))
+/** 短码 → 全球池条目(用于徽标/缩略图;排除质量降级种) */
+const poolByCode = computed<Map<string, BankSpecies>>(() => {
+  const m = new Map<string, BankSpecies>()
+  for (const sp of globalPool.value ?? []) {
+    if (sp.taxonKey && !sp.quizExcluded) m.set(shortCodeOf(sp.taxonKey), sp)
+  }
+  return m
+})
 /** bank 物种按学名索引(骨架条目 ↔ bank 的桥;夹具 id 非 slug 形式也稳) */
 const bankBySci = computed<Map<string, BankSpecies>>(() => {
   const m = new Map<string, BankSpecies>()
@@ -167,12 +182,15 @@ const gridItems = computed<GridItem[]>(() => {
       const e = idx.byShortCode.get(code) ?? null
       if (!sp && e) sp = bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
       if (!e && !sp) continue
+      // 全球池条目(短码直查;骨架条目缺失时也能判定可玩)
+      const gp = poolByCode.value.get(code) ?? null
+      const usable = sp ?? gp
       items.push({
-        slug: sp ? sp.id : slugifySci(e!.nameSci),
-        name: sp ? nameOf(sp) : entryDisplayName(e!, currentLocale()),
-        nameSci: sp?.nameSci ?? e!.nameSci,
-        playable: !!sp,
-        thumb: sp?.images?.[0]?.thumbUrl || sp?.images?.[0]?.url || null,
+        slug: usable ? usable.id : slugifySci(e!.nameSci),
+        name: usable ? nameOf(usable) : entryDisplayName(e!, currentLocale()),
+        nameSci: usable?.nameSci ?? e!.nameSci,
+        playable: !!usable,
+        thumb: usable?.image?.thumbUrl || usable?.image?.url || null,
         bankId: sp?.id ?? null,
       })
     }

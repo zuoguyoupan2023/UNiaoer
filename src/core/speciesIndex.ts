@@ -102,3 +102,11 @@ export function entryDisplayName(e: SpeciesIndexEntry, locale: string): string {
   if (locale.startsWith('zh')) return e.nameZh || e.nameEn || e.nameSci
   return e.nameEn || e.nameSci
 }
+
+/** 测试用:清空骨架与区系缓存 */
+export function _resetSpeciesIndexCaches() {
+  indexCache = null
+  indexPromise = null
+  distCache = null
+  distPromise = null
+}

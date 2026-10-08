@@ -46,6 +46,13 @@ export interface BankSpecies {
   /** AviList 稳定概念键（AvibaseID，023 P0 只增字段）；playable=素材可玩的构建期基线 */
   taxonKey?: string
   playable?: boolean
+  playableImage?: boolean
+  playableAudio?: boolean
+  /**
+   * 029 M3:素材质量降级标记（构建期产物）。true = 该物种素材**仅展示、不进题库**
+   * （用户反馈确认差且无替补时置位；见 docs/029 §4 质量闭环）。
+   */
+  quizExcluded?: boolean
   family: string
   commonness: number
   /** 榜单排名 / 是否中国榜（manifest v2 起） */
@@ -164,6 +171,22 @@ function buildSpeciesIndex(bank: Manifest) {
   speciesIndex = new Map(bank.species.map((s) => [s.id, s]))
   nameIndex = new Map()
   for (const sp of bank.species) {
+    if (sp.nameZh && !nameIndex.has(sp.nameZh)) nameIndex.set(sp.nameZh, sp)
+    if (sp.nameEn && !nameIndex.has(sp.nameEn)) nameIndex.set(sp.nameEn, sp)
+    if (sp.nameSci && !nameIndex.has(sp.nameSci)) nameIndex.set(sp.nameSci, sp)
+  }
+}
+
+/**
+ * 029 M2:把懒加载的全球池并入索引——历史记录/错题本里存的是全球种 id 或作答时的名字，
+ * 都需要按当前语言解析（与核心库同规则：id 直查 + 名字反查，撞名先到先得）。
+ * 重复注册（同 id）跳过；核心库优先（先到先得）。
+ */
+export function registerSpecies(extra: BankSpecies[]): void {
+  if (!speciesIndex || !nameIndex) return
+  for (const sp of extra) {
+    if (!sp?.id) continue
+    if (!speciesIndex.has(sp.id)) speciesIndex.set(sp.id, sp)
     if (sp.nameZh && !nameIndex.has(sp.nameZh)) nameIndex.set(sp.nameZh, sp)
     if (sp.nameEn && !nameIndex.has(sp.nameEn)) nameIndex.set(sp.nameEn, sp)
     if (sp.nameSci && !nameIndex.has(sp.nameSci)) nameIndex.set(sp.nameSci, sp)

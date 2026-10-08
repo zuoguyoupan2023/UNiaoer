@@ -37,6 +37,8 @@ interface Persisted {
   tierAudio?: Tier
   /** D5 自适应难度：按最近表现自动升降档（默认开） */
   adaptiveTier?: boolean
+  /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
+  region?: string
 }
 
 function load(): Partial<Persisted> {
@@ -87,6 +89,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const tierAudio = ref<Tier | undefined>(saved.tierAudio)
   /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
+  /** 029 M2:出题地区偏好（默认 ALL=不过滤；L1-L3 按此过滤全球池） */
+  const region = ref<string>(saved.region ?? 'ALL')
 
   // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
   watch(locale, (v) => {
@@ -113,6 +117,7 @@ export const useSettingsStore = defineStore('settings', () => {
       tierImage,
       tierAudio,
       adaptiveTier,
+      region,
     ],
     () => {
       try {
@@ -137,6 +142,7 @@ export const useSettingsStore = defineStore('settings', () => {
             tierImage: tierImage.value,
             tierAudio: tierAudio.value,
             adaptiveTier: adaptiveTier.value,
+            region: region.value,
           } satisfies Persisted),
         )
       } catch {
@@ -165,5 +171,6 @@ export const useSettingsStore = defineStore('settings', () => {
     tierImage,
     tierAudio,
     adaptiveTier,
+    region,
   }
 })

@@ -38,6 +38,7 @@ import { addReport, markReportSynced, type ReportReason } from '@/core/reportSto
 import { submitReport as uploadReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
+import { loadSpeciesDistribution } from '@/core/speciesIndex'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
@@ -191,6 +192,51 @@ function chooseTier(v: Tier) {
   tier.value = v
   persistTier(v)
   adaptiveHint.value = null
+  // 029 M2:档位变化会改变池子(L1-L3 地区过滤 / L4-L5 全球),刷新赛制可用数
+  void quiz.regimeCounts(props.type, v).then((c) => {
+    regimeCountsData.value = c
+    const vis = visibleRegimes.value
+    if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
+      quiz.regime = vis[0]!.id
+      persistRegime(quiz.regime)
+    }
+  }).catch(() => {})
+}
+
+/** 029 M2:地区偏好(仅 L1-L3 生效;L4/L5 全球开放)。
+ * 候选项 = 「全球」+ 观鸟热区(按物种数排名靠前的国家,数据来自区系层;加载失败只显示「全球」)。 */
+const REGION_CHOICES_FALLBACK = ['CN', 'US', 'GB', 'AU', 'JP', 'BR', 'IN', 'ZA']
+const regionOptions = ref<{ code: string; label: string }[]>([{ code: 'ALL', label: '' }])
+const regionChoice = computed({
+  get: () => settings.region,
+  set: (v: string) => { settings.region = v },
+})
+onMounted(async () => {
+  try {
+    const dist = await loadSpeciesDistribution()
+    const codes = dist ? Object.keys(dist.byCountry) : []
+    // 按物种数降序取前 12(含中国),再并上兜底清单;港澳台等敏感性地区名走 Intl 本地化
+    const ranked = codes
+      .map((c) => ({ c, n: (dist!.byCountry[c] ?? []).length }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 12)
+      .map((x) => x.c)
+    const merged = [...new Set(['CN', ...ranked, ...REGION_CHOICES_FALLBACK])].slice(0, 14)
+    const dn = (() => {
+      try {
+        return new Intl.DisplayNames([currentLocale()], { type: 'region' })
+      } catch {
+        return null
+      }
+    })()
+    regionOptions.value = merged.map((c) => ({ code: c, label: dn?.of(c) ?? c }))
+  } catch {
+    /* 区系层不可用:只留「全球」 */
+  }
+})
+function chooseRegion(v: string) {
+  regionChoice.value = v
+  void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
@@ -201,7 +247,7 @@ function chooseRegime(r: QuizRegime) {
 async function initIntro() {
   if (!settings.nickname && !settings.nicknameGuideDismissed) showNameModal.value = true
   try {
-    regimeCountsData.value = await quiz.regimeCounts(props.type)
+    regimeCountsData.value = await quiz.regimeCounts(props.type, tier.value)
   } catch {
     regimeCountsData.value = null
   }
@@ -733,6 +779,22 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(cfg.descKey) }}</span>
       </button>
     </div>
+    <!-- 029 M2:地区偏好(L1-L3 生效;L4/L5 全球开放,不显示) -->
+    <template v-if="tier <= 3">
+      <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepRegion') }}</p>
+      <div class="regions">
+        <button
+          v-for="opt in regionOptions"
+          :key="opt.code"
+          class="tier region"
+          :class="{ on: regionChoice === opt.code }"
+          :title="t('quiz.regionHint')"
+          @click="chooseRegion(opt.code)"
+        >
+          <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : opt.label }}</strong>
+        </button>
+      </div>
+    </template>
     <p v-if="adaptiveHint" class="adaptive-hint">
       {{
         t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
@@ -744,7 +806,7 @@ function onTouchEnd(e: TouchEvent) {
     </p>
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
-    <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
+    <p class="step-cap"><i class="step-no">{{ tier <= 3 ? 4 : 3 }}</i>{{ t('quiz.stepForm') }}</p>
     <div class="regimes">
       <button
         v-for="r in visibleRegimes"
@@ -1027,6 +1089,23 @@ function onTouchEnd(e: TouchEvent) {
   gap: 10px;
   max-width: 520px;
   margin: 0 auto 10px;
+}
+/* 029 M2：地区偏好（chips 自动换行；仅 L1–L3 显示） */
+.regions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 560px;
+  margin: 0 auto 10px;
+}
+.regions .tier.region {
+  padding: 7px 12px;
+  min-height: 0;
+}
+.regions .tier.region strong {
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 @media (max-width: 520px) {
   .regimes {
