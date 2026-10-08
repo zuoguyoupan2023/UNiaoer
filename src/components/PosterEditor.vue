@@ -15,7 +15,13 @@ import {
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 
-const props = defineProps<{ open: boolean; data: PosterData; images: PosterImage[] }>()
+const props = defineProps<{
+  open: boolean
+  data: PosterData
+  images: PosterImage[]
+  /** 035：二维码指向（分享链接；缺省 → 官网，见 core/poster 的 drawQrSlot） */
+  qrUrl?: string
+}>()
 const emit = defineEmits<{ close: [] }>()
 
 // 弹层无障碍：焦点移入/圈闭/ESC 关闭/还原/滚动锁（打开状态由 props.open 驱动）
@@ -52,7 +58,13 @@ onMounted(() => {
 onUnmounted(revokeResult)
 
 function options(): PosterOptions {
-  return { themeId: themeId.value, bgImage: bgImage.value, bgOffset: offset.value }
+  return {
+    themeId: themeId.value,
+    bgImage: bgImage.value,
+    bgOffset: offset.value,
+    // 035：分享链接就绪后二维码指向成绩页；否则回退官网（不产生死链）
+    qrUrl: props.qrUrl,
+  }
 }
 
 /** 海报文案（015 i18n-4）：core/poster 不 import i18n，由这里按 locale 注入 */
@@ -99,7 +111,8 @@ watch(
   },
 )
 watch(
-  [themeId, bgImage, offset],
+  // qrUrl 变化（分享创建/撤回）也要重绘：二维码指向随之更新
+  [themeId, bgImage, offset, () => props.qrUrl],
   () => {
     redraw()
     if (blobUrl.value) stale.value = true

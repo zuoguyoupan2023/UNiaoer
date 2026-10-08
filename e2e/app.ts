@@ -5,6 +5,9 @@
 import { test as base, expect, type Page, type Route } from '@playwright/test'
 import { buildBank, TINY_MP3, TINY_PNG } from './bank'
 
+/** 可安装路由的目标：页面或浏览器上下文（035 分享桩跨上下文共享时需后者） */
+type Routable = Page | import('@playwright/test').BrowserContext
+
 const bank = buildBank()
 
 async function fulfillMedia(route: Route) {
@@ -17,7 +20,7 @@ async function fulfillMedia(route: Route) {
 }
 
 /** 拦截全部外部数据源；必须在 goto 之前调用 */
-export async function stubApp(page: Page) {
+export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }) {
   await page.route('**/api/manifest**', (r) => r.fulfill({ json: bank }))
   await page.route('**/data/manifest.json', (r) => r.fulfill({ json: bank }))
   // 029 M1:前端优先请求分层 core(夹具直接复用同一份 bank;分片请求回 404 → 走 core 首图首音回退)
@@ -168,7 +171,78 @@ export async function stubApp(page: Page) {
   )
   // 环境鸟鸣目录（外部站）：404 → 应用按「无音轨」降级，不播放
   await page.route('**whitenoise.earthtrip.online/**', (r) => r.fulfill({ status: 404, body: '' }))
+  // 035 分享：内存桩（创建 → 读取 → 撤回，全离线可验证）
+  await stubShares(page, opts?.shares)
   await page.route('**cdn.e2e.invalid/**', fulfillMedia)
+}
+
+/** 035 分享桩的跨上下文共享存储（创建方与"扫码方"各在新上下文，需共用同一份数据） */
+export interface ShareStubStore {
+  map: Map<string, { token: string; revoked: boolean; body: Record<string, unknown> }>
+  /** 自增序号（生成 id） */
+  seq: number
+}
+export function newShareStore(): ShareStubStore {
+  return { map: new Map(), seq: 0 }
+}
+
+/**
+ * 035 分享接口的内存桩：POST 建、GET 读、DELETE 撤回（撤回后 GET 404）。
+ * 兼容 Page 与 BrowserContext（桩要按上下文装，"扫码方"是新上下文）。
+ */
+export async function stubShares(pageOrCtx: Routable, shared?: ShareStubStore) {
+  const store = shared?.map ?? new Map<string, { token: string; revoked: boolean; body: Record<string, unknown> }>()
+  const counter = shared ?? { map: store, seq: 0 }
+  await pageOrCtx.route('**/api/shares', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    const body = route.request().postDataJSON() as Record<string, unknown>
+    counter.seq += 1
+    const id = `E2Eshare${String(counter.seq).padStart(4, '0')}`
+    const token = `tok-${counter.seq}-abcdef012345`
+    store.set(id, { token, revoked: false, body })
+    await route.fulfill({ status: 201, json: { ok: true, id, token } })
+  })
+  await pageOrCtx.route('**/api/shares/*', async (route) => {
+    const url = new URL(route.request().url())
+    const id = url.pathname.split('/').pop() ?? ''
+    const hit = store.get(id)
+    const method = route.request().method()
+    if (method === 'DELETE') {
+      const body = route.request().postDataJSON() as { token?: string }
+      if (!hit || body.token !== hit.token) {
+        return route.fulfill({ status: 401, json: { error: 'unauthorized' } })
+      }
+      hit.revoked = true
+      return route.fulfill({ json: { ok: true, id, hidden: true } })
+    }
+    if (!hit || hit.revoked) return route.fulfill({ status: 404, json: { error: 'not_found' } })
+    const payload = hit.body
+    await route.fulfill({
+      json: {
+        ok: true,
+        share: {
+          id,
+          at: Date.now(),
+          mode: payload.mode,
+          tier: payload.tier,
+          total: payload.total,
+          correct: payload.correct,
+          accuracy: Math.round((Number(payload.correct) / Number(payload.total)) * 100),
+          nickname: payload.nickname ?? null,
+          payload: {
+            v: 1,
+            mode: payload.mode,
+            tier: payload.tier,
+            total: payload.total,
+            correct: payload.correct,
+            accuracy: Math.round((Number(payload.correct) / Number(payload.total)) * 100),
+            locale: payload.locale ?? 'zh-CN',
+            items: payload.items,
+          },
+        },
+      },
+    })
+  })
 }
 
 /** 把自动切换设为「都手动」：作答反馈固定落在下方常驻块，断言不依赖 3s/4s 浮窗 */

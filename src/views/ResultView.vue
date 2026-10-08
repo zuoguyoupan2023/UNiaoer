@@ -505,6 +505,75 @@ async function again() {
 .actions .btn {
   flex: 0 0 auto;
 }
+/* 035 分享块：与 actions 分隔，弱化视觉（次级操作） */
+.share-block {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.share-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--primary-dark, var(--primary));
+}
+.share-head .ic {
+  color: var(--primary);
+}
+.share-lead {
+  max-width: 460px;
+  text-align: center;
+  line-height: 1.6;
+}
+.share-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.share-link {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 460px;
+}
+.share-link input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  background: #fbfdfc;
+}
+.btn-link {
+  border: none;
+  background: none;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.btn-link:hover {
+  color: var(--wrong);
+}
+.share-msg {
+  font-size: 0.78rem;
+  color: var(--primary);
+}
+.share-msg.err {
+  color: var(--wrong);
+}
 .review h3 {
   margin-bottom: 12px;
 }

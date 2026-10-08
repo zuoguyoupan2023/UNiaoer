@@ -2,7 +2,16 @@
  * H2 E2E：关键路径回归保护。
  * 全部离线运行（e2e/app.ts 拦截 manifest/媒体/外部 API），每个测试独享干净浏览器上下文。
  */
-import { answerOption, bank, expect, setManualAutoNext, startImageQuiz, test } from './app'
+import {
+  answerOption,
+  bank,
+  expect,
+  newShareStore,
+  setManualAutoNext,
+  startImageQuiz,
+  stubApp,
+  test,
+} from './app'
 
 test.describe('核心答题链路', () => {
   test('主链路：向导 → 答题 2 题 → 退出 → 结果 → 海报弹层 → 再来一轮 → 档案统计', async ({
@@ -73,6 +82,63 @@ test.describe('核心答题链路', () => {
     await panel.getByRole('button', { name: '录音不对' }).click()
     await panel.getByRole('button', { name: '提交' }).click()
     await expect(panel.getByText('已记录，感谢反馈！')).toBeVisible()
+  })
+
+  test('成绩分享（035）：创建链接 → 打开分享页 → 撤回后失效', async ({ page, context }) => {
+    // 分享桩的存储在多个上下文间共享（"创建方"与"扫码方"是两个独立浏览器上下文）。
+    // 后注册的路由优先，故这里重装一次即可覆盖 fixture 的默认桩。
+    const shares = newShareStore()
+    await stubApp(page, { shares })
+    // 答 2 题后中途退出（L1 每题前 5s 隐藏选项，答满 10 题会白等 ~50s）；
+    // 退出时本轮截断为已答题目（与主链路测试同一模式），分享流程完全等价。
+    const ROUND_ITEMS = 2
+    await setManualAutoNext(page)
+    await page.goto('/quiz/image')
+    await expect(page.locator('.wizard-panel')).toBeVisible()
+    await page.getByRole('button', { name: '直接开始' }).click()
+    await page.getByRole('button', { name: /L1 入门/ }).click()
+    await page.getByRole('button', { name: '开始答题' }).click()
+    for (let i = 0; i < ROUND_ITEMS; i++) {
+      await expect(page.locator('.option').first()).toBeVisible({ timeout: 10_000 })
+      await page.locator('.option').first().click()
+      await expect(page.locator('.feedback')).toBeVisible()
+      if (i < ROUND_ITEMS - 1) await page.getByRole('button', { name: '下一题' }).click()
+    }
+    page.once('dialog', (d) => d.accept())
+    await page.getByRole('button', { name: '退出' }).click()
+    await expect(page).toHaveURL(/\/result$/)
+
+    // 创建分享
+    await page.getByRole('button', { name: '生成分享链接' }).click()
+    const linkInput = page.locator('.share-link input')
+    await expect(linkInput).toBeVisible()
+    const shareUrl = await linkInput.inputValue()
+    expect(shareUrl).toMatch(/\/s\/E2Eshare\d{4}$/)
+
+    // 新上下文打开分享页（模拟"别人扫码"：无本地数据、无登录）
+    const anon = await context.browser()!.newContext({ locale: 'zh-CN' })
+    await stubApp(anon, { shares })
+    const viewer = await anon.newPage()
+    await viewer.goto(shareUrl)
+    await expect(viewer.locator('.share .items > li').first()).toBeVisible()
+    // 题目、答案、素材、署名都要在
+    await expect(viewer.locator('.share .items > li')).toHaveCount(ROUND_ITEMS)
+    await expect(viewer.locator('.share .items > li img, .share .items > li audio').first()).toBeVisible()
+    await expect(viewer.locator('.share .credits').first()).toContainText(/iNaturalist|Xeno-canto/)
+    // 分享页不该被收录
+    await expect(viewer.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+    await anon.close()
+
+    // 撤回 → 同一链接 404
+    page.once('dialog', (d) => d.accept()) // window.confirm
+    await page.getByRole('button', { name: '撤回分享' }).click()
+    await expect(page.locator('.share-msg')).toContainText(/已撤回/)
+    const after = await context.browser()!.newContext({ locale: 'zh-CN' })
+    await stubApp(after, { shares })
+    const gone = await after.newPage()
+    await gone.goto(shareUrl)
+    await expect(gone.getByText('这个分享链接不可用')).toBeVisible()
+    await after.close()
   })
 
   test('听音答题：音频播放器带 crossorigin（iPhone 播放前提，docs/033）', async ({ page }) => {

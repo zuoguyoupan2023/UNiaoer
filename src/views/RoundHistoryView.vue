@@ -2,7 +2,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CircleCheck, CircleX, Eye, Headphones, History, Swords } from 'lucide-vue-next'
+import {
+  CircleCheck,
+  CircleX,
+  Eye,
+  Headphones,
+  History,
+  Share2,
+  Swords,
+} from 'lucide-vue-next'
 import {
   listRounds,
   type RoundItem,
@@ -10,6 +18,13 @@ import {
 } from '@/core/historyDb'
 import { loadBank, speciesById, speciesNameById, speciesNameByStoredName } from '@/core/bank'
 import { assetsOf } from '@/core/questionEngine'
+import {
+  markShareRevoked,
+  revokeShare,
+  shareOfRound,
+  shareUrlOf,
+  type ShareLedgerEntry,
+} from '@/core/shareRound'
 import type { MediaAsset } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
@@ -34,6 +49,7 @@ onMounted(async () => {
   }
   const all = await listRounds()
   rounds.value = [...all].sort((a, b) => b.at - a.at)
+  refreshShares()
   loading.value = false
 })
 
@@ -95,6 +111,51 @@ function galleryOf(it: RoundItem, type: 'image' | 'audio'): MediaAsset[] {
   if (sp) return assetsOf(sp, type)
   return it.type === type && it.mediaUrl ? [toAsset(it)] : []
 }
+
+// ── 035 分享状态：每轮的分享记录（已分享 → 显示标记 + 撤回入口）──
+const shareMap = ref<Record<string, ShareLedgerEntry>>({})
+
+function refreshShares() {
+  const map: Record<string, ShareLedgerEntry> = {}
+  for (const r of rounds.value) {
+    const s = shareOfRound(r.id)
+    if (s) map[r.id] = s
+  }
+  shareMap.value = map
+}
+
+const shareOf = (roundId: string) => shareMap.value[roundId]
+const shareUrlFor = (roundId: string) => {
+  const s = shareMap.value[roundId]
+  return s ? shareUrlOf(s.shareId) : ''
+}
+
+const revoking = ref<string | null>(null)
+async function onRevoke(round: RoundRecord) {
+  const entry = shareMap.value[round.id]
+  if (!entry || revoking.value) return
+  if (!window.confirm(t('share.revokeConfirm'))) return
+  revoking.value = round.id
+  try {
+    await revokeShare(entry.shareId, entry.token)
+    markShareRevoked(entry.shareId)
+    refreshShares()
+  } catch {
+    window.alert(t('share.revokeFailed'))
+  } finally {
+    revoking.value = null
+  }
+}
+
+async function onCopy(round: RoundRecord) {
+  const url = shareUrlFor(round.id)
+  if (!url) return
+  try {
+    await navigator.clipboard.writeText(url)
+  } catch {
+    window.prompt(t('share.linkLabel'), url)
+  }
+}
 </script>
 
 <template>
@@ -124,7 +185,19 @@ function galleryOf(it: RoundItem, type: 'image' | 'audio'): MediaAsset[] {
             <span v-if="fmtDuration(r.durationMs)" class="dur muted">
               {{ t('history.duration', { time: fmtDuration(r.durationMs) }) }}
             </span>
+            <!-- 035：已分享标记（展开后可复制/撤回） -->
+            <span v-if="shareOf(r.id)" class="shared-tag" :title="t('share.title')">
+              <Share2 class="ic" :size="11" /> {{ t('share.sharedTag') }}
+            </span>
           </button>
+
+          <div v-if="openedId === r.id && shareOf(r.id)" class="share-row">
+            <span class="muted small">{{ shareUrlFor(r.id) }}</span>
+            <button class="btn-link" type="button" @click="onCopy(r)">{{ t('share.copy') }}</button>
+            <button class="btn-link" type="button" :disabled="revoking === r.id" @click="onRevoke(r)">
+              {{ t('share.revoke') }}
+            </button>
+          </div>
 
           <ol v-if="openedId === r.id" class="items">
             <li v-for="(it, i) in r.items" :key="i" class="item">
@@ -254,6 +327,40 @@ function galleryOf(it: RoundItem, type: 'image' | 'audio'): MediaAsset[] {
 }
 .dur {
   font-size: 0.72rem;
+}
+/* 035：已分享标记 + 展开后的分享行（复制/撤回） */
+.shared-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.share-row .btn-link {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 0.74rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.share-row .btn-link:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .items {
   list-style: none;
