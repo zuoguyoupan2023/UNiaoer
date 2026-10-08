@@ -72,6 +72,10 @@ CREATE TABLE species (
   aud_source_url     TEXT,
   aud_quality        TEXT,
   aud_transcode      INTEGER,
+  -- 029 M2/措施二:构建期固定的伪随机值 [0,1)，用于"随机取样"的**索引区间扫描**
+  -- （替代 ORDER BY RANDOM()——后者必须扫完整个候选集再排序：
+  --   L3 档实测每轮扫 ~10,000 行；改此列后每次只需扫几十行）
+  rnd                REAL NOT NULL DEFAULT 0,
   created_at         INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
@@ -88,9 +92,11 @@ CREATE TABLE IF NOT EXISTS questions (
   time_limit   INTEGER                   -- 秒；NULL 为不限时
 );
 
--- 索引最小化：每个索引都会让"写一行"变成"写两行"（索引维护按行计费），
--- 故只保留题目查询的热路径：按常见度筛池（playable/quiz_excluded 在该索引之上再过滤）。
+-- 索引策略：每个索引都会让"写一行"变成"写两行"（索引维护按行计费），故只为热路径建。
+-- 题目查询走 (commonness, rnd)：先按常见度定位区间，再用 rnd 做范围扫描取样，
+-- 无需全表排序（措施二）。写成本 +1 索引 ≈ 每次全量重建 +1.1 万行（额度 10 万/天）。
 CREATE INDEX IF NOT EXISTS idx_species_commonness ON species(commonness);
+CREATE INDEX IF NOT EXISTS idx_species_sample ON species(commonness, rnd);
 
 -- ============================================================
 -- 用户数据（永不 DROP；同步只重灌派生读模型）

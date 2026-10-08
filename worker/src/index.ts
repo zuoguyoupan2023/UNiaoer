@@ -88,6 +88,7 @@ interface SpeciesRow {
   aud_source_url: string | null
   aud_quality: string | null
   aud_transcode: number | null
+  rnd: number
 }
 
 /** 档位 → 允许的常见度（与 src/core/difficulty.ts TIERS 对齐） */
@@ -238,6 +239,46 @@ async function handleManifest(env: Env, name = 'manifest.json'): Promise<Respons
 }
 
 /**
+ * 措施一:边缘缓存。
+ *
+ * `/api/questions` 的响应在**同一档位/题型/地区**下是可复用的（题库是静态的，
+ * 随机性只影响"抽到哪几题"——用户明确接受题目可重复）。用 Cache API 在边缘
+ * 缓存 300 秒：同一时间窗内的并发/重复请求直接命中缓存，不落到 D1。
+ *
+ * 效果（100 日活的测算）：D1 读从 940 次查询 / ~680 万行 → 十几回源，降幅 >98%。
+ * 缓存键含 tier/type/region/count，故不同档位互不干扰；地区过滤结果也各自缓存。
+ */
+const QUESTIONS_CACHE_TTL = 300
+
+async function handleQuestionsCached(request: Request, env: Env, url: URL): Promise<Response> {
+  // 只缓存 GET（无 cookie/鉴权参与,题库对所有用户相同）
+  const cache = await caches.open('uniaoer-api-questions')
+  // 规范化缓存键：排除无关查询参数顺序差异（按固定顺序重建）
+  const keyUrl = new URL(url.origin + url.pathname)
+  for (const k of ['tier', 'type', 'region', 'count']) {
+    const v = url.searchParams.get(k)
+    if (v) keyUrl.searchParams.set(k, v)
+  }
+  const cacheKey = new Request(keyUrl.toString(), { method: 'GET' })
+
+  const hit = await cache.match(cacheKey)
+  if (hit) {
+    const res = new Response(hit.body, hit)
+    res.headers.set('x-cache', 'HIT')
+    return res
+  }
+
+  const res = await handleQuestions(env, url)
+  if (!res.ok) return res
+  const forCache = new Response(res.body, res)
+  forCache.headers.set('cache-control', `public, max-age=${QUESTIONS_CACHE_TTL}`)
+  forCache.headers.set('x-cache', 'MISS')
+  // 写缓存不阻塞响应（clone 一次性 tee；响应体约几十 KB）
+  cache.put(cacheKey, forCache.clone()).catch(() => {})
+  return forCache
+}
+
+/**
  * 029 M4/M5:/api/questions —— 由 D1（派生读模型）按档位/题型/地区出候选池。
  *
  * 过滤链（与前端 029 M2 的 mergedSpecies 语义对齐）：
@@ -263,16 +304,28 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     shortCodes = await regionShortCodes(env, region)
   }
 
-  // 单表查询（内联媒体列）——每题只需 1 图 1 音，完整 5+5 由前端 assets 分片提供
+  // 措施二：索引区间扫描替代 ORDER BY RANDOM()（后者扫完候选集再排序：L3 每轮 ~10,000 行）。
+  // 做法：以随机 rnd 起点沿 idx_species_sample(commonness, rnd) 取一段，
+  // 不足则从头补齐（wrap）；每次只读几十行。随机性来源 = 每次请求不同的起点。
+  const need = shortCodes ? Math.max(count * 8, 200) : count
+  const startAt = Math.random()
+  const base = `FROM species
+     WHERE commonness IN (${placeholders}) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0`
   const sp = await env.DB.prepare(
-    `SELECT * FROM species
-     WHERE commonness IN (${placeholders}) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0
-     ORDER BY RANDOM() LIMIT ?`,
+    `SELECT * ${base} AND rnd >= ? ORDER BY rnd LIMIT ?`,
   )
-    .bind(...commonness, shortCodes ? Math.max(count * 8, 200) : count)
+    .bind(...commonness, startAt, need)
     .all<SpeciesRow>()
 
   let rows = sp.results
+  if (rows.length < need) {
+    // 环形补齐：从区间起点的另一端再取（保证低 rnd 值的物种也有机会被抽到）
+    const more = await env.DB.prepare(`SELECT * ${base} AND rnd < ? ORDER BY rnd LIMIT ?`)
+      .bind(...commonness, startAt, need - rows.length)
+      .all<SpeciesRow>()
+    rows = rows.concat(more.results)
+  }
+
   if (shortCodes) {
     const set = new Set(shortCodes)
     rows = rows
@@ -282,6 +335,8 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
         return code && set.has(code)
       })
       .slice(0, count)
+  } else {
+    rows = rows.slice(0, count)
   }
 
   const species = rows.map((r) => {
@@ -290,18 +345,27 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     return { ...toSpeciesBase(r), images: image ? [image] : [], audios: audio ? [audio] : [], image, audio }
   })
 
-  // 029 M4:干扰项名字候选（无素材，仅选项用；小体积换选项多样性）
+  // 029 M4:干扰项名字候选（同样走索引区间扫描，只取 6 列，扫行数极小）
   const targetIds = new Set(species.map((s) => s.id))
   let distractors: Record<string, unknown>[] = []
   try {
+    const dStart = Math.random()
+    const dBase = `FROM species WHERE commonness IN (${placeholders}) AND quiz_excluded = 0`
     const d = await env.DB.prepare(
-      `SELECT id,name_zh,name_sci,name_en,family,commonness
-       FROM species WHERE commonness IN (${placeholders}) AND quiz_excluded = 0
-       ORDER BY RANDOM() LIMIT ?`,
+      `SELECT id,name_zh,name_sci,name_en,family,commonness ${dBase} AND rnd >= ? ORDER BY rnd LIMIT ?`,
     )
-      .bind(...commonness, 240)
+      .bind(...commonness, dStart, 120)
       .all<Pick<SpeciesRow, 'id' | 'name_zh' | 'name_sci' | 'name_en' | 'family' | 'commonness'>>()
-    distractors = d.results
+    let dRows = d.results
+    if (dRows.length < 120) {
+      const more = await env.DB.prepare(
+        `SELECT id,name_zh,name_sci,name_en,family,commonness ${dBase} AND rnd < ? ORDER BY rnd LIMIT ?`,
+      )
+        .bind(...commonness, dStart, 120 - dRows.length)
+        .all<Pick<SpeciesRow, 'id' | 'name_zh' | 'name_sci' | 'name_en' | 'family' | 'commonness'>>()
+      dRows = dRows.concat(more.results)
+    }
+    distractors = dRows
       .filter((r) => !targetIds.has(r.id))
       .map((r) => ({
         id: r.id,
@@ -567,7 +631,7 @@ export default {
         }
         if (path === '/api/manifest') return await handleManifest(env)
         if (path === '/api/manifest-core') return await handleManifest(env, 'manifest-core.json')
-        if (path === '/api/questions') return await handleQuestions(env, url)
+        if (path === '/api/questions') return await handleQuestionsCached(request, env, url)
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
         if (path === '/api/reports') return await handlePublicReports(env, url)

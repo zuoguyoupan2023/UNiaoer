@@ -25,7 +25,31 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CORE_PATH = path.join(ROOT, 'public/data/manifest.json')
 const GLOBAL_PATH = path.join(ROOT, 'public/data/manifest-global.min.json')
 
-const q = (v) => (v == null || v === '' ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
+/**
+ * SQL 字符串字面量。注意：**必须清洗控制字符**——
+ * 源数据里存在含换行符的作者名（如 `(c) \nDirk-Jan van Roest ...`）。
+ * 换行若原样写进 SQL，语句会跨物理行，而 sync-prod 的分块是按行切的
+ * （2026-10-08 实测：10,844 条中恰有 1 条命中，靠运气没被切断）。
+ * 统一折叠所有连续空白为单空格：语义无损，且让分块的行边界永远安全。
+ */
+const q = (v) =>
+  v == null || v === ''
+    ? 'NULL'
+    : `'${String(v).replace(/\s+/g, ' ').trim().replace(/'/g, "''")}'`
+
+/**
+ * 措施二：稳定的伪随机值 [0,1)（FNV-1a 哈希 → 归一）。
+ * 用 id 派生而非 Math.random()：同一物种跨次构建值不变，
+ * 便于将来做增量重建与结果复现；分布均匀性由总量（~11k）保证。
+ */
+function rndOf(id) {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return ((h >>> 0) % 100000) / 100000
+}
 const n = (v) => (v == null || v === '' ? 'NULL' : String(Number(v)))
 const b = (v) => (v == null ? 'NULL' : v ? '1' : '0')
 
@@ -40,7 +64,7 @@ const SPECIES_COLS =
   'img_url,img_thumb_url,img_xl_url,img_avif_url,img_thumbhash,img_original_url,img_source_id,' +
   'img_license,img_license_raw,img_author,img_source,img_source_url,img_transcode,' +
   'aud_url,aud_original_url,aud_source_id,aud_license,aud_license_raw,aud_author,' +
-  'aud_source,aud_source_url,aud_quality,aud_transcode'
+  'aud_source,aud_source_url,aud_quality,aud_transcode,rnd'
 
 /** 首图的内联取值（无素材则整组 NULL；共 13 列） */
 function inlineMedia(m) {
@@ -62,7 +86,7 @@ function inlineMedia(m) {
   ]
 }
 function inlineAudio(m) {
-  if (!m) return Array.from({ length: 11 }, () => 'NULL')
+  if (!m) return Array.from({ length: 10 }, () => 'NULL')
   return [
     q(m.url),
     q(m.originalUrl),
@@ -113,6 +137,7 @@ for (const s of core.species) {
       q(s.habit),
       ...inlineMedia(img),
       ...inlineAudio(aud),
+      rndOf(s.id).toFixed(5),
     ].join(',') +
     ');\n'
   if (img) withImg++
@@ -150,6 +175,7 @@ for (const s of globalSpecies) {
       q(s.habit),
       ...inlineMedia(img),
       ...inlineAudio(aud),
+      rndOf(s.id).toFixed(5),
     ].join(',') +
     ');\n'
   globalRows++
