@@ -43,10 +43,11 @@ interface R2Bucket {
 
 interface SpeciesRow {
   id: string
-  name_zh: string
+  name_zh: string | null
   name_sci: string
   name_en: string | null
   taxon_id: number | null
+  taxon_key: string | null
   family: string | null
   commonness: number
   rank_world: number | null
@@ -56,6 +57,9 @@ interface SpeciesRow {
   migration: string | null
   iucn_category: string | null
   distribution_count: number | null
+  playable_image: number
+  playable_audio: number
+  quiz_excluded: number
   desc: string | null
   location: string | null
   habit: string | null
@@ -78,6 +82,7 @@ interface MediaRow {
   source_url: string | null
   quality: string | null
   transcode: number
+  quiz_excluded: number
 }
 
 /** 档位 → 允许的常见度（与 src/core/difficulty.ts TIERS 对齐） */
@@ -128,12 +133,16 @@ function toSpeciesBase(r: SpeciesRow): Record<string, unknown> {
       : undefined
   return {
     id: r.id,
-    nameZh: r.name_zh,
+    nameZh: r.name_zh ?? '',
     nameSci: r.name_sci,
     nameEn: r.name_en ?? undefined,
     taxonId: r.taxon_id ?? undefined,
+    taxonKey: r.taxon_key ?? undefined,
     family: r.family ?? '',
     commonness: r.commonness,
+    playableImage: r.playable_image === 1,
+    playableAudio: r.playable_audio === 1,
+    quizExcluded: r.quiz_excluded === 1,
     rankWorld: r.rank_world,
     rankCN: r.rank_cn,
     inCN: r.in_cn == null ? null : r.in_cn === 1,
@@ -201,26 +210,64 @@ async function handleManifest(env: Env, name = 'manifest.json'): Promise<Respons
   })
 }
 
+/**
+ * 029 M4/M5:/api/questions —— 由 D1（派生读模型）按档位/题型/地区出候选池。
+ *
+ * 过滤链（与前端 029 M2 的 mergedSpecies 语义对齐）：
+ *   档位 commonness → 可玩（playable_image/audio 按题型） → quiz_excluded=0 → 媒体 quiz_excluded=0
+ *   地区（region=ISO2 且档位≤3 时）：经 species.taxon_key → 短码 与区系矩阵求交
+ *     · 区系矩阵存在 R2（data/species-distribution.json）；缺失时**不过滤**（保可用性）
+ *
+ * 返回候选物种（含 media），前端据此本地组装题面（不返回答案/选项——选项由前端按档位生成）。
+ */
 async function handleQuestions(env: Env, url: URL): Promise<Response> {
   const tier = clampInt(url.searchParams.get('tier'), 1, 5, 2)
   const type = url.searchParams.get('type') === 'audio' ? 'audio' : 'image'
-  const count = clampInt(url.searchParams.get('count'), 1, 50, 10)
+  const count = clampInt(url.searchParams.get('count'), 1, 100, 10)
+  const region = (url.searchParams.get('region') || 'ALL').toUpperCase()
 
   const commonness = TIER_COMMONNESS[tier] ?? TIER_COMMONNESS[2]!
+  const playableCol = type === 'audio' ? 'playable_audio' : 'playable_image'
   const placeholders = commonness.map(() => '?').join(',')
+
+  // 地区过滤（仅 L1–L3；L4/L5 全球开放,与前端 D-029-2 一致）
+  let shortCodes: string[] | null = null
+  if (region !== 'ALL' && tier <= 3) {
+    shortCodes = await regionShortCodes(env, region)
+  }
+
+  const where = [
+    `commonness IN (${placeholders})`,
+    `${playableCol} = 1`,
+    'quiz_excluded = 0',
+  ]
+  const binds: (string | number)[] = [...commonness]
+
   const sp = await env.DB.prepare(
-    `SELECT id,name_zh,name_sci,name_en,taxon_id,family,commonness,rank_world,rank_cn,in_cn,group_name,migration,iucn_category,distribution_count,desc,location,habit
-     FROM species WHERE commonness IN (${placeholders}) ORDER BY RANDOM() LIMIT ?`,
+    `SELECT id,name_zh,name_sci,name_en,taxon_id,taxon_key,family,commonness,rank_world,rank_cn,in_cn,group_name,migration,iucn_category,distribution_count,playable_image,playable_audio,quiz_excluded,desc,location,habit
+     FROM species WHERE ${where.join(' AND ')} ORDER BY RANDOM() LIMIT ?`,
   )
-    .bind(...commonness, count)
+    .bind(...binds, shortCodes ? Math.max(count * 8, 200) : count)
     .all<SpeciesRow>()
 
-  const ids = sp.results.map((r) => r.id)
-  if (ids.length === 0) return json({ tier, type, count: 0, species: [] })
+  let rows = sp.results
+  if (shortCodes) {
+    // 短码 = AvibaseID 去 avibase- 前缀；区系矩阵未命中/无 taxon_key 的种丢弃
+    const set = new Set(shortCodes)
+    rows = rows.filter((r) => {
+      const key = r.taxon_key || ''
+      const code = key.startsWith('avibase-') ? key.slice(8) : ''
+      return code && set.has(code)
+    })
+    rows = rows.slice(0, count)
+  }
+
+  const ids = rows.map((r) => r.id)
+  if (ids.length === 0) return json({ tier, type, region, count: 0, species: [] })
 
   const media = await env.DB.prepare(
-    `SELECT id,species_id,type,url,thumb_url,xl_url,avif_url,original_url,source_id,license,license_raw,author,source,source_url,quality,transcode
-     FROM media WHERE species_id IN (${ids.map(() => '?').join(',')})`,
+    `SELECT id,species_id,type,url,thumb_url,xl_url,avif_url,original_url,source_id,license,license_raw,author,source,source_url,quality,transcode,quiz_excluded
+     FROM media WHERE species_id IN (${ids.map(() => '?').join(',')}) AND quiz_excluded = 0`,
   )
     .bind(...ids)
     .all<MediaRow>()
@@ -236,18 +283,45 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     else bucket.audios.push(toMedia(m))
   }
 
-  const species = sp.results.map((r) => {
-    const bucket = byId.get(r.id) ?? { images: [], audios: [] }
-    return {
-      ...toSpeciesBase(r),
-      images: bucket.images,
-      audios: bucket.audios,
-      image: bucket.images[0] ?? null,
-      audio: bucket.audios[0] ?? null,
-    }
-  })
+  // 媒体全被隔离(quiz_excluded)的物种从候选里剔除——否则前端拿到空素材
+  const species = rows
+    .map((r) => {
+      const bucket = byId.get(r.id) ?? { images: [], audios: [] }
+      return {
+        ...toSpeciesBase(r),
+        images: bucket.images,
+        audios: bucket.audios,
+        image: bucket.images[0] ?? null,
+        audio: bucket.audios[0] ?? null,
+      }
+    })
+    .filter((s) => (type === 'audio' ? s.audio : s.image))
 
-  return json({ tier, type, count: species.length, species })
+  return json({ tier, type, region, count: species.length, species })
+}
+
+/**
+ * 地区 → AviList 短码集合（029 M5）。
+ * 从 R2 读 species-distribution.json（构建产物已上传）；对象缺失/解析失败返回 null
+ * 表示"区系不可用"→ 调用方降级为不过滤。结果按 region 缓存 10 分钟（Worker 实例内）。
+ */
+const regionCodesCache = new Map<string, { at: number; codes: string[] | null }>()
+async function regionShortCodes(env: Env, region: string): Promise<string[] | null> {
+  const hit = regionCodesCache.get(region)
+  if (hit && Date.now() - hit.at < 600_000) return hit.codes
+  let codes: string[] | null = null
+  try {
+    const obj = await env.MEDIA.get('data/species-distribution.json')
+    if (obj) {
+      const doc = JSON.parse(await obj.text()) as { byCountry?: Record<string, string[]> }
+      const list = doc.byCountry?.[region]
+      codes = Array.isArray(list) ? list : []
+    }
+  } catch {
+    codes = null
+  }
+  regionCodesCache.set(region, { at: Date.now(), codes })
+  return codes
 }
 
 async function handleMedia(env: Env, id: string): Promise<Response> {
