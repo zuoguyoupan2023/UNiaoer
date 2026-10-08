@@ -33,7 +33,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
-import { loadBank, speciesNoteById } from '@/core/bank'
+import { loadBank, speciesNoteById, loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
 import { submitReport as uploadReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
@@ -245,6 +245,30 @@ const samePool = computed<MediaAsset[]>(() => {
 })
 /** 另一类型池（跨类型：看图题听鸟鸣 / 听音题看图） */
 const crossPool = computed<MediaAsset[]>(() => quiz.current?.crossAssets ?? [])
+
+/**
+ * 029 M1:core 层只带首图首音；画廊的「同种多素材」(C3) 按需从 assets 分片补齐。
+ * 当前题物种的分片加载完成后（按桶缓存，一次请求）合并进两池；
+ * 加载中先用 core 的首图首音，不阻塞答题。
+ */
+const lazyPool = computed<{ images: MediaAsset[]; audios: MediaAsset[] }>(() => {
+  const id = quiz.current?.media.speciesId
+  const hit = cachedSpeciesAssets(id)
+  return { images: hit?.images ?? [], audios: hit?.audios ?? [] }
+})
+watch(
+  () => quiz.current?.media.speciesId,
+  (id) => {
+    if (id) void loadSpeciesAssets(id)
+  },
+  { immediate: true },
+)
+/** 合并去重（以 url 为键；core 首图在前，分片补齐其余） */
+function mergePool(base: MediaAsset[], extra: MediaAsset[]): MediaAsset[] {
+  if (!extra.length) return base
+  const seen = new Set(base.map((m) => m.url))
+  return [...base, ...extra.filter((m) => !seen.has(m.url))]
+}
 /** 当前真正展示的素材 */
 const displayMedia = computed<MediaAsset | null>(
   () => selected.value ?? quiz.current?.media ?? samePool.value[0] ?? null,
@@ -254,10 +278,14 @@ const displayType = computed<MediaType>(
   () => displayMedia.value?.type ?? quiz.current?.type ?? props.type,
 )
 const galleryImages = computed<MediaAsset[]>(() =>
-  quiz.current?.type === 'image' ? samePool.value : crossPool.value,
+  quiz.current?.type === 'image'
+    ? mergePool(samePool.value, lazyPool.value.images)
+    : mergePool(crossPool.value, lazyPool.value.images),
 )
 const galleryAudios = computed<MediaAsset[]>(() =>
-  quiz.current?.type === 'audio' ? samePool.value : crossPool.value,
+  quiz.current?.type === 'audio'
+    ? mergePool(samePool.value, lazyPool.value.audios)
+    : mergePool(crossPool.value, lazyPool.value.audios),
 )
 
 /** 答疑专栏入口（011 §9）：仅当该物种有说明时显示 */

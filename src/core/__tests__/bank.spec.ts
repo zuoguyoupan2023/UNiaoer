@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   _resetBankCache,
   loadBank,
+  loadSpeciesAssets,
   speciesNameById,
   speciesNameByStoredName,
   speciesNoteById,
@@ -151,13 +152,13 @@ describe('speciesProfileById / speciesProfileText（C1 物种档案）', () => {
   })
 })
 
-describe('loadBank（B3：生产优先 /api/manifest，失败回退静态）', () => {
+describe('loadBank（029 M1：优先 core 分层，逐级回退）', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
   })
 
-  it('生产：优先请求 /api/manifest', async () => {
+  it('生产：优先请求 /api/manifest-core', async () => {
     _resetBankCache()
     vi.stubEnv('PROD', true)
     const calls: string[] = []
@@ -172,10 +173,10 @@ describe('loadBank（B3：生产优先 /api/manifest，失败回退静态）', (
       }),
     )
     await loadBank()
-    expect(calls[0]).toContain('/api/manifest')
+    expect(calls[0]).toContain('/api/manifest-core')
   })
 
-  it('生产：/api/manifest 失败时回退到静态文件', async () => {
+  it('生产：/api/manifest-core 失败 → 静态 core → 完整 manifest 逐级回退', async () => {
     _resetBankCache()
     vi.stubEnv('PROD', true)
     const calls: string[] = []
@@ -184,7 +185,7 @@ describe('loadBank（B3：生产优先 /api/manifest，失败回退静态）', (
       vi.fn(async (input: unknown) => {
         const u = String(input)
         calls.push(u)
-        if (u.includes('/api/manifest')) {
+        if (u.includes('/api/') || u.includes('data/manifest-core.json')) {
           return new Response('boom', { status: 500, headers: { 'content-type': 'text/plain' } })
         }
         return new Response(JSON.stringify(manifest), {
@@ -195,7 +196,71 @@ describe('loadBank（B3：生产优先 /api/manifest，失败回退静态）', (
     )
     const m = await loadBank()
     expect(m.total).toBe(2)
-    expect(calls.some((u) => u.includes('/api/manifest'))).toBe(true)
+    expect(calls.some((u) => u.includes('/api/manifest-core'))).toBe(true)
+    expect(calls.some((u) => u.includes('data/manifest-core.json'))).toBe(true)
     expect(calls.some((u) => u.includes('data/manifest.json'))).toBe(true)
+  })
+})
+
+describe('loadSpeciesAssets（029 M1：assets 分片懒加载）', () => {
+  afterEach(() => {
+    _resetBankCache()
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('按 id 解析分片、拉取并缓存；二次调用不再请求', async () => {
+    _resetBankCache()
+    const calls: string[] = []
+    const bucket = {
+      layer: 'assets',
+      bucket: 'sp',
+      species: {
+        'sp-01': { images: [{ url: 'https://m/1.webp' }, { url: 'https://m/2.webp' }], audios: [] },
+      },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        calls.push(u)
+        if (u.includes('data/manifest-core.json')) {
+          // core 带 buckets 清单(含两位子桶)
+          return new Response(
+            JSON.stringify({ ...manifest, layer: 'core', buckets: ['sp', 'a'] }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        if (u.includes('data/assets/sp.json')) {
+          return new Response(JSON.stringify(bucket), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        }
+        return new Response('nope', { status: 404 })
+      }),
+    )
+    await loadBank()
+    const first = await loadSpeciesAssets('sp-01')
+    expect(first?.images).toHaveLength(2)
+    expect(calls.filter((u) => u.includes('data/assets/')).length).toBe(1)
+    const second = await loadSpeciesAssets('sp-01')
+    expect(second?.images).toHaveLength(2)
+    expect(calls.filter((u) => u.includes('data/assets/')).length).toBe(1)
+  })
+
+  it('core 无 buckets（旧完整层）时返回 null，调用方回退 core 素材', async () => {
+    _resetBankCache()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify(manifest), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+    await loadBank()
+    expect(await loadSpeciesAssets('sp-01')).toBeNull()
   })
 })

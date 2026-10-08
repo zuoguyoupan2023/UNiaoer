@@ -165,9 +165,16 @@ function toMedia(m: MediaRow): Record<string, unknown> {
   }
 }
 
-async function handleManifest(env: Env): Promise<Response> {
-  // 1) 优先 R2 上的 data/manifest.json（若已上传）
-  const obj = await env.MEDIA.get('data/manifest.json')
+/**
+ * 题库索引：优先 R2 快照，回退 Pages 静态。
+ * 029 M1 起支持分层产物：/api/manifest → 完整层；/api/manifest-core → 启动层（默认前端使用）。
+ * `name` 仅允许白名单文件名,避免路径穿越。
+ */
+async function handleManifest(env: Env, name = 'manifest.json'): Promise<Response> {
+  const allowed = ['manifest.json', 'manifest-core.json', 'manifest-global.min.json']
+  const file = allowed.includes(name) ? name : 'manifest.json'
+  // 1) 优先 R2 上的 data/<file>（若已上传）
+  const obj = await env.MEDIA.get(`data/${file}`)
   if (obj) {
     return new Response(await obj.text(), {
       headers: {
@@ -177,9 +184,9 @@ async function handleManifest(env: Env): Promise<Response> {
       },
     })
   }
-  // 2) 回退 Pages 静态 manifest（始终与部署同步）
+  // 2) 回退 Pages 静态文件（始终与部署同步）
   const origin = env.MANIFEST_ORIGIN || 'https://uniaoer.com'
-  const upstream = await fetch(`${origin}/data/manifest.json`, {
+  const upstream = await fetch(`${origin}/data/${file}`, {
     cf: { cacheTtl: 300, cacheEverything: true },
   } as RequestInit & { cf: Record<string, unknown> })
   if (!upstream.ok) {
@@ -431,6 +438,7 @@ export default {
           return json({ ok: true, ts: Date.now(), hasXcKey: Boolean(env.XC_API_KEY) })
         }
         if (path === '/api/manifest') return await handleManifest(env)
+        if (path === '/api/manifest-core') return await handleManifest(env, 'manifest-core.json')
         if (path === '/api/questions') return await handleQuestions(env, url)
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))

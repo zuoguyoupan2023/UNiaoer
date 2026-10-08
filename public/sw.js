@@ -45,12 +45,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 题库：network-first（只缓存 JSON，避免把 SPA 回退的 HTML 缓存下来）
-  if (url.pathname.includes('/data/manifest')) {
+  // 覆盖 data/manifest.json、data/manifest-core.json 与 data/assets/*.json（029 M1 分层产物）
+  if (url.pathname.includes('/data/manifest') || url.pathname.includes('/data/assets/')) {
     event.respondWith(manifestFetch(req))
     return
   }
 
-  // 同源构建产物：cache-first
+  // 同源构建产物：cache-first（/assets/ 是 vite 产物;data/assets/*.json 走上面的 network-first）
   if (url.origin === self.location.origin && url.pathname.startsWith('/assets/')) {
     event.respondWith(cacheFirst(req, RUNTIME_CACHE))
     return

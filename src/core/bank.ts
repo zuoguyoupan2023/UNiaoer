@@ -74,9 +74,76 @@ export interface Manifest {
   total: number
   stats: { withImage: number; withAudio: number }
   species: BankSpecies[]
+  /** 029 M1 分层:core 层带实际分片清单与层级标记(旧完整层无此字段) */
+  layer?: 'core' | 'global'
+  buckets?: string[]
+  schemaVersion?: number
 }
 
 let cache: Manifest | null = null
+
+/** 029 M1:分片缓存(id → 完整素材)。详情/画廊/海报按需加载一次,进程内复用。 */
+const assetCache = new Map<string, { images?: MediaAsset[]; audios?: MediaAsset[] }>()
+/** 已加载的分片名(避免同桶重复请求) */
+const bucketLoaded = new Set<string>()
+/** 分片请求进行中的 Promise(并发去重:多个视图同时要同桶只发一次) */
+const bucketInflight = new Map<string, Promise<void>>()
+
+/** 029 M1:由 core.buckets 与 id 解析分片名(两位子桶优先,回退一位桶)。 */
+function bucketNameFor(id: string): string {
+  const buckets = cache?.buckets
+  if (!buckets || !buckets.length) return ''
+  const s = String(id || '').toLowerCase()
+  const two = s.slice(0, 2)
+  if (/^[a-z][a-z0-9]$/.test(two) && buckets.includes(two)) return two
+  const one = /^[a-z]$/.test(s.charAt(0)) ? s.charAt(0) : '0-9'
+  return buckets.includes(one) ? one : ''
+}
+
+/**
+ * 029 M1:按需加载某物种的完整素材(详情页画廊 / 结果页 / 海报)。
+ * 命中 core 首图首音之外的素材时才有额外请求;无 core(未 loadBank)或物种无分片返回 null。
+ */
+export async function loadSpeciesAssets(
+  id: string,
+): Promise<{ images?: MediaAsset[]; audios?: MediaAsset[] } | null> {
+  if (assetCache.has(id)) return assetCache.get(id)!
+  const name = bucketNameFor(id)
+  if (!name) return null
+  if (!bucketLoaded.has(name)) {
+    let p = bucketInflight.get(name)
+    if (!p) {
+      p = (async () => {
+        const url = `${import.meta.env.BASE_URL}data/assets/${name}.json`
+        try {
+          const res = await fetch(url)
+          if (res.ok) {
+            const data = (await res.json()) as { species?: Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }> }
+            for (const [sid, entry] of Object.entries(data.species || {})) {
+              assetCache.set(sid, entry)
+            }
+          }
+        } catch {
+          /* 分片加载失败:调用方回退 core 首图首音 */
+        } finally {
+          bucketLoaded.add(name)
+          bucketInflight.delete(name)
+        }
+      })()
+      bucketInflight.set(name, p)
+    }
+    await p
+  }
+  return assetCache.get(id) ?? null
+}
+
+/** 029 M1:同步取已缓存的完整素材(未加载则 null);供已 await 过 loadSpeciesAssets 的渲染路径。 */
+export function cachedSpeciesAssets(
+  id: string | null | undefined,
+): { images?: MediaAsset[]; audios?: MediaAsset[] } | null {
+  if (!id) return null
+  return assetCache.get(id) ?? null
+}
 
 /** 物种显示名（015 §6.1）：en 优先 nameEn，缺失回退学名；zh 用 nameZh */
 export function speciesName(sp: BankSpecies, locale?: string): string {
@@ -208,18 +275,23 @@ async function fetchManifest(url: string): Promise<Manifest> {
 }
 
 /**
- * 加载题库（构建脚本产物 public/data/manifest.json）。
- * 生产环境优先走 Worker 的 `/api/manifest`（B3），失败自动回退静态文件；
- * 开发/测试只用静态，避免本地没有 Worker 时报错。
+ * 加载题库。029 M1 起优先加载分层产物 core（名录 + 首图首音，约 1.7MB，
+ * 取代原先 12MB 完整 manifest）；core 不存在时回退完整 manifest（旧部署/离线夹具兼容）。
+ * 生产环境优先走 Worker 的 `/api/manifest`（B3），失败自动回退静态文件。
  */
 export async function loadBank(): Promise<Manifest> {
   if (cache) return cache
-  const staticUrl = `${import.meta.env.BASE_URL}data/manifest.json`
-  const urls = import.meta.env.PROD ? ['/api/manifest', staticUrl] : [staticUrl]
+  const base = import.meta.env.BASE_URL
+  const coreUrl = `${base}data/manifest-core.json`
+  const staticUrl = `${base}data/manifest.json`
+  const urls = import.meta.env.PROD
+    ? ['/api/manifest-core', coreUrl, staticUrl]
+    : [coreUrl, staticUrl]
   let lastError: unknown
   for (const url of urls) {
     try {
-      cache = await fetchManifest(url)
+      const m = await fetchManifest(url)
+      cache = m
       buildSpeciesIndex(cache)
       return cache
     } catch (err) {
@@ -236,4 +308,7 @@ export function _resetBankCache() {
   cache = null
   speciesIndex = null
   nameIndex = null
+  assetCache.clear()
+  bucketLoaded.clear()
+  bucketInflight.clear()
 }

@@ -506,6 +506,12 @@ async function main() {
   await ensureDir(path.dirname(outFile))
   await writeJsonAtomic(outFile, JSON.stringify(manifest, null, 2))
 
+  // 029 M1:manifest 分层产物(core + assets 分片 + 全球池)——前端启动只加载 core。
+  // 主 manifest 仍是"完整层"(构建真源/check-bank 校验对象),分层产物由它派生、随构建同步刷新。
+  if (!args['no-layers']) {
+    await writeManifestLayers(manifest, outFile)
+  }
+
   console.log(`\n✅ 完成：处理 ${records.length} 种，输出 ${outputSpecies.length} 种（图片 ${withImage}，音频 ${withAudio}）`)
   if (skipped) console.log(`   ⏱️ 因时间预算跳过 ${skipped} 种（下次构建会补齐）`)
   console.log(`   写入 ${path.relative(ROOT, outFile)}`)
@@ -522,6 +528,17 @@ async function main() {
       console.log(`   失败清单 → data-cache/bank-global-failed.json`)
     }
   }
+}
+
+/**
+ * 029 M1:由完整 manifest 派生分层产物(core + assets 分片 + 全球池)。
+ * 实现复用 scripts/build-manifest-layers.mjs(npm run layers 同源),仅当输出是
+ * 正式主 manifest 时产出,避免定向/离线构建污染真产物目录。
+ */
+async function writeManifestLayers(manifest, outFile) {
+  if (path.basename(outFile) !== 'manifest.json') return
+  const { writeManifestLayers: writeLayers } = await import('./build-manifest-layers.mjs')
+  await writeLayers(manifest, { dataDir: path.dirname(outFile) })
 }
 
 async function buildSpecies(sp, useXc) {

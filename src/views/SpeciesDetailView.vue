@@ -8,6 +8,7 @@ import {
   loadBank,
   speciesName,
   speciesNoteText,
+  loadSpeciesAssets,
   type BankSpecies,
   type Manifest,
 } from '@/core/bank'
@@ -54,8 +55,31 @@ const seasonEntry = computed(() =>
 const note = computed(() => speciesNoteText(species.value?.notes, currentLocale()))
 const name = computed(() => (species.value ? speciesName(species.value, currentLocale()) : ''))
 
-const images = computed<MediaAsset[]>(() => species.value?.images ?? [])
-const audios = computed<MediaAsset[]>(() => species.value?.audios ?? [])
+/**
+ * 029 M1:core 层 species 只带首图首音（image/audio）；画廊/海报需要的完整 5+5 素材
+ * 从 assets 分片按需加载（按桶缓存）。未就绪时先用 core 的首图首音，不阻塞首屏。
+ */
+const fullAssets = ref<{ images?: MediaAsset[]; audios?: MediaAsset[] } | null>(null)
+watch(
+  () => species.value?.id,
+  async (id) => {
+    fullAssets.value = null
+    if (id) fullAssets.value = await loadSpeciesAssets(id)
+  },
+  { immediate: true },
+)
+const images = computed<MediaAsset[]>(
+  () =>
+    fullAssets.value?.images ??
+    species.value?.images ??
+    (species.value?.image ? [species.value.image] : []),
+)
+const audios = computed<MediaAsset[]>(
+  () =>
+    fullAssets.value?.audios ??
+    species.value?.audios ??
+    (species.value?.audio ? [species.value.audio] : []),
+)
 const hero = computed<MediaAsset | null>(() => images.value[0] ?? null)
 /** 全部素材 → 逐条署名（任何展示媒体的页面署名不可省） */
 const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])

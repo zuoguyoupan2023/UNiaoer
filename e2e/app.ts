@@ -20,6 +20,9 @@ async function fulfillMedia(route: Route) {
 export async function stubApp(page: Page) {
   await page.route('**/api/manifest**', (r) => r.fulfill({ json: bank }))
   await page.route('**/data/manifest.json', (r) => r.fulfill({ json: bank }))
+  // 029 M1:前端优先请求分层 core(夹具直接复用同一份 bank;分片请求回 404 → 走 core 首图首音回退)
+  await page.route('**/data/manifest-core.json', (r) => r.fulfill({ json: bank }))
+  await page.route('**/data/assets/*.json', (r) => r.fulfill({ status: 404, body: '' }))
   await page.route('**/data/distribution.json', (r) =>
     r.fulfill({
       json: { bySpecies: { 'sp-01': ['CN', 'US'], 'sp-02': ['CN', 'JP', 'US'], 'sp-03': ['US'] } },

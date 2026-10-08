@@ -22,7 +22,7 @@ import { persistRound } from '@/core/roundRecorder'
 import { getActiveArchive, getStats, listRounds } from '@/core/historyDb'
 import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
 import { ALL_SPECIES_TOTAL, BADGES, type BadgeDef } from '@/core/badges'
-import type { Question } from '@/types'
+import type { MediaAsset, Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
@@ -32,6 +32,8 @@ import {
   speciesNameByStoredName,
   speciesNoteById,
   speciesProfileById,
+  loadSpeciesAssets,
+  cachedSpeciesAssets,
 } from '@/core/bank'
 import AttributionLine from '@/components/AttributionLine.vue'
 import BadgeIcon from '@/components/BadgeIcon.vue'
@@ -145,6 +147,23 @@ const posterImages = computed<PosterImage[]>(() => {
   return out
 })
 
+/** 029 M1:分片就绪标记(触发画廊重渲染);值本身是时间戳,仅作依赖 */
+const mediaReady = ref(0)
+/** 每题画廊素材:题目自带(core 首图首音) + 分片补齐的完整素材,按 url 去重 */
+function galleryPoolOf(q: Question): { images: MediaAsset[]; audios: MediaAsset[] } {
+  void mediaReady.value // 建立响应依赖:分片到位后重算
+  const hit = cachedSpeciesAssets(q.media.speciesId)
+  const img = q.type === 'image' ? q.assets : q.crossAssets
+  const aud = q.type === 'audio' ? q.assets : q.crossAssets
+  const merge = (base: MediaAsset[] | undefined, extra: MediaAsset[] | undefined) => {
+    const b = base ?? []
+    if (!extra?.length) return b
+    const seen = new Set(b.map((m) => m.url))
+    return [...b, ...extra.filter((m) => !seen.has(m.url))]
+  }
+  return { images: merge(img, hit?.images), audios: merge(aud, hit?.audios) }
+}
+
 onMounted(async () => {
   if (!hasResult.value) {
     router.replace('/')
@@ -153,6 +172,10 @@ onMounted(async () => {
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
+  // 029 M1:core 只带首图首音;回顾画廊的完整素材按需加载(按桶合并,一轮题通常落在少数几个桶)
+  void Promise.all(
+    quiz.questions.map((q) => loadSpeciesAssets(q.media.speciesId).catch(() => null)),
+  ).then(() => (mediaReady.value = Date.now()))
   try {
     archiveNickname.value = (await getActiveArchive()).nickname || ''
   } catch {
@@ -228,10 +251,10 @@ async function again() {
           {{ t('result.yourChoice', { choice: choiceOf(q, quiz.chosen[i] ?? null) }) }}
         </div>
         <AttributionLine :media="q.media" />
-        <!-- C3：回顾该鸟的其它图/音（可放大、可试听） -->
+        <!-- C3：回顾该鸟的其它图/音（可放大、可试听）；029 M1:core 只带首图首音,其余按需从 assets 分片补齐 -->
         <SpeciesGallery
-          :images="q.type === 'image' ? q.assets : q.crossAssets"
-          :audios="q.type === 'audio' ? q.assets : q.crossAssets"
+          :images="galleryPoolOf(q).images"
+          :audios="galleryPoolOf(q).audios"
           mode="browse"
           :label="t('result.viewSpeciesMedia')"
         />
