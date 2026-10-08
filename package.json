@@ -29,6 +29,7 @@
     "check:layers": "node scripts/check-manifest-layers.mjs",
     "sync:prod": "node scripts/sync-prod.mjs",
     "check:sync": "node scripts/check-sync.mjs",
+    "d1:usage": "node scripts/d1-usage.mjs",
     "quality:export": "node scripts/export-quality-exclusions.mjs",
     "check:media": "node scripts/check-media.mjs",
     "region:build": "node scripts/region/build-seasonality.mjs",

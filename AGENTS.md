@@ -18,6 +18,12 @@
    - `0xx-*.md`（规划文档）、`docs/`（开发过程文档，另有私有 repo `uniaoer-private` 存档）、`legacy/`（旧单文件 demo）已在 `.gitignore`，不要提交。
 
 4. **改完必须自检。** 交付前跑：`npm run lint` && `npm test` && `npm run build`。
+   - **动了 D1 相关代码或 schema/seed，必须再手动跑 `npm run check:sync`**（CI 不跑它；
+     2026-10-08 事故正是「Worker 部署了带新列的查询、D1 结构没同步」——见 `docs/032`）。
+   - **`sync:prod` 单次写入 ≈43,410 行（10 万/天额度的 43%）→ 单日最多跑 2 次**；
+     跑前可用 `npm run d1:usage` 看当日已用额度。
+   - 所有"响应后仍需完成"的副作用（Cache API 写入等）必须 `ctx.waitUntil(...)` 或 await——
+     否则被 Worker 运行时取消（边缘缓存曾因此静默失效半日，见 `docs/032`）。
 
 5. **涉及媒体许可的改动**，必须保持署名（作者/许可证/来源）与 `canTranscode()`（ND 不转码）。
 
@@ -58,6 +64,8 @@
 | 物种骨架校验（结构/署名/1299 映射/无几何；CI 已接入） | `npm run check:index` |
 | 生成 D1 seed | `npm run d1:seed` |
 | D1 建表 / 灌数据（务必 `--remote`） | `wrangler d1 execute uniaoer --file=worker/schema.sql --remote` |
+| D1 用量取证（按天/按小时读写，Cloudflare GraphQL；需已 `wrangler login`） | `npm run d1:usage -- --days 3`（`--db uniaoer` / `--hourly-only`） |
+| 三源一致性校验（仓库/R2/D1/Pages；**改完 D1 相关代码必须手动跑**，CI 不跑） | `npm run check:sync` |
 | Worker 本地调试（绑定远端 D1/R2） | `npm run worker:dev` |
 | Worker 编译自检（不部署） | `npm run worker:check` |
 | Worker 部署（挂 `uniaoer.com/api/*`） | `npm run worker:deploy` |

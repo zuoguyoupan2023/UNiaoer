@@ -169,6 +169,11 @@ if (!SKIP_D1) {
     if (cur.length) chunks.push(cur.join('\n'))
     const chunkDir = path.join(ROOT, 'data-cache/d1-seed')
     await fs.mkdir(chunkDir, { recursive: true })
+    // 清理上一次的分块残留：块数随 seed 体量变化（曾 10 块，现 6 块），旧块留盘会被
+    // 误读为本次产物（2026-10-08 复盘发现 10 块制式旧块与 6 块新块混在一起）。
+    for (const f of await fs.readdir(chunkDir)) {
+      if (f.endsWith('.sql')) await fs.rm(path.join(chunkDir, f), { force: true })
+    }
 
     console.log(`  · seed.sql 分 ${chunks.length} 块执行（每块 ≤${(CHUNK_BYTES / 1e6).toFixed(1)}MB）`)
     for (let i = 0; i < chunks.length; i++) {
