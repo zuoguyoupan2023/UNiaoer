@@ -117,37 +117,57 @@ function flashShareMsg(text: string, kind: 'ok' | 'err' = 'ok') {
 /** 该轮历史里已分享的记录（用于进页面就显示"已分享 / 已撤回"） */
 const existingShare = ref<{ shareId: string; token: string; revoked?: boolean } | null>(null)
 
-async function doShare() {
-  if (shareBusy.value || !roundRecord.value) return
-  shareBusy.value = true
-  shareMsg.value = ''
-  let draft: ReturnType<typeof buildShareDraft> | null = null
+/**
+ * 创建本轮分享（不含 UI 状态收尾）。成功返回分享 URL；失败返回 null
+ * （失败时的落盘/文案由调用方决定——手动创建会入队补传并提示）。
+ */
+async function createRoundShare(): Promise<string | null> {
+  if (!roundRecord.value) return null
+  const draft = buildShareDraft(roundRecord.value, {
+    clientId: getClientId(),
+    // 勾选「隐藏昵称」时提交 null（服务端不再写昵称快照）
+    nickname: hideNickname.value ? null : archiveNickname.value || settings.nickname || null,
+    locale: currentLocale(),
+  })
+  if ('error' in draft) return null
   try {
-    draft = buildShareDraft(roundRecord.value, {
-      clientId: getClientId(),
-      // 勾选「隐藏昵称」时提交 null（服务端不再写昵称快照）
-      nickname: hideNickname.value ? null : archiveNickname.value || settings.nickname || null,
-      locale: currentLocale(),
-    })
-    if ('error' in draft) {
-      flashShareMsg(t('share.noMedia'), 'err')
-      return
-    }
     const { id, token } = await createShare(draft)
     rememberShare({ roundId: roundRecord.value.id, shareId: id, token, at: Date.now() })
     existingShare.value = { shareId: id, token }
     shareRevoked.value = false
     shareUrl.value = shareUrlOf(id)
-    flashShareMsg(t('share.created'))
+    return shareUrl.value
   } catch {
     // 035 离线补传（2026-10-09）：失败时把草稿落盘，之后可在设置页/本页一键补传
-    if (draft && !('error' in draft) && roundRecord.value) {
-      enqueueShare(draft, roundRecord.value.id)
-      queuedShare.value = true
-      flashShareMsg(t('share.queued'), 'err')
-    } else {
-      flashShareMsg(t('share.createFailed'), 'err')
-    }
+    enqueueShare(draft, roundRecord.value.id)
+    queuedShare.value = true
+    return null
+  }
+}
+
+async function doShare() {
+  if (shareBusy.value || !roundRecord.value) return
+  shareBusy.value = true
+  shareMsg.value = ''
+  try {
+    const url = await createRoundShare()
+    flashShareMsg(url ? t('share.created') : t('share.queued'), url ? 'ok' : 'err')
+  } finally {
+    shareBusy.value = false
+  }
+}
+
+/**
+ * 海报弹层「包含测试内容」时调用（2026-10-09）：确保本轮存在分享链接并回传。
+ * 已分享 → 直接复用（不重复创建）；未分享 → 就地创建（弹层的提醒已构成明确同意）；
+ * 失败/该轮未落库 → null，海报二维码退回官网（绝不产生指向无效页面的码）。
+ */
+async function ensureShare(): Promise<string | null> {
+  if (shareUrl.value) return shareUrl.value
+  if (!roundRecord.value || shareBusy.value) return null
+  shareBusy.value = true
+  try {
+    return await createRoundShare()
   } finally {
     shareBusy.value = false
   }
@@ -437,9 +457,7 @@ async function again() {
     :data="posterData"
     :images="posterImages"
     :qr-url="shareUrl || undefined"
-    :can-share="!!roundRecord && !shareRevoked"
-    :share-busy="shareBusy"
-    @request-share="doShare"
+    :ensure-share="ensureShare"
     @close="showPoster = false"
   />
 

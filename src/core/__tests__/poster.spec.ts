@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildWrongRows,
   drawPoster,
+  posterFilename,
   POSTER_WRONG_MAX,
   DEFAULT_SITE_URL,
   type PosterData,
@@ -184,5 +185,64 @@ describe('海报 · 背景（F1）', () => {
 describe('海报 · 官网二维码（F4）', () => {
   it('默认指向官网地址（R35：正式域名 uniaoer.com）', () => {
     expect(DEFAULT_SITE_URL).toBe('https://uniaoer.com')
+  })
+})
+
+describe('海报 · 文件名（2026-10-09）', () => {
+  it('UNiaoer-Test_Share_yyyy-mm-dd-hh-mm.png（本地时间，零填充）', () => {
+    const d = new Date(2026, 9, 9, 7, 5) // 2026-10-09 07:05
+    expect(posterFilename(d)).toBe('UNiaoer-Test_Share_2026-10-09-07-05.png')
+  })
+
+  it('逐分钟唯一：同一分钟相同、跨分钟不同（避免大量同名文件）', () => {
+    const a = posterFilename(new Date(2026, 9, 9, 7, 5, 10))
+    const b = posterFilename(new Date(2026, 9, 9, 7, 5, 59))
+    const c = posterFilename(new Date(2026, 9, 9, 7, 6, 0))
+    expect(a).toBe(b)
+    expect(a).not.toBe(c)
+  })
+})
+
+describe('海报 · 是否包含测试内容（2026-10-09）', () => {
+  const data = posterData([{ answer: '家燕', chosen: '金腰燕', timedOut: false }])
+
+  it('默认（includeResults 未指定）：画成绩、正确率与错题', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(canvas, data, { themeId: 'white' }, posterStrings())
+    const joined = texts.join('\n')
+    expect(joined).toContain('8') // 得分
+    expect(joined).toContain('/10')
+    expect(joined).toContain('1. 家燕') // 错题行
+    expect(joined).toContain('认成了「金腰燕」')
+    expect(joined).toContain(i18n.global.t('poster.canvas.wrongHeading'))
+  })
+
+  it('includeResults=false：不出现成绩/正确率/错题，只留品牌面', () => {
+    const { canvas, texts } = stubCanvas()
+    const strings = posterStrings()
+    drawPoster(canvas, data, { themeId: 'white', includeResults: false }, strings)
+    const joined = texts.join('\n')
+    // 品牌头仍在（UNiaoer + 日期/模式标签）
+    expect(joined).toContain('UNiaoer')
+    expect(joined).toContain('鸟图版')
+    // 测试内容整块消失
+    expect(joined).not.toContain('/10')
+    expect(joined).not.toContain('1. 家燕')
+    expect(joined).not.toContain('认成了「金腰燕」')
+    expect(joined).not.toContain(strings.wrongHeading)
+    expect(joined).not.toContain(strings.answeredTitle)
+    expect(joined).not.toContain(strings.accuracyLine)
+  })
+
+  it('全对时含内容 → 画「全对了」；不含内容 → 该文案也不出现', () => {
+    const perfect = { ...posterData([]), correct: 10, accuracy: 100 }
+    const withR = stubCanvas()
+    drawPoster(withR.canvas, perfect, { themeId: 'white' }, posterStrings())
+    expect(withR.texts.join('\n')).toContain(i18n.global.t('poster.canvas.perfect'))
+
+    const withoutR = stubCanvas()
+    drawPoster(withoutR.canvas, perfect, { themeId: 'white', includeResults: false }, posterStrings())
+    expect(withoutR.texts.join('\n')).not.toContain(i18n.global.t('poster.canvas.perfect'))
+    expect(withoutR.texts.join('\n')).not.toContain(i18n.global.t('poster.canvas.allCorrect'))
   })
 })

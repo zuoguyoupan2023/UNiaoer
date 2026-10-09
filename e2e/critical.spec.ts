@@ -48,12 +48,13 @@ test.describe('核心答题链路', () => {
     await expect(page.getByText('答题完成')).toBeVisible()
     await expect(page.getByText(/正确率 \d+%/).first()).toBeVisible()
 
-    // 海报弹层：打开（role=dialog）→ 二维码去向提示 → ESC 关闭（useDialogA11y 回归）
+    // 海报弹层：打开（role=dialog）→ 勾选项默认勾上 → ESC 关闭（useDialogA11y 回归）
     await page.getByRole('button', { name: '生成海报' }).click()
     const posterDialog = page.locator('.overlay .panel[role="dialog"]')
     await expect(posterDialog).toBeVisible()
-    // 尚未创建分享 → 明示二维码指向首页，并给一键创建入口（2026-10-09 实测反馈修复）
-    await expect(posterDialog.locator('.qr-note')).toContainText('指向首页')
+    const inc = posterDialog.locator('.inc-opt input')
+    await expect(inc).toBeChecked() // 「海报包含本组测试内容」默认勾选
+    await expect(posterDialog.locator('.inc-note')).toContainText('含本轮成绩')
     await page.keyboard.press('Escape')
     await expect(posterDialog).toBeHidden()
 
@@ -110,12 +111,20 @@ test.describe('核心答题链路', () => {
     await page.getByRole('button', { name: '退出' }).click()
     await expect(page).toHaveURL(/\/result$/)
 
-    // 海报里直接创建分享链接 → 二维码改指本轮成绩（2026-10-09：不必先生成海报才发现指向首页）
+    // 海报「生成并下载」→ 先弹提醒（含错题信息，可改为不含）→ 继续生成
+    // 勾选含测试内容时，生成过程会确保本轮分享链接存在并向二维码回填（2026-10-09）
     await page.getByRole('button', { name: '生成海报' }).click()
     const posterDialog = page.locator('.overlay .panel[role="dialog"]')
-    await expect(posterDialog.locator('.qr-note')).toContainText('指向首页')
-    await posterDialog.getByRole('button', { name: /创建分享链接/ }).click()
-    await expect(posterDialog.locator('.qr-note')).toContainText('本轮成绩页')
+    await expect(posterDialog).toBeVisible()
+    const downloadPromise = page.waitForEvent('download')
+    await posterDialog.getByRole('button', { name: /生成并下载/ }).click()
+    // 提醒弹层：说明会带上成绩与错题；点「继续生成」→ 直接下载
+    const notice = posterDialog.locator('.notice')
+    await expect(notice).toBeVisible()
+    await expect(notice).toContainText('错题')
+    await notice.getByRole('button', { name: '继续生成' }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toMatch(/^UNiaoer-Test_Share_\d{4}-\d{2}-\d{2}-\d{2}-\d{2}\.png$/)
     await page.keyboard.press('Escape')
     await expect(posterDialog).toBeHidden()
 

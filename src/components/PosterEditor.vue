@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CircleCheck, Lock, Share2, Unlock, X } from 'lucide-vue-next'
+import { Lock, Unlock, X } from 'lucide-vue-next'
 import {
   downloadBlob,
   drawPoster,
   loadImage,
+  posterFilename,
   renderPosterBlob,
   type PosterData,
   type PosterImage,
@@ -13,7 +14,7 @@ import {
   type PosterStrings,
 } from '@/core/poster'
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
-import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import { track } from '@/core/metrics'
 
 const props = defineProps<{
@@ -23,15 +24,12 @@ const props = defineProps<{
   /** 035：二维码指向（分享链接；缺省 → 官网，见 core/poster 的 drawQrSlot） */
   qrUrl?: string
   /**
-   * 本轮成绩**可以**生成分享链接（roundRecord 已落库）。
-   * qrUrl 为空且此值为 true 时，导出区给出「创建分享链接」入口——
-   * 否则二维码直落官网（DEFAULT_SITE_URL），扫码方只看到首页而非本轮成绩。
+   * 勾选「包含测试内容」时，生成前要求结果页**确保存在**本轮分享链接并回传
+   * （已存在则直接返回，不重复创建）。失败/未落库时返回 null → 二维码退回官网。
    */
-  canShare?: boolean
-  /** 正在创建分享链接（按钮禁用/文案切换） */
-  shareBusy?: boolean
+  ensureShare?: () => Promise<string | null>
 }>()
-const emit = defineEmits<{ close: []; 'request-share': [] }>()
+const emit = defineEmits<{ close: [] }>()
 
 // 弹层无障碍：焦点移入/圈闭/ESC 关闭/还原/滚动锁（打开状态由 props.open 驱动）
 const { panelRef } = useDialogA11y(() => props.open, { onClose: () => emit('close') })
@@ -49,13 +47,28 @@ const loadingBg = ref(false)
 /** N6-B：移动端隐藏锁定按钮，背景自由平移，不做干涉 */
 const isMobile = ref(false)
 
-// ---- F7 导出：弹层内预览 + 保存（不自动关闭，保留继续编辑） ----
-const blobUrl = ref<string | null>(null)
-const resultBlob = ref<Blob | null>(null)
+// ---- 测试内容勾选（2026-10-09）----
+/** 「海报包含本组测试内容」默认勾选；取消勾选 → 海报不含成绩/错题，二维码也不指向成绩页 */
+const includeResults = ref(true)
+/** 本次弹层会话内已确认过"分享含测试内容"提醒（避免反复生成时反复打扰） */
+const noticeAcked = ref(false)
+/** 提醒弹层可见 */
+const showNotice = ref(false)
+watch(includeResults, (on) => {
+  if (!on) noticeAcked.value = false // 重新勾选视为新的同意
+})
+
+// ---- F7 导出：生成即下载（弹层顶部画布就是预览，不再另出预览块） ----
 const generating = ref(false)
-/** 生成后又改了配置 → 预览过期，需重新生成 */
-const stale = ref(false)
 const resultMsg = ref('')
+/** 渲染用二维码：优先用生成时确保的链接（props.qrUrl 的更新可能晚一拍） */
+const qrForRender = ref<string | undefined>(props.qrUrl ?? undefined)
+watch(
+  () => props.qrUrl,
+  (v) => {
+    qrForRender.value = v ?? undefined
+  },
+)
 
 const W = 1080
 const H = 1440
@@ -64,15 +77,15 @@ onMounted(() => {
   isMobile.value =
     typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 })
-onUnmounted(revokeResult)
 
 function options(): PosterOptions {
   return {
     themeId: themeId.value,
     bgImage: bgImage.value,
     bgOffset: offset.value,
-    // 035：分享链接就绪后二维码指向成绩页；否则回退官网（不产生死链）
-    qrUrl: props.qrUrl,
+    // 含测试内容 → 指向本轮成绩页（生成时确保链接）；不含 → 回退官网，不漏任何本轮信息
+    qrUrl: includeResults.value ? qrForRender.value : undefined,
+    includeResults: includeResults.value,
   }
 }
 
@@ -114,18 +127,15 @@ watch(
   (o) => {
     if (o) nextTick(redraw)
     else {
-      revokeResult()
-      stale.value = false
+      resultMsg.value = ''
+      showNotice.value = false
     }
   },
 )
 watch(
-  // qrUrl 变化（分享创建/撤回）也要重绘：二维码指向随之更新
-  [themeId, bgImage, offset, () => props.qrUrl],
-  () => {
-    redraw()
-    if (blobUrl.value) stale.value = true
-  },
+  // 这些变化都要重绘：二维码/测试内容勾选变化后，画布必须与实际导出一致
+  [themeId, bgImage, offset, () => props.qrUrl, includeResults, () => qrForRender.value],
+  () => redraw(),
   { deep: true },
 )
 
@@ -213,46 +223,51 @@ function resetOffset() {
   offset.value = { x: 0, y: 0 }
 }
 
-function revokeResult() {
-  if (blobUrl.value) URL.revokeObjectURL(blobUrl.value)
-  blobUrl.value = null
-  resultBlob.value = null
-}
-
-/** 最终预览区：生成后滚动到可见，避免用户不知道下方已出结果（R44） */
-const resultRef = ref<HTMLElement | null>(null)
-
+/**
+ * 生成并**直接下载**（2026-10-09）：弹层顶部画布本身就是实时预览，
+ * 另出一个"生成后预览块"是冗余（用户反馈）；文件名 UNiaoer-Test_Share_<时间>.png。
+ */
 async function generate() {
   if (generating.value) return
   generating.value = true
   resultMsg.value = ''
   try {
+    // 含测试内容 → 生成前确保本轮分享链接（已存在则复用；失败不影响出图，二维码退回官网）
+    if (includeResults.value && props.ensureShare) {
+      const url = await props.ensureShare()
+      qrForRender.value = url ?? undefined
+    }
     const blob = await renderPosterBlob(props.data, options(), strings.value)
     if (!blob) {
       resultMsg.value = t('poster.genFailed')
       return
     }
-    revokeResult()
-    resultBlob.value = blob
-    blobUrl.value = URL.createObjectURL(blob)
-    stale.value = false
+    downloadBlob(blob, posterFilename())
     track('poster_create') // 028 计量：海报生成成功（无属性）
-    await nextTick()
-    resultRef.value?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-    })
   } finally {
     generating.value = false
   }
 }
 
-function download() {
-  if (resultBlob.value && !stale.value) downloadBlob(resultBlob.value)
+/** 勾选/点生成：首次带测试内容时弹一次提醒（可取消勾选，避免把成绩发出去） */
+function onGenerateClick() {
+  if (includeResults.value && !noticeAcked.value) {
+    showNotice.value = true
+    return
+  }
+  void generate()
 }
-
-function openImage() {
-  if (blobUrl.value && !stale.value) window.open(blobUrl.value, '_blank', 'noopener')
+/** 提醒里点「继续生成」 */
+function confirmNotice() {
+  noticeAcked.value = true
+  showNotice.value = false
+  void generate()
+}
+/** 提醒里点「不含测试内容」 */
+function dropResults() {
+  includeResults.value = false
+  showNotice.value = false
+  void generate()
 }
 </script>
 
@@ -366,63 +381,47 @@ function openImage() {
             </p>
           </div>
 
-          <!-- 导出：先生成预览，可在弹层内保存/继续修改（F7） -->
+          <!-- 导出：生成即下载（顶部画布就是预览；2026-10-09 去掉冗余预览块） -->
           <div class="group export">
-            <!-- 二维码去向（035）：有分享链接 → 本轮成绩页；否则官网。缺链接时给一键创建入口，
-                 免去"先生成海报、扫码才发现是首页"的来回（2026-10-09 用户实测反馈） -->
-            <p class="qr-note" :class="{ ok: !!qrUrl }">
-              <CircleCheck v-if="qrUrl" class="ic" :size="13" />
-              <span>{{
-                qrUrl
-                  ? t('poster.qrShareReady')
-                  : canShare
-                    ? t('poster.qrShareNone')
-                    : t('poster.qrSiteOnly')
-              }}</span>
+            <!-- 「海报包含本组测试内容」默认勾选；取消 → 海报与二维码都不含本轮成绩（隐私取向） -->
+            <label class="inc-opt">
+              <input v-model="includeResults" type="checkbox" />
+              <span>{{ t('poster.includeResults') }}</span>
+            </label>
+            <p class="inc-note" :class="{ warn: includeResults }">
+              {{
+                includeResults
+                  ? t('poster.includeResultsOn')
+                  : t('poster.includeResultsOff')
+              }}
             </p>
-            <button
-              v-if="canShare && !qrUrl"
-              class="btn btn-secondary"
-              style="width: 100%"
-              :disabled="shareBusy"
-              @click="emit('request-share')"
-            >
-              <Share2 class="ic" :size="15" />
-              {{ shareBusy ? t('share.creating') : t('poster.qrShareCreate') }}
-            </button>
 
             <button
               class="btn btn-primary"
               style="width: 100%"
-              :style="{ marginTop: '8px' }"
               :disabled="generating"
-              @click="generate"
+              @click="onGenerateClick"
             >
-              {{
-                generating
-                  ? t('poster.generating')
-                  : blobUrl
-                    ? t('poster.regenerate')
-                    : t('poster.generate')
-              }}
+              {{ generating ? t('poster.generating') : t('poster.generateDownload') }}
             </button>
 
-            <div v-if="blobUrl" ref="resultRef" class="result" aria-live="polite">
-              <img class="result-img" :src="blobUrl" :alt="t('poster.previewAlt')" />
-              <p v-if="stale" class="result-status stale">{{ t('poster.staleHint') }}</p>
-              <p v-else class="result-status">
-                <CircleCheck class="ic" :size="14" /> {{ t('poster.generatedHint') }}
-              </p>
-              <div class="result-actions">
-                <button class="btn btn-secondary" :disabled="stale" @click="download">
-                  {{ t('poster.downloadPng') }}
-                </button>
-                <button class="btn btn-secondary" :disabled="stale" @click="openImage">
-                  {{ t('poster.openNewTab') }}
-                </button>
-              </div>
-            </div>
             <p v-if="resultMsg" class="err small" role="alert" style="margin-top: 8px">{{ resultMsg }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 生成前提醒：海报/分享会带上本轮具体信息（含错题），可改为不含 -->
+      <div v-if="showNotice" class="notice" role="alertdialog" aria-modal="true">
+        <div class="notice-panel">
+          <h4>{{ t('poster.noticeTitle') }}</h4>
+          <p>{{ t('poster.noticeBody') }}</p>
+          <div class="notice-actions">
+            <button class="btn btn-secondary" type="button" @click="dropResults">
+              {{ t('poster.noticeDrop') }}
+            </button>
+            <button class="btn btn-primary" type="button" @click="confirmNotice">
+              {{ t('poster.noticeContinue') }}
+            </button>
           </div>
         </div>
       </div>
@@ -701,55 +700,64 @@ function openImage() {
   border-top: 1px solid var(--border);
   padding-top: 18px;
 }
-/* 二维码去向提示（035）：明确告知扫码会落到哪里，避免"海报流出后才发现指向首页" */
-.qr-note {
+/* 「海报包含本组测试内容」勾选（2026-10-09）：默认勾选，取消则不带上成绩/错题 */
+.inc-opt {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin: 0 0 10px;
-  font-size: 0.76rem;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.inc-opt input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.inc-note {
+  margin: 6px 0 12px;
+  font-size: 0.74rem;
   line-height: 1.5;
   color: var(--text-light);
 }
-.qr-note.ok {
-  color: var(--primary);
-}
-.result {
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: #f7faf8;
-  text-align: center;
-}
-.result-img {
-  width: 100%;
-  max-width: 220px;
-  height: auto;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  display: block;
-  margin: 0 auto 10px;
-  -webkit-touch-callout: default;
-}
-.result-status {
-  font-size: 0.78rem;
-  color: var(--text-light);
-  line-height: 1.6;
-  margin-bottom: 10px;
-}
-.result-status.stale {
+.inc-note.warn {
   color: #8a6d00;
 }
-.result-actions {
+/* 生成前提醒弹层（可取消勾选，避免把成绩发出去） */
+.notice {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 30, 22, 0.5);
+  backdrop-filter: blur(3px);
+}
+.notice-panel {
+  width: min(420px, 100%);
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.5);
+}
+.notice-panel h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.notice-panel p {
+  margin: 0 0 16px;
+  font-size: 0.84rem;
+  line-height: 1.65;
+  color: var(--text-light);
+}
+.notice-actions {
   display: flex;
   gap: 8px;
-  justify-content: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
-}
-.result-actions .btn {
-  padding: 9px 16px;
-  font-size: 0.84rem;
 }
 .btn:disabled {
   opacity: 0.5;

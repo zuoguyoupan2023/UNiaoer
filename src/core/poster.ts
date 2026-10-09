@@ -94,6 +94,12 @@ export interface PosterOptions {
   qrUrl?: string
   /** 真二维码图（可选，提供后替代占位框） */
   qrImage?: ImageBitmap | null
+  /**
+   * 是否画本轮测试内容（成绩/正确率/错题回顾），默认 true。
+   * 用户在海报弹层取消勾选「海报包含本组测试内容」时传 false —— 隐私取向：
+   * 只留品牌头/日期/称号徽章/页脚与二维码，**不出现任何本轮成绩信息**（2026-10-09 用户要求）。
+   */
+  includeResults?: boolean
 }
 
 /** 官网地址（二维码默认指向；正式域名确定后替换） */
@@ -475,76 +481,89 @@ export function drawPoster(
     ctx.fillText(rt, 60 + rw / 2, 101)
   }
 
-  // 正文
-  drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
-  const perfect = data.total > 0 && data.correct === data.total
-  drawSegments(
-    ctx,
-    [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
-    W / 2,
-    650,
-    'center',
-    box,
-  )
-  drawSegments(
-    ctx,
-    [
-      { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
-      { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
-    ],
-    W / 2,
-    860,
-    'center',
-    box,
-  )
-  const accText = strings.accuracyLine
-  drawSegments(
-    ctx,
-    [{ text: accText, color: P.muted, weight: 500, size: 28 }],
-    W / 2,
-    950,
-    'center',
-    box,
-  )
-
-  // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
-  drawSegments(ctx, [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
-  const rows = buildWrongRows(data.wrong, strings.overflow)
-  if (rows.length === 0) {
+  // 本轮测试内容（成绩/正确率/错题）：取消勾选时整块不画（只留品牌面）
+  if (opts.includeResults !== false) {
+    // 正文
+    drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
+    const perfect = data.total > 0 && data.correct === data.total
     drawSegments(
       ctx,
-      [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 28 }],
-      60,
-      1070,
-      'left',
+      [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
+      W / 2,
+      650,
+      'center',
       box,
     )
+    drawSegments(
+      ctx,
+      [
+        { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
+        { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
+      ],
+      W / 2,
+      860,
+      'center',
+      box,
+    )
+    const accText = strings.accuracyLine
+    drawSegments(
+      ctx,
+      [{ text: accText, color: P.muted, weight: 500, size: 28 }],
+      W / 2,
+      950,
+      'center',
+      box,
+    )
+
+    // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
+    drawSegments(ctx, [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
+    const rows = buildWrongRows(data.wrong, strings.overflow)
+    if (rows.length === 0) {
+      drawSegments(
+        ctx,
+        [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 28 }],
+        60,
+        1070,
+        'left',
+        box,
+      )
+    } else {
+      const colWidth = 440
+      const rowGap = 48
+      const top = 1058
+      ctx.textAlign = 'left'
+      rows.forEach((w, i) => {
+        const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
+        const y = top + (i % (POSTER_WRONG_MAX / 2)) * rowGap
+        if (w.placeholder) {
+          drawSegments(
+            ctx,
+            [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 25 }],
+            x,
+            y,
+            'left',
+            box,
+          )
+          return
+        }
+        const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
+        const mineText = w.timedOut ? strings.timedOut : strings.mistakenAs(w.chosen ?? '—')
+        ctx.font = `600 26px ${FONT}`
+        const headW = ctx.measureText(head.text).width
+        const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
+        drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 24 }], x, y, 'left', box)
+      })
+    }
   } else {
-    const colWidth = 440
-    const rowGap = 48
-    const top = 1058
-    ctx.textAlign = 'left'
-    rows.forEach((w, i) => {
-      const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
-      const y = top + (i % (POSTER_WRONG_MAX / 2)) * rowGap
-      if (w.placeholder) {
-        drawSegments(
-          ctx,
-          [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 25 }],
-          x,
-          y,
-          'left',
-          box,
-        )
-        return
-      }
-      const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
-      const mineText = w.timedOut ? strings.timedOut : strings.mistakenAs(w.chosen ?? '—')
-      ctx.font = `600 26px ${FONT}`
-      const headW = ctx.measureText(head.text).width
-      const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
-      drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 24 }], x, y, 'left', box)
-    })
+    // 不含测试内容：居中一句品牌语，避免大片空白
+    drawSegments(
+      ctx,
+      [{ text: strings.intro, color: P.muted, weight: 400, size: 44 }],
+      W / 2,
+      H / 2,
+      'center',
+      box,
+    )
   }
 
   // 页脚（左对齐，给右下角二维码让位）
@@ -600,7 +619,7 @@ export function renderPosterBlob(
 }
 
 /** 触发浏览器下载。用于保存已生成的 blob（不再自动关闭弹层） */
-export function downloadBlob(blob: Blob, filename = 'uniaoer-result.png'): void {
+export function downloadBlob(blob: Blob, filename = posterFilename()): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -611,12 +630,24 @@ export function downloadBlob(blob: Blob, filename = 'uniaoer-result.png'): void 
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/**
+ * 海报文件名：UNiaoer-Test_Share_<yyyy-mm-dd-hh-mm>.png（本地时间）。
+ * 逐分钟唯一——避免"多次生成全叫 uniaoer-result.png"，文件堆一起没法区分（2026-10-09 用户要求）。
+ */
+export function posterFilename(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  const stamp =
+    `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}` +
+    `-${p(now.getHours())}-${p(now.getMinutes())}`
+  return `UNiaoer-Test_Share_${stamp}.png`
+}
+
 /** 生成并下载（保留旧接口，供一次性调用场景） */
 export async function downloadPoster(
   data: PosterData,
   opts: PosterOptions,
   strings: PosterStrings,
-  filename = 'uniaoer-result.png',
+  filename = posterFilename(),
 ): Promise<void> {
   const blob = await renderPosterBlob(data, opts, strings)
   if (blob) downloadBlob(blob, filename)
