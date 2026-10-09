@@ -274,15 +274,39 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.prov-btn', { hasText: '北京市' })).toBeVisible()
   })
 
-  test('地区浏览：观鸟点（021 M4 腿 B）网格聚合列表/就地详情/署名', async ({ page }) => {
+  test('答题页：地区选择器「已选摘要 + 更改」与新手指引（2026-10-09 UI 重做）', async ({ page }) => {
+    await page.goto('/quiz/image')
+    await expect(page.locator('.wizard-panel')).toBeVisible()
+    await page.getByRole('button', { name: '直接开始' }).click()
+    await expect(page.locator('.wizard-panel')).toBeHidden()
+
+    // 默认收起：只显示「当前地区：全球」摘要 + 更改按钮（不再平铺国家按钮）
+    await expect(page.locator('.region-value')).toContainText('全球')
+    await expect(page.locator('.region-picker')).toBeHidden()
+
+    // 展开 → 选中国 → 选北京市 → 摘要变成「中国 · 北京市」且选择器收起
+    await page.getByRole('button', { name: '更改' }).click()
+    await expect(page.locator('.region-picker')).toBeVisible()
+    await page.locator('.region-picker').getByRole('button', { name: '中国', exact: true }).click()
+    await page.locator('.region-picker').getByRole('button', { name: '北京市' }).click()
+    await expect(page.locator('.region-value')).toContainText('中国 · 北京市')
+    await expect(page.locator('.region-picker')).toBeHidden()
+
+    // 新手福利提示（全新上下文 = 无历史轮次 + L1）
+    await page.getByRole('button', { name: /L1 入门/ }).click()
+    await expect(page.locator('.beginner-hint')).toBeVisible()
+  })
+
+  test('地区浏览：观鸟点（021 M4 腿 B / 2026-10-09 标签页）列表/就地详情/署名', async ({ page }) => {
     await page.goto('/region')
     await page.getByRole('button', { name: '北美洲' }).click()
 
-    // 默认收起 → 展开；列表为国家内有记录数的观鸟点
-    const toggle = page.locator('.hotspots-toggle')
-    await expect(toggle).toBeVisible()
-    await toggle.click()
-    await expect(page.locator('.hotspot-body')).toBeVisible()
+    // 右侧面板：鸟种 / 观鸟点两个标签页（不再上下堆叠）
+    const spotsTab = page.getByRole('tab', { name: /观鸟点/ })
+    await expect(spotsTab).toBeVisible()
+    await spotsTab.click()
+    await expect(spotsTab).toHaveAttribute('aria-selected', 'true')
+
     const ca = page.locator('.hotspot-btn', { hasText: 'California' })
     await expect(ca).toBeVisible()
     await expect(ca).toContainText('条记录')
@@ -293,6 +317,22 @@ test.describe('入口与页面', () => {
     await expect(detail).toContainText('常见鸟种')
     await expect(detail).toContainText('测试鸟1')
     await expect(page.locator('.hotspot-source')).toContainText('GBIF')
+
+    // 切回鸟种标签页：物种网格可见、观鸟点列表隐藏（v-show 保留节点但不可见）
+    const speciesTab = page.getByRole('tab', { name: /鸟种/ })
+    await speciesTab.click()
+    await expect(page.locator('.species-grid')).toBeVisible()
+    await expect(page.locator('.hotspot-btn').first()).toBeHidden()
+  })
+
+  test('地区浏览：观鸟点按省过滤（选省后只见本省点）', async ({ page }) => {
+    await page.goto('/region')
+    // 默认中国：点省份「北京市」后，观鸟点标签只应显示北京（夹具 CN-Beijing）
+    await page.locator('.prov-btn[data-prov="CN-11"]').click()
+    const spotsTab = page.getByRole('tab', { name: /观鸟点/ })
+    await spotsTab.click()
+    await expect(page.locator('.hotspot-btn')).toHaveCount(1)
+    await expect(page.locator('.hotspot-btn')).toContainText('Beijing')
   })
 
   test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {

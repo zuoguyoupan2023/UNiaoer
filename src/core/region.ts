@@ -75,15 +75,18 @@ for (const [continent, codes] of [
 }
 
 /**
- * 需按「中国+地区」特别标注的地区码 → i18n key（视图用 t() 取显示名）。
- * 港澳台单独成条目，但显示为「中国香港／中国澳门／中国台湾」（英文 …, China）。
+ * 需**固定显示名**的地区码 → i18n key（视图用 t() 取显示名）。
+ * - 港澳台单独成条目，但显示为「中国香港／中国澳门／中国台湾」（英文 …, China）；
+ * - **CN 也必须固定**：各地浏览器 ICU/CLDR 数据不一致——iPhone Safari 的
+ *   `Intl.DisplayNames('zh')` 会把 CN 渲染成「中国大陆」，桌面/多数安卓是「中国」。
+ *   国家名属政治敏感展示项，不可交给运行时的 CLDR 版本决定（见 AGENTS 铁律 6）。
  */
 export const REGION_LABEL_KEY: Record<string, string> = {
+  CN: 'region.regions.CN',
   HK: 'region.regions.HK',
   MO: 'region.regions.MO',
   TW: 'region.regions.TW',
 }
-
 /** 国家/地区码 → 所属大洲（未收录返回 undefined） */
 export function continentOf(code: string): Continent | undefined {
   return CONTINENT_BY_COUNTRY[code]

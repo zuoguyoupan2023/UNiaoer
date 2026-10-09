@@ -87,6 +87,15 @@ async function safeWrongBook(): Promise<WrongEntry[]> {
   }
 }
 
+/**
+ * 是否为"新手首轮"（2026-10-09 新手福利）。
+ * 判定 = 当前档案**尚无任何已完成轮次**（历史为空）。只影响 L1 首轮的候选池，
+ * 之后不再干预（用户定稿："只有第一次做 L1 固定常见鸟"）。
+ */
+async function isFirstRoundEver(): Promise<boolean> {
+  return (await safeListRounds()).length === 0
+}
+
 /** D5：按最近表现给出档位建议（图/声隔离；IndexedDB 不可用时保持当前档） */
 async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierSuggestion> {
   return suggestTier(await safeListRounds(), type, currentTier)
@@ -210,7 +219,15 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       //   客户端命中即零网络；一次取 30 条也够本轮多次取材。
       const count = opts.count ?? 10
       const settings = useSettingsStore()
-      const online = opts.keepSession
+      // 新手福利（2026-10-09）：**第一轮 + L1** → 候选限定为人人皆知的最常见鸟
+      // （starterBirds.ts；不足一轮自动回退常规逻辑）。仅在会话首轮判定，后续轮不再干预。
+      let starterOnly = false
+      if (tier.value === 1 && !opts.keepSession) {
+        starterOnly = await isFirstRoundEver()
+      }
+      // 新手轮**跳过在线池**：服务端 30 条随机候选里新手鸟可能只有个位数，会误触发"不足一轮"回退。
+      // 本地全量池（核心 1299 + 全球池）才能让新手池完整参与筛选（也顺带省一次 D1 读）。
+      const online = opts.keepSession || starterOnly
         ? null
         : await fetchOnlinePool(type, tier.value, settings.region)
 
@@ -255,6 +272,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         locale: currentLocale(),
         distractorPool,
         regionTiers,
+        starterOnly,
       })
       if (!qs.length) {
         // 无素材（池内物种都缺对应媒体）：错误码入 store，文案由组件按 locale 渲染（015 §6.5）

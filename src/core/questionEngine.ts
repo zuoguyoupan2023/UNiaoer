@@ -1,6 +1,7 @@
 import type { MediaAsset, MediaType, Question, Tier } from '@/types'
 import { speciesName, type BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
+import { isStarterBird } from './starterBirds'
 
 export interface BuildOptions {
   type: MediaType
@@ -26,6 +27,12 @@ export interface BuildOptions {
    * 表内不足 count → 放宽到表内其余档位；表内全空才兜底整池（绝不出空）。
    */
   regionTiers?: Map<string, number> | null
+  /**
+   * 新手福利（2026-10-09）：候选限定在 `STARTER_BIRD_IDS`（喜鹊/麻雀/白头鹎…）。
+   * 仅由 quiz store 在「第一轮 + L1」时置 true；池内不足一轮时**自动回退常规 L1**（绝不出空）。
+   * 之后照常走 地区档位 → 媒体 → 轮内去重 既有链路（地域自适应，见 starterBirds.ts）。
+   */
+  starterOnly?: boolean
 }
 
 
@@ -145,7 +152,7 @@ export function pickMedia(sp: BankSpecies, type: MediaType, poolSize: number): M
  *   不同轮次之间允许重复（"再来一轮"复用候选池是预期行为，见 onlinePool.ts 头注释）。
  */
 export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
-  const { type, count = 10, tier = 2, speciesPool, locale, distractorPool, regionTiers } = opts
+  const { type, count = 10, tier = 2, speciesPool, locale, distractorPool, regionTiers, starterOnly } = opts
   const cfg = TIERS[tier]
   const full = mediaPool(bank, type)
   // 干扰项池：默认与出题池同源（本地模式）；在线模式传入服务端候选（含无素材的名字条目）
@@ -173,11 +180,23 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   }
 
   let pool: BankSpecies[]
-  if (speciesPool) {
-    // 池上仍按档位筛常见度；样本不足放宽到池内全部（013 §4.2 标准赛也允许难度筛选）
-    pool = buildPool(full.filter((s) => speciesPool.has(s.id)))
+  const candidates = speciesPool ? full.filter((s) => speciesPool.has(s.id)) : full
+  /**
+   * 新手福利（2026-10-09）：首轮 L1 把候选收窄到"人人皆知的最常见鸟"（starterBirds.ts）。
+   *
+   * 顺序很重要——**先按地区表收窄、再取新手池**：
+   *   · 新手池先与本地物种求交（`starterLocal`），保证不会把外地新手鸟塞给本地用户；
+   *   · 交集能撑满一轮（≥ count）才启用；**不足则回退常规 L1**（仍是本地池）——
+   *     实测 49 个省的本省新手鸟 < 10（AU-NT 仅 2），直接放宽会出一轮 5–8 题的短轮，
+   *     违反"每轮最少十道题"（用户 2026-10-09 定稿）。
+   *   · 收窄只是前置过滤，后面照常走 地区档位 → 媒体 → 轮内去重 的既有链路。
+   */
+  if (starterOnly && tier === 1) {
+    const localBase = hasRegion ? candidates.filter((s) => regionTiers!.has(s.id)) : candidates
+    const starterLocal = (localBase.length ? localBase : candidates).filter((s) => isStarterBird(s.id))
+    pool = starterLocal.length >= count ? buildPool(starterLocal) : buildPool(candidates)
   } else {
-    pool = buildPool(full)
+    pool = buildPool(candidates)
   }
   // 轮内不重复（用户 2026-10-09 定稿原则）：按物种 id 去重后取样——
   // 同一轮里每只鸟最多出现一次；不同轮次之间允许重复（"再来一轮"复用候选池是预期行为）。

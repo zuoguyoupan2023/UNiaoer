@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { assetsOf, buildQuestions, pickDistractors, shuffle } from '../questionEngine'
+import { isStarterBird } from '../starterBirds'
 import { TIERS } from '../difficulty'
 import type { BankSpecies } from '../bank'
 import type { MediaAsset } from '@/types'
@@ -303,5 +304,74 @@ describe('shuffle', () => {
   it('不改变元素集合', () => {
     const src = [1, 2, 3, 4, 5]
     expect([...shuffle(src)].sort()).toEqual([1, 2, 3, 4, 5])
+  })
+})
+
+describe('buildQuestions · starterOnly（新手福利，2026-10-09）', () => {
+  const starterBank: BankSpecies[] = [
+    sp('pica-serica', '喜鹊', '鸦科'),
+    sp('passer-montanus', '麻雀', '雀科'),
+    sp('pycnonotus-sinensis', '白头鹎', '鹎科'),
+    sp('corvus-macrorhynchos', '大嘴乌鸦', '鸦科'),
+    sp('egretta-garzetta', '小白鹭', '鹭科'),
+    sp('nycticorax-nycticorax', '夜鹭', '鹭科'),
+    sp('random-bird-a', '陌生鸟A', '某科'),
+    sp('random-bird-b', '陌生鸟B', '某科'),
+    sp('random-bird-c', '陌生鸟C', '某科'),
+    sp('random-bird-d', '陌生鸟D', '某科'),
+    sp('random-bird-e', '陌生鸟E', '某科'),
+  ]
+
+  it('L1 + starterOnly：只出新手池物种（喜鹊/麻雀/白头鹎…）', () => {
+    for (let i = 0; i < 12; i++) {
+      const qs = buildQuestions(starterBank, { type: 'image', count: 4, tier: 1, starterOnly: true })
+      expect(qs.length).toBe(4)
+      expect(qs.every((q) => isStarterBird(q.media.speciesId))).toBe(true)
+    }
+  })
+
+  it('池内不足一轮 → 回退常规 L1（绝不出空）', () => {
+    // 新手池只有 6 只，但要 7 题 → 收窄不成立，放行常规池
+    const qs = buildQuestions(starterBank, { type: 'image', count: 7, tier: 1, starterOnly: true })
+    expect(qs.length).toBe(7)
+    expect(qs.some((q) => !isStarterBird(q.media.speciesId))).toBe(true)
+  })
+
+  it('仅 L1 生效：L2 带 starterOnly 不改变行为', () => {
+    const a = buildQuestions(starterBank, { type: 'image', count: 6, tier: 2, starterOnly: true })
+    const b = buildQuestions(starterBank, { type: 'image', count: 6, tier: 2 })
+    expect(a.length).toBe(b.length)
+  })
+
+  it('与地区档位叠加：表内非新手鸟不因 starterOnly 泄漏，表外新手鸟仍被地区排除', () => {
+    // 新手池 6 种；地区表只含 4 种（其中 1 只非新手鸟）→ 先收窄新手池，再按地区档位筛
+    const regionTiers = new Map([
+      ['pica-serica', 1],
+      ['passer-montanus', 1],
+      ['pycnonotus-sinensis', 2],
+      ['corvus-macrorhynchos', 1],
+    ])
+    const qs = buildQuestions(starterBank, { type: 'image', count: 3, tier: 1, starterOnly: true, regionTiers })
+    expect(qs.length).toBe(3)
+    expect(qs.every((q) => ['pica-serica', 'passer-montanus', 'pycnonotus-sinensis', 'corvus-macrorhynchos'].includes(q.media.speciesId))).toBe(true)
+  })
+
+  it('本地新手鸟不足一轮 → 回退常规本地 L1（保 10 题，不出短轮）', () => {
+    // 地区表只含 2 只新手鸟（AU-NT 场景）→ 新手池撑不满 10 题 → 用本地全池出满 10 题
+    const regionTiers = new Map([
+      ['pica-serica', 1],
+      ['passer-montanus', 1],
+      ['random-bird-a', 3],
+      ['random-bird-b', 4],
+      ['random-bird-c', 2],
+      ['random-bird-d', 3],
+      ['random-bird-e', 2],
+    ])
+    for (let i = 0; i < 10; i++) {
+      const qs = buildQuestions(starterBank, { type: 'image', count: 7, tier: 1, starterOnly: true, regionTiers })
+      expect(qs.length).toBe(7) // 仍是满轮
+      // 且全部来自本地表（新手池不足时不得把表外新手鸟塞进来）
+      expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
+    }
   })
 })

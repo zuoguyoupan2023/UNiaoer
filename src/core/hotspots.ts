@@ -61,3 +61,28 @@ export function hotspotsOf(data: HotspotData | null, country: string): Hotspot[]
     .filter((h) => h.country === country)
     .sort((a, b) => b.recordCount - a.recordCount || a.id.localeCompare(b.id))
 }
+
+/**
+ * 某省观鸟点（036/037 地区下钻）：按 `subnational1`（ISO 3166-2 省码）过滤。
+ * 数据现状（2026-10-09）：15 国中 3,215/5,588 个点带省码；CN 331/706。
+ *
+ * 返回结构区分"有没有省归属"：
+ * - `matched`：属于该省的点；
+ * - `unassigned`：该国**无省码**的点（eBird 就近命名失败），不能算作该省；
+ * - 无省码的点**不会**混进某省列表（避免"选上海看到全国"）。
+ */
+export function hotspotsInProvince(
+  data: HotspotData | null,
+  country: string,
+  provinceCode: string,
+): { matched: Hotspot[]; unassigned: Hotspot[] } {
+  const all = hotspotsOf(data, country)
+  if (!provinceCode) return { matched: all, unassigned: [] }
+  const matched: Hotspot[] = []
+  const unassigned: Hotspot[] = []
+  for (const h of all) {
+    if (!h.subnational1) unassigned.push(h)
+    else if (h.subnational1 === provinceCode) matched.push(h)
+  }
+  return { matched, unassigned }
+}

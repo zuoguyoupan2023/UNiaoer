@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import { setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
+import { listRounds, setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import {
   AUTO_NEXT_DELAY_CORRECT_MS,
@@ -29,6 +29,7 @@ import {
   LogOut,
   Play,
   Smartphone,
+  Sparkles,
   Timer,
   X,
 } from 'lucide-vue-next'
@@ -40,6 +41,7 @@ import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
 import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
+import { REGION_LABEL_KEY } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
@@ -209,34 +211,48 @@ function chooseTier(v: Tier) {
 /** 029 M2:地区偏好(仅 L1-L3 生效;L4/L5 全球开放)。
  * 候选项 = 「全球」+ 观鸟热区(按物种数排名靠前的国家,数据来自区系层;加载失败只显示「全球」)。 */
 const REGION_CHOICES_FALLBACK = ['CN', 'US', 'GB', 'AU', 'JP', 'BR', 'IN', 'ZA']
-/** 036 省级细分数据（懒加载；失败静默 → 只显示国家级） */
+/**
+ * 036 省级细分数据（懒加载；失败静默 → 只显示国家级）
+ * 2026-10-09 UI 重做（用户反馈）：选择器不再直接铺 14 国按钮（选完看不出选了哪儿），
+ * 改为「**已选摘要**（中国·北京）+ 更改」两步流程——默认收起，点「更改」才展开。
+ */
 const provinceData = ref<ProvinceData | null>(null)
 const regionOptions = ref<{ code: string; label: string }[]>([{ code: 'ALL', label: '' }])
+/** 地区选择面板是否展开（收起时只显示已选摘要） */
+const regionPickerOpen = ref(false)
 const regionChoice = computed({
   get: () => settings.region,
   set: (v: string) => { settings.region = v },
 })
+/** 固定显示名（CN/港澳台走 i18n，其余走 Intl.DisplayNames）——避免各端 CLDR 差异（见 core/region.ts） */
+function regionLabel(code: string): string {
+  const key = REGION_LABEL_KEY[code]
+  if (key) return t(key)
+  try {
+    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+/** 新手福利提示（2026-10-09）：该档案尚无任何轮次 + L1 → 显示"第一轮只出最常见鸟" */
+const firstRoundEver = ref(false)
 onMounted(async () => {
+  void listRounds()
+    .then((rs) => (firstRoundEver.value = rs.length === 0))
+    .catch(() => (firstRoundEver.value = false))
   // 036：省级细分（可选；失败不影响国家级选择）
   void loadProvinces().then((d) => (provinceData.value = d))
   try {
     const dist = await loadSpeciesDistribution()
     const codes = dist ? Object.keys(dist.byCountry) : []
-    // 按物种数降序取前 12(含中国),再并上兜底清单;港澳台等敏感性地区名走 Intl 本地化
+    // 按物种数降序取前 12(含中国),再并上兜底清单;港澳台等敏感性地区名走固定表 + Intl 本地化
     const ranked = codes
       .map((c) => ({ c, n: (dist!.byCountry[c] ?? []).length }))
       .sort((a, b) => b.n - a.n)
       .slice(0, 12)
       .map((x) => x.c)
     const merged = [...new Set(['CN', ...ranked, ...REGION_CHOICES_FALLBACK])].slice(0, 14)
-    const dn = (() => {
-      try {
-        return new Intl.DisplayNames([currentLocale()], { type: 'region' })
-      } catch {
-        return null
-      }
-    })()
-    regionOptions.value = merged.map((c) => ({ code: c, label: dn?.of(c) ?? c }))
+    regionOptions.value = merged.map((c) => ({ code: c, label: regionLabel(c) }))
   } catch {
     /* 区系层不可用:只留「全球」 */
   }
@@ -245,6 +261,9 @@ function chooseRegion(v: string) {
   regionChoice.value = v
   // 换国家时清掉省选择（省码属于原国家）
   regionProvince.value = ''
+  // 有省级细分的国家**保持展开**，让用户能接着选省；无细分的直接收起（本次选择已完成）
+  const hasProvinces = v !== 'ALL' && provincesOf(provinceData.value, v, currentLocale()).length > 0
+  regionPickerOpen.value = hasProvinces
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
 
@@ -256,24 +275,49 @@ function chooseRegion(v: string) {
 const regionProvince = ref('')
 const provinceChoices = computed(() => {
   const data = provinceData.value
-  const cc = regionChoice.value
+  const cc = selectedCountry.value
   if (!data || !cc || cc === 'ALL') return []
   return provincesOf(data, cc, currentLocale())
 })
-watch(regionChoice, (cc) => {
-  if (cc === 'ALL' || !regionProvince.value) return
-  // 省份必须属于当前国家，否则清空（防止跨国残留）
-  if (!regionProvince.value.startsWith(cc + '-')) regionProvince.value = ''
+/**
+ * regionChoice ↔ regionProvince 同步（2026-10-09 修正）：
+ * `settings.region` 是**唯一真源**，省选择是它的派生视图——
+ * - regionChoice 为省码（CN-11）→ 同步 regionProvince；
+ * - 变为纯国家码（CN）或 ALL → 省选择跟随清空（防跨国残留）。
+ * （旧实现按"country 前缀"判断，会把省码自己误判为"不属于该国"而清掉。）
+ */
+watch(regionChoice, (v) => {
+  if (v.includes('-')) {
+    regionProvince.value = v
+    return
+  }
+  if (regionProvince.value && !regionProvince.value.startsWith(v + '-')) regionProvince.value = ''
 })
 function chooseRegionProvince(code: string) {
-  regionProvince.value = regionProvince.value === code ? '' : code
-  regionChoice.value = regionProvince.value || selectedCountry.value
+  // 再点一次同省 = 取消省细分（回到纯国家）
+  const next = regionProvince.value === code ? '' : code
+  regionChoice.value = next || selectedCountry.value
+  regionPickerOpen.value = false
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
 /** 当前所选国家（省选择被清空时回退到它） */
 const selectedCountry = computed(() => {
   const r = regionChoice.value
   return r.includes('-') ? r.split('-')[0]! : r
+})
+/**
+ * 已选地区摘要（用户 2026-10-09 反馈：必须一眼看出"我选了哪儿"）。
+ * 形态：「全球」/「中国」/「中国 · 北京」（英文：Beijing, China）。
+ */
+const regionSummary = computed(() => {
+  const r = regionChoice.value
+  if (!r || r === 'ALL') return t('quiz.regionAll')
+  const cc = selectedCountry.value
+  const country = regionLabel(cc)
+  const provName = regionProvince.value
+    ? provinceChoices.value.find((p) => p.code === regionProvince.value)?.name
+    : ''
+  return provName ? `${country} · ${provName}` : country
 })
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
@@ -819,31 +863,51 @@ function onTouchEnd(e: TouchEvent) {
     <!-- 029 M2:地区偏好(L1-L3 生效;L4/L5 全球开放,不显示) -->
     <template v-if="tier <= 3">
       <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepRegion') }}</p>
-      <div class="regions">
+      <p v-if="tier === 1 && firstRoundEver" class="beginner-hint">
+        <Sparkles class="ic" :size="14" /> {{ t('quiz.beginnerHint') }}
+      </p>
+      <!-- 已选摘要（默认收起）：一眼看出"选了哪儿"；点「更改」才展开选择器 -->
+      <div class="region-summary">
+        <span class="region-current">
+          <span class="region-cap muted small">{{ t('quiz.regionCurrent') }}</span>
+          <strong class="region-value">{{ regionSummary }}</strong>
+        </span>
         <button
-          v-for="opt in regionOptions"
-          :key="opt.code"
-          class="tier region"
-          :class="{ on: regionChoice === opt.code }"
-          :title="t('quiz.regionHint')"
-          @click="chooseRegion(opt.code)"
+          type="button"
+          class="region-change"
+          :aria-expanded="regionPickerOpen"
+          @click="regionPickerOpen = !regionPickerOpen"
         >
-          <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : opt.label }}</strong>
+          {{ regionPickerOpen ? t('common.cancel') : t('quiz.regionChange') }}
         </button>
       </div>
-      <!-- 036：省级细分（可选）。选中后按**该省**的地区常见度出题 -->
-      <div v-if="provinceChoices.length" class="provinces">
-        <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
-        <div class="prov-wrap">
+      <div v-if="regionPickerOpen" class="region-picker">
+        <div class="regions">
           <button
-            v-for="p in provinceChoices"
-            :key="p.code"
-            class="prov-pill"
-            :class="{ on: regionProvince === p.code }"
-            @click="chooseRegionProvince(p.code)"
+            v-for="opt in regionOptions"
+            :key="opt.code"
+            class="tier region"
+            :class="{ on: regionChoice === opt.code || (opt.code !== 'ALL' && selectedCountry === opt.code) }"
+            :title="t('quiz.regionHint')"
+            @click="chooseRegion(opt.code)"
           >
-            {{ p.name }}
+            <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : opt.label }}</strong>
           </button>
+        </div>
+        <!-- 036：省级细分（可选）。选中后按**该省**的地区常见度出题 -->
+        <div v-if="provinceChoices.length" class="provinces">
+          <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
+          <div class="prov-wrap">
+            <button
+              v-for="p in provinceChoices"
+              :key="p.code"
+              class="prov-pill"
+              :class="{ on: regionProvince === p.code }"
+              @click="chooseRegionProvince(p.code)"
+            >
+              {{ p.name }}
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -1143,6 +1207,60 @@ function onTouchEnd(e: TouchEvent) {
   margin: 0 auto 10px;
 }
 /* 029 M2：地区偏好（chips 自动换行；仅 L1–L3 显示） */
+/* 已选摘要 + 更改（2026-10-09：选完必须一眼看出选了哪儿） */
+.beginner-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #fff7e6;
+  color: #8a5a00;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+.region-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 auto 10px;
+  max-width: 560px;
+}
+.region-current {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: #eaf4ef;
+}
+.region-cap {
+  font-size: 0.7rem;
+}
+.region-value {
+  font-size: 0.92rem;
+  color: var(--primary-dark, var(--primary));
+}
+.region-change {
+  padding: 7px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.region-change:hover {
+  border-color: var(--primary-light);
+}
+.region-picker {
+  margin-bottom: 6px;
+}
 .provinces {
   margin-top: 8px;
   text-align: left;

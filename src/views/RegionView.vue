@@ -21,6 +21,7 @@ import {
   type ProvinceData,
 } from '@/core/provinces'
 import {
+  hotspotsInProvince,
   hotspotsOf,
   loadHotspots,
   type HotspotData,
@@ -41,7 +42,6 @@ const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
 const provinceData = ref<ProvinceData | null>(null)
 const hotspotData = ref<HotspotData | null>(null)
-const hotspotsOpen = ref(false)
 const expandedHotspot = ref('')
 const failed = ref(false)
 const query = ref('')
@@ -55,6 +55,8 @@ const continent = ref<Continent>('asia')
 const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
+/** 右侧面板标签页：鸟种 / 观鸟点（2026-10-09：从"上下堆叠"改为并列标签，避免观鸟点被淹没） */
+const activeTab = ref<'species' | 'hotspots'>('species')
 /** 选中国家的省级二级列表是否展开（点击已选国家切换） */
 const expanded = ref(true)
 /** 移动端「选择地区」面板是否展开（桌面端始终显示，见 style 媒体查询） */
@@ -223,8 +225,20 @@ const provinceSources = computed(() =>
   (provinceData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
 
-/** 该国观鸟点（腿 B 网格聚合；缺失/无数据则为空，整块隐藏） */
-const hotspotList = computed(() => hotspotsOf(hotspotData.value, selected.value))
+/** 该国观鸟点（腿 B 网格聚合；缺失/无数据则为空，整块隐藏）。
+ *  2026-10-09：选中省份时**按 subnational1 过滤到省**；本省无点时回退全国并在窄条说明。 */
+const hotspotResult = computed(() => {
+  const placed = hotspotsInProvince(hotspotData.value, selected.value, province.value)
+  if (province.value && !placed.matched.length) {
+    return { list: hotspotsOf(hotspotData.value, selected.value), fallback: true }
+  }
+  return {
+    list: province.value ? placed.matched : hotspotsOf(hotspotData.value, selected.value),
+    fallback: false,
+  }
+})
+const hotspotList = computed(() => hotspotResult.value.list)
+const hotspotCountryCount = computed(() => hotspotsOf(hotspotData.value, selected.value).length)
 const hotspotSources = computed(() =>
   (hotspotData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
@@ -388,6 +402,37 @@ function pickProvince(code: string) {
         </aside>
 
         <div class="species">
+          <!-- 右侧标签页：鸟种 / 观鸟点（2026-10-09：不再上下堆叠，观鸟点不再被淹没） -->
+          <div class="panel-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              class="panel-tab"
+              :class="{ active: activeTab === 'species' }"
+              :aria-selected="activeTab === 'species'"
+              @click="activeTab = 'species'"
+            >
+              {{ t('region.tabSpecies') }}
+              <span class="tab-count">{{ gridItems.length }}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="panel-tab"
+              :class="{ active: activeTab === 'hotspots' }"
+              :aria-selected="activeTab === 'hotspots'"
+              @click="activeTab = 'hotspots'"
+            >
+              {{ t('region.tabHotspots') }}
+              <span class="tab-count">
+                {{ hotspotList.length }}
+                <template v-if="province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
+                  {{ t('region.hotspotInProvince', { n: hotspotCountryCount }) }}
+                </template>
+              </span>
+            </button>
+          </div>
+
           <p class="col-title">
             {{
               province
@@ -396,7 +441,7 @@ function pickProvince(code: string) {
             }}
           </p>
 
-          <ul class="species-grid">
+          <ul v-show="activeTab === 'species'" class="species-grid">
             <li v-for="gi in visibleItems" :key="gi.slug">
               <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
                 <img
@@ -418,28 +463,26 @@ function pickProvince(code: string) {
               </RouterLink>
             </li>
           </ul>
-          <div v-if="gridItems.length > visibleItems.length" class="grid-more">
+          <div v-if="activeTab === 'species' && gridItems.length > visibleItems.length" class="grid-more">
             <button class="btn btn-sm" type="button" @click="visibleCount += 200">
               {{ t('region.showMore') }}
             </button>
           </div>
 
-          <p v-if="provinces.length" class="prov-source muted">
+          <p v-if="activeTab === 'species' && provinces.length" class="prov-source muted">
             {{ t('region.provinceSource', { sources: provinceSources }) }}
           </p>
 
-          <!-- 观鸟点（021 M4 腿 B）：默认收起，展开后列表 + 就地详情 -->
-          <div v-if="hotspotList.length" class="hotspots">
-            <button
-              type="button"
-              class="hotspots-toggle"
-              :aria-expanded="hotspotsOpen"
-              @click="hotspotsOpen = !hotspotsOpen"
-            >
-              <span>{{ t('region.hotspotTitle') }}</span>
-              <span class="hotspot-badge">{{ hotspotList.length }}</span>
-            </button>
-            <div v-if="hotspotsOpen" class="hotspot-body">
+          <!-- 观鸟点标签页：就地列表 + 详情（本省过滤，回退时给出说明） -->
+          <div v-show="activeTab === 'hotspots'" class="hotspots">
+            <p v-if="!hotspotList.length" class="muted">{{ t('region.hotspotEmpty') }}</p>
+            <template v-else>
+              <p v-if="province && hotspotResult.fallback" class="hotspot-fallback muted">
+                {{ t('region.hotspotFallback', { n: hotspotList.length }) }}
+              </p>
+              <p v-else-if="province" class="hotspot-scope muted">
+                {{ t('region.hotspotProvinceOnly') }}
+              </p>
               <ul class="hotspot-list">
                 <li v-for="h in hotspotList" :key="h.id">
                   <button
@@ -477,7 +520,7 @@ function pickProvince(code: string) {
               <p class="hotspot-source muted">
                 {{ t('region.hotspotSource', { sources: hotspotSources }) }}
               </p>
-            </div>
+            </template>
           </div>
         </div>
       </div>
@@ -736,34 +779,53 @@ function pickProvince(code: string) {
   margin-top: 10px;
   font-size: 0.68rem;
 }
-.hotspots {
-  margin-top: 14px;
+/* 右侧面板标签页（2026-10-09：鸟种 / 观鸟点并列，替代上下堆叠） */
+.panel-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--border);
 }
-.hotspots-toggle {
+.panel-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #f7faf8;
-  color: var(--text);
-  font-size: 0.85rem;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--text-light);
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
+  margin-bottom: -2px;
 }
-.hotspots-toggle:hover {
-  border-color: var(--primary-light);
+.panel-tab:hover {
+  color: var(--primary);
 }
-.hotspot-badge {
-  background: var(--primary);
-  color: #fff;
+.panel-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.panel-tab .tab-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-light);
+  background: #eef3f0;
   border-radius: 999px;
-  font-size: 0.68rem;
   padding: 1px 7px;
 }
-.hotspot-body {
-  margin-top: 10px;
+.panel-tab.active .tab-count {
+  background: var(--primary);
+  color: #fff;
+}
+.hotspot-scope,
+.hotspot-fallback {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+}
+.hotspots {
+  margin-top: 4px;
 }
 .hotspot-list {
   list-style: none;
