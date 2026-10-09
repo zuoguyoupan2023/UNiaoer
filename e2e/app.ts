@@ -97,25 +97,8 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
     }),
   )
   // 观鸟点（021 M4 腿 B）：网格聚合统计层（US/CN 各若干点）
-  await page.route('**/data/hotspots.json', (r) =>
-    r.fulfill({
-      json: {
-        schemaVersion: 1,
-        generatedAt: 'e2e-fixture',
-        method: 'gbif occurrence grid aggregation',
-        grid: 0.1,
-        thresholds: { minRecords: 1, minSpecies: 1, minObservers: 0 },
-        sources: [{ key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' }],
-        countries: ['CN', 'US'],
-        hotspotCount: 3,
-        hotspots: [
-          { id: 'US-g0.1-340_-1183', name: 'California', lat: 34.05, lng: -118.25, country: 'US', subnational1: 'California', speciesCount: 2, recordCount: 42, observerCount: 5, topSpecies: [{ id: 'sp-01', count: 20 }, { id: 'sp-02', count: 10 }], sources: ['gbif'] },
-          { id: 'US-g0.1-476_-1223', name: 'Washington', lat: 47.6, lng: -122.3, country: 'US', subnational1: 'Washington', speciesCount: 1, recordCount: 21, observerCount: 3, topSpecies: [{ id: 'sp-03', count: 21 }], sources: ['gbif'] },
-          { id: 'CN-g0.1-399_1164', name: 'Beijing', lat: 39.9, lng: 116.4, country: 'CN', subnational1: 'Beijing', speciesCount: 1, recordCount: 30, observerCount: 4, topSpecies: [{ id: 'sp-02', count: 30 }], sources: ['gbif'] },
-        ],
-      },
-    }),
-  )
+  // /region 观鸟点：与 /nearby 同源（eBird 派生点位按国分片）；旧 hotspots.json 已停用
+  await page.route('**/data/hotspots.json', (r) => r.fulfill({ status: 404, body: '' }))
   // 025 M2/M3:全球骨架与区系夹具(1 个 bank 种回桥 + 1 个全球未收录种)
   await page.route('**/data/species-index.json', (r) =>
     r.fulfill({
@@ -179,13 +162,24 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
         grids: { 'CN-g1-39_116': { r: 28504, s: 320, top: [{ id: 'sp-01', count: 900 }] } },
         spots: [
           { i: 'L1001', n: '颐和园 (Summer Palace)', lat: 39.95, lng: 116.35, sub: 'CN-11', p: 270, o: '2026-09-29', grid: 'CN-g1-39_116', km: 8 },
-          { i: 'L1002', n: '远郊湿地', lat: 40.6, lng: 117.2, sub: 'CN-11', p: 120 },
+          { i: 'L1002', n: '南汇东滩', lat: 31.0, lng: 121.9, sub: 'CN-31', p: 120 },
         ],
       },
     }),
   )
   await page.route('**/data/hotspots-ebird/US.json', (r) =>
-    r.fulfill({ json: { schemaVersion: 1, cc: 'US', count: 1, grids: {}, spots: [{ i: 'L2001', n: 'Liberty SP', lat: 39.96, lng: 116.34, p: 305 }] } }),
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        cc: 'US',
+        count: 2,
+        grids: {},
+        spots: [
+          { i: 'L2001', n: 'Central Park', lat: 40.78, lng: -73.97, sub: 'US-NY', p: 305, o: '2026-10-01' },
+          { i: 'L2002', n: 'Jamaica Bay', lat: 40.62, lng: -73.85, sub: 'US-NY', p: 330, o: '2026-09-30' },
+        ],
+      },
+    }),
   )
   await page.route('**/api/geo', (r) =>
     r.fulfill({ json: { ok: true, located: true, lat: 39.95, lng: 116.35, precisionDeg: 0.05, country: 'CN' } }),

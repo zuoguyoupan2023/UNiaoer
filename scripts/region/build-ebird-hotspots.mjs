@@ -8,10 +8,15 @@
  *  ① **体积**：全量 357,094 点 ≈ 67MB（US 一国 30MB），浏览器端不可用；
  *  ② **条款**：eBird ToU 禁止再分发原始数据（`docs/022` §2.5 明示"上线前须评估"）。
  * 故产物是**双重派生的子集**：
- *  - **质量门槛** `--min-species 50`：只留"至少记录过 50 种"的成熟观鸟点（滤掉单次检查单/临时点位）；
+ *  - **质量门槛** `--min-species 6`（2026-10-09 从 50 下调）：只留"至少记录过 6 种"的点位，
+ *    滤掉"只去过一次、记录了 1–5 种"的偶发记录。**不再要求 50 种**——实测被 50 挡掉的多是
+ *    "少人去过但真实存在"的目的地（卧牛山森林公园、阿尔山杜鹃湖、敬亭山…），在欠开发地区
+ *    这恰恰是最需要被列出的点（用户实测反馈：安徽只剩 36 个太少）；
  *  - **空间去重** `--cell-deg 0.25`（≈28km）每格只留物种数最多的 `--per-cell 1` 个。
- * 实测（15 国）：357,094 → 25,326 点（7.1%），合计 ≈4.1MB；25km 半径召回率 91–100%
- * （即绝大多数人口覆盖范围内 25km 内至少有一个点），CN 1,171 点 / 231KB。
+ *    **体积与"派生"性质主要由这条保证**：每格只出一个，且**纯加性**——下调门槛只会填补
+ *    原先空着的格，绝不会把同一格里更好的点位挤掉（格内仍取物种数最多者）。
+ * 实测（15 国）：357,094 → 31,279 点（8.8%），合计 ≈5.5MB；25km 半径召回率 ≥92%，
+ * CN 1,929 点（安徽 69）。
  *
  * ## 三层结构（去重：GBIF 网格统计按 id 只存一份）
  * ```jsonc
@@ -28,7 +33,7 @@
  *   n=名称 · lat/lng=坐标 · sub=省码 · p=该点记录过的鸟种数 · o=最近记录日期
  *   grid/km=最近的 GBIF 1° 网格 id 与其中心距离（km，用于"这一带有什么"）
  *
- * CLI：npm run region:nearby-spots -- [--min-species 50] [--cell-deg 0.25] [--per-cell 1]
+ * CLI：npm run region:nearby-spots -- [--min-species 6] [--cell-deg 0.25] [--per-cell 1]
  *        [--countries CN,US] [--out dir] [--no-gbif]
  */
 import fs from 'node:fs/promises'
@@ -43,7 +48,7 @@ const args = parseArgs(process.argv.slice(2))
 const readJson = async (p) => JSON.parse(await fs.readFile(p, 'utf8'))
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d)
 
-const MIN_SPECIES = Math.max(0, num(args['min-species'], 50))
+const MIN_SPECIES = Math.max(0, num(args['min-species'], 6))
 const CELL_DEG = Math.max(0, num(args['cell-deg'], 0.25))
 const PER_CELL = Math.max(1, num(args['per-cell'], 1))
 /** 与 GBIF 网格中心的最大挂接距离（km）；超出则视作"附近没有网格统计" */

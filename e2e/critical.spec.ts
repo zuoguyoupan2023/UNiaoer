@@ -349,16 +349,18 @@ test.describe('入口与页面', () => {
     await spotsTab.click()
     await expect(spotsTab).toHaveAttribute('aria-selected', 'true')
 
-    const ca = page.locator('.hotspot-btn', { hasText: 'California' })
-    await expect(ca).toBeVisible()
-    await expect(ca).toContainText('条记录')
+    // 数据源已统一为 eBird 派生点位（按国分片）：列表显示该点鸟种数与最近记录日期
+    const park = page.locator('.hotspot-btn', { hasText: 'Central Park' })
+    await expect(park).toBeVisible()
+    await expect(park).toContainText('305 种')
+    await expect(park).toContainText('最近记录')
 
-    // 就地详情：常见鸟种（可跳物种详情）+ 来源署名
-    await ca.click()
+    // 就地详情：eBird 官方热点外链 + 来源署名（点位自带 eBird 署名）
+    await park.click()
     const detail = page.locator('.hotspot-detail')
     await expect(detail).toContainText('常见鸟种')
-    await expect(detail).toContainText('测试鸟1')
-    await expect(page.locator('.hotspot-source')).toContainText('GBIF')
+    await expect(detail.locator('a.hotspot-ext')).toHaveAttribute('href', 'https://ebird.org/hotspot/L2001')
+    await expect(page.locator('.hotspot-source')).toContainText('eBird')
 
     // 切回鸟种标签页：物种网格可见、观鸟点列表隐藏（v-show 保留节点但不可见）
     const speciesTab = page.getByRole('tab', { name: /鸟种/ })
@@ -369,12 +371,14 @@ test.describe('入口与页面', () => {
 
   test('地区浏览：观鸟点按省过滤（选省后只见本省点）', async ({ page }) => {
     await page.goto('/region')
-    // 默认中国：点省份「北京市」后，观鸟点标签只应显示北京（夹具 CN-Beijing）
+    // 默认中国：全国 2 个点位（北京 CN-11 + 上海 CN-31）；点省份「北京市」后只剩北京的 1 个
     await page.locator('.prov-btn[data-prov="CN-11"]').click()
     const spotsTab = page.getByRole('tab', { name: /观鸟点/ })
     await spotsTab.click()
     await expect(page.locator('.hotspot-btn')).toHaveCount(1)
-    await expect(page.locator('.hotspot-btn')).toContainText('Beijing')
+    await expect(page.locator('.hotspot-btn')).toContainText('颐和园')
+    // 计数措辞必须区分"本省 / 全国"（曾误把全国数标成"本省"）
+    await expect(spotsTab).toContainText('全国 2 个')
   })
 
   test('公开统计（028）：数字卡/近 30 日条形/徽章与称号榜 + 口径说明', async ({ page }) => {
@@ -489,9 +493,10 @@ test.describe('入口与页面', () => {
     await expect(page.getByText(/eBird \(Cornell Lab of Ornithology\)/)).toBeVisible()
     await expect(page.getByText(/至少 50 种/)).toBeVisible()
 
-    // 手选国家：切到 US → 换成美国夹具点位
+    // 手选国家：切到 US → 数据源换成美国分片；美国点位远在 10^4 km 外 → 该半径内无点
     await page.locator('.sel').selectOption('US')
-    await expect(page.locator('.spot').first()).toContainText('Liberty SP')
+    await expect(page.locator('.spot')).toHaveCount(0)
+    await expect(page.getByText(/暂无符合条件的观鸟点/)).toBeVisible()
   })
 
   test('全球物种层（025）：未收录标记、轻量详情与 bank 回归', async ({ page }) => {

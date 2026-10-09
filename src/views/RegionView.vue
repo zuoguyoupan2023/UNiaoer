@@ -21,11 +21,13 @@ import {
   type ProvinceData,
 } from '@/core/provinces'
 import {
+  ebirdHotspotUrl,
   hotspotsInProvince,
-  hotspotsOf,
+  loadCountrySpots,
   loadHotspots,
-  type HotspotData,
-  type HotspotTopSpecies,
+  spotsOf,
+  type HotspotIndex,
+  type Hotspot,
 } from '@/core/hotspots'
 import { currentLocale } from '@/i18n'
 import {
@@ -41,7 +43,9 @@ const { t, locale } = useI18n()
 const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
 const provinceData = ref<ProvinceData | null>(null)
-const hotspotData = ref<HotspotData | null>(null)
+const hotspotData = ref<HotspotIndex | null>(null)
+/** 当前所选国家的点位（懒加载；null = 加载中/无数据） */
+const countrySpots = ref<Hotspot[]>([])
 const expandedHotspot = ref('')
 const failed = ref(false)
 const query = ref('')
@@ -61,6 +65,8 @@ const activeTab = ref<'species' | 'hotspots'>('species')
 const expanded = ref(true)
 /** 移动端「选择地区」面板是否展开（桌面端始终显示，见 style 媒体查询） */
 const pickerOpen = ref(false)
+/** 与 region:nearby-spots 的 --cell-deg 一致（仅用于署名文案） */
+const CELL_DEG = 0.25
 /** 目录排序：名称（zh 拼音 / en 首字母）或鸟种数；一级二级共用 */
 const sortMode = ref<'name' | 'count'>('name')
 
@@ -74,8 +80,9 @@ onMounted(async () => {
     bySpecies.value = data.bySpecies ?? {}
     // 省级层：缺失则整层不显示（021 §2.5 薄数据回退国家层）
     provinceData.value = await loadProvinces()
-    // 观鸟点（021 M4 腿 B）：缺失则整块不显示
+    // 观鸟点（eBird 派生点位）：索引缺失则整块不显示
     hotspotData.value = await loadHotspots()
+    void loadSpotsFor(selected.value)
   } catch {
     failed.value = true
   }
@@ -228,25 +235,33 @@ const provinceSources = computed(() =>
 /** 该国观鸟点（腿 B 网格聚合；缺失/无数据则为空，整块隐藏）。
  *  2026-10-09：选中省份时**按 subnational1 过滤到省**；本省无点时回退全国并在窄条说明。 */
 const hotspotResult = computed(() => {
-  const placed = hotspotsInProvince(hotspotData.value, selected.value, province.value)
-  if (province.value && !placed.matched.length) {
-    return { list: hotspotsOf(hotspotData.value, selected.value), fallback: true }
+  const placed = hotspotsInProvince(countrySpots.value, province.value)
+  if (province.value && !placed.matched.length && countrySpots.value.length) {
+    return { list: countrySpots.value, fallback: true }
   }
-  return {
-    list: province.value ? placed.matched : hotspotsOf(hotspotData.value, selected.value),
-    fallback: false,
-  }
+  return { list: province.value ? placed.matched : countrySpots.value, fallback: false }
 })
 const hotspotList = computed(() => hotspotResult.value.list)
-const hotspotCountryCount = computed(() => hotspotsOf(hotspotData.value, selected.value).length)
+/** 该国点位总数（用于「省份筛选 x（全国 y）」里的 y） */
+const hotspotCountryCount = computed(() => countrySpots.value.length)
 const hotspotSources = computed(() =>
   (hotspotData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
+/** 按国懒加载点位（切国时调用；失败 → 空数组，页面走空态） */
+async function loadSpotsFor(cc: string) {
+  if (!cc) {
+    countrySpots.value = []
+    return
+  }
+  const file = await loadCountrySpots(cc)
+  countrySpots.value = spotsOf(file)
+}
+
 function toggleHotspot(id: string) {
   expandedHotspot.value = expandedHotspot.value === id ? '' : id
 }
 /** 代表鸟种显示名：有 manifest id 用本地化名，否则回退学名 */
-function topSpeciesName(s: HotspotTopSpecies): string {
+function topSpeciesName(s: Hotspot['topSpecies'][number]): string {
   const sp = s.id ? speciesById(s.id) : undefined
   return sp ? nameOf(sp) : (s.sci ?? s.id ?? '')
 }
@@ -272,6 +287,7 @@ watch(selected, () => {
   province.value = ''
   expanded.value = true
   expandedHotspot.value = ''
+  void loadSpotsFor(selected.value)
 })
 
 /**
@@ -427,7 +443,7 @@ function pickProvince(code: string) {
               <span class="tab-count">
                 {{ hotspotList.length }}
                 <template v-if="province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
-                  {{ t('region.hotspotInProvince', { n: hotspotCountryCount }) }}
+                  {{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}
                 </template>
               </span>
             </button>
@@ -496,15 +512,19 @@ function pickProvince(code: string) {
                       {{ h.name || `${h.lat.toFixed(2)}, ${h.lng.toFixed(2)}` }}
                     </span>
                     <span class="hotspot-stat muted">
-                      {{ t('region.hotspotRecords', { n: h.recordCount }) }}
+                      {{ t('region.hotspotSpeciesN', { n: h.speciesCount }) }}
+                      <template v-if="h.latestObs"> · {{ t('region.hotspotLatest', { d: h.latestObs }) }}</template>
                     </span>
                   </button>
                   <div v-if="expandedHotspot === h.id" class="hotspot-detail">
-                    <p class="hotspot-meta muted">
-                      {{ t('region.hotspotSpeciesN', { n: h.speciesCount }) }} ·
-                      {{ t('region.hotspotObservers', { n: h.observerCount }) }}
+                    <!-- 明确区分"本点"与"这一带"：本点用 eBird 鸟种数；网格是周边统计，不冒充本点 -->
+                    <p v-if="h.gridRecords" class="hotspot-meta muted">
+                      {{ t('region.hotspotGridNearby', { km: h.gridKm ?? 0, r: h.gridRecords }) }}
                     </p>
                     <p class="hotspot-sub">{{ t('region.hotspotTopSpecies') }}</p>
+                    <a class="hotspot-ext" :href="ebirdHotspotUrl(h.id)" target="_blank" rel="noopener noreferrer">
+                      {{ t('region.hotspotOnEbird') }}
+                    </a>
                     <ul class="hotspot-spp">
                       <li v-for="(s, si) in h.topSpecies" :key="si">
                         <RouterLink v-if="s.id && speciesById(s.id)" :to="`/species/${s.id}`">
@@ -518,7 +538,7 @@ function pickProvince(code: string) {
                 </li>
               </ul>
               <p class="hotspot-source muted">
-                {{ t('region.hotspotSource', { sources: hotspotSources }) }}
+                {{ t('region.hotspotSource', { sources: hotspotSources, n: CELL_DEG }) }}
               </p>
             </template>
           </div>
