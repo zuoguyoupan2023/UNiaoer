@@ -40,6 +40,14 @@ jobs:
       - name: Check species index
         run: npm run check:index
 
+      # 029 M1：manifest 三层产物（core/assets/global）一致性（纯本地）
+      - name: Check manifest layers
+        run: npm run check:layers
+
+      # 041 A1：/catalog 名录产物结构/计数/manifest/骨架/拼音键校验（纯本地）
+      - name: Check catalog
+        run: npm run check:catalog
+
       # 015 i18n-5：CJK 字面量门禁 + zh-CN/en key 对齐校验
       - name: i18n scan (unwrapped CJK literals)
         run: npm run i18n:scan

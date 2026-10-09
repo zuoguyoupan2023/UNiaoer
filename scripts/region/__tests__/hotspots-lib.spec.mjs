@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { aggregateHotspots, applyEbirdNames, buildHotspotIndex, cellKey, indexedNearest } from '../hotspots-lib.mjs'
+import {
+  aggregateHotspots,
+  applyEbirdNames,
+  buildHotspotIndex,
+  cellKey,
+  fillSubnationalFromCells,
+  indexedNearest,
+} from '../hotspots-lib.mjs'
+import { buildIndex } from '../adapters/iso3166.mjs'
 
 const rec = (o) => ({
   key: o.key ?? Math.random().toString(36).slice(2),
@@ -126,5 +134,74 @@ describe('buildHotspotIndex / indexedNearest', () => {
     expect(indexedNearest(idx, 39.949, 116.401, 10)?.id).toBe('a')
     expect(indexedNearest(idx, 40.005, 116.401, 10)?.id).toBe('b')
     expect(indexedNearest(idx, 0, 0, 10)).toBeNull()
+  })
+})
+
+describe('fillSubnationalFromCells（041 A2）', () => {
+  const index = buildIndex(
+    {
+      CN: { 'CN-11': 'Beijing', 'CN-31': 'Shanghai', 'CN-44': 'Guangdong' },
+      US: { 'US-CA': 'California', 'US-NV': 'Nevada', 'US-AZ': 'Arizona' },
+      JP: { 'JP-13': 'Tōkyō [Tokyo]' },
+    },
+    ['CN', 'US', 'JP'],
+  )
+  const cell = (cc, lat, lng, province, n) => ({ countrycode: cc, stateprovince: province, latb: lat, lngb: lng, n })
+
+  it('多数票补省码，标记来源；已有省码不覆盖，不改其他字段', () => {
+    const hotspots = [
+      { id: 'a', country: 'CN', lat: 39.5, lng: 116.5, subnational1: undefined, sources: ['gbif'] },
+      { id: 'b', country: 'CN', lat: 30.5, lng: 121.5, subnational1: 'CN-31', sources: ['gbif'] }, // 已有 → 不动
+      { id: 'c', country: 'CN', lat: 20, lng: 30, subnational1: undefined, sources: ['gbif'] }, // 无数据 → 不动
+    ]
+    const rows = [cell('CN', 39, 116, 'Beijing', 10), cell('CN', 30, 121, 'Shanghai', 99)]
+    const { hotspots: out, filled } = fillSubnationalFromCells(hotspots, rows, index, { grid: 1 })
+    expect(filled).toBe(1)
+    expect(out[0]).toMatchObject({ id: 'a', subnational1: 'CN-11', subnational1Source: 'gbif-cell' })
+    expect(out[1]).toEqual(hotspots[1])
+    expect(out[2]).toEqual(hotspots[2])
+  })
+
+  it('份额不足 minShare 的跨界网格放弃（宁缺勿错）', () => {
+    const hotspots = [{ id: 'x', country: 'US', lat: 39.5, lng: -120.5, sources: ['gbif'] }]
+    // 同格内 CA 5 / NV 4 / AZ 3：多数票 CA 份额 5/12 < 0.5 → 放弃；放宽到 0.4 才采纳
+    const rows = [
+      cell('US', 39, -121, 'California', 5),
+      cell('US', 39, -121, 'Nevada', 4),
+      cell('US', 39, -121, 'Arizona', 3),
+    ]
+    const half = fillSubnationalFromCells(hotspots, rows, index, { grid: 1, minShare: 0.5 })
+    expect(half.filled).toBe(0)
+    expect(half.skipped).toBe(1)
+    expect(half.hotspots[0].subnational1).toBeUndefined()
+    const loose = fillSubnationalFromCells(hotspots, rows, index, { grid: 1, minShare: 0.4 })
+    expect(loose.filled).toBe(1)
+    expect(loose.hotspots[0].subnational1).toBe('US-CA')
+  })
+
+  it('省名走 ISO 映射（含别名）；映射不到或非法行丢弃', () => {
+    const hotspots = [
+      { id: 'j', country: 'JP', lat: 35.5, lng: 139.5, sources: ['gbif'] },
+      { id: 'u', country: 'US', lat: 34.5, lng: -118.5, sources: ['gbif'] },
+    ]
+    const rows = [
+      cell('JP', 35, 139, 'Tokyo', 20), // 赫本式 → JP-13（NAME_ALIASES）
+      cell('US', 34, -119, 'CA', 20), // 两位缩写 → US-CA
+      cell('US', 33, -117, 'Pacific Ocean', 50), // 映射不到 → 丢弃
+      { countrycode: 'US', stateprovince: 'Nevada', latb: 'NaN', lngb: 1, n: 5 }, // 非法坐标 → 丢弃
+    ]
+    const { hotspots: out, filled } = fillSubnationalFromCells(hotspots, rows, index, { grid: 1 })
+    expect(filled).toBe(2)
+    expect(out[0].subnational1).toBe('JP-13')
+    expect(out[1].subnational1).toBe('US-CA')
+  })
+
+  it('只有支持的 15 国参与补全（其他国家原样返回）；grid 非法抛错', () => {
+    const hotspots = [{ id: 'k', country: 'KE', lat: 1.5, lng: 36.5, sources: ['gbif'] }]
+    const rows = [cell('KE', 1, 36, 'Nairobi', 100)]
+    const { hotspots: out, filled } = fillSubnationalFromCells(hotspots, rows, index, { grid: 1 })
+    expect(filled).toBe(0)
+    expect(out[0]).toEqual(hotspots[0])
+    expect(() => fillSubnationalFromCells([], [], index, { grid: 0 })).toThrow(/grid/)
   })
 })

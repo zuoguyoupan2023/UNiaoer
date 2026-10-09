@@ -20,6 +20,8 @@
 4. **改完必须自检。** 交付前跑：`npm run lint` && `npm test` && `npm run build`。
    - **动了 D1 相关代码或 schema/seed，必须再手动跑 `npm run check:sync`**（CI 不跑它；
      2026-10-08 事故正是「Worker 部署了带新列的查询、D1 结构没同步」——见 `docs/032`）。
+   - 动了产物构建脚本（`build-manifest-layers` / `build-hotspots-gbif` / `region:*` 等），同步跑对应门禁：
+     `check:layers`（manifest 三层）· `check:catalog`（名录）· `check:region`（地区层）；前三者 CI 已接入，但**产物是提交物**，本地重建后必须自检再提交。
    - **`sync:prod` 单次写入 ≈43,410 行（10 万/天额度的 43%）→ 单日最多跑 2 次**；
      跑前可用 `npm run d1:usage` 看当日已用额度。
    - 所有"响应后仍需完成"的副作用（Cache API 写入等）必须 `ctx.waitUntil(...)` 或 await——
@@ -71,12 +73,14 @@
 | 抓 ISO 3166-2 省级基准清单（021 M2，缓存到 data-cache） | `npm run region:subdiv` |
 | 构建季节层 / 省级层（`-- --mock` 全离线；产 `public/data/*.json`） | `npm run region:build` / `npm run region:provinces` |
 | 构建观鸟点（XC 源；`-- --mock` 离线） | `npm run region:hotspots` |
-| 构建观鸟点（GBIF SQL 1° 源 + eBird 命名；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names` |
+| 构建观鸟点（GBIF SQL 1° 源 + eBird 命名 + 网格×省补码；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names --cell-provinces <GBIF 下载 key，如 0017635-260928105237408>` |
 | 构建全球区系层（GBIF SQL 国家矩阵 → `species-distribution.json`；025 M1） | `npm run region:distribution`（`-- --mock --out …` 离线） |
 | 抓 eBird 热点/区划到缓存（需 `EBIRD_API_KEY`） | `npm run region:ebird` |
 | GBIF SQL 下载（提交/续传/列表；需 GBIF 账号） | `npm run region:gbif-sql -- --sql "..."` / `-- --key <key>` / `-- --list` |
 | 地区 SQL 对照校验（仅报告，不改产物） | `npm run region:verify-provinces` / `region:verify-seasonality` / `region:verify-hotspots` |
-| 地区产物校验（结构/署名/无边界几何；CI 用 `-- --no-net`） | `npm run check:region` |
+| 地区产物校验（结构/署名/无边界几何/观鸟点省码覆盖率地板；CI 用 `-- --no-net`） | `npm run check:region` |
+| 名录产物校验（`catalog.json` 结构/计数/manifest/骨架/拼音键；CI 已接入） | `npm run check:catalog` |
+| manifest 三层产物校验（core/assets/global 与完整层一致；CI 已接入） | `npm run check:layers` |
 | 拉 AviList v2025b（全球名录 xlsx → data-cache/taxonomy，gitignore；CC BY 4.0） | `npm run taxonomy:avilist`（`--refresh` 重下） |
 | 抓 Wikidata 中文名（specieswiki 标题反查，断点缓存；CC0） | `npm run taxonomy:wikidata-zh`（`--limit N` 冒烟 / `--refresh` 重抓） |
 | GBIF backbone 批量键位匹配（v2 match → 断点缓存；023 P1-b） | `npm run taxonomy:gbif-match`（`--limit N` 冒烟 / `--refresh` 重抓） |

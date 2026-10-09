@@ -25,6 +25,8 @@ export interface Hotspot {
   lng: number
   country: string
   subnational1?: string
+  /** 省码来源（041 A2）：'gbif-cell' 为网格×省多数票补全；eBird 命名自带的旧数据无此字段 */
+  subnational1Source?: 'gbif-cell' | 'ebird'
   speciesCount: number
   recordCount: number
   observerCount: number
@@ -64,11 +66,12 @@ export function hotspotsOf(data: HotspotData | null, country: string): Hotspot[]
 
 /**
  * 某省观鸟点（036/037 地区下钻）：按 `subnational1`（ISO 3166-2 省码）过滤。
- * 数据现状（2026-10-09）：15 国中 3,215/5,588 个点带省码；CN 331/706。
+ * 数据现状（2026-10-09 041 A2 补码后）：5,557/5,588 个点带省码（99.4%；CN 704/706）——
+ * eBird 就近命名 3,215 + GBIF 网格×省多数票 2,342。无省码的点只剩 31 个。
  *
  * 返回结构区分"有没有省归属"：
  * - `matched`：属于该省的点；
- * - `unassigned`：该国**无省码**的点（eBird 就近命名失败），不能算作该省；
+ * - `unassigned`：该国**无省码**的点（eBird 与网格补码都没定下来），不能算作该省；
  * - 无省码的点**不会**混进某省列表（避免"选上海看到全国"）。
  */
 export function hotspotsInProvince(

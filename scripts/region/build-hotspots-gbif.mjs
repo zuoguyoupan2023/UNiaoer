@@ -3,20 +3,23 @@
  * `public/data/hotspots.json`，并用 eBird 热点就近命名（可选）。
  *
  * 数据链：cell 聚合（records/species/observers，精确 distinct）+ species 明细（topSpecies）
- *        → 阈值过滤 → 物种学名映射 manifest id → eBird 就近命名/补 subnational1。
+ *        → 阈值过滤 → 物种学名映射 manifest id → eBird 就近命名/补 subnational1
+ *        → 041 A2：GBIF 网格×stateProvince 补省码（eBird 命名覆盖不到的格）
  * 体积：1° 网格 + 阈值，控制在 021 §2.3 的 2MB 内。
  *
  * CLI：npm run region:hotspots-gbif -- [--ebird-names] [--grid 1] [--top 5]
  *        [--min-records 5] [--min-species 3] [--min-observers 3] [--cell in.json] [--sp in.json] [--out path]
+ *        [--cell-provinces in.json] [--min-province-share 0.5]
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from '../lib/util.mjs'
 import { hotspotRecords } from './adapters/ebird.mjs'
-import { applyEbirdNames } from './hotspots-lib.mjs'
+import { buildIndex } from './adapters/iso3166.mjs'
+import { applyEbirdNames, fillSubnationalFromCells } from './hotspots-lib.mjs'
 import { normBinomial } from './verify-provinces-lib.mjs'
-import { EBIRD_SOURCE, GBIF_SQL_SOURCE, HOTSPOT_DEFAULTS, SUPPORTED_COUNTRIES } from './config.mjs'
+import { EBIRD_SOURCE, GBIF_SQL_SOURCE, HOTSPOT_DEFAULTS, SUBDIVISION_SOURCE, SUPPORTED_COUNTRIES } from './config.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 const args = parseArgs(process.argv.slice(2))
@@ -30,7 +33,14 @@ const MIN_OBSERVERS = num(args['min-observers'], HOTSPOT_DEFAULTS.minObservers)
 const TOP = Math.max(1, num(args.top, 3))
 
 async function findSql(prefix, explicit) {
-  if (explicit) return path.resolve(ROOT, explicit)
+  if (explicit) {
+    // 允许「下载 key」或相对仓库根的路径（与 region:gbif-sql 落盘位置一致）
+    const direct = path.resolve(ROOT, explicit)
+    if (await fs.stat(direct).then(() => true).catch(() => false)) return direct
+    const byKey = path.join(ROOT, 'data-cache/region/gbif-sql', `${explicit}.json`)
+    if (await fs.stat(byKey).then(() => true).catch(() => false)) return byKey
+    return direct // 交给 readFile 报错（路径更直观）
+  }
   const dir = path.join(ROOT, 'data-cache/region/gbif-sql')
   const files = (await fs.readdir(dir).catch(() => [])).filter((f) => new RegExp(`^${prefix}-.*\\.json$`).test(f)).sort()
   if (!files.length) throw new Error(`找不到 SQL 结果（先 npm run region:gbif-sql -- --key ${prefix}-…）`)
@@ -109,6 +119,33 @@ if (args['ebird-names']) {
   console.log(`region-hotspots-gbif: eBird 名录 ${spots.length} · 命名 ${ebirdNamed} 个 cell`)
 }
 
+// 041 A2：eBird 命名覆盖不到的格，用 GBIF「网格 × stateProvince」多数票补省码。
+// 输入 SQL（DOI 另记）：SELECT countrycode, stateprovince, FLOOR(decimallatitude) latb,
+//   FLOOR(decimallongitude) lngb, COUNT(*) n ... WHERE class='Aves' AND stateprovince IS NOT NULL
+//   AND countrycode IN (15 国) AND "year">=2021 GROUP BY countrycode, stateprovince, FLOOR(lat), FLOOR(lng)
+let cellProvinces = { filled: 0, skipped: 0 }
+const MIN_PROVINCE_SHARE = num(args['min-province-share'], 0.5)
+if (args['cell-provinces']) {
+  const cellProvinceFile = path.resolve(ROOT, String(args['cell-provinces']))
+  const resolved = await fs.stat(cellProvinceFile).then(() => cellProvinceFile)
+    .catch(() => path.join(ROOT, 'data-cache/region/gbif-sql', `${args['cell-provinces']}.json`))
+  const rows = await readJson(resolved)
+  const subsRaw = await readJson(path.join(ROOT, 'data-cache/region/iso3166-2/subs.json'))
+  const index = buildIndex(subsRaw.subdivisions || subsRaw, SUPPORTED_COUNTRIES)
+  const res = fillSubnationalFromCells(hotspots, rows, index, { grid: GRID, minShare: MIN_PROVINCE_SHARE })
+  hotspots.length = 0
+  hotspots.push(...res.hotspots)
+  cellProvinces = { filled: res.filled, skipped: res.skipped }
+  console.log(
+    `region-hotspots-gbif: 网格×省聚合 ${rows.length} 行 → 补省码 ${res.filled} 个 cell` +
+      `（份额不足放弃 ${res.skipped}；来源 ${path.relative(ROOT, resolved)}）`,
+  )
+}
+
+const sources = new Set([GBIF_SQL_SOURCE])
+if (ebirdNamed > 0) sources.add(EBIRD_SOURCE)
+if (cellProvinces.filled > 0) sources.add(SUBDIVISION_SOURCE)
+
 const out = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
@@ -116,11 +153,14 @@ const out = {
     `GBIF SQL ${GRID}° 网格（class='Aves'，近 ${new Date().getFullYear() - 2020}+ 年，` +
     `countrycode ∈ ${SUPPORTED_COUNTRIES.length} 国）；cell=records/species/observers（精确 distinct），` +
     `topSpecies 取网格内记录数前 ${TOP}；阈值 records≥${MIN_RECORDS} 且 species≥${MIN_SPECIES} 且 observers≥${MIN_OBSERVERS}` +
-    (ebirdNamed ? `；${ebirdNamed} 个 cell 由 eBird 热点就近命名` : ''),
+    (ebirdNamed ? `；${ebirdNamed} 个 cell 由 eBird 热点就近命名` : '') +
+    (cellProvinces.filled
+      ? `；${cellProvinces.filled} 个无省码的 cell 按 GBIF 网格内 stateProvince 多数票（份额≥${MIN_PROVINCE_SHARE}）补省码`
+      : ''),
   source: 'gbif-sql',
   grid: GRID,
   thresholds: { minRecords: MIN_RECORDS, minSpecies: MIN_SPECIES, minObservers: MIN_OBSERVERS },
-  sources: ebirdNamed > 0 ? [GBIF_SQL_SOURCE, EBIRD_SOURCE] : [GBIF_SQL_SOURCE],
+  sources: [...sources],
   countries: [...new Set(hotspots.map((h) => h.country))].sort(),
   hotspotCount: hotspots.length,
   hotspots,

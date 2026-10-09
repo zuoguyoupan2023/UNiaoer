@@ -187,7 +187,7 @@ function checkProvinces(name, data) {
   }
 }
 
-/** hotspots.json（M4 腿 B 网格聚合观鸟点） */
+/** hotspots.json（M4 腿 B 网格聚合观鸟点；041 A2 起含网格×省补码） */
 function checkHotspots(name, data) {
   check(typeof data.grid === 'number' && data.grid > 0, `${name}: grid 必须为正数`)
   const th = data.thresholds || {}
@@ -195,6 +195,8 @@ function checkHotspots(name, data) {
     check(Number.isInteger(th[k]) && th[k] >= 0, `${name}: thresholds.${k} 非法`)
   }
   check(Array.isArray(data.hotspots), `${name}: hotspots 必须是数组`)
+  let withSub = 0
+  const bySource = {}
   for (const [i, h] of (data.hotspots || []).entries()) {
     const at = `${name}: hotspot[${i}]`
     check(typeof h?.id === 'string' && h.id, `${at} id 缺失`)
@@ -220,6 +222,35 @@ function checkHotspots(name, data) {
       Array.isArray(h?.sources) && h.sources.length > 0 && h.sources.every((s) => typeof s === 'string' && s),
       `${at} sources（逐条署名）缺失`,
     )
+    // 041 A2：省码必须与所在国家对得上；subnational1Source 只允许已知取值
+    if (h?.subnational1 !== undefined) {
+      withSub++
+      check(
+        String(h.subnational1).startsWith(h.country + '-'),
+        `${at} subnational1 ${h.subnational1} 与国家 ${h.country} 不匹配`,
+      )
+      if (h.subnational1Source !== undefined) {
+        check(
+          h.subnational1Source === 'gbif-cell' || h.subnational1Source === 'ebird',
+          `${at} subnational1Source 非法（${h.subnational1Source}）`,
+        )
+        bySource[h.subnational1Source] = (bySource[h.subnational1Source] || 0) + 1
+      }
+    } else {
+      check(h?.subnational1Source === undefined, `${at} 无 subnational1 却带 subnational1Source`)
+    }
+  }
+  // 覆盖率地板：eBird 命名 3215/5588（57.5%）；补码后应显著高于它。跌破说明补码链断裂。
+  const total = (data.hotspots || []).length
+  const ratio = total ? withSub / total : 0
+  check(
+    ratio >= 0.55,
+    `${name}: 省码覆盖率 ${(ratio * 100).toFixed(1)}%（${withSub}/${total}）低于 55% 地板` +
+      `（eBird 命名应已提供 ~57%；见 041 A2）`,
+  )
+  if (total && withSub) {
+    const detail = Object.entries(bySource).map(([k, v]) => `${k} ${v}`).join(' · ')
+    console.log(`  · 观鸟点：${total} 点 · 带省码 ${withSub}（${(ratio * 100).toFixed(1)}%${detail ? ` · ${detail}` : ''}）`)
   }
 }
 

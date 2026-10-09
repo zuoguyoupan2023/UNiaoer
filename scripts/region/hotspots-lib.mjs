@@ -9,6 +9,8 @@
  * - 不知情不编造：缺 observer / date 的字段如实计，不推断补齐。
  */
 import { distanceKm } from './adapters/ebird.mjs'
+import { matchSubdivision } from './adapters/iso3166.mjs'
+import { SUPPORTED_COUNTRIES } from './config.mjs'
 
 /** 网格单元键（floor，负坐标同样成立）；toFixed 规避 39.9/0.1 = 398.99… 的浮点误差 */
 export function cellKey(lat, lng, size) {
@@ -212,4 +214,72 @@ export function applyEbirdNames(hotspots, ebirdHotspots, { maxKm = 3 } = {}) {
       sources: [...new Set([...(h.sources || []), 'ebird'])].sort(),
     }
   })
+}
+
+/**
+ * 041 A2：用 GBIF 「网格 × stateProvince」聚合，为**仍无省码**的观鸟点补 subnational1。
+ *
+ * 背景：`hotspots.json` 的省码此前只来自 eBird 就近命名（≤maxKm 命中才带）——
+ * 精度 1° 的网格中心常落在 eBird 热点稀疏区（CN 331/706），选省浏览时这些点只能算「未归属」。
+ * GBIF 记录自带 `stateProvince` 自由文本（面广得多），可把每个网格的省归属定下来。
+ *
+ * 口径（021 §2.5「不知情不编造」）：
+ * - 只统计落在该网格内的记录（同一 floor 规则，与本产物口径一致）；
+ * - 取**记录数最多**的省（多数票），但要求该省份额 ≥ `minShare`（默认 0.5）——
+ *   跨界网格若省分布零散就放弃，宁缺勿错；
+ * - 省名经 ISO 3166-2 适配器映射（含 CN 历史拼写/日本赫本式等别名），映射不到直接丢弃；
+ * - 只补 `subnational1`（`subnational1Source` 记录来源便于抽检），**不覆盖**已有省码，不改其他字段。
+ *
+ * @param {Array} hotspots 观鸟点（aggregateHotspots / applyEbirdNames 输出）
+ * @param {Array<{countrycode,stateprovince,latb,lngb,n}>} rows GBIF 网格×省聚合行（latb/lngb 为 floor 计数）
+ * @param {object} index ISO 3166-2 索引（buildIndex 的输出）
+ * @param {{grid?:number,minShare?:number,onlyMissing?:boolean}} opts
+ */
+export function fillSubnationalFromCells(hotspots, rows, index, { grid = 1, minShare = 0.5, onlyMissing = true } = {}) {
+  if (!(grid > 0)) throw new Error('hotspots-lib: grid 必须为正数')
+  // 格键 → 省码 → 记录数（格键用与本产物相同的 floor 规则，字符串对齐 SQL 输出）
+  const cells = new Map()
+  for (const r of rows || []) {
+    const n = Number(r?.n) || 0
+    if (n <= 0) continue
+    const cc = String(r?.countrycode || '').toUpperCase()
+    const latb = Number(r?.latb)
+    const lngb = Number(r?.lngb)
+    if (!cc || !Number.isFinite(latb) || !Number.isFinite(lngb)) continue
+    const code = matchSubdivision(index, cc, r.stateprovince)
+    if (!code) continue
+    const ck = `${cc}|${Math.floor(latb)}|${Math.floor(lngb)}`
+    let cell = cells.get(ck)
+    if (!cell) {
+      cell = new Map()
+      cells.set(ck, cell)
+    }
+    cell.set(code, (cell.get(code) || 0) + n)
+  }
+
+  let filled = 0
+  let skipped = 0
+  const out = (hotspots || []).map((h) => {
+    if (onlyMissing && h.subnational1) return h
+    if (!SUPPORTED_COUNTRIES.includes(h.country)) return h
+    const cell = cells.get(`${h.country}|${Math.floor(h.lat / grid)}|${Math.floor(h.lng / grid)}`)
+    if (!cell) return h
+    let best = null
+    let bestN = 0
+    let total = 0
+    for (const [code, n] of cell) {
+      total += n
+      if (n > bestN || (n === bestN && best !== null && code < best)) {
+        best = code
+        bestN = n
+      }
+    }
+    if (!best || total <= 0 || bestN / total < minShare) {
+      skipped++
+      return h
+    }
+    filled++
+    return { ...h, subnational1: best, subnational1Source: 'gbif-cell' }
+  })
+  return { hotspots: out, filled, skipped }
 }
