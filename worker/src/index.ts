@@ -862,13 +862,15 @@ async function handleDeleteShare(request: Request, env: Env, id: string): Promis
 }
 
 /** 分享页浏览计数（2026-10-09 启用 view_count）：前端页面加载时打点，仅统计存在的未撤回分享 */
-async function handleShareView(env: Env, id: string): Promise<Response> {
+async function handleShareView(request: Request, env: Env, id: string): Promise<Response> {
   try {
     await env.DB.prepare(
       'UPDATE round_shares SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ? AND hidden = 0',
     )
       .bind(id)
       .run()
+    // 独立访客同样登记（分享页是主要外部入口，见 docs/028 §3.4）
+    await recordVisitor(env, request, new Date().toISOString().slice(0, 10))
   } catch {
     /* 计数失败不影响浏览：静默 */
   }
@@ -880,11 +882,25 @@ async function handleShareView(env: Env, id: string): Promise<Response> {
 /**
  * 事件白名单（docs/028 §2）：属性值必须落在枚举内（越界丢弃该属性，事件本身仍计数）。
  * 新增事件/属性时只改这里——前端 metrics.ts 同名单，两处一起改。
+ *
+ * `badge_earned` / `title_earned`（2026-10-09 公开看板需要）：徽章 id 与称号轨道 id 是
+ * **前端固定枚举**（`src/core/badges.ts` BADGES / `src/core/titles.ts` TITLE_TRACKS），
+ * 故此处逐一列出做硬校验（避免任意字符串污染 props 主键）；改动那两张表时同步这里。
  */
+const BADGE_IDS = [
+  'first-round', 'perfect', 'hundred', 'listener', 'expert', 'beginner-birder', 'streak',
+  'hell-first', 'audio-perfect', 'learned-revenge', 'five-rounds', 'thousand', 'veteran-fifty',
+  'collection-master', 'collection-all', 'dual-perfect', 'stable-five', 'audio-correct-200',
+  'review-correct-30', 'review-five', 'hell-ten', 'cross-streak-100', 'omniscient',
+  'all-tier-perfect', 'hell-perfect', 'perfect-three', 'hell-coach', 'wrong-terminator',
+  'hundred-rounds', 'night-owl', 'lark', 'escaped-quit', 'triple-forgiven', 'phoenix',
+]
+const TITLE_TRACKS = ['volume', 'collection', 'streak', 'perfect', 'audio', 'hell', 'rank', 'species-friend']
+
 const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   session_start: {},
   page_view: {
-    category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'other'],
+    category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'stats', 'other'],
   },
   quiz_complete: {
     mode: ['image', 'audio'],
@@ -892,6 +908,11 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   },
   report_submit: {},
   poster_create: {},
+  badge_earned: { badge: BADGE_IDS },
+  title_earned: {
+    track: TITLE_TRACKS,
+    level: ['1', '2', '3', '4', '5'],
+  },
 }
 
 /** 事件体上限（字节）：白名单事件 + ≤3 枚举属性，300 足够；超过静默丢弃 */
@@ -920,6 +941,65 @@ function rateAllowed(bucket: string, perMinute: number): boolean {
 }
 const clientIp = (request: Request): string => request.headers.get('cf-connecting-ip') ?? 'unknown'
 
+// ---------- 独立访客（日去重；只存不可逆哈希，见 schema.sql 与 docs/028 §3.4）----------
+
+/**
+ * 当日盐（存 meta，按日轮换）：盐只在内存缓存 10 分钟，避免每次上报都读 D1。
+ * 轮换意义：**不同日的哈希不可关联** → 无法跨日追踪同一人（隐私口径）。
+ */
+const saltCache = new Map<string, { at: number; salt: string }>()
+async function daySalt(env: Env, day: string): Promise<string | null> {
+  const hit = saltCache.get(day)
+  if (hit && Date.now() - hit.at < 600_000) return hit.salt
+  try {
+    const row = await env.DB.prepare('SELECT value FROM meta WHERE key = ?')
+      .bind(`stats_salt_${day}`)
+      .first<{ value: string }>()
+    if (row?.value) {
+      saltCache.set(day, { at: Date.now(), salt: row.value })
+      return row.value
+    }
+    const salt = [...crypto.getRandomValues(new Uint8Array(16))]
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    await env.DB.prepare('INSERT OR REPLACE INTO meta (key,value) VALUES (?,?)')
+      .bind(`stats_salt_${day}`, salt)
+      .run()
+    saltCache.set(day, { at: Date.now(), salt })
+    return salt
+  } catch {
+    return null // 读不到盐 → 本次不计独立访客（不影响其他计数）
+  }
+}
+
+/**
+ * 记一个独立访客（当日去重）。**IP/UA 只在此处内存参与一次哈希，不落库**；
+ * 落库的只有 `sha256(盐|日|IP|UA)` 的前 32 位 hex（不可逆、不可跨日关联）。
+ */
+async function recordVisitor(env: Env, request: Request, day: string): Promise<void> {
+  const salt = await daySalt(env, day)
+  if (!salt) return
+  const ua = request.headers.get('user-agent') ?? ''
+  const ip = clientIp(request)
+  const hash = (await sha256Hex(`${salt}|${day}|${ip}|${ua}`)).slice(0, 32)
+  try {
+    const res = await env.DB.prepare('INSERT OR IGNORE INTO metrics_visitors (day, vhash) VALUES (?,?)')
+      .bind(day, hash)
+      .run()
+    // changes=1 → 当天首次见到这个（不可逆）哈希 → 独立访客 +1
+    if (res.meta?.changes) {
+      await env.DB.prepare(
+        `INSERT INTO metrics_daily (day, event, props, n) VALUES (?, 'visitor_unique', '', 1)
+         ON CONFLICT(day, event, props) DO UPDATE SET n = n + 1`,
+      )
+        .bind(day)
+        .run()
+    }
+  } catch {
+    /* 静默：去重表异常不影响其他计数 */
+  }
+}
+
 /** 属性规范化：只保留白名单枚举值，按 key 排序 → 'mode=image;tier=2'（缓存键稳定） */
 function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): string {
   if (!raw || typeof raw !== 'object') return ''
@@ -934,7 +1014,7 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
 }
 
 /** POST /api/metrics：公开上报（事件计数；无 PII）。所有异常路径静默，绝不 5xx 打扰用户 */
-async function handleMetrics(request: Request, env: Env): Promise<Response> {
+async function handleMetrics(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const ip = clientIp(request)
   if (!rateAllowed(`m:${ip}`, 60)) return new Response(null, { status: 202, headers: CORS })
   let raw = ''
@@ -955,6 +1035,9 @@ async function handleMetrics(request: Request, env: Env): Promise<Response> {
   if (!spec) return new Response(null, { status: 204, headers: CORS }) // 非白名单：静默丢弃
   const props = normalizeMetricProps(spec, body.p)
   const day = new Date().toISOString().slice(0, 10)
+  // 独立访客（2026-10-09）：每个上报都尝试登记（当日哈希去重；只存不可逆哈希）。
+  // 与事件计数并行（waitUntil 不阻塞响应）。
+  ctx?.waitUntil(recordVisitor(env, request, day))
   try {
     // 原子自增（无读改写竞态）；每事件 1 行写
     await env.DB.prepare(
@@ -1080,6 +1163,119 @@ async function handleSharePage(request: Request, env: Env, id: string): Promise<
   return new Response(request.method === 'HEAD' ? null : out, { status: 200, headers })
 }
 
+// ---------- 028 公开统计看板（/api/stats/public）----------
+
+/** 公开看板缓存 TTL：1 小时（用户 2026-10-09 要求"压力不大就一小时一次"） */
+const PUBLIC_STATS_TTL = 3600
+/** 看板使用的 Cache API key（与 /api/questions 的缓存桶分开，避免规则互相干扰） */
+const PUBLIC_STATS_CACHE = 'uniaoer-api-stats'
+
+/**
+ * GET /api/stats/public —— 公开统计（无需密钥；**只输出聚合计数**，无任何个人/运行期信息）。
+ *
+ * 暴露原则（docs/028 §3.4）：
+ *   · 公开：累计事件计数、近 N 日日序列、按类目/档位分布、徽章与称号**获取计数**。
+ *   · 不公开：精确 IP、单次会话明细、分享者的个人数据、任何可关联个人的键。
+ *   · 独立访客是"按日哈希去重"的数字（跨日不可关联），非精确人数（口径见 schema.sql）。
+ *
+ * 新鲜度：边缘缓存 1 小时（命中打 `x-stats-cache: HIT`），回源时按需聚合。
+ * 回源成本：≤3 次小查询（聚合扫描 metrics_daily 近窗口 + 两个 DISTRIBUTION 分组），
+ * 全部走主键/小表；日写入仅几十行，压力可忽略。
+ */
+async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
+  const days = clampInt(url.searchParams.get('days'), 7, 90, 30)
+  const cache = await caches.open(PUBLIC_STATS_CACHE)
+  const cacheKey = new Request(`${url.origin}/api/stats/public?days=${days}`, { method: 'GET' })
+  const hit = await cache.match(cacheKey)
+  if (hit) {
+    const cachedAt = Number(hit.headers.get('x-stats-cached-at') || 0)
+    if (cachedAt > 0 && (Date.now() - cachedAt) / 1000 < PUBLIC_STATS_TTL) {
+      const res = new Response(hit.body, hit)
+      res.headers.set('x-stats-cache', 'HIT')
+      return res
+    }
+  }
+
+  const today = new Date()
+  const since = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  try {
+    const [series, byEvent, badges, titles] = await Promise.all([
+      env.DB.prepare(
+        'SELECT day, event, SUM(n) AS n FROM metrics_daily WHERE day >= ? GROUP BY day, event ORDER BY day',
+      )
+        .bind(since)
+        .all<{ day: string; event: string; n: number }>(),
+      env.DB.prepare('SELECT event, SUM(n) AS n FROM metrics_daily GROUP BY event')
+        .all<{ event: string; n: number }>(),
+      env.DB.prepare(
+        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'badge_earned' GROUP BY props ORDER BY n DESC",
+      )
+        .all<{ props: string; n: number }>(),
+      env.DB.prepare(
+        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'title_earned' GROUP BY props ORDER BY n DESC",
+      )
+        .all<{ props: string; n: number }>(),
+    ])
+
+    const totals: Record<string, number> = {}
+    for (const r of byEvent.results) totals[r.event] = r.n
+
+    /** props 串 'a=b;c=d' → 对象 */
+    const parseProps = (s: string): Record<string, string> =>
+      Object.fromEntries(
+        s
+          .split(';')
+          .filter(Boolean)
+          .map((kv) => {
+            const i = kv.indexOf('=')
+            return i > 0 ? [kv.slice(0, i), kv.slice(i + 1)] : [kv, '']
+          }),
+      )
+
+    const out = {
+      generatedAt: new Date().toISOString(),
+      days,
+      since,
+      /** 累计（自上线起，全时段） */
+      totals,
+      /** 近 N 日日序列：day × event */
+      series: series.results,
+      badges: badges.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
+      titles: titles.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
+      /** 口径说明（前端直接展示，避免"数字怎么来的"疑问） */
+      notes: {
+        visitor:
+          '独立访客为按日去重的匿名计数（日盐哈希，IP/UA 不落库、跨日不可关联）；非精确人数。',
+        scope: '仅统计本站匿名事件；成绩/档案仍只存在各自设备。',
+      },
+    }
+    const res = json(out, {
+      headers: {
+        'cache-control': `public, max-age=${PUBLIC_STATS_TTL}`,
+        'x-stats-cache': 'MISS',
+        'x-stats-cached-at': String(Date.now()),
+      },
+    })
+    ctx.waitUntil(cache.put(cacheKey, res.clone()))
+    return res
+  } catch {
+    // 只读聚合失败（如首次部署表尚未生效）：返回可用形状的空结构，不 5xx
+    return json(
+      {
+        generatedAt: new Date().toISOString(),
+        days,
+        since,
+        totals: {},
+        series: [],
+        badges: [],
+        titles: [],
+        notes: { visitor: '', scope: '' },
+      },
+      { headers: { 'cache-control': 'no-store', 'x-stats-cache': 'BYPASS' } },
+    )
+  }
+}
+
 function isAdmin(request: Request, env: Env): boolean {
   const key = request.headers.get('x-admin-key') ?? ''
   return Boolean(env.ADMIN_KEY) && key.length > 0 && key === env.ADMIN_KEY
@@ -1186,6 +1382,8 @@ export default {
         if (shareGet) return await handleGetShare(env, shareGet[1]!)
         // 028 匿名计量：按日聚合读取（管理）
         if (path === '/api/metrics/summary') return await handleMetricsSummary(request, env, url)
+        // 028 公开统计看板（无需密钥；边缘缓存 1 小时）
+        if (path === '/api/stats/public') return await handlePublicStats(env, ctx, url)
         // 029 M3:质量隔离台账（管理端读取,供 /admin 展示与导出脚本拉取）
         if (path === '/api/quarantine') {
           if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
@@ -1205,7 +1403,7 @@ export default {
       }
       // 028 匿名计量上报（公开；白名单 + 内存限流；静默 204）
       if (method === 'POST' && path === '/api/metrics') {
-        return await handleMetrics(request, env)
+        return await handleMetrics(request, env, ctx)
       }
       if (method === 'POST' && path === '/api/shares') {
         return await handleCreateShare(request, env)
@@ -1214,7 +1412,8 @@ export default {
       const shareView = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})\/view$/)
       if (method === 'POST' && shareView) {
         if (!rateAllowed(`v:${clientIp(request)}`, 120)) return new Response(null, { status: 202, headers: CORS })
-        return await handleShareView(env, shareView[1]!)
+        // 打开分享页也算"来过人"（POST 该方法即会建表计数）
+        return await handleShareView(request, env, shareView[1]!)
       }
       // 035：撤回（凭管理令牌；软删）
       const shareDel = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})$/)

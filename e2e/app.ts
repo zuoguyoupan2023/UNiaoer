@@ -81,6 +81,21 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
       },
     }),
   )
+  // 028 公开统计看板：桩数据（避免 e2e 依赖线上 Worker）
+  await page.route('**/api/stats/public**', (r) =>
+    r.fulfill({
+      json: {
+        generatedAt: 'e2e-fixture',
+        days: 30,
+        since: '2026-09-10',
+        totals: { visitor_unique: 7, session_start: 12, quiz_complete: 5, page_view: 40, poster_create: 2, report_submit: 1, badge_earned: 3, title_earned: 2 },
+        series: [{ day: '2026-10-09', event: 'quiz_complete', n: 5 }],
+        badges: [{ badge: 'first-round', n: 3 }],
+        titles: [{ track: 'volume', level: '1', n: 2 }],
+        notes: { visitor: 'per-day dedup', scope: 'anonymous only' },
+      },
+    }),
+  )
   // 观鸟点（021 M4 腿 B）：网格聚合统计层（US/CN 各若干点）
   await page.route('**/data/hotspots.json', (r) =>
     r.fulfill({

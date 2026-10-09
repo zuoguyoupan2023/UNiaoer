@@ -11,6 +11,7 @@ import {
 } from './historyDb'
 import { evaluateBadges, type BadgeDef } from './badges'
 import { evaluateTitles, titleTextAt, TITLE_TRACKS, type EarnedTitle } from './titles'
+import { track } from './metrics'
 
 type QuizStore = ReturnType<typeof useQuizStore>
 
@@ -89,6 +90,8 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
     if (newBadges.length) {
       await saveBadges(newBadges.map((b) => ({ id: b.id, at: Date.now() })))
       for (const b of newBadges) earnedIds.add(b.id)
+      // 028 公开看板：徽章**获取计数**（每个用户每枚只报一次——本分支只在首次获得时进入）
+      for (const b of newBadges) track('badge_earned', { badge: b.id })
     }
 
     // 称号：逐轨计算当前级；与已标记级（id = title:{trackId}:{level}）diff，新升的每轨只提示最高新级
@@ -106,12 +109,14 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
         }
       }
       if (highestNew !== null) {
-        const track = TITLE_TRACKS.find((x) => x.id === t.trackId)!
+        const trackDef = TITLE_TRACKS.find((x) => x.id === t.trackId)!
         newTitles.push({
           ...t,
           level: highestNew,
-          text: titleTextAt(track, highestNew, stats, rounds),
+          text: titleTextAt(trackDef, highestNew, stats, rounds),
         })
+        // 028 公开看板：称号**获取计数**（按"新解锁的最高级"计一次；同一级不会重复报）
+        track('title_earned', { track: t.trackId, level: highestNew })
       }
     }
     if (titleMarks.length) await saveBadges(titleMarks)

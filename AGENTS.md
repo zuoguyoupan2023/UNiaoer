@@ -42,6 +42,16 @@
    - 一律**带参一步到位**：`t(key, { name })`；`grep -rn "replace('{" src/` 应为空。
    - 画布类渲染（`poster.ts`）沿用**函数式注入**模式（如 `PosterStrings.mistakenAs: (name) => string`）。
 
+8. **推送（`git push`）由用户执行，AI 只提交到本地。**
+   - 原因：`https://github.com` 在本机常年超时/被网络拦截，且沙箱进程读不到 macOS 钥匙串凭据
+     （报错形态：`could not read Username for 'https://github.com'` 或 `Failed to connect to github.com port 443`）。
+   - 做法：AI 完成改动后 `git commit`（消息里写清自检结论），并把**待推提交清单**报告给用户；
+     用户手动 `git push origin main`（会触发 CI + Pages 重建）。
+   - **不要**反复重试推送、不要改用 SSH/代理等旁路；推送受阻时把剩余工作继续做完（Worker 部署走
+     `wrangler`，不经 GitHub，可正常执行）。
+   - Worker 用 `npm run worker:deploy`，前端靠 Pages——**两者发布节奏不同步**：Worker 侧改动推前就已生效，
+     前端改动要等用户推送 + Pages 重建。报告时须显式区分（哪些已生效、哪些等推送）。
+
 ## 速查命令
 
 | 目的 | 命令 |
@@ -83,6 +93,9 @@
 | 下沉 XC 密钥到 Worker secret（值从 `.env` 管道传入） | `wrangler secret put XC_API_KEY -c worker/wrangler.toml` |
 | 查看用户报错（管理，需 `ADMIN_KEY`，见 `.env`） | `curl -H "x-admin-key: $ADMIN_KEY" "https://uniaoer.com/api/reports/admin?status=open"` |
 | 纠正/处理报错（管理） | `curl -X PATCH -H "x-admin-key: $ADMIN_KEY" -H 'content-type: application/json' -d '{"status":"fixed"}' https://uniaoer.com/api/reports/<id>` |
+| **看匿名计量数据**（028，管理；默认近 30 天，`days` 可调） | `source .env && curl -s -H "x-admin-key: $ADMIN_KEY" "https://uniaoer.com/api/metrics/summary?days=30" \| jq` |
+| 直接查计量原始行（按日/事件/属性） | `wrangler d1 execute uniaoer --command "SELECT day,event,props,n FROM metrics_daily ORDER BY day DESC LIMIT 50;" --remote` |
+| 分享页浏览数（管理，按浏览次数降序） | `wrangler d1 execute uniaoer --command "SELECT id,nickname,total,correct,view_count FROM round_shares WHERE hidden=0 ORDER BY view_count DESC LIMIT 20;" --remote` |
 
 ## 架构速览
 

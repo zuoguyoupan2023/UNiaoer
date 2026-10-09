@@ -335,6 +335,22 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.hotspot-btn')).toContainText('Beijing')
   })
 
+  test('公开统计（028）：数字卡/近 30 日条形/徽章与称号榜 + 口径说明', async ({ page }) => {
+    await page.goto('/stats')
+    // 数字卡（桩数据：独立访客 7 / 会话 12 / 轮次 5 / 浏览 40）
+    const cards = page.locator('.card-item')
+    await expect(cards).toHaveCount(6)
+    await expect(page.locator('.card-item', { hasText: '独立访客' }).locator('.num')).toHaveText('7')
+    await expect(page.locator('.card-item', { hasText: '完成轮次' }).locator('.num')).toHaveText('5')
+    // 近 30 日逐日条形
+    await expect(page.locator('.bars li')).toHaveCount(30)
+    // 徽章 / 称号榜（桩：first-round 3 人；volume L1 2 人）——两个独立列表，各取 first()
+    await expect(page.locator('.ranks li').first()).toContainText('3 人')
+    await expect(page.locator('.ranks').last()).toContainText('2 人')
+    // 口径说明可见（避免"数字怎么来的"疑问）
+    await expect(page.locator('.foot')).toContainText('匿名')
+  })
+
   test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/region')

@@ -180,6 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_shares_client  ON round_shares(client_id, created
 -- 028 匿名计量（最小用户计量：只做事件计数，不做用户追踪）
 -- 口径（docs/028）：无 cookie、无设备指纹、不存 IP/UA；维度 = 日期 × 事件 × 少量枚举属性。
 -- 读取：GET /api/metrics/summary?days=30（需 ADMIN_KEY）。写入：POST /api/metrics（公开，白名单硬校验）。
+-- 公开看板：GET /api/stats/public（边缘缓存 1 小时；聚合口径见 docs/028 §3.4）。
 -- 成本：每事件 1 行写（UPSERT 原子自增）；10 事件 × 365 天 ≈ 3.6k 行/年。
 -- ============================================================
 CREATE TABLE IF NOT EXISTS metrics_daily (
@@ -188,4 +189,14 @@ CREATE TABLE IF NOT EXISTS metrics_daily (
   props TEXT NOT NULL DEFAULT '',      -- 规范化属性串 'mode=image;tier=2'（枚举校验后排序拼接）
   n     INTEGER NOT NULL DEFAULT 0,    -- 当日累计次数
   PRIMARY KEY (day, event, props)
+);
+
+-- 独立访客去重（**只存不可逆哈希**，见 §隐私）：
+--   vhash = sha256(日盐 | 日期 | IP | UA) 的截断值；日盐每日随机轮换（存 meta，`stats_salt_<day>`），
+--   故**无法跨日关联同一人**；IP/UA 原值不落库（仅在内存中参与一次哈希计算）。
+-- 计数出口：insert 成功时把 metrics_daily 的 event='visitor_unique' 累加 1（避免统计端扫本表）。
+CREATE TABLE IF NOT EXISTS metrics_visitors (
+  day   TEXT NOT NULL,                 -- '2026-10-09'（UTC）
+  vhash TEXT NOT NULL,                 -- 当日去重哈希（16 字节 hex 截断 32 字符）
+  PRIMARY KEY (day, vhash)
 );

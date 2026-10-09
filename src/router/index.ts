@@ -49,6 +49,12 @@ const router = createRouter({
       component: () => import('../views/CatalogView.vue'),
     },
     {
+      // 028 公开统计看板：匿名汇总数据（无需登录）
+      path: '/stats',
+      name: 'stats',
+      component: () => import('../views/StatsView.vue'),
+    },
+    {
       // C7 地区浏览（017）：国家/地区 → 鸟种
       path: '/region',
       name: 'region',
@@ -143,6 +149,7 @@ function pageCategory(path: string): string {
   if (path.startsWith('/quiz') || path === '/result') return 'quiz'
   if (path.startsWith('/region')) return 'region'
   if (path.startsWith('/catalog')) return 'catalog'
+  if (path.startsWith('/stats')) return 'stats'
   if (path.startsWith('/species')) return 'species'
   if (path.startsWith('/profile')) return 'profile'
   if (path.startsWith('/faq')) return 'faq'

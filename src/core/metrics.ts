@@ -13,16 +13,33 @@ import { useSettingsStore } from '@/stores/settings'
 
 type Props = Record<string, string | number>
 
+/** 徽章 id 白名单（与 `src/core/badges.ts` BADGES 同步；改那张表时同步这里 + Worker） */
+const BADGE_IDS = [
+  'first-round', 'perfect', 'hundred', 'listener', 'expert', 'beginner-birder', 'streak',
+  'hell-first', 'audio-perfect', 'learned-revenge', 'five-rounds', 'thousand', 'veteran-fifty',
+  'collection-master', 'collection-all', 'dual-perfect', 'stable-five', 'audio-correct-200',
+  'review-correct-30', 'review-five', 'hell-ten', 'cross-streak-100', 'omniscient',
+  'all-tier-perfect', 'hell-perfect', 'perfect-three', 'hell-coach', 'wrong-terminator',
+  'hundred-rounds', 'night-owl', 'lark', 'escaped-quit', 'triple-forgiven', 'phoenix',
+]
+/** 称号轨道 id 白名单（与 `src/core/titles.ts` TITLE_TRACKS 同步） */
+const TITLE_TRACKS = ['volume', 'collection', 'streak', 'perfect', 'audio', 'hell', 'rank', 'species-friend']
+
 /**
  * 事件白名单（与 worker METRIC_EVENTS 对齐；键=事件，值=属性名 → 允许值）。
  * 两侧都校验：前端先裁剪（省一次无效往返），Worker 再硬校验（前端不可信）。
  */
 const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
   session_start: {},
-  page_view: { category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'other'] },
+  page_view: {
+    category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'stats', 'other'],
+  },
   quiz_complete: { mode: ['image', 'audio'], tier: ['1', '2', '3', '4', '5'] },
   report_submit: {},
   poster_create: {},
+  // 公开看板（docs/028 §3.4）：徽章/称号**获取计数**（id 来自固定枚举，非用户输入）
+  badge_earned: { badge: BADGE_IDS },
+  title_earned: { track: TITLE_TRACKS, level: ['1', '2', '3', '4', '5'] },
 }
 
 const ENDPOINT = '/api/metrics'
