@@ -26,6 +26,9 @@ const EXCLUDE = [/^i18n[\\/]/, /__tests__/, /\.spec\.ts$/, /\.test\.ts$/]
 const WHITELIST = [
   // 语言切换器里的语言名：各语言永远以自身文字显示（中文 不随 locale 翻译，i18n 惯例）
   { file: 'views/SettingsView.vue', line: 0, reason: '语言名按惯例以本语言显示，不翻译' },
+  // ⚠️ 临时预览页（2026-10-09，A3 新手池实测用，用完即删）：一次性诊断界面，不值得投入 i18n。
+  // 删除时同步移除本条目（见该文件头部"删除清单"）。
+  { file: 'views/DevStarterPreviewView.vue', line: 0, reason: '临时实测页（A3），用完即删' },
 ]
 
 const CJK = /[\u4e00-\u9fff\u3400-\u4dbf]/

@@ -129,6 +129,13 @@ const router = createRouter({
       ],
     },
     {
+      // ⚠️ 临时预览页（2026-10-09，A3 新手池实测用）——**用完即删**：
+      // 删除本路由 + src/views/DevStarterPreviewView.vue + scripts/i18n-scan.mjs 白名单条目。
+      path: '/dev/starter',
+      name: 'dev-starter',
+      component: () => import('../views/DevStarterPreviewView.vue'),
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
