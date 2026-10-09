@@ -142,8 +142,12 @@ export function aggregateHotspots(records, opts) {
 
 /**
  * 021 M4 腿 A：用 eBird 热点名录给**无名**网格点就近命名（020 §3.3）。
- * 仅补 name/ebirdId/ebirdUrl 并把 'ebird' 计入 sources；已有名字的点不动（不覆盖 XC loc）。
+ * 仅补 name/ebirdId（并把 'ebird' 计入 sources）；已有名字的点不动（不覆盖 XC loc）。
  * 找不到 ≤maxKm 的最近热点则原样返回（不臆造名字）。
+ *
+ * 不存 `ebirdUrl`：可由 `ebirdId` 派生（`https://ebird.org/hotspot/<id>`），
+ * 3,215 条 URL 占 ~155KB——本产物是浏览器懒加载的静态 JSON，021 §2.3 有 2MB 预算
+ * （2026-10-09 041 A2 补省码后贴线，故移除；需要链接时按 id 现拼）。
  * @param {Array} hotspots aggregateHotspots 的输出
  * @param {Array} ebirdHotspots adapters/ebird.hotspotRecords 的输出
  */
@@ -210,7 +214,6 @@ export function applyEbirdNames(hotspots, ebirdHotspots, { maxKm = 3 } = {}) {
       name: near.name,
       subnational1: h.subnational1 ?? near.subnational1 ?? undefined,
       ebirdId: near.id,
-      ebirdUrl: near.sourceUrl,
       sources: [...new Set([...(h.sources || []), 'ebird'])].sort(),
     }
   })

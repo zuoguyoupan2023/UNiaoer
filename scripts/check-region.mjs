@@ -249,8 +249,12 @@ function checkHotspots(name, data) {
       `（eBird 命名应已提供 ~57%；见 041 A2）`,
   )
   if (total && withSub) {
-    const detail = Object.entries(bySource).map(([k, v]) => `${k} ${v}`).join(' · ')
-    console.log(`  · 观鸟点：${total} 点 · 带省码 ${withSub}（${(ratio * 100).toFixed(1)}%${detail ? ` · ${detail}` : ''}）`)
+    // 只统计已声明来源者；未声明者即 eBird 就近命名自带（或旧的记录层数据）——两段之和应为总数
+    const filled = bySource['gbif-cell'] || 0
+    console.log(
+      `  · 观鸟点：${total} 点 · 带省码 ${withSub}（${(ratio * 100).toFixed(1)}%）` +
+        `（eBird/记录层 ${withSub - filled} · 网格补码 ${filled}）`,
+    )
   }
 }
 
