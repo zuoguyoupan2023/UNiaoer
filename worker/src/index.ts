@@ -424,7 +424,9 @@ async function regionShortCodes(env: Env, region: string): Promise<string[] | nu
     const obj = await env.MEDIA.get('data/species-distribution.json')
     if (obj) {
       const doc = JSON.parse(await obj.text()) as { byCountry?: Record<string, string[]> }
-      const list = doc.byCountry?.[region]
+      // 省码（CN-11）→ 所属国：区系层是国家级的；与前端 countryOfRegion 同语义。缓存键仍用原 region。
+      const cc = region.includes('-') ? (region.split('-')[0] ?? region) : region
+      const list = doc.byCountry?.[cc]
       codes = Array.isArray(list) ? list : []
     }
   } catch {
