@@ -377,7 +377,7 @@ console.log(
     `小样本跳过 ${stats.provinces.skippedSmall}，可信物种不足跳过 ${stats.provinces.skippedFew}）`,
 )
 console.log(
-  `  守卫命中：dominance ${stats.provinces.guardsHit.dominance} · spike ${stats.provinces.guardsHit.spike}` +
+  `  守卫命中：dominance ${stats.provinces.guardsHit.dominance} · spike ${stats.provinces.guardsHit.spike} · lowRecords(孤证 <${guards.minSpeciesRecords}) ${stats.provinces.guardsHit.lowRecords}` +
     `　国家层 ${coverage.countryPairs} 组（可信 ${stats.countries.trusted}/${stats.countries.total}）`,
 )
 console.log(`  档位分布（省）: ${JSON.stringify(coverage.tierHist)}　人工覆盖 ${ov.applied} 条`)

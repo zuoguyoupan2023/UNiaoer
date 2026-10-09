@@ -67,19 +67,27 @@ step('1/5 刷新分层产物（core / assets / global.min）')
 // ─────────────────────────────────────────────
 step(SKIP_R2 ? '2/5 R2 上传（--skip-r2 跳过）' : '2/5 上传 R2（发布通道，--remote）')
 // ─────────────────────────────────────────────
-// 发布通道文件：题库三层 + 区系矩阵（Worker 地区过滤读它）
-const R2_FILES = ['manifest.json', 'manifest-core.json', 'manifest-global.min.json', 'species-distribution.json']
+// 发布通道文件：题库三层 + 区系矩阵（Worker 地区过滤读它）+ 省级常见度（036 地区档位）
+const R2_FILES = ['manifest.json', 'manifest-core.json', 'manifest-global.min.json', 'species-distribution.json', 'province-commonness.json']
+/** 036 分片目录（Worker 按省读 `data/province-commonness/<CC>.json`；索引给前端发现） */
+const R2_PROVINCE_DIR = 'province-commonness'
 if (!SKIP_R2) {
-  for (const file of R2_FILES) {
-    const local = path.join(ROOT, 'public/data', file)
+  const uploads = R2_FILES.map((file) => ({ local: path.join(ROOT, 'public/data', file), key: `data/${file}` }))
+  // 分片：仅上传仓库中**已存在**的（`npm run check:region` 保证索引/文件/结构一致）
+  const shardDir = path.join(ROOT, 'public/data', R2_PROVINCE_DIR)
+  const shardFiles = (await fs.readdir(shardDir).catch(() => [])).filter((f) => f.endsWith('.json')).sort()
+  for (const f of shardFiles) {
+    uploads.push({ local: path.join(shardDir, f), key: `data/${R2_PROVINCE_DIR}/${f}` })
+  }
+  for (const { local, key } of uploads) {
     const size = (await fs.stat(local)).size
     if (DRY) {
-      console.log(`  [dry] ${file}（${(size / 1e6).toFixed(2)}MB）→ r2://${bucket}/data/${file}`)
+      console.log(`  [dry] ${key}（${(size / 1e6).toFixed(2)}MB）→ r2://${bucket}/${key}`)
       continue
     }
-    process.stdout.write(`  ↑ ${file}（${(size / 1e6).toFixed(2)}MB）… `)
+    process.stdout.write(`  ↑ ${key}（${(size / 1e3).toFixed(0)}KB）… `)
     await wrangler([
-      'r2', 'object', 'put', `${bucket}/data/${file}`,
+      'r2', 'object', 'put', `${bucket}/${key}`,
       '--file', local,
       '--content-type', 'application/json; charset=utf-8',
       '--cache-control', 'public, max-age=300',

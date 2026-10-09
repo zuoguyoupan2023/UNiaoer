@@ -94,6 +94,16 @@ describe('bandProvince（份额归一 + 守卫 + 分档）', () => {
     expect(res.tiers['seasonal-visitor']).toBeUndefined()
   })
 
+  it('孤证地板：n < minSpeciesRecords 的物种不进表（噪声剔除，docs/036 §10）', () => {
+    // 20 种正常 + 1 条孤证噪声（如"长尾鹦鹉在中国仅 1 条记录"）
+    const rest = entries(Array.from({ length: 20 }, (_, i) => 100 - i))
+    const list = [{ speciesId: 'psittacula-longicauda', n: 1 }, ...rest]
+    const res = bandProvince(list, 1200, null, DEFAULT_GUARDS)
+    expect(res.guardsHit.lowRecords).toBe(1)
+    expect(res.tiers['psittacula-longicauda']).toBeUndefined()
+    expect(res.trusted).toBe(20)
+  })
+
   it('高份额但全年可见（非尖峰）→ 不触发 spike 守卫', () => {
     const rest = entries(Array.from({ length: 20 }, (_, i) => 100 - i))
     const list = [{ speciesId: 'resident-dominant', n: 900 }, ...rest]

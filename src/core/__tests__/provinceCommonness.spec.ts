@@ -106,7 +106,7 @@ describe('regionTierMap（分片读取 + 降级链）', () => {
   })
 })
 
-describe('filterByRegionTier（筛选 + 放宽，绝不出空）', () => {
+describe('filterByRegionTier（严格 → 表内放宽 → 兜底，绝不出空）', () => {
   const pool = ['a', 'b', 'c', 'd', 'e'].map(sp)
   const tiers = new Map([['a', 1], ['b', 2], ['c', 3], ['d', 4], ['e', 5]])
 
@@ -115,17 +115,15 @@ describe('filterByRegionTier（筛选 + 放宽，绝不出空）', () => {
     expect(out.map((s) => s.id)).toEqual(['a', 'b'])
   })
 
-  it('严格筛不足 min → 放宽为"档位 ≤ 允许上限"', () => {
-    // L1 允许 [1,2]；但只有 a 是 1 档 → 放宽为 ≤2（仍是 a,b）
-    const out = filterByRegionTier(pool, tiers, [1], 4)
-    expect(out.map((s) => s.id)).toEqual(['a'])
-    const relaxed = filterByRegionTier(pool, tiers, [1], 1.5)
-    expect(relaxed.map((s) => s.id)).toEqual(['a'])
+  it('严格筛不足 min → 放宽为「表内任意档位」（而非原池）', () => {
+    // L1 允许 [1,2]；严格只有 a → 放宽为表内全部（a..e，本地稀有也比外地鸟贴近语义）
+    const out = filterByRegionTier(pool, tiers, [1, 2], 4)
+    expect(out.map((s) => s.id)).toEqual(['a', 'b', 'c', 'd', 'e'])
   })
 
-  it('放宽后仍有物种 → 返回放宽结果（而非原池）', () => {
-    const out = filterByRegionTier(pool, tiers, [1, 2], 10)
-    expect(out.length).toBe(2)
+  it('表外物种不因放宽而回归（放宽仍限表内）', () => {
+    const out = filterByRegionTier(pool, new Map([['a', 1]]), [1], 10)
+    expect(out.map((s) => s.id)).toEqual(['a'])
   })
 
   it('档位表为空 → 返回原池（不做筛选）', () => {

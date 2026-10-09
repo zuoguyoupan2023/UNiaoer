@@ -34,16 +34,34 @@ describe('aggregateCountryMatrix', () => {
     ]
     const { byCountry, skipped } = aggregateCountryMatrix(rows, nameToCode)
     expect(byCountry.get('CN')).toEqual(new Set(['BB5650EB'])) // 作者注记/亚种行并入种
-    expect(byCountry.get('JP')).toEqual(new Set(['BB5650EB']))
+    expect(byCountry.get('JP')).toBeUndefined() // n=1 孤证丢弃（default 地板 2）
     expect(byCountry.get('DE')).toEqual(new Set(['E4EE9AC4']))
     expect(byCountry.has('ZZ')).toBe(false)
-    expect(skipped).toEqual({ unknownName: 2, badCountry: 1, deniedCountry: 2 })
+    expect(skipped).toEqual({ unknownName: 2, badCountry: 1, deniedCountry: 2, lowRecords: 1 })
+  })
+
+  it('孤证地板：同国多行先合并再判定（亚种/作者注记行并入后达标）', () => {
+    const rows = [
+      { scientificname: 'Pycnonotus sinensis', countrycode: 'CN', n: 1 },
+      { scientificname: 'Pycnonotus sinensis hainanus', countrycode: 'CN', n: 1 },
+      { scientificname: 'Corvus corone', countrycode: 'DE', n: 1 },
+    ]
+    const { byCountry, skipped } = aggregateCountryMatrix(rows, nameToCode)
+    expect(byCountry.get('CN')).toEqual(new Set(['BB5650EB'])) // 1+1=2 达标
+    expect(byCountry.has('DE')).toBe(false) // 1 < 2 丢弃
+    expect(skipped.lowRecords).toBe(1)
+  })
+
+  it('minRecords 可调：设为 1 时保留孤证（旧行为）', () => {
+    const rows = [{ scientificname: 'Pycnonotus sinensis', countrycode: 'JP', n: 1 }]
+    const { byCountry } = aggregateCountryMatrix(rows, nameToCode, { minRecords: 1 })
+    expect(byCountry.get('JP')).toEqual(new Set(['BB5650EB']))
   })
 
   it('空输入安全', () => {
     const { byCountry, skipped } = aggregateCountryMatrix([], nameToCode)
     expect(byCountry.size).toBe(0)
-    expect(skipped).toEqual({ unknownName: 0, badCountry: 0, deniedCountry: 0 })
+    expect(skipped).toEqual({ unknownName: 0, badCountry: 0, deniedCountry: 0, lowRecords: 0 })
   })
 })
 

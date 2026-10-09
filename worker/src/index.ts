@@ -263,7 +263,7 @@ async function handleManifest(env: Env, name = 'manifest.json'): Promise<Respons
  */
 const QUESTIONS_CACHE_TTL = 1800
 /** 缓存版本：需要强制失效旧缓存时 +1（随 Worker 重新部署生效）。 */
-const QUESTIONS_CACHE_VERSION = 2
+const QUESTIONS_CACHE_VERSION = 3
 
 async function handleQuestionsCached(
   request: Request,
@@ -309,10 +309,14 @@ async function handleQuestionsCached(
 /**
  * 029 M4/M5:/api/questions —— 由 D1（派生读模型）按档位/题型/地区出候选池。
  *
- * 过滤链（与前端 029 M2 的 mergedSpecies 语义对齐）：
- *   档位 commonness → 可玩（playable_image/audio 按题型） → quiz_excluded=0 → 媒体 quiz_excluded=0
- *   地区（region=ISO2 且档位≤3 时）：经 species.taxon_key → 短码 与区系矩阵求交
- *     · 区系矩阵存在 R2（data/species-distribution.json）；缺失时**不过滤**（保可用性）
+ * 过滤链（036 定稿 2026-10-09，与前端 questionEngine 语义一致）：
+ *   L1–L3 + 指定地区：**地区档位**（R2 `data/province-commonness/<CC>.json`）优先
+ *     · 省码 → 省级分片 tiersByCode[省码]；国家码 → 国家级降级层（<CC>.country.json）
+ *     · 严格档位（TIER_COMMONNESS[tier]）不足 → 放宽到**表内任意档位**（仍排除表外物种）
+ *     · 表外 = 本地罕见/无记录（省表只收录该省有记录的物种）→ **剔除**（不回退全局 commonness）
+ *   L1–L3 + 分片缺失：降级为区系短码（species-distribution，国家级"有没有"）+ 全局 commonness
+ *   L4–L5 / region=ALL：全局 commonness（不做地区过滤，与前端 D-029-2 一致）
+ *   两处共同：可玩（playable_image/audio 按题型） + quiz_excluded=0
  *
  * 返回候选物种（含 media），前端据此本地组装题面（不返回答案/选项——选项由前端按档位生成）。
  */
@@ -326,45 +330,58 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
   const playableCol = type === 'audio' ? 'aud_url' : 'img_url'
   const placeholders = commonness.map(() => '?').join(',')
 
-  // 地区过滤（仅 L1–L3；L4/L5 全球开放,与前端 D-029-2 一致）
-  let shortCodes: string[] | null = null
+  let rows: SpeciesRow[] = []
+  let byTiers = false
   if (region !== 'ALL' && tier <= 3) {
-    shortCodes = await regionShortCodes(env, region)
+    // ① 地区档位（036）：省/国家分片 → 严格档位；不足则放宽到表内任意档位
+    const tiers = await regionTiers(env, region)
+    if (tiers?.size) {
+      const allowed = new Set(commonness)
+      let ids = [...tiers].filter(([, t]) => allowed.has(t)).map(([id]) => id)
+      if (ids.length < count) ids = [...tiers.keys()]
+      rows = await sampleByIds(env, ids, playableCol, count)
+      byTiers = true
+    }
   }
+  if (!byTiers) {
+    // ② 旧路径：区系短码（分片缺失时降级）；L4/L5 或 ALL 则不做地区过滤
+    const shortCodes = region !== 'ALL' && tier <= 3 ? await regionShortCodes(env, region) : null
 
-  // 措施二：索引区间扫描替代 ORDER BY RANDOM()（后者扫完候选集再排序：L3 每轮 ~10,000 行）。
-  // 做法：以随机 rnd 起点沿 idx_species_sample(commonness, rnd) 取一段，
-  // 不足则从头补齐（wrap）；每次只读几十行。随机性来源 = 每次请求不同的起点。
-  const need = shortCodes ? Math.max(count * 8, 200) : count
-  const startAt = Math.random()
-  const base = `FROM species
-     WHERE commonness IN (${placeholders}) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0`
-  const sp = await env.DB.prepare(
-    `SELECT * ${base} AND rnd >= ? ORDER BY rnd LIMIT ?`,
-  )
-    .bind(...commonness, startAt, need)
-    .all<SpeciesRow>()
-
-  let rows = sp.results
-  if (rows.length < need) {
-    // 环形补齐：从区间起点的另一端再取（保证低 rnd 值的物种也有机会被抽到）
-    const more = await env.DB.prepare(`SELECT * ${base} AND rnd < ? ORDER BY rnd LIMIT ?`)
-      .bind(...commonness, startAt, need - rows.length)
+    // 措施二：索引区间扫描替代 ORDER BY RANDOM()（后者扫完候选集再排序：L3 每轮 ~10,000 行）。
+    // 做法：以随机 rnd 起点沿 idx_species_sample(commonness, rnd) 取一段，
+    // 不足则从头补齐（wrap）；每次只读几十行。随机性来源 = 每次请求不同的起点。
+    const need = shortCodes ? Math.max(count * 8, 200) : count
+    const startAt = Math.random()
+    const base = `FROM species
+       WHERE commonness IN (${placeholders}) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0`
+    const sp = await env.DB.prepare(
+      `SELECT * ${base} AND rnd >= ? ORDER BY rnd LIMIT ?`,
+    )
+      .bind(...commonness, startAt, need)
       .all<SpeciesRow>()
-    rows = rows.concat(more.results)
-  }
 
-  if (shortCodes) {
-    const set = new Set(shortCodes)
-    rows = rows
-      .filter((r) => {
-        const key = r.taxon_key || ''
-        const code = key.startsWith('avibase-') ? key.slice(8) : ''
-        return code && set.has(code)
-      })
-      .slice(0, count)
-  } else {
-    rows = rows.slice(0, count)
+    let sampled = sp.results
+    if (sampled.length < need) {
+      // 环形补齐：从区间起点的另一端再取（保证低 rnd 值的物种也有机会被抽到）
+      const more = await env.DB.prepare(`SELECT * ${base} AND rnd < ? ORDER BY rnd LIMIT ?`)
+        .bind(...commonness, startAt, need - sampled.length)
+        .all<SpeciesRow>()
+      sampled = sampled.concat(more.results)
+    }
+
+    if (shortCodes) {
+      const set = new Set(shortCodes)
+      sampled = sampled
+        .filter((r) => {
+          const key = r.taxon_key || ''
+          const code = key.startsWith('avibase-') ? key.slice(8) : ''
+          return code && set.has(code)
+        })
+        .slice(0, count)
+    } else {
+      sampled = sampled.slice(0, count)
+    }
+    rows = sampled
   }
 
   const species = rows.map((r) => {
@@ -434,6 +451,82 @@ async function regionShortCodes(env: Env, region: string): Promise<string[] | nu
   }
   regionCodesCache.set(region, { at: Date.now(), codes })
   return codes
+}
+
+/**
+ * 036 修法 b：地区**档位**（province-commonness 分片）→ 出题候选按省过滤。
+ *
+ * 数据：R2 `data/province-commonness/<CC>.json`（省级 tiersByCode）与
+ *      `data/province-commonness/<CC>.country.json`（国家级降级层）。
+ * 语义（2026-10-09 定稿，与前端 questionEngine 一致）：
+ *   · 表内且档位落在 TIER_COMMONNESS[tier] → 本地常见，出题；
+ *   · 表内但档位不匹配 → 剔除；
+ *   · 表外 → **视为本地罕见**（省表只收录该省有记录的物种，不入表=该省罕见/无记录）→ 剔除。
+ * 返回 null（分片缺失/解析失败）→ 调用方按"无地区档位"降级（保持可用性，绝不 500）。
+ */
+const regionTiersCache = new Map<string, { at: number; tiers: Map<string, number> | null }>()
+async function regionTiers(env: Env, region: string): Promise<Map<string, number> | null> {
+  const hit = regionTiersCache.get(region)
+  if (hit && Date.now() - hit.at < 600_000) return hit.tiers
+  let tiers: Map<string, number> | null = null
+  try {
+    const m = /^([A-Z]{2})(?:-([A-Z0-9]{1,3}))?$/.exec(region)
+    if (m) {
+      const cc = m[1]!
+      const code = m[2] ? `${m[1]}-${m[2]}` : null
+      if (code) {
+        const obj = await env.MEDIA.get(`data/province-commonness/${cc}.json`)
+        if (obj) {
+          const doc = JSON.parse(await obj.text()) as {
+            tiersByCode?: Record<string, Record<string, number>>
+          }
+          const map = doc.tiersByCode?.[code]
+          if (map) tiers = new Map(Object.entries(map))
+        }
+      }
+      if (!tiers) {
+        const obj = await env.MEDIA.get(`data/province-commonness/${cc}.country.json`)
+        if (obj) {
+          const doc = JSON.parse(await obj.text()) as { tiers?: Record<string, number> }
+          if (doc.tiers) tiers = new Map(Object.entries(doc.tiers))
+        }
+      }
+    }
+  } catch {
+    tiers = null
+  }
+  regionTiersCache.set(region, { at: Date.now(), tiers })
+  return tiers
+}
+
+/**
+ * 按 id 白名单取样候选（036 地区档位路径）。
+ * id 列表来自 R2 分片（单省 ≤ 538、国家级 ≤ ~2,600），经 json_each 展开成行；
+ * 与索引区间扫描同口径：随机起点 + 环形补齐（边缘缓存 30 分钟窗口内可复用）。
+ */
+async function sampleByIds(
+  env: Env,
+  ids: string[],
+  playableCol: string,
+  count: number,
+): Promise<SpeciesRow[]> {
+  if (!ids.length) return []
+  const json = JSON.stringify(ids)
+  const need = Math.min(ids.length, Math.max(count * 8, 200))
+  const startAt = Math.random()
+  const base = `FROM species
+     WHERE id IN (SELECT value FROM json_each(?)) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0`
+  const head = await env.DB.prepare(`SELECT * ${base} AND rnd >= ? ORDER BY rnd LIMIT ?`)
+    .bind(json, startAt, need)
+    .all<SpeciesRow>()
+  let rows = head.results
+  if (rows.length < need) {
+    const tail = await env.DB.prepare(`SELECT * ${base} AND rnd < ? ORDER BY rnd LIMIT ?`)
+      .bind(json, startAt, need - rows.length)
+      .all<SpeciesRow>()
+    rows = rows.concat(tail.results)
+  }
+  return rows.slice(0, count)
 }
 
 /**

@@ -12,7 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from '../lib/util.mjs'
 import { normBinomial } from './verify-provinces-lib.mjs'
-import { aggregateCountryMatrix, shortCode, toByCountryObject } from './distribution-global-lib.mjs'
+import { aggregateCountryMatrix, shortCode, toByCountryObject, DEFAULT_MIN_RECORDS } from './distribution-global-lib.mjs'
 import { GBIF_SQL_SOURCE } from './config.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -54,13 +54,13 @@ try {
   const byCountryObj = toByCountryObject(byCountry)
   const pairs = Object.values(byCountryObj).reduce((n, arr) => n + arr.length, 0)
   console.log(
-    `聚合:国家 ${Object.keys(byCountryObj).length} · (国家,物种)对 ${pairs} · 丢弃 未收录学名 ${skipped.unknownName} / 非法国家码 ${skipped.badCountry} / 排除码(ZZ/XK/XZ) ${skipped.deniedCountry}`,
+    `聚合:国家 ${Object.keys(byCountryObj).length} · (国家,物种)对 ${pairs} · 丢弃 未收录学名 ${skipped.unknownName} / 非法国家码 ${skipped.badCountry} / 排除码(ZZ/XK/XZ) ${skipped.deniedCountry} / 孤证(n<${DEFAULT_MIN_RECORDS}) ${skipped.lowRecords}`,
   )
 
   const out = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    method: `GBIF SQL occurrence(country matrix, class='Aves'), presence-only; names matched to AviList v2025b via binomial normalization`,
+    method: `GBIF SQL occurrence(country matrix, class='Aves'), presence-only + per-country records >= ${DEFAULT_MIN_RECORDS} (singleton noise floor, docs/036 §10); names matched to AviList v2025b via binomial normalization`,
     sources: [GBIF_SQL_SOURCE],
     counts: {
       countries: Object.keys(byCountryObj).length,
@@ -68,6 +68,7 @@ try {
       unmatchedNames: skipped.unknownName,
       badCountry: skipped.badCountry,
       deniedCountry: skipped.deniedCountry,
+      lowRecords: skipped.lowRecords,
     },
     byCountry: byCountryObj,
   }

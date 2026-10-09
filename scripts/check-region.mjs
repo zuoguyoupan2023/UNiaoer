@@ -90,7 +90,7 @@ function checkProvinceCommonness(name, data) {
     if (['ZZ', 'XK', 'XZ'].includes(cc)) errors.push(`${name}: 出现排除码 ${cc}（铁律 6）`)
   }
   // 档位配置合理性（防止误配成"全是 1 档"之类）
-  for (const k of ['dominanceShare', 'spikeShare', 'minProvinceRecords', 'minBandSize']) {
+  for (const k of ['dominanceShare', 'spikeShare', 'minProvinceRecords', 'minBandSize', 'minSpeciesRecords']) {
     const v = data.guards?.[k]
     check(Number.isFinite(v) && v >= 0, `${name}: guards.${k} 非法`)
   }

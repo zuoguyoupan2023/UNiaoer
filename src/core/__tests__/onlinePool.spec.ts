@@ -153,7 +153,7 @@ describe('fetchOnlinePool', () => {
 
     // 再写 3 个新键（借用 L4/L5 的 region 变体不会产生新键,改用清空后重填验证淘汰）
     // 简化：验证"写入不超过上限"由 CLIENT_MAX_ENTRIES 保证即可 —— 通过 storage 条目数断言
-    const stored = Object.keys(sessionStorage).filter((k) => k.startsWith('uniaoer.onlinePool.v1:'))
+    const stored = Object.keys(sessionStorage).filter((k) => k.startsWith('uniaoer.onlinePool.v2:'))
     expect(stored.length).toBeLessThanOrEqual(24)
     expect(stored.length).toBe(keys.length)
   })

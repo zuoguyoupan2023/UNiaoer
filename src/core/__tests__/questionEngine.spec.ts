@@ -98,41 +98,78 @@ describe('buildQuestions', () => {
 
 /**
  * 036：地区档位（省级常见度）参与档位筛选。
- * 语义：表里有该物种 → 用地区档位；表里没有 → 回退全局 commonness（绝不出空池）。
+ * 语义（2026-10-09 定稿，D-036-8）：表里有该物种 → 用地区档位；
+ * 表里没有 → **视为本地罕见，不参与档位筛选**（排除式，不回退全局 commonness）；
+ * 表内不足 count → 放宽到"表内任意档位"（仍排除表外物种）；表内全空才兜底整池（绝不出空）。
  */
 describe('buildQuestions · regionTiers（036 地区档位）', () => {
-  it('地区档位覆盖全局档位：同一只鸟在"本地稀有"时不被 L1 选中', () => {
+  it('地区档位覆盖全局档位：本地稀有（5 档）不被 L1 选中（严格档位足够时）', () => {
     // 全部 5 种全局都是 commonness=2（L1 允许 [1,2]）→ 不加 regionTiers 时 L1 都有资格
     const noRegion = buildQuestions(bank, { type: 'image', count: 4, tier: 1 })
     expect(noRegion.length).toBeGreaterThan(0)
 
-    // 给 e 标成"本地 5 档（稀有）"→ L1（[1,2]）不该再选到它
-    const regionTiers = new Map([['e', 5]])
+    // 表内 a..d 是 1–2 档（4 种 ≥ count），e 本地 5 档 → L1 严格池不含 e（不应放宽）
+    const regionTiers = new Map([
+      ['a', 1],
+      ['b', 2],
+      ['c', 1],
+      ['d', 2],
+      ['e', 5],
+    ])
     for (let i = 0; i < 12; i++) {
       const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
       expect(qs.some((q) => q.media.speciesId === 'e')).toBe(false)
     }
   })
 
-  it('表里没有的物种回退全局档位（不被静默排除）', () => {
-    // 只给 'a' 一个地区档位；其余走全局（commonness=2，L2 允许 [1,2,3]）
-    const regionTiers = new Map([['a', 3]])
-    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 2, regionTiers })
-    expect(qs.length).toBeGreaterThan(0)
-    // 'a' 变 3 档，L2 允许 [1,2,3] → 仍在池里
-    expect(new Set(qs.map((q) => q.media.speciesId)).size).toBeGreaterThan(1)
+  it('表外物种不回退全局档位：本地没有的鸟不出题（长尾鹦鹉场景）', () => {
+    // 地区表只含 a/b/c；d/e 不在表里（= 该地区罕见/无记录）。
+    // 旧语义下 d/e 会因全局 commonness=2 混进 L2；新语义必须排除。
+    const regionTiers = new Map([
+      ['a', 1],
+      ['b', 2],
+      ['c', 3],
+    ])
+    for (let i = 0; i < 20; i++) {
+      const qs = buildQuestions(bank, { type: 'image', count: 3, tier: 2, regionTiers })
+      const ids = qs.map((q) => q.media.speciesId)
+      expect(ids.every((id) => ['a', 'b', 'c'].includes(id))).toBe(true)
+      expect(ids).not.toContain('d')
+      expect(ids).not.toContain('e')
+    }
   })
 
-  it('regionTiers 全把物种标为稀有 → 池不足时放宽，仍能出题（绝不出空）', () => {
+  it('表内严格档位不足 count → 放宽到表内其余档位（仍不出表外物种）', () => {
+    // L1 允许 [1,2]；表内只有 a(1)；b/c/d/e 不在表内 → 放宽到表内任意档位仍是 {a}
+    const regionTiers = new Map([['a', 1]])
+    const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
+    expect(qs.length).toBe(1)
+    expect(qs[0]!.media.speciesId).toBe('a')
+  })
+
+  it('地区表存在但全表为空 → 兜底整池（绝不出空）', () => {
+    // 空 Map 走全局语义（与"无表"等价）
+    const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: new Map() })
+    expect(qs.length).toBeGreaterThan(0)
+  })
+
+  it('regionTiers 把表内物种全标为稀有 → 放宽到表内任意档位，仍能出题（绝不出空）', () => {
     const regionTiers = new Map(bank.map((s) => [s.id, 5]))
     const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
-    expect(qs.length).toBeGreaterThan(0) // 放宽到全池
+    expect(qs.length).toBeGreaterThan(0) // 放宽到表内全部（不引入表外物种）
+    expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
   })
 
   it('null / 缺省等价于不使用地区档位', () => {
     const a = buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: null })
     const b = buildQuestions(bank, { type: 'image', count: 4, tier: 2 })
     expect(a.length).toBe(b.length)
+  })
+
+  it('轮内不重复：同一轮里每只鸟最多出现一次', () => {
+    const qs = buildQuestions(bank, { type: 'image', count: 10, tier: 2 })
+    const ids = qs.map((q) => q.media.speciesId)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })
 

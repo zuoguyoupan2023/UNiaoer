@@ -32,6 +32,12 @@ export const DEFAULT_GUARDS = {
   minBandSize: 30,
   /** 分档后可信物种下限（低于则整省不可信） */
   minProvinceSpecies: 20,
+  /**
+   * 孤证地板：某物种在该地区记录数 < 此值 → 不进该地区档位表（docs/036 §10）。
+   * 依据：n=1 的多为迷鸟/笼养逃逸/误认（实测噪声：长尾鹦鹉、美洲鸵鸟等），
+   * 分位分档会把它放进 1–3 档（US-NY 实测 12 条 1 档孤证），进而混入出题池。
+   */
+  minSpeciesRecords: 2,
 }
 
 /**
@@ -66,14 +72,20 @@ export function bandSlices(n, bands = 5, minSize = 1) {
  * @returns {{ tiers: Record<string, number>, trusted: number, guardsHit: { dominance: number, spike: number }, bandSizes: number[] }}
  */
 export function bandProvince(entries, total, monthsCount, guards = DEFAULT_GUARDS) {
-  const empty = { tiers: {}, trusted: 0, guardsHit: { dominance: 0, spike: 0 }, bandSizes: [] }
+  const empty = { tiers: {}, trusted: 0, guardsHit: { dominance: 0, spike: 0, lowRecords: 0 }, bandSizes: [] }
   if (!Number.isFinite(total) || total < guards.minProvinceRecords) return empty
   if (!entries.length) return empty
 
   let dominance = 0
   let spike = 0
+  let lowRecords = 0
   const trusted = []
   for (const e of entries) {
+    // 孤证地板（docs/036 §10）：记录数过低的"物种"不参与分档，避免噪声占据 1–3 档
+    if (Number.isFinite(guards.minSpeciesRecords) && e.n < guards.minSpeciesRecords) {
+      lowRecords++
+      continue
+    }
     const share = e.n / total
     if (share > guards.dominanceShare) {
       dominance++
@@ -89,7 +101,7 @@ export function bandProvince(entries, total, monthsCount, guards = DEFAULT_GUARD
     trusted.push({ ...e, share })
   }
   if (trusted.length < guards.minProvinceSpecies) {
-    return { ...empty, guardsHit: { dominance, spike } }
+    return { ...empty, guardsHit: { dominance, spike, lowRecords } }
   }
 
   trusted.sort((a, b) => b.share - a.share || a.speciesId.localeCompare(b.speciesId))
@@ -99,7 +111,7 @@ export function bandProvince(entries, total, monthsCount, guards = DEFAULT_GUARD
   for (let k = 0; k < slices.length; k++) {
     for (let j = 0; j < slices[k]; j++) tiers[trusted[i++].speciesId] = k + 1
   }
-  return { tiers, trusted: trusted.length, guardsHit: { dominance, spike }, bandSizes: slices }
+  return { tiers, trusted: trusted.length, guardsHit: { dominance, spike, lowRecords }, bandSizes: slices }
 }
 
 /**
@@ -133,8 +145,8 @@ export function buildRegionTiers(rows, provinceTotals, countryTotals, monthsCoun
   const tiers = {}
   const countryTiers = {}
   const stats = {
-    provinces: { total: 0, trusted: 0, skippedSmall: 0, skippedFew: 0, guardsHit: { dominance: 0, spike: 0 } },
-    countries: { total: 0, trusted: 0, skippedSmall: 0, skippedFew: 0, guardsHit: { dominance: 0, spike: 0 } },
+    provinces: { total: 0, trusted: 0, skippedSmall: 0, skippedFew: 0, guardsHit: { dominance: 0, spike: 0, lowRecords: 0 } },
+    countries: { total: 0, trusted: 0, skippedSmall: 0, skippedFew: 0, guardsHit: { dominance: 0, spike: 0, lowRecords: 0 } },
     /** 明细（留痕用；只保留必要的诊断字段） */
     provinceReport: [],
     countryReport: [],
@@ -160,6 +172,7 @@ export function buildRegionTiers(rows, provinceTotals, countryTotals, monthsCoun
       const res = bandProvince(entries, total, monthsCount, guards)
       stats.provinces.guardsHit.dominance += res.guardsHit.dominance
       stats.provinces.guardsHit.spike += res.guardsHit.spike
+      stats.provinces.guardsHit.lowRecords += res.guardsHit.lowRecords
       if (res.trusted < guards.minProvinceSpecies) {
         stats.provinces.skippedFew++
         stats.provinceReport.push({
@@ -199,6 +212,7 @@ export function buildRegionTiers(rows, provinceTotals, countryTotals, monthsCoun
       const res = bandProvince(entries, total, monthsCount, guards)
       stats.countries.guardsHit.dominance += res.guardsHit.dominance
       stats.countries.guardsHit.spike += res.guardsHit.spike
+      stats.countries.guardsHit.lowRecords += res.guardsHit.lowRecords
       if (res.trusted < guards.minProvinceSpecies) {
         stats.countries.skippedFew++
         stats.countryReport.push({ key: cc, status: 'skipped-few', total, matched: entries.length, trusted: res.trusted })

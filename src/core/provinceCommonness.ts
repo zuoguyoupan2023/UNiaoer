@@ -105,8 +105,10 @@ export async function regionTierMap(
 /**
  * 用地区档位筛物种（若可用），否则返回原列表（**绝不出空**）。
  *
- * 与 `TIERS[tier].commonness` 的语义一致：保留档位落在 `allowed` 内的物种；
- * 若筛完不足 `min` 个，则放宽为"档位 ≤ 允许上限"（避免某省 1 档物种太少导致题目不足）。
+ * 语义（2026-10-09 定稿，与 questionEngine 一致）：
+ *   ① 严格：档位落在 `allowed` 内（本地常见度）；
+ *   ② 放宽：档位够的不足 `min` → 放宽到**表内任意档位**（本地稀有鸟也比外地鸟贴近语义）；
+ *   ③ 兜底：表内一个候选都没有 → 原池（避免空题；无表时直接走全球 commonness 语义）。
  */
 export function filterByRegionTier(
   species: BankSpecies[],
@@ -120,12 +122,8 @@ export function filterByRegionTier(
     return t != null && allowed.includes(t)
   })
   if (strict.length >= min) return strict
-  const maxAllowed = Math.max(...allowed)
-  const relaxed = species.filter((sp) => {
-    const t = tiers.get(sp.id)
-    return t != null && t <= maxAllowed
-  })
-  return relaxed.length ? relaxed : species
+  const local = species.filter((sp) => tiers.has(sp.id))
+  return local.length ? local : species
 }
 
 /** 该物种在该地区的档位（无则 null；供 UI 展示"本地常见度"） */

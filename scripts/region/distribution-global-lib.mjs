@@ -18,13 +18,24 @@ export function shortCode(taxonKey) {
 
 const CC_RE = /^[A-Z]{2}$/
 
+/** 默认"孤证地板"：单条记录（n<2）多为迷鸟/笼养逃逸/误认，不进地区矩阵（docs/036 §10） */
+export const DEFAULT_MIN_RECORDS = 2
+
 /**
- * 行聚合 → { byCountry: { [ISO2]: Set<shortCode> }, skipped: { unknownName, badCountry } }
+ * 行聚合 → { byCountry: { [ISO2]: Set<shortCode> }, skipped: { unknownName, badCountry, deniedCountry, lowRecords } }
  * rows 元素容错:缺 scientificname/countrycode 的行按 skipped 计,不中断。
+ *
+ * `options.minRecords`（默认 2）= 孤证地板：同一 (国家,物种) 的多行先按记录数**合并**，
+ * 合计 < 地板则丢弃。依据：中国境内 1 条记录的"长尾鹦鹉/美洲鸵鸟"等笼养逃逸噪声
+ * 曾进入题库候选（实测 2026-10-09，见 docs/036 §10 / docs/038 §7）。
  */
-export function aggregateCountryMatrix(rows, nameToCode) {
-  const byCountry = new Map()
-  const skipped = { unknownName: 0, badCountry: 0, deniedCountry: 0 }
+export function aggregateCountryMatrix(rows, nameToCode, options = {}) {
+  const minRecords = Number.isFinite(options.minRecords)
+    ? Math.max(1, Math.trunc(options.minRecords))
+    : DEFAULT_MIN_RECORDS
+  // cc → Map<shortCode, n>：先累计再过滤（同一物种的亚种/作者注记行会被 normBinomial 合并）
+  const counts = new Map()
+  const skipped = { unknownName: 0, badCountry: 0, deniedCountry: 0, lowRecords: 0 }
   for (const r of rows || []) {
     const code = nameToCode.get(normBinomial(r?.scientificname))
     if (!code) {
@@ -41,8 +52,18 @@ export function aggregateCountryMatrix(rows, nameToCode) {
       skipped.deniedCountry++
       continue
     }
-    if (!byCountry.has(cc)) byCountry.set(cc, new Set())
-    byCountry.get(cc).add(code)
+    let m = counts.get(cc)
+    if (!m) counts.set(cc, (m = new Map()))
+    m.set(code, (m.get(code) || 0) + (Number(r?.n) || 0))
+  }
+  const byCountry = new Map()
+  for (const [cc, m] of counts) {
+    const set = new Set()
+    for (const [code, n] of m) {
+      if (n >= minRecords) set.add(code)
+      else skipped.lowRecords++
+    }
+    if (set.size) byCountry.set(cc, set)
   }
   return { byCountry, skipped }
 }

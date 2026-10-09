@@ -39,7 +39,12 @@ const CLIENT_TTL_MS = 10 * 60_000
  * 上限过小（曾试 8）会在正常使用中互相淘汰——用户切几次档位/题型就废掉缓存。
  */
 const CLIENT_MAX_ENTRIES = 24
-const CLIENT_PREFIX = 'uniaoer.onlinePool.v1:'
+/**
+ * 客户端缓存前缀。版本变更即整体失效旧条目：
+ *   v1 → v2（2026-10-09）：Worker 候选池改为"地区档位过滤"（表外物种不再回退全局
+ *   commonness，见 docs/036 §10），旧缓存可能含本地没有的鸟，必须作废。
+ */
+const CLIENT_PREFIX = 'uniaoer.onlinePool.v2:'
 
 interface CachedPool {
   at: number
