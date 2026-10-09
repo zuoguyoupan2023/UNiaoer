@@ -1013,6 +1013,38 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
   return parts.join(';')
 }
 
+/**
+ * GET /api/geo —— 粗定位（039 P1「附近观鸟点」的默认定位来源）。
+ *
+ * 位置取自 Cloudflare 注入的 `request.cf`（IP 归属地），**四舍五入到 0.05°（≈5km）**后返回：
+ *  - **不落库**：不读也不写任何表；只在本次请求的内存里算一次；
+ *  - **不进日志**：本函数不 console.*，也不带任何可关联标识返回；
+ *  - **不可缓存**：响应 `no-store`（位置因人而异，缓存会串味；且我们不想在边缘留下副本）。
+ * 客户端拿到后只放在页面内存里算距离。取不到（代理/某些移动网络无 cf 数据）→ 返回
+ * `{ ok: true, located: false }`，前端回退到手动选地区。
+ *
+ * 隐私口径与 docs/028（计量）一致：不追踪、不画像；文案见设置页与 /nearby 页。
+ */
+function handleGeo(request: Request): Response {
+  // request.cf 是 Cloudflare 运行时属性；类型上不在标准 Request 里，故按需读取
+  const cf = (request as Request & { cf?: Record<string, unknown> }).cf
+  const lat = Number(cf?.latitude)
+  const lng = Number(cf?.longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+    return json({ ok: true, located: false })
+  }
+  const round = (v: number) => Math.round(v * 20) / 20 // 0.05° 步长
+  return json({
+    ok: true,
+    located: true,
+    lat: round(lat),
+    lng: round(lng),
+    // 精度提示（前端文案用）：0.05° ≈ 5km
+    precisionDeg: 0.05,
+    country: typeof cf?.country === 'string' ? cf.country : null,
+  })
+}
+
 /** POST /api/metrics：公开上报（事件计数；无 PII）。所有异常路径静默，绝不 5xx 打扰用户 */
 async function handleMetrics(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const ip = clientIp(request)
@@ -1373,6 +1405,8 @@ export default {
         }
         if (path === '/api/manifest') return await handleManifest(env)
         if (path === '/api/manifest-core') return await handleManifest(env, 'manifest-core.json')
+        // 039 P1：粗定位（CF request.cf，四舍五入 0.05°；不落库/不进日志）
+        if (path === '/api/geo') return handleGeo(request)
         if (path === '/api/questions') return await handleQuestionsCached(request, env, url, ctx)
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))

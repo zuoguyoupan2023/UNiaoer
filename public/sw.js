@@ -104,6 +104,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
     return
   }
+  // 039 P1 附近观鸟点（按国分片）：同 036 —— 产物随构建更新、URL 不含版本号，
+  // stale-while-revalidate 让"断网点开 /nearby"仍能出上次的列表（docs/039 §5 DoD）
+  if (url.pathname.includes('/data/hotspots-ebird')) {
+    event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
+    return
+  }
   // 其余题库 JSON（含完整层 manifest.json）：network-first（口径与旧行为一致）
   if (url.pathname.includes('/data/')) {
     event.respondWith(manifestFetch(req))

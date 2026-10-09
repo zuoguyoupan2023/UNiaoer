@@ -147,6 +147,49 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
     }),
   )
   // 名录目录（031 D-031-2）：小型确定性夹具（真实产物 1.5MB，e2e 只验证排序/跳转接线）
+  // 039 P1 附近观鸟点：索引 + 按国分片 + 粗定位接口（全部离线夹具）
+  await page.route('**/data/hotspots-ebird/index.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        method: 'e2e fixture: derived subset',
+        sources: [
+          { key: 'ebird', name: 'eBird (Cornell Lab of Ornithology)', url: 'https://ebird.org/', license: 'non-commercial', attribution: 'eBird' },
+        ],
+        minSpecies: 50,
+        cellDeg: 0.25,
+        perCell: 1,
+        gridMaxKm: 120,
+        rawTotal: 1000,
+        total: 3,
+        countries: [
+          { cc: 'CN', count: 2, grids: 1, bytes: 100 },
+          { cc: 'US', count: 1, grids: 1, bytes: 100 },
+        ],
+      },
+    }),
+  )
+  await page.route('**/data/hotspots-ebird/CN.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        cc: 'CN',
+        count: 2,
+        grids: { 'CN-g1-39_116': { r: 28504, s: 320, top: [{ id: 'sp-01', count: 900 }] } },
+        spots: [
+          { i: 'L1001', n: '颐和园 (Summer Palace)', lat: 39.95, lng: 116.35, sub: 'CN-11', p: 270, o: '2026-09-29', grid: 'CN-g1-39_116', km: 8 },
+          { i: 'L1002', n: '远郊湿地', lat: 40.6, lng: 117.2, sub: 'CN-11', p: 120 },
+        ],
+      },
+    }),
+  )
+  await page.route('**/data/hotspots-ebird/US.json', (r) =>
+    r.fulfill({ json: { schemaVersion: 1, cc: 'US', count: 1, grids: {}, spots: [{ i: 'L2001', n: 'Liberty SP', lat: 39.96, lng: 116.34, p: 305 }] } }),
+  )
+  await page.route('**/api/geo', (r) =>
+    r.fulfill({ json: { ok: true, located: true, lat: 39.95, lng: 116.35, precisionDeg: 0.05, country: 'CN' } }),
+  )
   await page.route('**/data/catalog.json', (r) =>
     r.fulfill({
       json: {

@@ -35,12 +35,15 @@ function findGeo(node, at = '$', hits = []) {
 }
 
 /** 顶层通用校验(budget:体积上限,默认 2MB;species-distribution 3MB,见 025 §5) */
-function checkCommon(name, raw, data, budget = MAX_BYTES) {
+function checkCommon(name, raw, data, budget = MAX_BYTES, { shard = false } = {}) {
   check(raw.length < budget, `${name}: 体积超预算（021 §2.3 上限 ${Math.round(budget / 1024 / 1024)}MB）：${Math.round(raw.length / 1024)}KB`)
   check(data.schemaVersion === 1, `${name}: schemaVersion 必须为 1，得到 ${data.schemaVersion}`)
-  check(typeof data.generatedAt === 'string' && data.generatedAt, `${name}: generatedAt 缺失`)
-  check(typeof data.method === 'string' && data.method, `${name}: method（口径说明）缺失`)
-  check(Array.isArray(data.sources) && data.sources.length > 0, `${name}: sources（数据集署名）缺失`)
+  // 039 P1 按国分片：口径/署名集中在 index.json（15 份重复无意义），分片只查结构
+  if (!shard) {
+    check(typeof data.generatedAt === 'string' && data.generatedAt, `${name}: generatedAt 缺失`)
+    check(typeof data.method === 'string' && data.method, `${name}: method（口径说明）缺失`)
+    check(Array.isArray(data.sources) && data.sources.length > 0, `${name}: sources（数据集署名）缺失`)
+  }
   const geo = findGeo(data)
   check(geo.length === 0, `${name}: 产物含边界/几何数据（021 §2.4.4 禁止）：${geo.slice(0, 5).join(', ')}`)
 }
@@ -301,6 +304,79 @@ function checkDistributionGlobal(name, data, indexCodes) {
   }
 }
 
+/**
+ * 039 P1 附近观鸟点：索引 + 按国分片（eBird 派生子集 + GBIF 网格去重共享）。
+ * 重点校验：**派生约束**（原始 → 子集的保留率不能异常高——高了说明退化成"原样导出"，
+ * 会把 eBird 条款风险与体积一起带回来）、字段完整性、省码与国家前缀、grid 引用闭环。
+ */
+function checkNearbySpots(name, data) {
+  const isIndex = !!data.countries && data.total != null
+  if (isIndex) {
+    check(data.schemaVersion === 1, `${name}: schemaVersion 应为 1`)
+    check(Array.isArray(data.sources) && data.sources.length > 0, `${name}: sources 缺失（eBird 署名不可省）`)
+    const ebird = (data.sources || []).find((s) => s.key === 'ebird')
+    check(!!ebird, `${name}: sources 缺 ebird 条目`)
+    check(typeof data.method === 'string' && data.method.length > 20, `${name}: method（派生口径）缺失或过短`)
+    for (const k of ['minSpecies', 'cellDeg', 'perCell']) {
+      check(Number.isFinite(data[k]) && data[k] >= 0, `${name}: ${k} 非法`)
+    }
+    check(data.cellDeg > 0, `${name}: cellDeg 必须为正（0 = 未做空间去重，等于原样导出）`)
+    check(Number.isFinite(data.rawTotal) && data.rawTotal > 0, `${name}: rawTotal 缺失`)
+    check(Number.isInteger(data.total) && data.total > 0, `${name}: total 非法`)
+    for (const c of data.countries || []) {
+      if (!/^[A-Z]{2}$/.test(String(c.cc || ''))) errors.push(`${name}: 非法国家码 ${c.cc}`)
+      check(Number.isInteger(c.count) && c.count > 0, `${name}: ${c.cc} count 非法`)
+    }
+    const kept = data.countries.reduce((n, c) => n + c.count, 0)
+    check(kept === data.total, `${name}: total(${data.total}) ≠ 各国之和(${kept})`)
+    // 派生边界：保留率过高说明过滤失效（对照 docs/039 §2.2 的 7.1% 实测）
+    const ratio = data.total / data.rawTotal
+    check(
+      ratio <= 0.2,
+      `${name}: 保留率 ${(ratio * 100).toFixed(1)}%（${data.total}/${data.rawTotal}）过高——` +
+        `派生约束失效？eBird 原始名录不得原样分发（docs/022 §2.5）`,
+    )
+  } else {
+    check(/^[A-Z]{2}$/.test(String(data.cc || '')), `${name}: cc 非法`)
+    check(Number.isInteger(data.count) && data.count > 0, `${name}: count 非法`)
+    check(Array.isArray(data.spots), `${name}: spots 必须是数组`)
+    check(data.count === (data.spots || []).length, `${name}: count(${data.count}) ≠ spots(${data.spots?.length})`)
+    check(data.grids && typeof data.grids === 'object', `${name}: grids 缺失`)
+    const gridIds = new Set(Object.keys(data.grids || {}))
+    for (const [i, s] of (data.spots || []).entries()) {
+      const at = `${name}: spot[${i}]`
+      check(/^L\d+$/.test(String(s?.i || '')), `${at} locId 非法（${s?.i}；eBird hotspot id 形如 L123456）`)
+      check(Number.isFinite(s?.lat) && s.lat >= -90 && s.lat <= 90, `${at} lat 非法`)
+      check(Number.isFinite(s?.lng) && s.lng >= -180 && s.lng <= 180, `${at} lng 非法`)
+      if (s?.sub !== undefined) check(String(s.sub).startsWith(data.cc + '-'), `${at} 省码 ${s.sub} 与 ${data.cc} 不匹配`)
+      if (s?.p !== undefined) check(Number.isInteger(s.p) && s.p >= 0, `${at} p（鸟种数）非法`)
+      if (s?.o !== undefined) check(/^\d{4}-\d{2}-\d{2}$/.test(String(s.o)), `${at} o（日期）格式非法（${s.o}）`)
+      if (s?.grid !== undefined) {
+        check(gridIds.has(s.grid), `${at} 引用不存在的 grid ${s.grid}（grids 表里没有）`)
+        check(Number.isInteger(s.km) && s.km >= 0, `${at} 有 grid 但 km 非法`)
+      } else {
+        check(s?.km === undefined, `${at} 无 grid 却带 km`)
+      }
+    }
+    for (const [id, g] of Object.entries(data.grids || {})) {
+      check(Number.isInteger(g?.r) && g.r > 0, `${name}: grid ${id} r（记录数）非法`)
+      check(Number.isInteger(g?.s) && g.s > 0, `${name}: grid ${id} s（物种数）非法`)
+    }
+  }
+}
+
+/** 039 P1：附近观鸟点的**按国分片**（有 spots/cc，但不是索引） */
+function isNearbyShard(data, file) {
+  return /hotspots-ebird[\\/]/.test(file) && Array.isArray(data?.spots) && !data?.countries
+}
+
+// 039 P1：附近观鸟点分片（索引 + 各国文件；不存在时静默跳过，兼容未构建的旧检出）
+const nearbyDir = path.join(ROOT, 'public/data/hotspots-ebird')
+const nearbyFiles = await fs
+  .readdir(nearbyDir)
+  .then((list) => list.filter((f) => f.endsWith('.json')).sort().map((f) => path.join(nearbyDir, f)))
+  .catch(() => [])
+
 const files = args.file
   ? [path.resolve(ROOT, args.file)]
   : [
@@ -309,7 +385,9 @@ const files = args.file
       'public/data/hotspots.json',
       'public/data/species-distribution.json',
       'public/data/province-commonness.json',
-    ].map((p) => path.join(ROOT, p))
+    ]
+      .map((p) => path.join(ROOT, p))
+      .concat(nearbyFiles)
 
 const present = []
 // 025 M1:species-distribution 闭环校验需要骨架短码全集(缺骨架时报错,由 checkDistributionGlobal 呈现)
@@ -332,7 +410,13 @@ for (const file of files) {
     errors.push(`${name}: 不是合法 JSON`)
     continue
   }
-  checkCommon(name, raw, data, /species-distribution/.test(name) ? 3 * 1024 * 1024 : MAX_BYTES)
+  // 039 P1 分片：US 最大约 1.8MB，给 3MB 上限；索引与其余产物沿用 2MB
+  const budget = /species-distribution/.test(name)
+    ? 3 * 1024 * 1024
+    : /hotspots-ebird[\\/]/.test(file)
+      ? 3 * 1024 * 1024
+      : MAX_BYTES
+  checkCommon(name, raw, data, budget, { shard: isNearbyShard(data, file) })
   if (Array.isArray(data.tiers)) errors.push(`${name}: tiers 必须是对象`)
   else if (data.tiers || data.sharding) {
     // 036 省级常见度（分片产物）：索引 + 分片
@@ -356,6 +440,9 @@ for (const file of files) {
         checkProvinceCommonnessShard(`${data.sharding.dir}/${f}`, shard)
       }
     }
+  } else if (Array.isArray(data.spots) || (data.countries && data.total != null && nearbyFiles.includes(file))) {
+    // 039 P1：附近观鸟点（索引 / 分片）
+    checkNearbySpots(name, data)
   } else if (data.bySpecies && data.byCountry) checkProvinces(name, data)
   else if (Array.isArray(data.hotspots)) checkHotspots(name, data)
   else if (data.bySpecies) checkSeasonality(name, data)

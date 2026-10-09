@@ -463,6 +463,37 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.cat-sp')).toContainText('家燕')
   })
 
+  test('附近观鸟点（039 P1）：粗定位 → 按距离列表 → 展开详情与署名', async ({ page }) => {
+    await page.goto('/nearby')
+
+    // 粗定位（/api/geo 桩）生效 → 显示"网络大致位置"并自动列出点位
+    await expect(page.getByText(/网络大致位置/)).toBeVisible({ timeout: 10_000 })
+    const spots = page.locator('.spot')
+    await expect(spots).toHaveCount(1) // 25km 内只有颐和园（另一个在 ~100km 外）
+    await expect(spots.first()).toContainText('颐和园')
+    await expect(spots.first()).toContainText('公里')
+
+    // 半径切换：50km 仍只有 1 个；取消半径限制后第二个点出现（用 50 覆盖不到 100km，故选 10 验证收缩）
+    await page.getByRole('button', { name: '10 公里内' }).click()
+    await expect(spots).toHaveCount(1)
+    await expect(spots.first()).toContainText('0')
+
+    // 展开详情：省码 + "这一带"网格统计 + 代表鸟种可点进物种页 + eBird 外链
+    await spots.first().locator('.spot-btn').click()
+    const detail = spots.first().locator('.spot-detail')
+    await expect(detail).toContainText('CN-11')
+    await expect(detail).toContainText('28504') // 网格记录数（去重共享的 grids）
+    await expect(detail.locator('a.ext')).toHaveAttribute('href', 'https://ebird.org/hotspot/L1001')
+
+    // 署名与派生口径必须随页展示（铁律 5 + docs/022 §2.5）
+    await expect(page.getByText(/eBird \(Cornell Lab of Ornithology\)/)).toBeVisible()
+    await expect(page.getByText(/至少 50 种/)).toBeVisible()
+
+    // 手选国家：切到 US → 换成美国夹具点位
+    await page.locator('.sel').selectOption('US')
+    await expect(page.locator('.spot').first()).toContainText('Liberty SP')
+  })
+
   test('全球物种层（025）：未收录标记、轻量详情与 bank 回归', async ({ page }) => {
     await page.goto('/region') // 默认亚洲 + 中国
 

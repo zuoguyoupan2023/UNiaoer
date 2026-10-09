@@ -76,6 +76,7 @@
 | 构建观鸟点（GBIF SQL 1° 源 + eBird 命名 + 网格×省补码；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names --cell-provinces <GBIF 下载 key，如 0017635-260928105237408>` |
 | 构建全球区系层（GBIF SQL 国家矩阵 → `species-distribution.json`；025 M1） | `npm run region:distribution`（`-- --mock --out …` 离线） |
 | 抓 eBird 热点/区划到缓存（需 `EBIRD_API_KEY`） | `npm run region:ebird` |
+| 构建附近观鸟点产物（eBird 派生子集 + GBIF 网格去重；039 P1） | `npm run region:nearby-spots`（`--min-species 50 --cell-deg 0.25`） |
 | GBIF SQL 下载（提交/续传/列表；需 GBIF 账号） | `npm run region:gbif-sql -- --sql "..."` / `-- --key <key>` / `-- --list` |
 | 地区 SQL 对照校验（仅报告，不改产物） | `npm run region:verify-provinces` / `region:verify-seasonality` / `region:verify-hotspots` |
 | 地区产物校验（结构/署名/无边界几何/观鸟点省码覆盖率地板；CI 用 `-- --no-net`） | `npm run check:region` |
