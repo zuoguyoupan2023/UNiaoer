@@ -460,6 +460,10 @@ export const messages = {
     genFailed: '生成失败，请重试',
     bgLoadFailed: '背景图加载失败（跨域受限），已保持纯配色',
     wrongThumbTitle: '{base}（这题你答错了，试试用它做背景？）',
+    qrShareReady: '二维码指向本轮成绩页：扫码可见每题素材、正确答案与你选错的那一项。',
+    qrShareNone: '尚未生成分享链接，二维码会指向首页。点下方按钮改为指向本轮成绩。',
+    qrShareCreate: '创建分享链接（二维码指向本轮成绩）',
+    qrSiteOnly: '二维码指向官网首页。',
     wrongBadgeTitle: '这题你答错了，试试用它做背景？',
     wrongBadgeAria: '这题你答错了',
     scene: {

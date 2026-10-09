@@ -69,7 +69,7 @@ describe('QuizPlay C3 画廊', () => {
     pushMock.mockClear()
   })
 
-  it('L1 也展示全部图/音（各 5 个）', async () => {
+  it('L1 也展示全部图/音；但当前题面素材被排除（去冗余，2026-10-09）', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
     try {
       const wrapper = mount(QuizPlay, { props: { type: 'image' } })
@@ -89,8 +89,14 @@ describe('QuizPlay C3 画廊', () => {
       await toggle.trigger('click')
       await flushPromises()
 
-      expect(wrapper.findAll('.sg-thumb')).toHaveLength(5) // 5 张照片
-      expect(wrapper.findAll('.sg-audio')).toHaveLength(5) // 5 条录音（跨类型）
+      // 图题：题面那张图不再列出（4 = 5 − 题面），跨类型录音 5 条全在
+      expect(wrapper.findAll('.sg-thumb')).toHaveLength(4)
+      expect(wrapper.findAll('.sg-audio')).toHaveLength(5)
+      // 计数标签也应为过滤后的 9
+      expect(toggle.text()).toContain('9')
+
+      // 题面图确实不在列表里（选中态不存在 → 列表里没有任何高亮项）
+      expect(wrapper.findAll('.sg-thumb.on')).toHaveLength(0)
     } finally {
       vi.useRealTimers()
     }

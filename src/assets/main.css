@@ -84,6 +84,9 @@
   font-weight: 600;
   color: var(--text-light);
   transition: all 0.2s ease;
+  /* 导航胶囊一律不折行：中文可在任意字间断行，宽度不足时「看图识鸟」会折成两行
+     （窄屏靠收紧尺寸 + 横向滚动兜底，见下方 @media） */
+  white-space: nowrap;
 }
 .app-nav a:hover {
   background: #eaf4ef;
@@ -150,6 +153,28 @@
     order: 2;
     flex-basis: 100%;
     justify-content: center;
+  }
+  /* 收紧胶囊：窄屏下 5 个中/英文标签并排更从容（文字本身不折行） */
+  .app-nav a {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+  /* 极窄屏（iPhone SE 等）：允许**整颗胶囊**换到下一行，绝不把文字压进胶囊内部 */
+  .nav-group {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 4px;
+  }
+}
+
+/* 超窄屏再收一档：品牌名与胶囊同步缩小，避免第一行溢出 */
+@media (max-width: 400px) {
+  .brand-name {
+    font-size: 1.2rem;
+  }
+  .app-nav a {
+    padding: 6px 8px;
+    font-size: 0.74rem;
   }
 }
 

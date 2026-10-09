@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CircleCheck, Lock, Unlock, X } from 'lucide-vue-next'
+import { CircleCheck, Lock, Share2, Unlock, X } from 'lucide-vue-next'
 import {
   downloadBlob,
   drawPoster,
@@ -22,8 +22,16 @@ const props = defineProps<{
   images: PosterImage[]
   /** 035：二维码指向（分享链接；缺省 → 官网，见 core/poster 的 drawQrSlot） */
   qrUrl?: string
+  /**
+   * 本轮成绩**可以**生成分享链接（roundRecord 已落库）。
+   * qrUrl 为空且此值为 true 时，导出区给出「创建分享链接」入口——
+   * 否则二维码直落官网（DEFAULT_SITE_URL），扫码方只看到首页而非本轮成绩。
+   */
+  canShare?: boolean
+  /** 正在创建分享链接（按钮禁用/文案切换） */
+  shareBusy?: boolean
 }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; 'request-share': [] }>()
 
 // 弹层无障碍：焦点移入/圈闭/ESC 关闭/还原/滚动锁（打开状态由 props.open 驱动）
 const { panelRef } = useDialogA11y(() => props.open, { onClose: () => emit('close') })
@@ -360,9 +368,33 @@ function openImage() {
 
           <!-- 导出：先生成预览，可在弹层内保存/继续修改（F7） -->
           <div class="group export">
+            <!-- 二维码去向（035）：有分享链接 → 本轮成绩页；否则官网。缺链接时给一键创建入口，
+                 免去"先生成海报、扫码才发现是首页"的来回（2026-10-09 用户实测反馈） -->
+            <p class="qr-note" :class="{ ok: !!qrUrl }">
+              <CircleCheck v-if="qrUrl" class="ic" :size="13" />
+              <span>{{
+                qrUrl
+                  ? t('poster.qrShareReady')
+                  : canShare
+                    ? t('poster.qrShareNone')
+                    : t('poster.qrSiteOnly')
+              }}</span>
+            </p>
+            <button
+              v-if="canShare && !qrUrl"
+              class="btn btn-secondary"
+              style="width: 100%"
+              :disabled="shareBusy"
+              @click="emit('request-share')"
+            >
+              <Share2 class="ic" :size="15" />
+              {{ shareBusy ? t('share.creating') : t('poster.qrShareCreate') }}
+            </button>
+
             <button
               class="btn btn-primary"
               style="width: 100%"
+              :style="{ marginTop: '8px' }"
               :disabled="generating"
               @click="generate"
             >
@@ -668,6 +700,19 @@ function openImage() {
 .export {
   border-top: 1px solid var(--border);
   padding-top: 18px;
+}
+/* 二维码去向提示（035）：明确告知扫码会落到哪里，避免"海报流出后才发现指向首页" */
+.qr-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 10px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-light);
+}
+.qr-note.ok {
+  color: var(--primary);
 }
 .result {
   margin-top: 14px;

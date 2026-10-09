@@ -48,10 +48,12 @@ test.describe('核心答题链路', () => {
     await expect(page.getByText('答题完成')).toBeVisible()
     await expect(page.getByText(/正确率 \d+%/).first()).toBeVisible()
 
-    // 海报弹层：打开（role=dialog）→ ESC 关闭（useDialogA11y 回归）
+    // 海报弹层：打开（role=dialog）→ 二维码去向提示 → ESC 关闭（useDialogA11y 回归）
     await page.getByRole('button', { name: '生成海报' }).click()
     const posterDialog = page.locator('.overlay .panel[role="dialog"]')
     await expect(posterDialog).toBeVisible()
+    // 尚未创建分享 → 明示二维码指向首页，并给一键创建入口（2026-10-09 实测反馈修复）
+    await expect(posterDialog.locator('.qr-note')).toContainText('指向首页')
     await page.keyboard.press('Escape')
     await expect(posterDialog).toBeHidden()
 
@@ -108,8 +110,16 @@ test.describe('核心答题链路', () => {
     await page.getByRole('button', { name: '退出' }).click()
     await expect(page).toHaveURL(/\/result$/)
 
-    // 创建分享
-    await page.getByRole('button', { name: '生成分享链接' }).click()
+    // 海报里直接创建分享链接 → 二维码改指本轮成绩（2026-10-09：不必先生成海报才发现指向首页）
+    await page.getByRole('button', { name: '生成海报' }).click()
+    const posterDialog = page.locator('.overlay .panel[role="dialog"]')
+    await expect(posterDialog.locator('.qr-note')).toContainText('指向首页')
+    await posterDialog.getByRole('button', { name: /创建分享链接/ }).click()
+    await expect(posterDialog.locator('.qr-note')).toContainText('本轮成绩页')
+    await page.keyboard.press('Escape')
+    await expect(posterDialog).toBeHidden()
+
+    // 结果页同步进入"已分享"态（复用弹层里创建的那份，不重复创建）
     const linkInput = page.locator('.share-link input')
     await expect(linkInput).toBeVisible()
     const shareUrl = await linkInput.inputValue()
@@ -151,6 +161,29 @@ test.describe('核心答题链路', () => {
     const audio = page.locator('.media audio, .audio-row audio').first()
     await expect(audio).toBeAttached({ timeout: 10_000 })
     await expect(audio).toHaveAttribute('crossorigin', 'anonymous')
+  })
+
+  test('更多素材去冗余：图题只列音频、音题只列图片（2026-10-09 实测反馈）', async ({ page }) => {
+    // 夹具物种为 1 图 + 1 音：过滤掉当前题面后，画廊里应只剩"另一种"
+    await startImageQuiz(page)
+    const toggle = page.locator('.sg-toggle')
+    await expect(toggle).toBeVisible()
+    await toggle.click()
+    const body = page.locator('.sg-body')
+    await expect(body.locator('.sg-audio')).toHaveCount(1) // 图题 → 列录音
+    await expect(body.locator('.sg-thumb')).toHaveCount(0) // 题面那张图不再重复列出
+    await expect(toggle).toContainText('1')
+
+    // 音题同理：只列图片（首启向导已在上面跳过，同一上下文不再弹）
+    await page.goto('/quiz/audio')
+    await page.getByRole('button', { name: /L1 入门/ }).click()
+    await page.getByRole('button', { name: '开始答题' }).click()
+    const atoggle = page.locator('.sg-toggle')
+    await expect(atoggle).toBeVisible({ timeout: 10_000 })
+    await atoggle.click()
+    const abody = page.locator('.sg-body')
+    await expect(abody.locator('.sg-thumb')).toHaveCount(1)
+    await expect(abody.locator('.sg-audio')).toHaveCount(0)
   })
 })
 

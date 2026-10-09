@@ -21,9 +21,26 @@ const emit = defineEmits<{ select: [MediaAsset] }>()
 
 const open = ref(false)
 const zoom = ref<MediaAsset | null>(null)
-const images = computed(() => props.images ?? [])
-const audios = computed(() => props.audios ?? [])
+
+/**
+ * 去冗余（2026-10-09）：select 模式下**当前正展示的素材不再列出**——
+ * 否则「更多素材」里第一项就是题面本身，点它等于什么都不做（图题重复图、音题重复音）。
+ * 过滤后自然形成"看图的看它怎么叫 / 听音的看它长什么样"：
+ *   1 图 1 音的长尾种 → 图题只列音频、音题只列图片；核心种（5+5）仍保留**其余**图/音可切换（C3）。
+ * browse 模式（结果页/错题本/物种详情）不传 activeUrl → 一张不滤，语义不变。
+ */
+const images = computed(() => {
+  const list = props.images ?? []
+  return props.activeUrl ? list.filter((m) => m.url !== props.activeUrl) : list
+})
+const audios = computed(() => {
+  const list = props.audios ?? []
+  return props.activeUrl ? list.filter((m) => m.url !== props.activeUrl) : list
+})
 const total = computed(() => images.value.length + audios.value.length)
+const allTotal = computed(() => (props.images?.length ?? 0) + (props.audios?.length ?? 0))
+/** 有可展示的"非当前"素材才渲染：单个同类素材（browse 单人素材）仍隐藏 */
+const visible = computed(() => total.value >= 1 && (total.value > 1 || allTotal.value > total.value))
 
 // 焦点移入/圈闭/ESC/还原由 useDialogA11y 统一处理
 const { panelRef: zoomPanelRef } = useDialogA11y(() => !!zoom.value, { onClose: closeZoom })
@@ -37,7 +54,7 @@ function closeZoom() {
 </script>
 
 <template>
-  <div v-if="total > 1" class="sg">
+  <div v-if="visible" class="sg">
     <button
       class="sg-toggle"
       type="button"

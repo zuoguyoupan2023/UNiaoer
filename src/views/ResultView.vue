@@ -437,6 +437,9 @@ async function again() {
     :data="posterData"
     :images="posterImages"
     :qr-url="shareUrl || undefined"
+    :can-share="!!roundRecord && !shareRevoked"
+    :share-busy="shareBusy"
+    @request-share="doShare"
     @close="showPoster = false"
   />
 

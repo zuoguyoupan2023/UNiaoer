@@ -467,6 +467,10 @@ const en: typeof zhMessages = {
     genFailed: 'Generation failed, please retry',
     bgLoadFailed: 'Background failed to load (CORS); keeping plain colors',
     wrongThumbTitle: '{base} (you missed this one — try it as background?)',
+    qrShareReady: 'The QR code opens this round: every item, its media, the right answer and your wrong pick.',
+    qrShareNone: 'No share link yet — the QR code points at the homepage. Use the button below to point it at this round.',
+    qrShareCreate: 'Create share link (point QR at this round)',
+    qrSiteOnly: 'The QR code points at the homepage.',
     wrongBadgeTitle: 'You missed this one — try it as background?',
     wrongBadgeAria: 'You missed this one',
     scene: {
