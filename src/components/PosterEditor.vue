@@ -14,6 +14,7 @@ import {
 } from '@/core/poster'
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
+import { track } from '@/core/metrics'
 
 const props = defineProps<{
   open: boolean
@@ -227,6 +228,7 @@ async function generate() {
     resultBlob.value = blob
     blobUrl.value = URL.createObjectURL(blob)
     stale.value = false
+    track('poster_create') // 028 计量：海报生成成功（无属性）
     await nextTick()
     resultRef.value?.scrollIntoView({
       behavior: prefersReducedMotion() ? 'auto' : 'smooth',

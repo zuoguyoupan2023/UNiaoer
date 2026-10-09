@@ -6,6 +6,8 @@ import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
 import { clearReports, countReports, pendingReportCount } from '@/core/reportStore'
 import { syncPendingReports } from '@/core/reportSync'
+import { pendingShareCount } from '@/core/shareQueue'
+import { syncPendingShares } from '@/core/shareSync'
 import type { AutoNextMode } from '@/types'
 
 const { t } = useI18n()
@@ -15,6 +17,10 @@ const reportCount = ref(0)
 const pendingCount = ref(0)
 const reportsMsg = ref('')
 const syncing = ref(false)
+/** 035 离线补传（2026-10-09） */
+const shareQueueCount = ref(0)
+const shareSyncing = ref(false)
+const shareMsg = ref('')
 
 // 环境鸟鸣音轨目录（懒加载，默认全部勾选）
 const tracks = ref<AmbienceTrack[] | null>(null)
@@ -35,6 +41,31 @@ async function refreshReportCounts() {
     pendingCount.value = await pendingReportCount()
   } catch {
     /* IndexedDB 不可用：保持 0 */
+  }
+  try {
+    shareQueueCount.value = pendingShareCount()
+  } catch {
+    shareQueueCount.value = 0
+  }
+}
+
+/** 035 离线补传：逐条补传待传分享（成功即出队并写入令牌台账，可撤回） */
+async function syncShares() {
+  if (shareSyncing.value) return
+  shareSyncing.value = true
+  shareMsg.value = ''
+  try {
+    const r = await syncPendingShares()
+    shareMsg.value = r.synced
+      ? t('share.retryDone', { n: r.synced })
+      : r.failed
+        ? t('share.retryFailed')
+        : ''
+  } catch {
+    shareMsg.value = t('errors.unknown')
+  } finally {
+    shareSyncing.value = false
+    await refreshReportCounts()
   }
 }
 
@@ -216,6 +247,30 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
         {{ t('settings.clearCache') }}
       </button>
       <p v-if="cacheMsg" class="muted" role="status" style="margin-top: 8px">{{ cacheMsg }}</p>
+    </div>
+
+    <div class="setting">
+      <h3>{{ t('settings.metricsTitle') }}</h3>
+      <p class="muted">{{ t('settings.metricsDesc') }}</p>
+      <label class="switch">
+        <input v-model="settings.metricsEnabled" type="checkbox" />
+        <span>{{ t('settings.metricsSwitch') }}</span>
+      </label>
+    </div>
+
+    <!-- 035 离线补传（2026-10-09）：分享创建失败时草稿入队，网络恢复后在此补传 -->
+    <div class="setting">
+      <h3>{{ t('share.shareQueueTitle') }}</h3>
+      <p class="muted">{{ t('share.shareQueueDesc', { n: shareQueueCount }) }}</p>
+      <button
+        class="btn btn-secondary"
+        style="margin-top: 10px"
+        :disabled="shareSyncing || !shareQueueCount"
+        @click="syncShares"
+      >
+        {{ shareSyncing ? t('settings.syncing') : t('share.shareQueueSync') }}
+      </button>
+      <p v-if="shareMsg" class="muted" role="status" style="margin-top: 8px">{{ shareMsg }}</p>
     </div>
 
     <div class="setting">

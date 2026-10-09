@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import { track } from '@/core/metrics'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -133,6 +134,25 @@ const router = createRouter({
  * 无 head 管理库，故在路由钩子里动态增删 robots meta。
  */
 const ROBOTS_META_ID = 'uniaoer-robots-noindex'
+
+/**
+ * 028 计量：路径前缀 → page_view category（白名单枚举，与 worker METRIC_EVENTS 一致）。
+ * 分享页（/s/:id）不计——那是别人的成绩页，计入会污染"本站使用"口径。
+ */
+function pageCategory(path: string): string {
+  if (path.startsWith('/quiz') || path === '/result') return 'quiz'
+  if (path.startsWith('/region')) return 'region'
+  if (path.startsWith('/catalog')) return 'catalog'
+  if (path.startsWith('/species')) return 'species'
+  if (path.startsWith('/profile')) return 'profile'
+  if (path.startsWith('/faq')) return 'faq'
+  if (path.startsWith('/reports')) return 'reports'
+  return 'other'
+}
+
+/** 上一次计入的类目：同 category 连续切换不重复计（docs/028 §3.1 的 SPA 去重语义） */
+let lastCategory: string | null = null
+
 router.afterEach((to) => {
   const existing = document.getElementById(ROBOTS_META_ID)
   if (to.name === 'share') {
@@ -145,6 +165,14 @@ router.afterEach((to) => {
     }
   } else {
     existing?.remove()
+  }
+  // 028 计量：页面访问（同 category 连续切换不重复计；分享页不计）
+  if (to.name !== 'share') {
+    const category = pageCategory(to.path)
+    if (category !== lastCategory) {
+      lastCategory = category
+      track('page_view', { category })
+    }
   }
 })
 

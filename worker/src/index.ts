@@ -805,7 +805,7 @@ async function handleCreateShare(request: Request, env: Env): Promise<Response> 
 /** 公开读取：hidden=1 → 404（撤回）；边缘缓存见路由包装 */
 async function handleGetShare(env: Env, id: string): Promise<Response> {
   const row = await env.DB.prepare(
-    'SELECT id,created_at,mode,tier,total,correct,accuracy,nickname,payload,hidden FROM round_shares WHERE id = ?',
+    'SELECT id,created_at,mode,tier,total,correct,accuracy,nickname,payload,hidden,view_count FROM round_shares WHERE id = ?',
   )
     .bind(id)
     .first<{
@@ -819,6 +819,7 @@ async function handleGetShare(env: Env, id: string): Promise<Response> {
       nickname: string | null
       payload: string
       hidden: number
+      view_count: number | null
     }>()
   if (!row || row.hidden === 1) return json({ error: 'not_found' }, { status: 404 })
   let payload: unknown = null
@@ -839,6 +840,8 @@ async function handleGetShare(env: Env, id: string): Promise<Response> {
       accuracy: row.accuracy,
       nickname: row.nickname,
       payload,
+      /** 2026-10-09：分享页浏览次数（打点见 POST /api/shares/:id/view） */
+      views: row.view_count ?? 0,
     },
   })
 }
@@ -856,6 +859,225 @@ async function handleDeleteShare(request: Request, env: Env, id: string): Promis
   if (row.token_hash !== tokenHash) return json({ error: 'unauthorized' }, { status: 401 })
   await env.DB.prepare('UPDATE round_shares SET hidden = 1 WHERE id = ?').bind(id).run()
   return json({ ok: true, id, hidden: true })
+}
+
+/** 分享页浏览计数（2026-10-09 启用 view_count）：前端页面加载时打点，仅统计存在的未撤回分享 */
+async function handleShareView(env: Env, id: string): Promise<Response> {
+  try {
+    await env.DB.prepare(
+      'UPDATE round_shares SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ? AND hidden = 0',
+    )
+      .bind(id)
+      .run()
+  } catch {
+    /* 计数失败不影响浏览：静默 */
+  }
+  return new Response(null, { status: 204, headers: CORS })
+}
+
+// ---------- 028 匿名计量 ----------
+
+/**
+ * 事件白名单（docs/028 §2）：属性值必须落在枚举内（越界丢弃该属性，事件本身仍计数）。
+ * 新增事件/属性时只改这里——前端 metrics.ts 同名单，两处一起改。
+ */
+const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
+  session_start: {},
+  page_view: {
+    category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'other'],
+  },
+  quiz_complete: {
+    mode: ['image', 'audio'],
+    tier: ['1', '2', '3', '4', '5'],
+  },
+  report_submit: {},
+  poster_create: {},
+}
+
+/** 事件体上限（字节）：白名单事件 + ≤3 枚举属性，300 足够；超过静默丢弃 */
+const METRIC_MAX_BYTES = 300
+
+/**
+ * 简易内存限流（按 IP；**不落库、不记录**，仅防刷）。
+ * 单 IP 60 次/分钟；超限静默 202（调用方不重试）。Map 超 5000 条时清理过期项防内存膨胀。
+ */
+const metricsHits = new Map<string, number[]>()
+function rateAllowed(bucket: string, perMinute: number): boolean {
+  const now = Date.now()
+  const arr = (metricsHits.get(bucket) ?? []).filter((t) => now - t < 60_000)
+  if (arr.length >= perMinute) {
+    metricsHits.set(bucket, arr)
+    return false
+  }
+  arr.push(now)
+  metricsHits.set(bucket, arr)
+  if (metricsHits.size > 5000) {
+    for (const [k, v] of metricsHits) {
+      if (!v.length || now - v[v.length - 1]! > 60_000) metricsHits.delete(k)
+    }
+  }
+  return true
+}
+const clientIp = (request: Request): string => request.headers.get('cf-connecting-ip') ?? 'unknown'
+
+/** 属性规范化：只保留白名单枚举值，按 key 排序 → 'mode=image;tier=2'（缓存键稳定） */
+function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): string {
+  if (!raw || typeof raw !== 'object') return ''
+  const src = raw as Record<string, unknown>
+  const parts: string[] = []
+  for (const key of Object.keys(spec).sort()) {
+    const v = src[key]
+    if (typeof v !== 'string') continue
+    if (spec[key]!.includes(v)) parts.push(`${key}=${v}`)
+  }
+  return parts.join(';')
+}
+
+/** POST /api/metrics：公开上报（事件计数；无 PII）。所有异常路径静默，绝不 5xx 打扰用户 */
+async function handleMetrics(request: Request, env: Env): Promise<Response> {
+  const ip = clientIp(request)
+  if (!rateAllowed(`m:${ip}`, 60)) return new Response(null, { status: 202, headers: CORS })
+  let raw = ''
+  try {
+    raw = await request.text()
+  } catch {
+    return new Response(null, { status: 204, headers: CORS })
+  }
+  if (raw.length > METRIC_MAX_BYTES) return new Response(null, { status: 204, headers: CORS })
+  let body: { e?: unknown; p?: unknown }
+  try {
+    body = JSON.parse(raw) as { e?: unknown; p?: unknown }
+  } catch {
+    return new Response(null, { status: 204, headers: CORS })
+  }
+  const event = typeof body.e === 'string' ? body.e : ''
+  const spec = METRIC_EVENTS[event]
+  if (!spec) return new Response(null, { status: 204, headers: CORS }) // 非白名单：静默丢弃
+  const props = normalizeMetricProps(spec, body.p)
+  const day = new Date().toISOString().slice(0, 10)
+  try {
+    // 原子自增（无读改写竞态）；每事件 1 行写
+    await env.DB.prepare(
+      `INSERT INTO metrics_daily (day, event, props, n) VALUES (?, ?, ?, 1)
+       ON CONFLICT(day, event, props) DO UPDATE SET n = n + 1`,
+    )
+      .bind(day, event, props)
+      .run()
+  } catch {
+    /* 写入失败（如额度）：静默丢弃，不影响用户 */
+  }
+  return new Response(null, { status: 204, headers: CORS })
+}
+
+/** GET /api/metrics/summary?days=30（管理）：按日聚合，供人工回填 docs/028 §6 */
+async function handleMetricsSummary(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
+  const days = clampInt(url.searchParams.get('days'), 1, 365, 30)
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const rows = await env.DB.prepare(
+    'SELECT day, event, props, n FROM metrics_daily WHERE day >= ? ORDER BY day DESC, event, props',
+  )
+    .bind(since)
+    .all<{ day: string; event: string; props: string; n: number }>()
+  const totals: Record<string, number> = {}
+  for (const r of rows.results) totals[r.event] = (totals[r.event] ?? 0) + r.n
+  return json({ days, since, totals, rows: rows.results })
+}
+
+// ---------- 035 分享页社交预览（OG）----------
+
+/** HTML 转义（昵称/文案来自用户数据，注入前必须转义） */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * `/s/:id` 的 OG 注入（2026-10-09）：
+ * 社交平台爬虫不执行 JS，SPA 的 og:image 拿不到分享内容 → 由 Worker 在 HTML 壳里注入
+ * 「标题/描述/首图」的 og meta（图片直接用该轮首张题图的 thumb，正是分享内容本身）。
+ *
+ * 失败降级：拿不到 HTML 壳 → 302 回首页；分享不存在/已撤回 → 原样壳（SPA 会渲染 404 页）。
+ * 内容不缓存（撤回要即时生效）；壳本身由 Pages 承担，未额外读 D1 行（1 行 SELECT）。
+ */
+async function handleSharePage(request: Request, env: Env, id: string): Promise<Response> {
+  const origin = env.MANIFEST_ORIGIN || 'https://uniaoer.com'
+  let html: string
+  try {
+    const res = await fetch(`${origin}/`, { headers: { accept: 'text/html' }, cf: { cacheTtl: 300 } } as RequestInit)
+    if (!res.ok) throw new Error(String(res.status))
+    html = await res.text()
+  } catch {
+    return Response.redirect(`${origin}/`, 302)
+  }
+
+  const row = await env.DB.prepare(
+    'SELECT nickname, payload, hidden, view_count FROM round_shares WHERE id = ?',
+  )
+    .bind(id)
+    .first<{ nickname: string | null; payload: string; hidden: number; view_count: number }>()
+
+  let title = 'UNiaoer'
+  let description = 'UNiaoer · 鸟语识别：看图认鸟 / 听音认鸟'
+  let image: string | null = null
+  if (row && row.hidden !== 1) {
+    try {
+      const p = JSON.parse(row.payload) as {
+        mode?: string
+        tier?: number
+        total?: number
+        correct?: number
+        accuracy?: number
+        locale?: string
+        items?: { type?: string; thumbUrl?: string | null; mediaUrl?: string }[]
+      }
+      const en = String(p.locale || '').startsWith('en')
+      const modeLabel = p.mode === 'audio' ? (en ? 'Sound quiz' : '听音认鸟') : en ? 'Photo quiz' : '看图认鸟'
+      const score = `${p.correct ?? 0}/${p.total ?? 0}`
+      const who = row.nickname ? (en ? `${row.nickname}'s` : `${row.nickname} 的`) : en ? '' : ''
+      title = en
+        ? `${who ? who + ' ' : ''}bird-ID score · UNiaoer`
+        : `${who}认鸟成绩 · UNiaoer`
+      description = `${modeLabel} L${p.tier ?? '?'} · ${score}（${p.accuracy ?? 0}%）`
+      const first = (p.items ?? []).find((it) => it.type === 'image' && (it.thumbUrl || it.mediaUrl))
+      image = first ? (first.thumbUrl || first.mediaUrl || null) : null
+    } catch {
+      /* 载荷损坏：用默认文案 */
+    }
+  } else {
+    title = 'UNiaoer · 链接不可用'
+    description = '该分享已撤回或不存在'
+  }
+
+  const url = `${origin}/s/${encodeURIComponent(id)}`
+  const metas = [
+    `<title>${escapeHtml(title)}</title>`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:url" content="${escapeHtml(url)}" />`,
+    `<meta property="og:title" content="${escapeHtml(title)}" />`,
+    `<meta property="og:description" content="${escapeHtml(description)}" />`,
+    image ? `<meta property="og:image" content="${escapeHtml(image)}" />` : '',
+    image ? `<meta name="twitter:card" content="summary_large_image" />` : `<meta name="twitter:card" content="summary" />`,
+    `<meta name="robots" content="noindex" id="uniaoer-robots-noindex" />`,
+  ]
+    .filter(Boolean)
+    .join('\n    ')
+
+  // 去掉模板里的默认 og:*（避免与注入重复）与旧 title，再统一插入 head 末尾
+  const out = html
+    .replace(/<meta\s+property="og:[^"]*"[^>]*>\s*/gi, '')
+    .replace(/<meta\s+name="twitter:[^"]*"[^>]*>\s*/gi, '')
+    .replace(/<title>[^<]*<\/title>\s*/, '')
+    .replace('</head>', `  ${metas}\n  </head>`)
+
+  const headers = new Headers({
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+  })
+  return new Response(request.method === 'HEAD' ? null : out, { status: 200, headers })
 }
 
 function isAdmin(request: Request, env: Env): boolean {
@@ -942,6 +1164,13 @@ export default {
     }
 
     try {
+      // 035 分享页社交预览（2026-10-09）：/s/* 由本 Worker 接管，向 Pages 的 HTML 壳注入 og meta。
+      // 放在最前：这是页面请求（非 /api），命中即返回。
+      if ((method === 'GET' || method === 'HEAD') && path.startsWith('/s/')) {
+        const m = path.match(/^\/s\/([A-Za-z0-9]{6,24})$/)
+        if (m) return await handleSharePage(request, env, m[1]!)
+        return Response.redirect(`${url.origin}/`, 302)
+      }
       if (method === 'GET') {
         if (path === '/api/health') {
           return json({ ok: true, ts: Date.now(), hasXcKey: Boolean(env.XC_API_KEY) })
@@ -955,6 +1184,8 @@ export default {
         // 035：分享读取（公开；不加边缘缓存——撤回需即时生效，D1 仅 1 行读）
         const shareGet = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})$/)
         if (shareGet) return await handleGetShare(env, shareGet[1]!)
+        // 028 匿名计量：按日聚合读取（管理）
+        if (path === '/api/metrics/summary') return await handleMetricsSummary(request, env, url)
         // 029 M3:质量隔离台账（管理端读取,供 /admin 展示与导出脚本拉取）
         if (path === '/api/quarantine') {
           if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
@@ -972,8 +1203,18 @@ export default {
       if (method === 'POST' && path === '/api/reports') {
         return await handleSubmitReport(request, env)
       }
+      // 028 匿名计量上报（公开；白名单 + 内存限流；静默 204）
+      if (method === 'POST' && path === '/api/metrics') {
+        return await handleMetrics(request, env)
+      }
       if (method === 'POST' && path === '/api/shares') {
         return await handleCreateShare(request, env)
+      }
+      // 035：分享页浏览计数（2026-10-09）
+      const shareView = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})\/view$/)
+      if (method === 'POST' && shareView) {
+        if (!rateAllowed(`v:${clientIp(request)}`, 120)) return new Response(null, { status: 202, headers: CORS })
+        return await handleShareView(env, shareView[1]!)
       }
       // 035：撤回（凭管理令牌；软删）
       const shareDel = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})$/)

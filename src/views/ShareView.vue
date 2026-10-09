@@ -10,8 +10,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CircleCheck, CircleX, Home, Leaf, Share2, Timer } from 'lucide-vue-next'
-import { fetchShare, type ShareItem, type ShareView } from '@/core/shareRound'
+import { CircleCheck, CircleX, Eye, Home, Leaf, Share2, Timer } from 'lucide-vue-next'
+import {
+  countShareView,
+  fetchShare,
+  markShareViewed,
+  type ShareItem,
+  type ShareView,
+} from '@/core/shareRound'
 import { loadBank, speciesNameById } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
@@ -30,7 +36,11 @@ onMounted(async () => {
   try {
     share.value = await fetchShare(id)
     if (!share.value) notFound.value = true
-    else await bankReady
+    else {
+      await bankReady
+      // 浏览计数（2026-10-09）：同会话同一分享只计一次（避免刷新灌水）；失败静默
+      if (markShareViewed(id)) void countShareView(id)
+    }
   } catch {
     notFound.value = true
   } finally {
@@ -85,7 +95,12 @@ const modeLabel = computed(() =>
           <Share2 class="ic" :size="15" />
           <span v-if="share.nickname">@{{ share.nickname }} · </span>{{ dateText }}
         </p>
-        <p class="meta">{{ modeLabel }} · {{ tierLabel }}</p>
+        <p class="meta">
+          {{ modeLabel }} · {{ tierLabel }}
+          <span v-if="(share.views ?? 0) > 0" class="views" :title="t('share.viewsTitle')">
+            · <Eye class="ic" :size="13" /> {{ t('share.views', { n: share.views ?? 0 }) }}
+          </span>
+        </p>
         <p class="score">
           <b>{{ share.correct }}</b><span>/{{ share.total }}</span>
           <em>{{ t('share.accuracy', { acc: share.accuracy }) }}</em>
@@ -177,6 +192,14 @@ const modeLabel = computed(() =>
 .meta {
   font-size: 0.78rem;
   color: var(--text-light);
+}
+.meta .views {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.meta .views .ic {
+  vertical-align: -2px;
 }
 .score {
   margin-top: 8px;

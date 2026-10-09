@@ -167,7 +167,25 @@ CREATE TABLE IF NOT EXISTS round_shares (
   payload       TEXT NOT NULL,           -- JSON：一轮全量 items（见 docs/035 §2.3）
   token_hash    TEXT NOT NULL,           -- 管理令牌 SHA-256（撤回凭据；明文不落库）
   client_id     TEXT,                    -- 仅用于限流与管理，不公开
-  hidden        INTEGER NOT NULL DEFAULT 0 -- 1 = 分享者已撤回（公开读 404）
+  hidden        INTEGER NOT NULL DEFAULT 0, -- 1 = 分享者已撤回（公开读 404）
+  view_count    INTEGER NOT NULL DEFAULT 0 -- 分享页浏览次数（2026-10-09 启用；只加不清）
 );
+-- ⚠️ 既有部署补列（一次性，已在远端执行 2026-10-09）：
+--   ALTER TABLE round_shares ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0;
+--   （CREATE TABLE IF NOT EXISTS 对已存在的表是 no-op，不会补列——改列必须手工 ALTER）
 CREATE INDEX IF NOT EXISTS idx_shares_created ON round_shares(created_at);
 CREATE INDEX IF NOT EXISTS idx_shares_client  ON round_shares(client_id, created_at);
+
+-- ============================================================
+-- 028 匿名计量（最小用户计量：只做事件计数，不做用户追踪）
+-- 口径（docs/028）：无 cookie、无设备指纹、不存 IP/UA；维度 = 日期 × 事件 × 少量枚举属性。
+-- 读取：GET /api/metrics/summary?days=30（需 ADMIN_KEY）。写入：POST /api/metrics（公开，白名单硬校验）。
+-- 成本：每事件 1 行写（UPSERT 原子自增）；10 事件 × 365 天 ≈ 3.6k 行/年。
+-- ============================================================
+CREATE TABLE IF NOT EXISTS metrics_daily (
+  day   TEXT NOT NULL,                 -- '2026-10-09'（UTC）
+  event TEXT NOT NULL,                 -- 白名单事件名（见 worker/src/index.ts METRIC_EVENTS）
+  props TEXT NOT NULL DEFAULT '',      -- 规范化属性串 'mode=image;tier=2'（枚举校验后排序拼接）
+  n     INTEGER NOT NULL DEFAULT 0,    -- 当日累计次数
+  PRIMARY KEY (day, event, props)
+);

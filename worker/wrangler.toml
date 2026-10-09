@@ -21,3 +21,9 @@ MANIFEST_ORIGIN = "https://uniaoer.com"
 [[routes]]
 pattern = "uniaoer.com/api/*"
 zone_name = "uniaoer.com"
+
+# 035 分享页社交预览（2026-10-09）：/s/* 也走本 Worker，用于向 Pages 的 HTML 壳注入 og meta
+# （爬虫不执行 JS；SPA 的 og:image 拿不到分享内容）。非分享页请求不受影响。
+[[routes]]
+pattern = "uniaoer.com/s/*"
+zone_name = "uniaoer.com"

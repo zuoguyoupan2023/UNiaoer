@@ -44,6 +44,7 @@ import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 import { REGION_LABEL_KEY } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { track } from '@/core/metrics'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -159,6 +160,7 @@ async function submitReport() {
     try {
       await uploadReport(row, getClientId())
       await markReportSynced(row.id)
+      track('report_submit') // 028 计量：反馈管道活跃度（无属性）
     } catch {
       /* 离线/后端不可用：保留 pending */
     }

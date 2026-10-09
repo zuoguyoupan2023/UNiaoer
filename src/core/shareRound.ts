@@ -64,6 +64,8 @@ export interface ShareView {
   accuracy: number
   nickname: string | null
   payload: SharePayload
+  /** 2026-10-09：分享页浏览次数（页面加载打点；同会话同一分享只计一次） */
+  views?: number
 }
 
 /** 分享页 URL（二维码/复制链接都用它） */
@@ -159,6 +161,38 @@ export async function revokeShare(id: string, token: string): Promise<void> {
     body: JSON.stringify({ token }),
   })
   if (!res.ok) throw new Error(`revoke failed: ${res.status}`)
+}
+
+// ─────────────────────────────────────────────
+// 分享页浏览计数（2026-10-09 启用 view_count）
+// ─────────────────────────────────────────────
+
+const VIEWED_KEY = 'uniaoer.shareViewed.v1'
+
+/**
+ * 标记并判断"本次会话是否已计过该分享"。
+ * 返回 true = 首见（应打点）；sessionStorage 随标签页关闭即清，不会变成跨会话追踪标识。
+ */
+export function markShareViewed(id: string): boolean {
+  try {
+    const raw = sessionStorage.getItem(VIEWED_KEY)
+    const seen: string[] = raw ? (JSON.parse(raw) as string[]) : []
+    if (seen.includes(id)) return false
+    seen.push(id)
+    sessionStorage.setItem(VIEWED_KEY, JSON.stringify(seen.slice(-50)))
+    return true
+  } catch {
+    return true // 隐私模式：去重不可用则仍计（宁可多计一次）
+  }
+}
+
+/** 打点一次浏览（失败静默——计数绝不影响浏览） */
+export async function countShareView(id: string): Promise<void> {
+  try {
+    await fetch(`/api/shares/${encodeURIComponent(id)}/view`, { method: 'POST' })
+  } catch {
+    /* 静默 */
+  }
 }
 
 // ─────────────────────────────────────────────

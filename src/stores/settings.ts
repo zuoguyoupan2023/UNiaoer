@@ -39,6 +39,11 @@ interface Persisted {
   adaptiveTier?: boolean
   /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
   region?: string
+  /**
+   * 028 匿名计量开关（默认开，D-028-1）：只做**事件计数**（无 cookie/设备标识/IP）。
+   * 关闭后前端完全不上报（设置页披露）。
+   */
+  metricsEnabled?: boolean
 }
 
 function load(): Partial<Persisted> {
@@ -91,6 +96,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
   /** 029 M2:出题地区偏好（默认 ALL=不过滤；L1-L3 按此过滤全球池） */
   const region = ref<string>(saved.region ?? 'ALL')
+  /** 028 匿名计量开关（默认开；关闭即完全不上报） */
+  const metricsEnabled = ref<boolean>(saved.metricsEnabled ?? true)
 
   // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
   watch(locale, (v) => {
@@ -118,6 +125,7 @@ export const useSettingsStore = defineStore('settings', () => {
       tierAudio,
       adaptiveTier,
       region,
+      metricsEnabled,
     ],
     () => {
       try {
@@ -143,6 +151,7 @@ export const useSettingsStore = defineStore('settings', () => {
             tierAudio: tierAudio.value,
             adaptiveTier: adaptiveTier.value,
             region: region.value,
+            metricsEnabled: metricsEnabled.value,
           } satisfies Persisted),
         )
       } catch {
@@ -172,5 +181,6 @@ export const useSettingsStore = defineStore('settings', () => {
     tierAudio,
     adaptiveTier,
     region,
+    metricsEnabled,
   }
 })

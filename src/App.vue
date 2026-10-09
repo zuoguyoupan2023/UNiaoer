@@ -7,6 +7,7 @@ import { useQuizStore } from '@/stores/quiz'
 import { useReportsMetaStore } from '@/stores/reportsMeta'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, getAmbienceState, subscribeAmbience } from '@/core/ambience'
+import { trackSessionStart } from '@/core/metrics'
 
 const route = useRoute()
 const quiz = useQuizStore()
@@ -24,6 +25,8 @@ watch(
   () => void reportsMeta.refresh(),
 )
 onMounted(() => {
+  // 028 匿名计量：会话开始（每标签页会话一次；已关开关则不上报）
+  trackSessionStart()
   subscribeAmbience((s) => {
     ambienceOn.value = s.playing
   })

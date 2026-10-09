@@ -21,6 +21,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
+import { track } from '@/core/metrics'
 import {
   buildShareDraft,
   createShare,
@@ -32,6 +33,8 @@ import {
   shareUrlOf,
   type ShareView,
 } from '@/core/shareRound'
+import { enqueueShare, queuedShareOfRound } from '@/core/shareQueue'
+import { syncPendingShares } from '@/core/shareSync'
 import type { RoundRecord } from '@/core/historyDb'
 import { getActiveArchive, getStats, listRounds } from '@/core/historyDb'
 import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
@@ -118,8 +121,9 @@ async function doShare() {
   if (shareBusy.value || !roundRecord.value) return
   shareBusy.value = true
   shareMsg.value = ''
+  let draft: ReturnType<typeof buildShareDraft> | null = null
   try {
-    const draft = buildShareDraft(roundRecord.value, {
+    draft = buildShareDraft(roundRecord.value, {
       clientId: getClientId(),
       // 勾选「隐藏昵称」时提交 null（服务端不再写昵称快照）
       nickname: hideNickname.value ? null : archiveNickname.value || settings.nickname || null,
@@ -136,7 +140,39 @@ async function doShare() {
     shareUrl.value = shareUrlOf(id)
     flashShareMsg(t('share.created'))
   } catch {
-    flashShareMsg(t('share.createFailed'), 'err')
+    // 035 离线补传（2026-10-09）：失败时把草稿落盘，之后可在设置页/本页一键补传
+    if (draft && !('error' in draft) && roundRecord.value) {
+      enqueueShare(draft, roundRecord.value.id)
+      queuedShare.value = true
+      flashShareMsg(t('share.queued'), 'err')
+    } else {
+      flashShareMsg(t('share.createFailed'), 'err')
+    }
+  } finally {
+    shareBusy.value = false
+  }
+}
+
+/** 本轮是否有待补传草稿（用于显示「重试上传」） */
+const queuedShare = ref(false)
+
+/** 补传（弱网恢复后手点；成功即恢复「已分享」状态） */
+async function retryShare() {
+  if (shareBusy.value || !roundRecord.value) return
+  shareBusy.value = true
+  try {
+    const r = await syncPendingShares()
+    if (r.ids.length) {
+      const prior = shareOfRound(roundRecord.value.id)
+      if (prior) {
+        existingShare.value = { shareId: prior.shareId, token: prior.token }
+        shareUrl.value = shareUrlOf(prior.shareId)
+      }
+      queuedShare.value = false
+      flashShareMsg(t('share.retryDone', { n: r.synced }))
+    } else if (r.failed) {
+      flashShareMsg(t('share.retryFailed'), 'err')
+    }
   } finally {
     shareBusy.value = false
   }
@@ -296,10 +332,14 @@ onMounted(async () => {
   newBadges.value = res.badges
   newTitleTexts.value = res.newTitles.map((x) => x.text)
   roundRecord.value = res.record
+  // 028 计量：一轮完成（仅在本轮真正落库时计一次——刷新结果页不会重复计数）
+  if (res.record) track('quiz_complete', { mode: quiz.mode, tier: quiz.tier })
   // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
   if (res.record) {
     const prior = shareOfRound(res.record.id)
     if (prior) void refreshExistingShare(prior.shareId, prior.token, prior.revoked)
+    // 035 离线补传：本轮若在队列里（上次创建失败），显示「重试上传」
+    queuedShare.value = !!queuedShareOfRound(res.record.id)
   }
   // 佩戴称号/徽章 → 海报（R30/R31/R38：含独特图标）
   const [stats, rounds] = await Promise.all([getStats(), listRounds()])
@@ -361,6 +401,10 @@ async function again() {
         </label>
         <button class="btn btn-secondary" :disabled="shareBusy" @click="doShare">
           {{ shareBusy ? t('share.creating') : t('share.create') }}
+        </button>
+        <!-- 035 离线补传：上次创建失败已入队 → 提供一键重试 -->
+        <button v-if="queuedShare" class="btn btn-secondary" :disabled="shareBusy" @click="retryShare">
+          {{ t('share.retryUpload') }}
         </button>
       </template>
 
