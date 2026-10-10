@@ -54,11 +54,33 @@ export function mergeShares(vecs) {
  * recordCount 取单源最大口径（各源底层记录总量取 max；不跨源求和以免重复计数）。
  * 无任何有效数据返回 null（薄数据不出条目，UI 自动隐藏）。
  */
+/**
+ * 051 S3：媒体月份的**样本量门槛**。
+ *
+ * 实测：全球种每种只采了 1 图 + 1 音，所以
+ *   · 9,306 / 9,545 种的媒体记录数 **n = 2**、226 种 n = 3–5、**0 种 n > 5**。
+ * 用 n=2 的两三个月份去算"逐月百分比"，得到的是**采样偶然性**，不是季节分布
+ * （例：只有 2 月和 4 月各一张照片 → 显示"3 月完全不出现"）。
+ * 这样的数据会顺着 province-commonness 污染**地区档位**。
+ *
+ * 因此：媒体来源的条目必须有足够样本才准入，样本不足者**留空**（不编造），
+ * 由 GBIF（occurrence 数万级）补；两者都不够就真的没有季节数据。
+ *
+ * @param {number} min 最小记录数；0 = 不限制（旧行为）
+ */
+export const MIN_MEDIA_RECORDS = 5
+
 export function buildEntry(countsBySource) {
   const sources = Object.keys(countsBySource || {})
     .filter((s) => (countsBySource[s] || []).some(Boolean))
     .sort()
   if (!sources.length) return null
+  // 样本量门槛：只统计非 GBIF 来源（媒体）的记录数；GBIF 本身样本量足够大
+  const mediaTotal = sources
+    .filter((s) => s !== 'gbif')
+    .reduce((a, s) => a + countsBySource[s].reduce((x, y) => x + y, 0), 0)
+  const onlyMedia = sources.every((s) => s !== 'gbif')
+  if (onlyMedia && mediaTotal < MIN_MEDIA_RECORDS) return null
   const shares = sources.map((s) => toShare(countsBySource[s]))
   const recordCount = Math.max(
     ...sources.map((s) => countsBySource[s].reduce((a, b) => a + b, 0)),

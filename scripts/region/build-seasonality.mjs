@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createClient } from '../lib/http.mjs'
+import { loadMetaSpecies } from './lib/meta-species.mjs'
 import { loadEnv, mapPool, parseArgs, slug } from '../lib/util.mjs'
 import { buildEntry, countsFromGbifFacet, countsFromMedia } from './seasonality-lib.mjs'
 import { parseSheet, parseSharedStrings, extractBirds } from './adapters/cn-authority.mjs'
@@ -40,12 +41,20 @@ const OUT = args.out
 
 await loadEnv()
 
+// 051 S3：`--source meta` 改读权威层（10,844 种，含回填的 taxonId）+ 媒体月份（台账/完整层）
+const SOURCE = args.source === 'meta' ? 'meta' : 'manifest'
 const manifestPath = MOCK
   ? path.join(ROOT, 'tests/fixtures/region/manifest-subset.json')
-  : path.join(ROOT, 'public/data/manifest.json')
-const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
+  : path.join(ROOT, SOURCE === 'meta' ? 'public/data/manifest-meta.json' : 'public/data/manifest.json')
+const manifest = SOURCE === 'meta' && !MOCK ? null : JSON.parse(await fs.readFile(manifestPath, 'utf8'))
 
-let species = manifest.species || []
+let species =
+  SOURCE === 'meta'
+    ? await loadMetaSpecies(ROOT, { withMedia: true })
+    : manifest.species || []
+if (SOURCE === 'meta') {
+  console.log(`· 数据源：权威层 manifest-meta.json（${species.length} 种，含媒体月份）`)
+}
 if (args.ids) {
   const want = new Set(String(args.ids).split(',').map((s) => s.trim()))
   species = species.filter((sp) => want.has(sp.id))
@@ -175,7 +184,25 @@ async function loadCnAuthority() {
   }
 }
 
+// 051 S3：`--carry-over` —— 把**旧产物里本次未覆盖的种**原样带过来。
+// 为什么需要：核心库 1,299 种的逐月分布历来来自 GBIF；若这次只跑"媒体月份"，
+// 它们会全部消失（实测 1,296/1,296 重合种全部缺失）。带过来 = 不丢既有数据，只做增量。
 const bySpecies = {}
+let carriedOver = 0
+if (args['carry-over']) {
+  try {
+    const prev = JSON.parse(
+      await fs.readFile(path.join(ROOT, 'public/data/seasonality.json'), 'utf8'),
+    )
+    for (const [id, entry] of Object.entries(prev.bySpecies || {})) {
+      bySpecies[id] = entry
+      carriedOver++
+    }
+  } catch {
+    console.log('· 无旧产物可继承（首次运行）')
+  }
+}
+
 let gbifOk = 0
 let gbifMiss = 0
 let speciesWithMediaMonths = 0
@@ -183,16 +210,36 @@ let speciesWithRange = 0
 const failedIds = []
 let done = 0
 
-/** 单物种：GBIF + manifest 媒体月份 + 权威居留型 → bySpecies 条目（并发池单元，保序返回） */
+/**
+ * 051 S3：`--gbif-limit N` —— **限制走 GBIF 的物种数**（默认不限，保持旧行为）。
+ * 扩到全球种后有两条现实约束：
+ *   · 全球种 9,532 / 9,545 至少一项媒体带 month → **不联网就能覆盖 88%**；
+ *   · GBIF occurrence 是礼貌低并发（qps 5），10,844 种逐个查要跑很久。
+ * 因此支持先 `--gbif-limit 0`（纯媒体月份，一次跑完），再按需补。
+ */
+const GBIF_LIMIT = args['gbif-limit'] === undefined ? Infinity : Math.max(0, Number(args['gbif-limit']))
+let gbifBudget = Number.isFinite(GBIF_LIMIT) ? GBIF_LIMIT : Infinity
+
+/** 单物种：GBIF + 媒体月份 + 权威居留型 → bySpecies 条目（并发池单元，保序返回） */
 async function processSpecies(sp) {
-  const usageKey = MOCK ? null : await resolveUsageKeySafe(sp)
-  const gbif = MOCK ? countsFromGbifFacet(await readGbifFixture(sp.id)) : await gbifMonthCountsSafe(sp, usageKey)
+  // 051 S3：实测核心库 1,299 种的媒体 month **全为空**（它们的月份历来来自 GBIF），
+  // 而全球种 9,532/9,545 有媒体月份。因此 GBIF 预算要**优先花在"没有媒体月份"的种**，
+  // 否则会白花 10,844 次查询。`--gbif-all` 可强制每个种都查。
+  const hasMediaMonth = speciesOfAssets(sp).some((a) => a?.month >= 1 && a?.month <= 12)
+  const wantGbif = gbifBudget > 0 && (args['gbif-all'] ? true : !hasMediaMonth)
+  const useGbif = MOCK || wantGbif
+  const usageKey = useGbif ? (MOCK ? null : await resolveUsageKeySafe(sp)) : null
+  const gbif = !useGbif
+    ? null
+    : MOCK
+      ? countsFromGbifFacet(await readGbifFixture(sp.id))
+      : await gbifMonthCountsSafe(sp, usageKey)
+  if (useGbif && !MOCK) gbifBudget -= 1
   const counts = {}
   if (gbif !== null) counts.gbif = gbif
   const media = mediaCountsBySource(sp)
   counts.xc = media.xc
   counts.inat = media.inat
-  const hasMediaMonth = speciesOfAssets(sp).some((a) => a?.month >= 1 && a?.month <= 12)
   const entry = buildEntry(counts)
   const sciKey = String(sp.nameSci || '').trim().toLowerCase().replace(/\s+/g, ' ')
   const range = cnAuthority?.bySci[sciKey] ?? cnAuthority?.byKey[usageKey]

@@ -16,10 +16,12 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '../lib/http.mjs'
+import { loadMetaSpecies } from './lib/meta-species.mjs'
 import { loadEnv, mapPool, parseArgs, slug } from '../lib/util.mjs'
 import { facetCounts } from './adapters/gbif.mjs'
 import { buildIndex, displayName, matchSubdivision, NAME_ALIASES } from './adapters/iso3166.mjs'
 import { GBIF_SOURCE, SUBDIVISION_SOURCE, SUPPORTED_COUNTRIES } from './config.mjs'
+import fsSync from 'node:fs'
 import { CN_PROVINCES, CN_SPECIAL_COUNTRY } from './cn-provinces.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
@@ -39,12 +41,37 @@ const OUT = args.out
 await loadEnv()
 
 const readJson = async (p) => JSON.parse(await fs.readFile(p, 'utf8'))
-const manifest = await readJson(
+// 051 S3：`--source meta` 改读权威层（10,844 种，含回填 taxonId）；
+// 分发判定从 `distribution.bySpecies`（只覆盖核心库）换成 `species-distribution.byCountry`（249 国短码）。
+const SOURCE = args.source === 'meta' ? 'meta' : 'manifest'
+let manifest = SOURCE === 'meta' ? null : await readJson(
   path.join(ROOT, MOCK ? 'tests/fixtures/region/manifest-subset.json' : 'public/data/manifest.json'),
 )
-const distribution = await readJson(
-  path.join(ROOT, MOCK ? 'tests/fixtures/region/distribution-subset.json' : 'public/data/distribution.json'),
-)
+if (SOURCE === 'meta') {
+  manifest = { species: await loadMetaSpecies(ROOT, { withMedia: false }) }
+  console.log(`· 数据源：权威层 manifest-meta.json（${manifest.species.length} 种）`)
+}
+// ⚠️ 语义分叉（051 S3，必须显式选择，不能默认切换）
+//   · `--dist manifest`（**默认，沿用旧口径**）：`data/distribution.json`，IUCN 分布，只覆盖核心库 1,299 种。
+//     "某国可能有这个种"用的是**权威分布**，保守、不臆造。
+//   · `--dist global`：`species-distribution.json`，GBIF occurrence 矩阵，覆盖 10,821 种，
+//     但它的"某国有记录"包含**迷鸟/笼养逃逸/博物馆记录**，范围明显更宽
+//     （实测：与旧口径的核心种只有 17/1186 国家集合完全一致）。
+//     真正的过滤交给查询本身（occurrenceStatus=PRESENT 且排除 ESCAPED/CULTIVATED），
+//     代价是**候选任务数暴涨**（15,717 次），换来的是覆盖全球种。
+const DIST = args.dist === 'global' ? 'global' : 'manifest'
+const distribution =
+  DIST === 'global'
+    ? { bySpecies: buildDistFromGlobal(manifest.species) }
+    : await readJson(
+        path.join(ROOT, MOCK ? 'tests/fixtures/region/distribution-subset.json' : 'public/data/distribution.json'),
+      )
+if (SOURCE === 'meta' && DIST === 'manifest') {
+  console.log(
+    '⚠ --source meta + --dist manifest：该分布表只覆盖核心库 1,299 种 → 省级层仍只有核心种。' +
+      '要扩到全球种请加 --dist global（语义更宽，详见脚本注释）。',
+  )
+}
 const subsRaw = await readJson(
   path.join(ROOT, MOCK ? 'tests/fixtures/region/iso3166-2.json' : 'data-cache/region/iso3166-2/subs.json'),
 )
@@ -53,6 +80,30 @@ const COUNTRIES = String(args.countries || (MOCK ? Object.keys(subdivisions) : S
   .split(',')
   .map((s) => s.trim().toUpperCase())
   .filter(Boolean)
+
+/**
+ * 051 S3：权威层 → 「物种 → 国家列表」。
+ * `species-distribution.json` 是「国家 → taxonKey 短码[]」，这里反向索引成「物种 → 国家[]」，
+ * 与 `distribution.bySpecies` 同构，从而复用既有的 `speciesForCountry()`。
+ */
+function buildDistFromGlobal(species) {
+  const bySpecies = {}
+  const short = (k) => String(k || '').replace(/^avibase-/, '')
+  const keyBySci = new Map()
+  const idx = JSON.parse(fsSync.readFileSync(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
+  for (const e of idx.species) if (e.taxonKey) keyBySci.set(e.nameSci, short(e.taxonKey))
+  const dist = JSON.parse(fsSync.readFileSync(path.join(ROOT, 'public/data/species-distribution.json'), 'utf8'))
+  for (const sp of species) {
+    const code = keyBySci.get(sp.nameSci)
+    if (!code) continue
+    const countries = []
+    for (const [cc, codes] of Object.entries(dist.byCountry || {})) {
+      if ((codes || []).map(short).includes(code)) countries.push(cc)
+    }
+    if (countries.length) bySpecies[sp.id] = countries
+  }
+  return bySpecies
+}
 
 const index = buildIndex(subdivisions, COUNTRIES)
 const distBySpecies = distribution.bySpecies || {}
