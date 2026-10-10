@@ -15,7 +15,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { toCore, toAssetBuckets, toGlobalPool, splitLargeBuckets } from './lib/manifest-layers.mjs'
+import { toCore, toAssetBuckets, toGlobalPool, toMeta, splitLargeBuckets } from './lib/manifest-layers.mjs'
 import { pinyinKey } from './lib/pinyin-key.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -238,6 +238,32 @@ export async function writeManifestLayers(manifest, opts = {}) {
     global = null // 无台账:跳过(不报错)
   }
 
+  // 050 P1：权威名录层（10,844 种 × 全字段，不含媒体）。
+  // 台账缺失时用 core + 现有 global.min 兜底，保证 meta 永远是「当前可玩全集」。
+  let metaBytes = 0
+  let metaTotal = 0
+  try {
+    const idx = JSON.parse(await fs.readFile(path.join(dataDir, 'species-index.json'), 'utf8'))
+    const orderOfBySci = new Map(idx.species.map((e) => [e.nameSci, e.order]))
+    const orderOfByKey = new Map(idx.species.map((e) => [e.taxonKey, e.order]).filter(([k]) => k))
+    const orderOf = { get: (k) => orderOfByKey.get(k) || orderOfBySci.get(k) }
+    let ledger = global ? JSON.parse(JSON.stringify(global)) : { species: [] }
+    let raw = null
+    try {
+      raw = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
+      ledger = raw
+    } catch {
+      /* 无台账：用 global.min（只有首图首音，字段仍在） */
+    }
+    const meta = toMeta(manifest, ledger, orderOf)
+    metaBytes = Buffer.byteLength(JSON.stringify(meta))
+    metaTotal = meta.total
+    stats_note.meta = meta.stats
+    await writeJsonAtomic(path.join(dataDir, 'manifest-meta.json'), JSON.stringify(meta))
+  } catch (e) {
+    if (!quiet) console.warn(`⚠ 权威名录层 meta 跳过：${e.message}`)
+  }
+
   // 统计与全量目录：依赖 species-index（order/family/extinct）；缺失则跳过(不阻塞分层产物)。
   // 统计烘焙进 core（首页/答疑页展示),避免前端为显示数字多拉 10MB 全球池。
   let catalogBytes = 0
@@ -281,6 +307,8 @@ export async function writeManifestLayers(manifest, opts = {}) {
     globalCommonnessMerged: stats_note.commonness || 0,
     catalogBytes,
     catalogTotal,
+    metaBytes,
+    metaTotal,
   }
   if (!quiet) {
     const MB = (b) => `${(b / 1e6).toFixed(2)}MB`
@@ -289,8 +317,17 @@ export async function writeManifestLayers(manifest, opts = {}) {
         (global
           ? ` · global.min ${MB(stats.globalBytes)}(${stats.globalTotal} 种,commonness 联表 ${stats.globalCommonnessMerged})`
           : ' · 无全球台账,global.min 跳过') +
-        (stats.catalogTotal ? ` · catalog ${MB(stats.catalogBytes)}(${stats.catalogTotal} 种)` : ''),
+        (stats.catalogTotal ? ` · catalog ${MB(stats.catalogBytes)}(${stats.catalogTotal} 种)` : '') +
+        (stats.metaTotal ? ` · meta ${MB(stats.metaBytes)}(${stats.metaTotal} 种)` : ''),
     )
+    if (stats_note.meta) {
+      const m = stats_note.meta
+      console.log(
+        `  权威层:来自核心库 ${m.fromCore} 种 · 补齐 ${m.enriched} 种 · 有中文名 ${m.withNameZh} · 有 profile ${m.withProfile} · 有 taxonId ${m.withTaxonId}` +
+          ` · 类群 水鸟 ${m.groups.waterbird}/猛禽 ${m.groups.raptor}/林鸟 ${m.groups.landbird}` +
+          (m.skippedNoMedia ? ` · 无媒体未入层 ${m.skippedNoMedia}` : ''),
+      )
+    }
     const py = stats_note.pinyin
     if (py) {
       console.log(

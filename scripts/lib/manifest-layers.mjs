@@ -10,10 +10,37 @@
  * 分桶规则:物种 id 首字符 a-z → 同名桶;数字/其它 → '0-9'。
  * 桶索引(core.buckets)只列**实际存在**的桶,前端据此拼接 URL。
  */
+import { groupOfOrder } from './profiles.mjs'
+
 
 /** 核心条目保留的名录字段(其余如 desc/location/habit 等属详情层)。
  *  notes/profile 体量极小(全库 ~0.2MB)且被 FAQ 列表/结果页档案直接读取(无 loading 态),
  *  故留在 core;真正的大头是 5+5 素材数组(images/audios)→ 三层里的 assets 分片。 */
+/** 050 P1：权威名录层的字段白名单（**刻意不含任何媒体键**）。 */
+const META_SPECIES_KEYS = [
+  'id',
+  'nameZh',
+  'nameSci',
+  'nameEn',
+  'family',
+  'order',
+  'taxonKey',
+  'taxonId',
+  'commonness',
+  'playable',
+  'playableImage',
+  'playableAudio',
+  'quizExcluded',
+  'notes',
+  'profile',
+  'rankWorld',
+  'rankCN',
+  'inCN',
+  'desc',
+  'location',
+  'habit',
+]
+
 const CORE_SPECIES_KEYS = [
   'id',
   'nameZh',
@@ -179,6 +206,91 @@ export function toGlobalPool(manifest) {
     layer: 'global',
     total: species.length,
     buckets: [],
+    species,
+  }
+}
+
+
+/**
+ * 050 P1：`toMeta()` —— **唯一权威名录层**。
+ *
+ * 输入：core 完整 manifest（1,299 种，字段最全）+ 全球台账（9,839 → 可玩 9,545 种），
+ * 输出：10,844 种 × 全部名录字段，**不含任何媒体**（媒体仍在 assets 分片 / 全球池）。
+ *
+ * 为什么"合并"不会冲突：core 1299 与全球池 9545 **实测零重叠**
+ * （`check:catalog` 的互斥断言长期通过），所以这里是
+ * 「**9,545 条补齐 core 才有的字段**」+「1,299 条原样带入」，没有去重/改 id 的风险。
+ *
+ * 字段口径：
+ *  - `id/nameZh/nameSci/nameEn/family/taxonKey/taxonId/commonness` 来自任一来源，core 优先；
+ *  - `rankWorld/rankCN/inCN/desc/location/habit` 只 core 有 → 保留；
+ *  - `profile` 以 core 为准，但**重算 group**（050 P0：改按目名派生，修全球种全标"林鸟"的 bug）；
+ *  - `notes`（答疑四字段）随 core 带入；
+ *  - `order` 从 species-index 补（族/目展示 + 后续按目分片的依据）。
+ */
+export function toMeta(coreManifest, globalLedger, orderOf) {
+  const byId = new Map()
+  // 口径：权威层 = **可玩全集**（至少 1 图或 1 音），与 catalog/global 池同口径（10,844）。
+  // 台账里"完全无媒体"的种（实测 294 种）不进权威层——它们没有详情可展示，
+  // 仍由 species-index 骨架的轻量详情兜底（属"没有数据"，非缺陷）。
+  let skippedNoMedia = 0
+  for (const sp of globalLedger?.species || []) {
+    const hasMedia = (sp.images && sp.images.length) || sp.audios && sp.audios.length || sp.image || sp.audio
+    if (!hasMedia) {
+      skippedNoMedia++
+      continue
+    }
+    const out = pick(sp, META_SPECIES_KEYS)
+    byId.set(sp.id, out)
+  }
+  let coreKept = 0
+  let enriched = 0
+  for (const sp of coreManifest?.species || []) {
+    const out = pick(sp, META_SPECIES_KEYS)
+    // 全球层同名（理论为 0）：core 覆盖全球层，缺失字段回填
+    const prev = byId.get(sp.id)
+    if (prev) {
+      for (const [k, v] of Object.entries(out)) {
+        if (v !== undefined && v !== null && (prev[k] === undefined || prev[k] === null)) prev[k] = v
+      }
+      enriched++
+    } else {
+      byId.set(sp.id, out)
+      coreKept++
+    }
+  }
+
+  // P0：group 按目名重算（core 的 profile.group 是旧的科名派生结果）
+  const groups = { waterbird: 0, raptor: 0, landbird: 0 }
+  let noOrder = 0
+  for (const sp of byId.values()) {
+    const order = sp.order || orderOf?.get(sp.id) || orderOf?.get(sp.nameSci) || ''
+    if (!sp.order && order) sp.order = order
+    const g = groupOfOrder(order)
+    if (g) sp.profile = { ...sp.profile, group: g }
+    else noOrder++
+    if (sp.profile?.group) groups[sp.profile.group] = (groups[sp.profile.group] || 0) + 1
+  }
+
+  const species = [...byId.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  return {
+    layer: 'meta',
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    policy: coreManifest?.policy || globalLedger?.policy || 'relaxed',
+    source: 'core manifest + 全球采集台账（050 单一权威名录层）',
+    total: species.length,
+    stats: {
+      fromCore: coreKept,
+      enriched: enriched,
+      skippedNoMedia,
+      withNameZh: species.filter((s) => s.nameZh).length,
+      withProfile: species.filter((s) => s.profile).length,
+      withNotes: species.filter((s) => s.notes).length,
+      withTaxonId: species.filter((s) => s.taxonId).length,
+      groups,
+      noOrder,
+    },
     species,
   }
 }

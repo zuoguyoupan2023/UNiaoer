@@ -7,7 +7,45 @@ import path from 'node:path'
  * 供 build-bank 与 apply-profiles 复用；产出写入 manifest 的 species[].profile。
  */
 
-/** 水鸟类群：游禽 + 涉禽（按 manifest 的中文科名归档） */
+/**
+ * 类群（group）派生。
+ *
+ * 050 P0 修 bug：原实现只认**中文科名**，而全球层的 `family` 是 AviList 的**英文科名**
+ * （`Cettiidae`/`Accipitridae`…）→ 10,844 条里除核心库外**全部落到兜底 `landbird`**，
+ * 连鸥科、鹭科、鹰科的全球种都被标成"林鸟"（实测 global.min 的 9545 种 group 100% 为 landbird）。
+ *
+ * 修法：**优先按目（Order）派生**——目名是 AviList 的英文标准名，在中英文两种来源下都稳定，
+ * 且 `species-index.json` 每种都带 `order`；科名派生保留为兜底（兼容无 order 的老数据）。
+ */
+
+/** 涉禽/水鸟相关目（AviList 英文目名；判据 = 「主要营水生环境」） */
+const WATERBIRD_ORDERS = new Set([
+  'Charadriiformes', // 鸻形目（鹬、鸻、燕鸻…）
+  'Gruiformes', // 鹤形目
+  'Pelecaniformes', // 鹈形目（鹈鹕、鹱、鹺鹈、鲣鸟…）
+  'Suliformes', // 鲣鸟目
+  'Procellariiformes', // 鹱形目
+  'Ciconiiformes', // 鹳形目（鹳、鹭、鹮…）
+  'Phoenicopteriformes', // 红鹳目
+  'Podicipediformes', // 鸊鷉目
+  'Gaviiformes', // 潜鸟目
+  'Sphenisciformes', // 企鹅目
+  'Coliiformes', //  coliiformes
+  'Pterocliformes', // 沙鸡目
+  'Tinamiformes', // 䴙䴘目
+  'Eurypygiformes', // 鹤鸵目（部分水栖）
+])
+
+/** 猛禽相关目（鹰、隼、鸮、鹫） */
+const RAPTOR_ORDERS = new Set([
+  'Accipitriformes',
+  'Falconiformes',
+  'Strigiformes',
+  'Cathartiformes',
+  'Sagittariiformes',
+])
+
+/** 水鸟类群：游禽 + 涉禽（按 manifest 的中文科名归档；旧数据兜底） */
 const WATERBIRD_FAMILIES = new Set([
   // 游禽
   '鸭科',
@@ -44,13 +82,28 @@ const WATERBIRD_FAMILIES = new Set([
   '锤头鹳科',
 ])
 
-/** 猛禽类群 */
+/** 猛禽类群（中文科名；旧数据兜底） */
 const RAPTOR_FAMILIES = new Set(['鹰科', '隼科', '鸱鸮科', '草鸮科', '美洲鹫科', '鹗科'])
 
-/** 科名 → 类群 key；其余归林鸟（含攀禽/陆禽等陆生鸟类） */
+/**
+ * 科名 → 类群 key（**仅作兜底**）。
+ * 050 P0 起优先用 `groupOfOrder`；这里同时收中英文科名，
+ * 以便仍然只有科名的历史数据也能判对。
+ */
 export function groupOfFamily(family) {
-  if (WATERBIRD_FAMILIES.has(family)) return 'waterbird'
-  if (RAPTOR_FAMILIES.has(family)) return 'raptor'
+  if (WATERBIRD_FAMILIES.has(family) || WATERBIRD_ORDERS.has(family)) return 'waterbird'
+  if (RAPTOR_FAMILIES.has(family) || RAPTOR_ORDERS.has(family)) return 'raptor'
+  return 'landbird'
+}
+
+/**
+ * 目名 → 类群 key（**首选**）。目名为 AviList 英文标准名，中英文数据源都一致。
+ * 未知目 → null（交由调用方回退到科名派生，避免未知目被误判成"林鸟"）。
+ */
+export function groupOfOrder(order) {
+  if (!order) return null
+  if (WATERBIRD_ORDERS.has(order)) return 'waterbird'
+  if (RAPTOR_ORDERS.has(order)) return 'raptor'
   return 'landbird'
 }
 
@@ -103,7 +156,8 @@ function distributionOf(entry) {
  */
 export function deriveProfile(sp, distEntry, curated = {}) {
   const profile = {}
-  const group = curated.group || groupOfFamily(sp.family)
+  // 050 P0：目名优先（全球层的 family 是英文科名，科名派生会全部兜底成 landbird）
+  const group = curated.group || groupOfOrder(sp.order) || groupOfFamily(sp.family)
   if (group) profile.group = group
   if (curated.migration) profile.migration = curated.migration
   const habitatZh = curated.habitatZh || curated.habitatEn
