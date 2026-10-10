@@ -44,22 +44,22 @@ describe('生活型台账（051 S2）', () => {
 
   it('一个科可跨类（鹭科既能游又能涉）', () => {
     const t = buildClassTable([ok({ groups: ['wader', 'swimmer'] })])
-    expect(resolveGroup6(t, 'Ardeidae', 'Ciconiiformes')?.groups).toEqual(['wader', 'swimmer'])
+    expect(resolveGroup6(t, { familySci: 'Ardeidae', orderSci: 'Ciconiiformes' })?.groups).toEqual(['wader', 'swimmer'])
   })
 
   it('科优先、目兜底', () => {
     const t = buildClassTable([ok({ familySci: 'Ardeidae', groups: ['wader'] }), ok({ familySci: '', orderSci: 'Gruiformes', groups: ['wader'] })])
-    expect(resolveGroup6(t, 'Ardeidae', 'Ciconiiformes')?.groups).toEqual(['wader'])
-    expect(resolveGroup6(t, 'Unknownidae', 'Gruiformes')?.groups).toEqual(['wader'])
+    expect(resolveGroup6(t, { familySci: 'Ardeidae', orderSci: 'Ciconiiformes' })?.groups).toEqual(['wader'])
+    expect(resolveGroup6(t, { familySci: 'Unknownidae', orderSci: 'Gruiformes' })?.groups).toEqual(['wader'])
   })
 
   it('查不到 → 返回 null（UI 不显示，而不是兜底成"林鸟"）', () => {
     const t = buildClassTable([ok()])
-    expect(resolveGroup6(t, 'Unknownidae', 'Unknowniformes')).toBeNull()
+    expect(resolveGroup6(t, { familySci: 'Unknownidae', orderSci: 'Unknowniformes' })).toBeNull()
   })
 
   it('空台账 → 什么都不生效（初始状态）', () => {
     const t = buildClassTable([])
-    expect(resolveGroup6(t, 'Ardeidae', 'Ciconiiformes')).toBeNull()
+    expect(resolveGroup6(t, { familySci: 'Ardeidae', orderSci: 'Ciconiiformes' })).toBeNull()
   })
 })
