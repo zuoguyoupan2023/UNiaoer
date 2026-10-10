@@ -210,6 +210,11 @@ console.log(
 console.log(`  M1 迁移完整性：${compared} 个字段逐一比对，缺种 ${report.missingInMigration} · 丢字段 ${report.fieldLoss}`)
 console.log(`  M2 详情完整度：署名缺失 ${attributionBad} 处`)
 
+// 类群分布单列一行（三分类口径，050 P0 修订：英文科名 → 目名 两级派生）
+console.log(
+  `  类群分布：水鸟 ${meta.stats?.groups?.waterbird} · 猛禽 ${meta.stats?.groups?.raptor} · 林鸟 ${meta.stats?.groups?.landbird}（水/涉/林/猛/攀/游六分法本项目未实现）`,
+)
+
 if (REPORT) {
   console.log('\n· 明细报告（缺什么 / 为什么）')
   const noHabitat = meta.total - report.withHabitat

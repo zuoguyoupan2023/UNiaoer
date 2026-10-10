@@ -10,7 +10,7 @@
  * 分桶规则:物种 id 首字符 a-z → 同名桶;数字/其它 → '0-9'。
  * 桶索引(core.buckets)只列**实际存在**的桶,前端据此拼接 URL。
  */
-import { groupOfOrder } from './profiles.mjs'
+import { groupOf } from './profiles.mjs'
 
 
 /** 核心条目保留的名录字段(其余如 desc/location/habit 等属详情层)。
@@ -266,7 +266,7 @@ export function toMeta(coreManifest, globalLedger, orderOf) {
   for (const sp of byId.values()) {
     const order = sp.order || orderOf?.get(sp.id) || orderOf?.get(sp.nameSci) || ''
     if (!sp.order && order) sp.order = order
-    const g = groupOfOrder(order)
+    const g = groupOf(sp.family, order)
     if (g) sp.profile = { ...sp.profile, group: g }
     else noOrder++
     if (sp.profile?.group) groups[sp.profile.group] = (groups[sp.profile.group] || 0) + 1

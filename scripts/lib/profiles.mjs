@@ -8,44 +8,197 @@ import path from 'node:path'
  */
 
 /**
- * 类群（group）派生。
+ * 类群（group）派生 —— 050 P0 修订版。
  *
- * 050 P0 修 bug：原实现只认**中文科名**，而全球层的 `family` 是 AviList 的**英文科名**
- * （`Cettiidae`/`Accipitridae`…）→ 10,844 条里除核心库外**全部落到兜底 `landbird`**，
- * 连鸥科、鹭科、鹰科的全球种都被标成"林鸟"（实测 global.min 的 9545 种 group 100% 为 landbird）。
+ * ## 为什么原实现是错的
+ * 原实现 `groupOfFamily()` 只认**中文科名**（`'鸥科'`/`'鹰科'`…），而全球层的 `family`
+ * 是 AviList 的**英文科名**（`Cettiidae`/`Accipitridae`…）→ 10,844 条里除核心库外
+ * **全部落到兜底 `landbird`**，连鸥科、鹭科、鹰科的全球种都被标成"林鸟"。
  *
- * 修法：**优先按目（Order）派生**——目名是 AviList 的英文标准名，在中英文两种来源下都稳定，
- * 且 `species-index.json` 每种都带 `order`；科名派生保留为兜底（兼容无 order 的老数据）。
+ * ## 口径（重要：本项目只有三类，不是六类）
+ * 系统枚举只有 `waterbird`（水/涉禽）/ `raptor`（猛禽）/ `landbird`（其余：林鸟+攀禽+游禽），
+ * 由 `check-bank.mjs` 强制校验。**"水/涉/林/猛/攀/游"六分法在本项目里从未实现**；
+ * 若将来要拆成六类，需同步改枚举 + `check-bank` + `SpeciesFacts.vue` 的 i18n。
+ *
+ * ## 派生方式：**用核心库反推，不手写**
+ * 手写目名→类目的集合必然会漂移：本次就手写错了 —— `Coraciiformes`（翠鸟/蜂虎）整目判水鸟，
+ * 但核心库该目是 13 种水鸟 / 10 种林鸟；`Pterocliformes` 沙鸡、`Tinamiformes` 䴙䴘、
+ * `Eurypygiformes` 鹤鸵在核心库**根本没有样本**，被我凭空判成水鸟。
+ * 现改为：核心库 1,299 种持有**中文科名**（权威口径），经 `species-index` 桥接到
+ * **英文科名 / 目名**后按多数票反查 —— 与原始中文集合**完全同源**，只是翻译到了英文世界。
  */
 
-/** 涉禽/水鸟相关目（AviList 英文目名；判据 = 「主要营水生环境」） */
-const WATERBIRD_ORDERS = new Set([
-  'Charadriiformes', // 鸻形目（鹬、鸻、燕鸻…）
-  'Gruiformes', // 鹤形目
-  'Pelecaniformes', // 鹈形目（鹈鹕、鹱、鹺鹈、鲣鸟…）
-  'Suliformes', // 鲣鸟目
-  'Procellariiformes', // 鹱形目
-  'Ciconiiformes', // 鹳形目（鹳、鹭、鹮…）
-  'Phoenicopteriformes', // 红鹳目
-  'Podicipediformes', // 鸊鷉目
-  'Gaviiformes', // 潜鸟目
-  'Sphenisciformes', // 企鹅目
-  'Coliiformes', //  coliiformes
-  'Pterocliformes', // 沙鸡目
-  'Tinamiformes', // 䴙䴘目
-  'Eurypygiformes', // 鹤鸵目（部分水栖）
-])
+/** 英文科名 → 类群（131 个科，由核心库 1,299 种反推；同科跨组的科不收录） */
+const FAMILY_GROUP = {
+"Acanthizidae": "landbird",
+  "Accipitridae": "raptor",
+  "Acrocephalidae": "landbird",
+  "Aegithalidae": "landbird",
+  "Aegithinidae": "landbird",
+  "Alaudidae": "landbird",
+  "Alcedinidae": "waterbird",
+  "Alcidae": "waterbird",
+  "Anatidae": "waterbird",
+  "Anhingidae": "waterbird",
+  "Apodidae": "landbird",
+  "Aramidae": "waterbird",
+  "Ardeidae": "waterbird",
+  "Artamidae": "landbird",
+  "Bombycillidae": "landbird",
+  "Bucerotidae": "landbird",
+  "Burhinidae": "waterbird",
+  "Cacatuidae": "landbird",
+  "Calcariidae": "landbird",
+  "Campephagidae": "landbird",
+  "Caprimulgidae": "landbird",
+  "Cardinalidae": "landbird",
+  "Casuariidae": "landbird",
+  "Cathartidae": "raptor",
+  "Certhiidae": "landbird",
+  "Cettiidae": "landbird",
+  "Charadriidae": "waterbird",
+  "Chloropseidae": "landbird",
+  "Ciconiidae": "waterbird",
+  "Cinclidae": "waterbird",
+  "Cisticolidae": "landbird",
+  "Climacteridae": "landbird",
+  "Coliidae": "landbird",
+  "Columbidae": "landbird",
+  "Coraciidae": "landbird",
+  "Corvidae": "landbird",
+  "Cracidae": "landbird",
+  "Cuculidae": "landbird",
+  "Dicaeidae": "landbird",
+  "Dicruridae": "landbird",
+  "Emberizidae": "landbird",
+  "Estrildidae": "landbird",
+  "Falconidae": "raptor",
+  "Fregatidae": "waterbird",
+  "Fringillidae": "landbird",
+  "Furnariidae": "landbird",
+  "Galbulidae": "landbird",
+  "Gaviidae": "waterbird",
+  "Glareolidae": "waterbird",
+  "Gruidae": "waterbird",
+  "Haematopodidae": "waterbird",
+  "Hirundinidae": "landbird",
+  "Icteridae": "landbird",
+  "Jacanidae": "waterbird",
+  "Laniidae": "landbird",
+  "Laridae": "waterbird",
+  "Leiothrichidae": "landbird",
+  "Maluridae": "landbird",
+  "Megalaimidae": "landbird",
+  "Megapodiidae": "landbird",
+  "Meliphagidae": "landbird",
+  "Meropidae": "landbird",
+  "Mimidae": "landbird",
+  "Momotidae": "landbird",
+  "Monarchidae": "landbird",
+  "Motacillidae": "landbird",
+  "Muscicapidae": "landbird",
+  "Nectariniidae": "landbird",
+  "Numididae": "landbird",
+  "Odontophoridae": "landbird",
+  "Oriolidae": "landbird",
+  "Pachycephalidae": "landbird",
+  "Pandionidae": "raptor",
+  "Panuridae": "landbird",
+  "Paradoxornithidae": "landbird",
+  "Pardalotidae": "landbird",
+  "Paridae": "landbird",
+  "Parulidae": "landbird",
+  "Passerellidae": "landbird",
+  "Passeridae": "landbird",
+  "Pelecanidae": "waterbird",
+  "Pellorneidae": "landbird",
+  "Petroicidae": "landbird",
+  "Phalacrocoracidae": "waterbird",
+  "Phasianidae": "landbird",
+  "Phoenicopteridae": "waterbird",
+  "Phylloscopidae": "landbird",
+  "Picidae": "landbird",
+  "Ploceidae": "landbird",
+  "Podargidae": "landbird",
+  "Podicipedidae": "waterbird",
+  "Polioptilidae": "landbird",
+  "Procellariidae": "waterbird",
+  "Prunellidae": "landbird",
+  "Psittacidae": "landbird",
+  "Psittaculidae": "landbird",
+  "Ptiliogonatidae": "landbird",
+  "Ptilonorhynchidae": "landbird",
+  "Pycnonotidae": "landbird",
+  "Rallidae": "waterbird",
+  "Ramphastidae": "landbird",
+  "Recurvirostridae": "waterbird",
+  "Regulidae": "landbird",
+  "Remizidae": "landbird",
+  "Rhipiduridae": "landbird",
+  "Rostratulidae": "waterbird",
+  "Scolopacidae": "waterbird",
+  "Scopidae": "waterbird",
+  "Sittidae": "landbird",
+  "Spheniscidae": "waterbird",
+  "Stenostiridae": "landbird",
+  "Stercorariidae": "waterbird",
+  "Strigidae": "raptor",
+  "Struthionidae": "landbird",
+  "Sturnidae": "landbird",
+  "Sulidae": "waterbird",
+  "Sylviidae": "landbird",
+  "Thraupidae": "landbird",
+  "Threskiornithidae": "waterbird",
+  "Timaliidae": "landbird",
+  "Tityridae": "landbird",
+  "Trochilidae": "landbird",
+  "Troglodytidae": "landbird",
+  "Trogonidae": "landbird",
+  "Turdidae": "landbird",
+  "Tyrannidae": "landbird",
+  "Tytonidae": "raptor",
+  "Upupidae": "landbird",
+  "Viduidae": "landbird",
+  "Vireonidae": "landbird",
+  "Zosteropidae": "landbird",
+}
 
-/** 猛禽相关目（鹰、隼、鸮、鹫） */
-const RAPTOR_ORDERS = new Set([
-  'Accipitriformes',
-  'Falconiformes',
-  'Strigiformes',
-  'Cathartiformes',
-  'Sagittariiformes',
-])
+/** 目名 → 类群（31 个目，由核心库按多数票反推；core 无样本的目不在表内 → 落兜底） */
+const ORDER_GROUP = {
+"Accipitriformes": "raptor",
+  "Anseriformes": "waterbird",
+  "Apodiformes": "landbird",
+  "Bucerotiformes": "landbird",
+  "Caprimulgiformes": "landbird",
+  "Casuariiformes": "landbird",
+  "Cathartiformes": "raptor",
+  "Charadriiformes": "waterbird",
+  "Ciconiiformes": "waterbird",
+  "Coliiformes": "landbird",
+  "Columbiformes": "landbird",
+  "Coraciiformes": "waterbird",
+  "Cuculiformes": "landbird",
+  "Falconiformes": "raptor",
+  "Galbuliformes": "landbird",
+  "Galliformes": "landbird",
+  "Gaviiformes": "waterbird",
+  "Gruiformes": "waterbird",
+  "Passeriformes": "landbird",
+  "Pelecaniformes": "waterbird",
+  "Phoenicopteriformes": "waterbird",
+  "Piciformes": "landbird",
+  "Podargiformes": "landbird",
+  "Podicipediformes": "waterbird",
+  "Procellariiformes": "waterbird",
+  "Psittaciformes": "landbird",
+  "Sphenisciformes": "waterbird",
+  "Strigiformes": "raptor",
+  "Struthioniformes": "landbird",
+  "Suliformes": "waterbird",
+  "Trogoniformes": "landbird",
+}
 
-/** 水鸟类群：游禽 + 涉禽（按 manifest 的中文科名归档；旧数据兜底） */
+/** 水鸟类群：游禽 + 涉禽（核心库的中文科名原始集合，保持不变） */
 const WATERBIRD_FAMILIES = new Set([
   // 游禽
   '鸭科',
@@ -82,29 +235,30 @@ const WATERBIRD_FAMILIES = new Set([
   '锤头鹳科',
 ])
 
-/** 猛禽类群（中文科名；旧数据兜底） */
+/** 猛禽类群（中文科名；核心库原始集合，保持不变） */
 const RAPTOR_FAMILIES = new Set(['鹰科', '隼科', '鸱鸮科', '草鸮科', '美洲鹫科', '鹗科'])
 
 /**
- * 科名 → 类群 key（**仅作兜底**）。
- * 050 P0 起优先用 `groupOfOrder`；这里同时收中英文科名，
- * 以便仍然只有科名的历史数据也能判对。
+ * 类群解析：英文科名 → 目名 → 中文科名 → 兜底林鸟。
+ * 前两级实测覆盖 8,174 / 2,517 种（合计 98.6%）；余 153 种落在
+ * "核心库无样本的目"（沙鸡、䴙䴘、鹤鸵、麝雉等），按原始集合的兜底口径落 landbird。
  */
-export function groupOfFamily(family) {
-  if (WATERBIRD_FAMILIES.has(family) || WATERBIRD_ORDERS.has(family)) return 'waterbird'
-  if (RAPTOR_FAMILIES.has(family) || RAPTOR_ORDERS.has(family)) return 'raptor'
+export function groupOf(family, order) {
+  if (family && FAMILY_GROUP[family]) return FAMILY_GROUP[family]
+  if (order && ORDER_GROUP[order]) return ORDER_GROUP[order]
+  if (family && WATERBIRD_FAMILIES.has(family)) return 'waterbird'
+  if (family && RAPTOR_FAMILIES.has(family)) return 'raptor'
   return 'landbird'
 }
 
-/**
- * 目名 → 类群 key（**首选**）。目名为 AviList 英文标准名，中英文数据源都一致。
- * 未知目 → null（交由调用方回退到科名派生，避免未知目被误判成"林鸟"）。
- */
+/** 只给科名的旧数据用（兼容原导出名） */
+export function groupOfFamily(family) {
+  return groupOf(family, '')
+}
+
+/** 只给目名的入口（050 P0 引入，保留导出名） */
 export function groupOfOrder(order) {
-  if (!order) return null
-  if (WATERBIRD_ORDERS.has(order)) return 'waterbird'
-  if (RAPTOR_ORDERS.has(order)) return 'raptor'
-  return 'landbird'
+  return groupOf('', order)
 }
 
 /** 读取 data/distribution.json，返回 { [taxonId]: entry }；文件缺失返回 {} */
@@ -157,7 +311,7 @@ function distributionOf(entry) {
 export function deriveProfile(sp, distEntry, curated = {}) {
   const profile = {}
   // 050 P0：目名优先（全球层的 family 是英文科名，科名派生会全部兜底成 landbird）
-  const group = curated.group || groupOfOrder(sp.order) || groupOfFamily(sp.family)
+  const group = curated.group || groupOf(sp.family, sp.order)
   if (group) profile.group = group
   if (curated.migration) profile.migration = curated.migration
   const habitatZh = curated.habitatZh || curated.habitatEn
