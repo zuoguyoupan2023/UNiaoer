@@ -457,6 +457,16 @@ export const messages = {
     },
     iucn: 'IUCN {code}',
     groups: { waterbird: '水鸟', raptor: '猛禽', landbird: '林鸟' },
+    // 051 S2 生活型六分法（习惯分类；仅有出处的记录才显示）
+    group6: {
+      label: '生活型',
+      swimmer: '游禽',
+      wader: '涉禽',
+      woodland: '林鸟',
+      raptor: '猛禽',
+      climber: '攀禽',
+      terrestrial: '陆禽',
+    },
     migrations: {
       resident: '留鸟',
       summer: '夏候鸟',

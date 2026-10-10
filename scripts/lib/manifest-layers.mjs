@@ -11,6 +11,7 @@
  * 桶索引(core.buckets)只列**实际存在**的桶,前端据此拼接 URL。
  */
 import { groupOfKnown } from './profiles.mjs'
+import { resolveGroup6 } from './class-taxonomy.mjs'
 
 
 /** 核心条目保留的名录字段(其余如 desc/location/habit 等属详情层)。
@@ -228,7 +229,7 @@ export function toGlobalPool(manifest) {
  *  - `notes`（答疑四字段）随 core 带入；
  *  - `order` 从 species-index 补（族/目展示 + 后续按目分片的依据）。
  */
-export function toMeta(coreManifest, globalLedger, orderOf, usageKeys) {
+export function toMeta(coreManifest, globalLedger, orderOf, usageKeys, classTable) {
   const byId = new Map()
   // 口径：权威层 = **可玩全集**（至少 1 图或 1 音），与 catalog/global 池同口径（10,844）。
   // 台账里"完全无媒体"的种（实测 294 种）不进权威层——它们没有详情可展示，
@@ -296,6 +297,29 @@ export function toMeta(coreManifest, globalLedger, orderOf, usageKeys) {
     }
   }
 
+  // 051 S2：生活型六分法——**只附有出处的记录**（classTable 已过滤 disputed 与无 source 的条目）。
+  // 出处本身不逐种重复写（按科/目存一次即可），物种上只挂 groups 数组 → 体积可控。
+  let classCovered = 0
+  const classes = {}
+  if (classTable) {
+    for (const sp of byId.values()) {
+      const hit = resolveGroup6(classTable, sp.family, sp.order)
+      if (!hit) continue
+      classCovered++
+      sp.profile = { ...sp.profile, group6: hit.groups }
+      const key = hit.record.familySci || `order:${hit.record.orderSci}`
+      if (!classes[key]) {
+        classes[key] = {
+          groups: hit.groups,
+          source: hit.record.source,
+          contributor: hit.record.contributor,
+          at: hit.record.at,
+          matchedBy: hit.record.familySci ? 'family' : 'order',
+        }
+      }
+    }
+  }
+
   const species = [...byId.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)))
   return {
     layer: 'meta',
@@ -304,6 +328,8 @@ export function toMeta(coreManifest, globalLedger, orderOf, usageKeys) {
     policy: coreManifest?.policy || globalLedger?.policy || 'relaxed',
     source: 'core manifest + 全球采集台账（050 单一权威名录层）',
     total: species.length,
+    /** 生活型类群出处（按科/目存一次；051 S2 —— 有出处才收录） */
+    classes,
     stats: {
       fromCore: coreKept,
       enriched: enriched,
@@ -315,6 +341,8 @@ export function toMeta(coreManifest, globalLedger, orderOf, usageKeys) {
       taxonFilled,
       groups,
       groupBlank,
+      classCovered,
+      classRecords: Object.keys(classes).length,
     },
     species,
   }

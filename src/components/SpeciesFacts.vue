@@ -17,6 +17,15 @@ const dist = computed(() => props.profile?.distribution)
 const groupLabel = computed(() =>
   props.profile?.group ? t(`species.groups.${props.profile.group}`) : '',
 )
+/**
+ * 051 S2：生活型六分法。**只渲染有出处的记录**（`profile.group6` 缺失 = 没有依据 = 不显示），
+ * 不做推断、不兜底。一个科可跨类 → 用「·」并列。
+ */
+const group6Label = computed(() => {
+  const gs = props.profile?.group6
+  if (!gs || !gs.length) return ''
+  return gs.map((g) => t(`species.group6.${g}`)).join(' · ')
+})
 const migrationLabel = computed(() =>
   props.profile?.migration ? t(`species.migrations.${props.profile.migration}`) : '',
 )
@@ -24,6 +33,7 @@ const hasAny = computed(
   () =>
     !!(
       groupLabel.value ||
+      group6Label.value ||
       migrationLabel.value ||
       text.value.habitat ||
       text.value.habit ||
@@ -75,6 +85,10 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
       <template v-if="groupLabel">
         <dt>{{ t('species.group') }}</dt>
         <dd>{{ groupLabel }}</dd>
+      </template>
+      <template v-if="group6Label">
+        <dt>{{ t('species.group6.label') }}</dt>
+        <dd>{{ group6Label }}</dd>
       </template>
       <template v-if="migrationLabel">
         <dt>{{ t('species.migration') }}</dt>

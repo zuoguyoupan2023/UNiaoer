@@ -463,6 +463,16 @@ const en: typeof zhMessages = {
     },
     iucn: 'IUCN {code}',
     groups: { waterbird: 'Waterbird', raptor: 'Raptor', landbird: 'Landbird' },
+    // 051 S2 six-way lifestyle grouping (habit classification; rendered only with a cited source)
+    group6: {
+      label: 'Lifestyle',
+      swimmer: 'Swimmer',
+      wader: 'Wader',
+      woodland: 'Woodland bird',
+      raptor: 'Raptor',
+      climber: 'Climber',
+      terrestrial: 'Terrestrial bird',
+    },
     migrations: {
       resident: 'Resident',
       summer: 'Summer visitor',

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "notice": [
+    "鸟类生活型（六分法：水/涉/林/猛/攀/游）是**习惯分类**，不是分类学事实，没有权威标准可查。",
+    "因此本台账采取「有出处才生效」的策略：**没有 source 的记录一律不生效**，",
+    "查不到的科/目一律留空（UI 不显示类群行），绝不用推断值填充。",
+    "记录可由用户投稿或挑错（docs/051 §2.2 R8）；被标记 status=disputed 的记录自动失效。"
+  ],
+  "values": {
+    "swimmer": "游禽",
+    "wader": "涉禽",
+    "woodland": "林鸟",
+    "raptor": "猛禽",
+    "climber": "攀禽",
+    "terrestrial": "陆禽"
+  },
+  "example": {
+    "_comment": "本对象仅为格式示例，不会被校验脚本当作真实记录（键名以 _ 开头即跳过）",
+    "familySci": "Ardeidae",
+    "orderSci": "",
+    "groups": ["wader", "swimmer"],
+    "source": {
+      "type": "handbook",
+      "ref": "中国鸟类观察手册（1999）鹭科条目",
+      "url": "",
+      "note": "按该手册的类群划分"
+    },
+    "contributor": "填写你的名字或昵称",
+    "at": "2026-10-10",
+    "status": "ok"
+  },
+  "records": []
+}

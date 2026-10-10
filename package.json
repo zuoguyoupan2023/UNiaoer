@@ -28,6 +28,7 @@
     "check:bank": "node scripts/check-bank.mjs",
     "check:layers": "node scripts/check-manifest-layers.mjs",
     "check:meta": "node scripts/check-meta.mjs",
+    "check:class": "node scripts/check-class.mjs",
     "check:catalog": "node scripts/check-catalog.mjs",
     "sync:prod": "node scripts/sync-prod.mjs",
     "check:sync": "node scripts/check-sync.mjs",

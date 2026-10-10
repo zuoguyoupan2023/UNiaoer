@@ -26,6 +26,12 @@ export interface SpeciesDistribution {
 /** 物种档案（C1）：类群自动派生、分布来自分布数据，居留型/生境/习性人工整理（稀疏） */
 export interface SpeciesProfile {
   group?: SpeciesGroup
+  /**
+   * 051 S2：生活型六分法（游/涉/林/猛/攀/陆）。
+   * **必须有出处才生效**（见 `data/class-records.json`）；查不到 → 字段缺失 → UI 不显示类群行。
+   * 与三分类 `group` 并存，便于逐步积累与回退。
+   */
+  group6?: SpeciesGroup6[]
   migration?: SpeciesMigration
   habitatZh?: string
   habitatEn?: string
@@ -33,6 +39,9 @@ export interface SpeciesProfile {
   habitEn?: string
   distribution?: SpeciesDistribution
 }
+
+/** 生活型六分法取值（051 S2） */
+export type SpeciesGroup6 = 'swimmer' | 'wader' | 'woodland' | 'raptor' | 'climber' | 'terrestrial'
 
 /** 题库中单个物种（来自构建脚本生成的 manifest） */
 export interface BankSpecies {
