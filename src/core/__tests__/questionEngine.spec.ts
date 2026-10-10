@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { assetsOf, buildQuestions, pickDistractors, shuffle } from '../questionEngine'
+import { assetsOf, buildQuestions, pickDistractors, shuffle, usableInNameMode } from '../questionEngine'
 import { isStarterBird } from '../starterBirds'
 import { TIERS } from '../difficulty'
 import type { BankSpecies } from '../bank'
@@ -373,5 +373,60 @@ describe('buildQuestions · starterOnly（新手福利，2026-10-09）', () => {
       // 且全部来自本地表（新手池不足时不得把表外新手鸟塞进来）
       expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
     }
+  })
+})
+
+/** 051 S1：出题池与干扰项池按命名体系过滤（无中文名 → 既不当答案也不当干扰项） */
+describe('S1 命名体系过滤', () => {
+  /** 造一个"有素材但没有中文名"的物种 */
+  const noZh: BankSpecies = {
+    ...(bank[0] as BankSpecies),
+    id: 'no-zh-bird',
+    nameZh: '',
+    nameSci: 'Sine nomina avis',
+    nameEn: 'Nameless Bird',
+  }
+  const mixed: BankSpecies[] = [...(bank as BankSpecies[]), noZh]
+
+  it('中文模式：无中文名的种既不出题、也不进选项', () => {
+    const qs = buildQuestions(mixed, { type: 'image', count: 4, tier: 2, nameMode: 'zh' })
+    expect(qs.length).toBeGreaterThan(0)
+    const zhSet = new Set((bank as BankSpecies[]).map((s) => s.nameZh))
+    for (const q of qs) {
+      expect(q.nameMode).toBe('zh')
+      expect(zhSet.has(q.answer)).toBe(true) // 中文卷里答案必须是中文名
+      expect(q.options).not.toContain('Nameless Bird')
+      expect(q.optionIds).not.toContain('no-zh-bird')
+    }
+  })
+
+  it('英文模式：无中文名不影响（英文名全覆盖）', () => {
+    const qs = buildQuestions(mixed, { type: 'image', count: 4, tier: 2, nameMode: 'en' })
+    expect(qs.length).toBeGreaterThan(0)
+    expect(qs.every((q) => q.nameMode === 'en')).toBe(true)
+  })
+
+  it('学名模式：全量可用（含无中文名、无英文名的极端情况）', () => {
+    const noNames: BankSpecies = { ...(bank[0] as BankSpecies), id: 'sci-only', nameZh: '', nameEn: '', nameSci: 'Sci only avis' }
+    const qs = buildQuestions([...(bank as BankSpecies[]), noNames], {
+      type: 'image',
+      count: 4,
+      tier: 2,
+      nameMode: 'sci',
+    })
+    expect(qs.length).toBeGreaterThan(0)
+    expect(qs.every((q) => q.nameMode === 'sci')).toBe(true)
+  })
+
+  it('缺省按 locale 推断：未显式传 nameMode 时 en→en / 其他→zh', () => {
+    expect(buildQuestions(mixed, { type: 'image', count: 2, locale: 'en' })[0]?.nameMode).toBe('en')
+    expect(buildQuestions(mixed, { type: 'image', count: 2, locale: 'zh-CN' })[0]?.nameMode).toBe('zh')
+  })
+
+  it('可用性判定：严格匹配本体系的字段，不跨语言回退', () => {
+    expect(usableInNameMode(noZh, 'zh')).toBe(false) // 无中文名 → 中文卷不可用（即便有英文名/学名）
+    expect(usableInNameMode(noZh, 'en')).toBe(true)
+    expect(usableInNameMode(noZh, 'sci')).toBe(true)
+    expect(usableInNameMode({ ...noZh, nameEn: '' } as BankSpecies, 'en')).toBe(false)
   })
 })

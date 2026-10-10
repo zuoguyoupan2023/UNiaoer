@@ -64,6 +64,8 @@ export function buildRoundRecord(quiz: QuizStore): RoundRecord | null {
     category: 'bird',
     mode: quiz.mode,
     tier: quiz.tier,
+    // 051 S1：落库命名体系 —— 046 的称号/徽章分区分账依赖它
+    nameMode: quiz.nameMode,
     total: quiz.total,
     correct: quiz.correctCount,
     accuracy: quiz.accuracy,

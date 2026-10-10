@@ -4,6 +4,16 @@ export type Tier = 1 | 2 | 3 | 4 | 5
 /** 题型 */
 export type MediaType = 'image' | 'audio'
 
+/**
+ * 选项命名体系（051 S1）：决定一道题的选项与答案用哪种名字。
+ *  - `zh`：中文俗名（中文界面默认；**物种必须有名中文名**，见 questionEngine 的可用性过滤）
+ *  - `en`：英文俗名
+ *  - `sci`：拉丁学名（预留给 045 L6「非人级别」；学名 100% 覆盖）
+ *
+ * 与 `RoundRecord.nameMode`（046 称号/徽章按区统计）配套 —— 两者共用同一字段。
+ */
+export type NameMode = 'zh' | 'en' | 'sci'
+
 /** 作答方式 */
 export type AnswerMode = 'choice' | 'input'
 
@@ -82,4 +92,6 @@ export interface Question {
   optionIds: string[]
   answerMode: AnswerMode
   timeLimitSec?: number
+  /** 051 S1：本轮选项/答案使用的命名体系（供错题本、海报与 046 分区统计复现语义） */
+  nameMode?: NameMode
 }

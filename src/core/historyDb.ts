@@ -8,7 +8,7 @@
  * 默认用户 + 默认档案（档案名 = 最早一轮的日期，无记录则建档日），meta.schema=2 标记；
  * versionchange 事务只在版本跃迁时执行一次，天然幂等（013 §2.1）。
  */
-import type { MediaType, Tier } from '@/types'
+import type { MediaType, NameMode, Tier } from '@/types'
 
 export interface RoundItem {
   speciesId: string
@@ -33,6 +33,12 @@ export interface RoundRecord {
   category: string
   mode: MediaType
   tier: Tier
+  /**
+   * 051 S1：本题的选项命名体系（zh/en/sci）。
+   * 历史轮次没有该字段 → 视为 'zh'（迁移前所有题目都是中文名选项）。
+   * 046 的称号/徽章分区分账按它统计。
+   */
+  nameMode?: NameMode
   total: number
   correct: number
   accuracy: number

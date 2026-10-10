@@ -1,4 +1,4 @@
-import type { MediaAsset, MediaType, Question, Tier } from '@/types'
+import type { MediaAsset, MediaType, NameMode, Question, Tier } from '@/types'
 import { speciesName, type BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
@@ -12,6 +12,17 @@ export interface BuildOptions {
   speciesPool?: ReadonlySet<string>
   /** 出题语种（015 §6.1）：'en' 时答案/选项优先 nameEn，缺失回退学名；缺省中文 */
   locale?: string
+  /**
+   * 051 S1：**选项命名体系**（默认按 `locale` 推断：'en' → en，否则 zh）。
+   *
+   * 规则（用户 2026-10-10 拍板 D1）：**某体系下缺名字的种，既不当正确答案，也不当干扰项**。
+   * 理由：中文卷里混进英文名选项，等于在告诉测试者"英文的都是干扰项"，
+   * 既让题目失去意义，也让"这道题考什么"变得不可判断。
+   *
+   * 覆盖面（权威层 10,844 种实测）：学名 10,844 · 英文名 10,844 · **中文名仅 5,646**。
+   * 因此中文模式会少掉一半物种，但对难度与观感都是必要的代价。
+   */
+  nameMode?: NameMode
   /**
    * 029 M4:干扰项来源池（缺省 = 从 bank 的素材池取）。
    * 在线出题（/api/questions）时传入「服务端返回的目标种 + 名字候选」——
@@ -151,12 +162,44 @@ export function pickMedia(sp: BankSpecies, type: MediaType, poolSize: number): M
  * 轮内不重复：`pool` 内物种 id 唯一，`picked` 取样天然无重复（同一轮每只鸟最多一次）；
  *   不同轮次之间允许重复（"再来一轮"复用候选池是预期行为，见 onlinePool.ts 头注释）。
  */
+/**
+ * 051 S1：某物种在当前 `nameMode` 下**是否可用**。
+ *
+ * **严格匹配该体系自己的名字字段，不做跨语言回退**：中文卷只收有名中文名的种。
+ * 若允许"回退学名/英文名"，中文卷里就会混进英文名选项——等于在告诉测试者
+ * "英文的都是干扰项"，题目失去意义（用户 2026-10-10 拍板 D1）。
+ *
+ * 覆盖面（权威层 10,844 种实测）：学名 10,844 · 英文名 10,844 · **中文名 5,646**。
+ */
+export function usableInNameMode(sp: BankSpecies, mode: NameMode): boolean {
+  if (mode === 'sci') return !!sp.nameSci
+  if (mode === 'en') return !!sp.nameEn
+  return !!sp.nameZh
+}
+
+/** 按命名体系过滤物种列表（出题池与干扰项池共用；保持原顺序） */
+export function filterByNameMode(list: BankSpecies[], mode: NameMode): BankSpecies[] {
+  return list.filter((s) => usableInNameMode(s, mode))
+}
+
 export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
-  const { type, count = 10, tier = 2, speciesPool, locale, distractorPool, regionTiers, starterOnly } = opts
+  const {
+    type,
+    count = 10,
+    tier = 2,
+    speciesPool,
+    locale,
+    nameMode = locale === 'en' ? 'en' : 'zh',
+    distractorPool,
+    regionTiers,
+    starterOnly,
+  } = opts
   const cfg = TIERS[tier]
-  const full = mediaPool(bank, type)
+  // 051 S1：**先按命名体系过滤，再进后续所有链路**（档位筛选、干扰项、新手池都基于过滤后的集合）
+  const full = filterByNameMode(mediaPool(bank, type), nameMode)
   // 干扰项池：默认与出题池同源（本地模式）；在线模式传入服务端候选（含无素材的名字条目）
-  const dPool = distractorPool && distractorPool.length ? distractorPool : full
+  const rawDPool = distractorPool && distractorPool.length ? distractorPool : full
+  const dPool = filterByNameMode(rawDPool, nameMode)
   const hasRegion = !!regionTiers?.size
 
   /** 构造出题池：严格档位优先，不足 count 用表内其余档位补齐（绝不引入表外物种） */
@@ -227,6 +270,7 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
       crossAssets: assetsOf(sp, otherType),
       answer: speciesName(sp, locale),
       sci: sp.nameSci,
+      nameMode,
       family: sp.family,
       options: optionPairs.map((p) => p.name),
       optionIds: optionPairs.map((p) => p.id),

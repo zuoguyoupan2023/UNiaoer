@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { MediaType, Question, QuizRegime, Tier } from '@/types'
+import type { MediaType, NameMode, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, registerSpecies, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
 import { assetsOf, buildQuestions } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
@@ -32,6 +32,8 @@ export const useQuizStore = defineStore('quiz', () => {
   const roundId = ref<string>('')
   const startedAt = ref<number>(0)
   const questions = ref<Question[]>([])
+  /** 051 S1：本轮命名体系（出题时确定，落进每道题与轮次记录，供 046 分区统计） */
+  const nameMode = ref<NameMode>(currentLocale() === 'en' ? 'en' : 'zh')
   const chosen = ref<(string | null)[]>([])
   const index = ref(0)
   const loading = ref(false)
@@ -191,6 +193,8 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       sessionTotal.value = 0
     }
     if (opts.regime) regime.value = opts.regime
+    // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）
+    nameMode.value = currentLocale() === 'en' ? 'en' : 'zh'
     loading.value = true
     error.value = ''
     try {
@@ -270,6 +274,8 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         tier: tier.value,
         speciesPool,
         locale: currentLocale(),
+        // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷；L6 学名卷另设）
+        nameMode: nameMode.value,
         distractorPool,
         regionTiers,
         starterOnly,
@@ -372,6 +378,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   return {
     mode,
     tier,
+    nameMode,
     roundId,
     startedAt,
     questions,
