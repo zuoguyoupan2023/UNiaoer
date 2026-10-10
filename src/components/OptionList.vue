@@ -12,6 +12,8 @@ const props = defineProps<{
   revealInSec?: number | null
   /** 鸟声版用「先倾听」，鸟图版用「先观察」 */
   mode?: MediaType
+  /** 045 L6 非人级别：选项全是拉丁学名 → 按学名排版惯例用斜体 */
+  nameMode?: 'name' | 'sci'
 }>()
 
 const emit = defineEmits<{ select: [value: string] }>()
@@ -44,7 +46,7 @@ function state(opt: string): string {
       v-for="(opt, i) in options"
       :key="opt"
       class="option"
-      :class="state(opt)"
+      :class="[state(opt), { sci: nameMode === 'sci' }]"
       :disabled="!!chosen"
       @click="emit('select', opt)"
     >
@@ -79,6 +81,10 @@ function state(opt: string): string {
   font-variant-numeric: tabular-nums;
   font-size: 0.92rem;
 }
+.option.sci {
+  font-style: italic;
+}
+
 .options {
   display: grid;
   grid-template-columns: 1fr 1fr;

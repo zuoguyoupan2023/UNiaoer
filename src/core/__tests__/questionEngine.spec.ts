@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { assetsOf, buildQuestions, pickDistractors, shuffle } from '../questionEngine'
 import { isStarterBird } from '../starterBirds'
-import { TIERS } from '../difficulty'
+import { TIER_LIST, TIERS } from '../difficulty'
+import { suggestTier } from '../adaptive'
 import type { BankSpecies } from '../bank'
 import type { MediaAsset } from '@/types'
 
@@ -373,5 +374,55 @@ describe('buildQuestions · starterOnly（新手福利，2026-10-09）', () => {
       // 且全部来自本地表（新手池不足时不得把表外新手鸟塞进来）
       expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
     }
+  })
+})
+
+/** 045：L6「非人级别 NOT-HUMAN Level」——选项与答案只用拉丁学名，其余设置同 L5 */
+describe('L6 非人级别', () => {
+  // 复用文件顶部的 bank 夹具（6 种、含中英文名与学名）
+  const starterBank = bank
+
+  it('选项与答案全部为拉丁学名，且不含任何中文/英文俗名', () => {
+    const qs = buildQuestions(starterBank, { type: 'image', count: 5, tier: 6 })
+    expect(qs.length).toBeGreaterThan(0)
+    const sci = new Set(starterBank.map((s) => s.nameSci))
+    for (const q of qs) {
+      expect(q.nameMode).toBe('sci')
+      expect(sci.has(q.answer)).toBe(true)
+      expect(q.options.every((o) => sci.has(o))).toBe(true)
+      expect(q.answer).toBe(q.sci) // 答案就是学名本身（不出现俗名）
+      // 选项互不重复、答案必在其中
+      expect(new Set(q.options).size).toBe(q.options.length)
+      expect(q.options).toContain(q.answer)
+    }
+  })
+
+  it('规格与 L5 一致：6 选项 / 10s 限时 / 同科干扰', () => {
+    const q6 = buildQuestions(starterBank, { type: 'image', count: 1, tier: 6 })[0]!
+    const q5 = buildQuestions(starterBank, { type: 'image', count: 1, tier: 5 })[0]!
+    expect(q6.options.length).toBe(q5.options.length)
+    expect(q6.timeLimitSec).toBe(q5.timeLimitSec)
+    expect(TIERS[6].optionCount).toBe(TIERS[5].optionCount)
+    expect(TIERS[6].distractor).toBe(TIERS[5].distractor)
+    expect(TIERS[6].commonness).toEqual(TIERS[5].commonness)
+  })
+
+  it('L1–L5 不受影响：选项仍是俗名（nameMode 为 name）', () => {
+    const q = buildQuestions(starterBank, { type: 'image', count: 1, tier: 2 })[0]!
+    expect(q.nameMode).toBe('name')
+    expect(q.answer).not.toBe(q.sci)
+  })
+
+  it('档位表含 L6，且自适应升档封顶 L5（不会自动升到 L6）', () => {
+    expect(TIER_LIST.map((t) => t.tier)).toContain(6)
+    const rounds = Array.from({ length: 5 }, (_, i) => ({
+      at: Date.now() - i * 1000,
+      mode: 'image' as const,
+      tier: 5 as const,
+      total: 10,
+      correct: 10,
+      items: [],
+    })) as unknown as Parameters<typeof suggestTier>[0]
+    expect(suggestTier(rounds, 'image', 5).tier).toBe(5)
   })
 })

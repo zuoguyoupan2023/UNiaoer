@@ -24,6 +24,8 @@ export const ADAPTIVE_WINDOW = 5
 export const ADAPTIVE_MIN_SAMPLE = 3
 export const ADAPTIVE_UP = 90
 export const ADAPTIVE_DOWN = 50
+/** 自适应升档上限（045：不含 L6） */
+const ADAPTIVE_MAX_TIER = 5
 
 /** 最近 window 轮（同模式、非错题重练）的合计正确率与样本数 */
 export function recentAccuracy(
@@ -51,7 +53,9 @@ export function suggestTier(
   if (sample < ADAPTIVE_MIN_SAMPLE || accuracy == null) {
     return { tier: currentTier, change: 'stay', sample, accuracy }
   }
-  if (accuracy >= ADAPTIVE_UP && currentTier < 5) {
+  // 045：自适应升档**封顶 L5**——L6「非人级别」是另一种识别体系（选项只用学名），
+  // 不能因为正确率高就自动把用户塞进去，只能手选。
+  if (accuracy >= ADAPTIVE_UP && currentTier < ADAPTIVE_MAX_TIER) {
     return { tier: (currentTier + 1) as Tier, change: 'up', sample, accuracy }
   }
   if (accuracy <= ADAPTIVE_DOWN && currentTier > 1) {

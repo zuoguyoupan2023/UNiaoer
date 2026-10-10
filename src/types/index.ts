@@ -1,5 +1,12 @@
-/** 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 / 5 地狱（随机鸟鸣干扰，R23） */
-export type Tier = 1 | 2 | 3 | 4 | 5
+/** 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 / 5 地狱（随机鸟鸣干扰，R23）· 6 非人级别（045） */
+export type Tier = 1 | 2 | 3 | 4 | 5 | 6
+
+/**
+ * 常见度档位：**只到 5**（1 最常见）。
+ * 与难度 `Tier` 曾共用同一类型，045 加 L6 后必须拆开——
+ * 否则 `tier: 6` 有可能漏进地区/全球常见度表（那里永远只有 1..5）。
+ */
+export type CommonnessTier = 1 | 2 | 3 | 4 | 5
 
 /** 题型 */
 export type MediaType = 'image' | 'audio'
@@ -22,7 +29,7 @@ export interface Species {
   nameZh: string // 乌鸫
   nameSci: string // Turdus merula
   family: string // 鸫科
-  commonness: Tier // 常见度 → 难度
+  commonness: CommonnessTier // 常见度（1..5，与难度 Tier 拆开，见 CommonnessTier）
   desc: string
   location: string
   habit: string
@@ -82,4 +89,9 @@ export interface Question {
   optionIds: string[]
   answerMode: AnswerMode
   timeLimitSec?: number
+  /**
+   * 045 L6「非人级别」：选项与答案用哪种命名体系。
+   * 'name'（默认）= 俗名（按 locale 取中/英）；'sci' = **只用拉丁学名**，不用中英文俗名。
+   */
+  nameMode?: 'name' | 'sci'
 }

@@ -85,12 +85,27 @@ describe('evaluateBadges（基础）', () => {
     expect(series.has('hidden')).toBe(true)
   })
 
-  it('系列分组：入门 11 / 进阶 12 / 大师 6 / 隐藏 5', () => {
+  it('系列分组：入门 11 / 进阶 12 / 大师 7 / 隐藏 5（045 新增 L6 满分徽章）', () => {
     const count = (s: BadgeSeries) => BADGES.filter((b) => b.series === s).length
     expect(count('starter')).toBe(11)
     expect(count('advanced')).toBe(12)
-    expect(count('master')).toBe(6)
+    expect(count('master')).toBe(7)
     expect(count('hidden')).toBe(5)
+  })
+
+  it('045：L6 满一轮得 non-human-perfect，all-tier-perfect 仍只要求 L1–L5', () => {
+    const mk = (tier: number) => [
+      { at: 1, mode: 'image', tier, total: 3, correct: 3, items: [] },
+    ] as never
+    const ids = (rounds: unknown[]) =>
+      evaluateBadges({} as never, rounds as never, new Set<string>()).map((b) => b.id)
+    const all = ids([...mk(1), ...mk(2), ...mk(3), ...mk(4), ...mk(5), ...mk(6)])
+    expect(all).toContain('non-human-perfect')
+    expect(all).toContain('all-tier-perfect')
+    // 只有 L1–L5 满分时，L6 徽章不得给出
+    const l5 = ids([...mk(1), ...mk(2), ...mk(3), ...mk(4), ...mk(5)])
+    expect(l5).toContain('all-tier-perfect')
+    expect(l5).not.toContain('non-human-perfect')
   })
 })
 

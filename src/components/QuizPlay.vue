@@ -1024,6 +1024,7 @@ function onTouchEnd(e: TouchEvent) {
         :hidden="optionsHidden"
         :reveal-in-sec="revealInSec"
         :mode="quiz.current.type"
+        :name-mode="quiz.current.nameMode"
         @select="quiz.answer($event)"
       />
 

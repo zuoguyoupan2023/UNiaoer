@@ -1,4 +1,4 @@
-import type { MediaAsset, MediaType, Question, Tier } from '@/types'
+import type { CommonnessTier, MediaAsset, MediaType, Question, Tier } from '@/types'
 import { speciesName, type BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
@@ -163,7 +163,9 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   const buildPool = (candidates: BankSpecies[]): BankSpecies[] => {
     if (!hasRegion) {
       // 无地区表：全局 commonness（旧行为；样本不足放宽到全部，绝不出空）
-      const tiered = candidates.filter((s) => cfg.commonness.includes(s.commonness))
+      const tiered = candidates.filter((s) =>
+        cfg.commonness.includes(s.commonness as CommonnessTier),
+      )
       return tiered.length >= Math.min(count, 4) ? tiered : candidates
     }
     const strict: BankSpecies[] = []
@@ -171,7 +173,7 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
     for (const s of candidates) {
       const t = regionTiers!.get(s.id)
       if (t == null) continue // 表外 = 本地罕见/无记录 → 剔除
-      if (cfg.commonness.includes(t)) strict.push(s)
+      if (cfg.commonness.includes(t as CommonnessTier)) strict.push(s)
       else localRest.push(s)
     }
     if (strict.length >= count) return strict
@@ -205,6 +207,14 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   const picked = shuffle(unique).slice(0, Math.min(count, unique.length))
 
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
+  /**
+   * 045 L6：选项与答案的取名口径。
+   *  - `nameMode: 'sci'`（L6 非人级别）→ **只用拉丁学名**，不用中英文俗名；
+   *  - 其余（L1–L5）→ 俗名，按 locale 取中文名/英文名（015 §6.1 既有语义）。
+   * 答案与选项必须走同一个函数，否则会出现「选项是学名、答案是俗名」的错配。
+   */
+  const nameOf = (s: BankSpecies): string =>
+    cfg.nameMode === 'sci' ? s.nameSci : speciesName(s, locale)
   return picked.map((sp, i) => {
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractorPairs(
@@ -212,10 +222,10 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
       dPool,
       Math.max(0, cfg.optionCount - 1),
       cfg.distractor,
-      (s) => speciesName(s, locale),
+      nameOf,
     )
     // 名字与 id 成对洗牌，保证 optionIds 与 options 一一对应
-    const optionPairs = shuffle([{ id: sp.id, name: speciesName(sp, locale) }, ...distractors])
+    const optionPairs = shuffle([{ id: sp.id, name: nameOf(sp) }, ...distractors])
     // C3（R8）：携带同种两类全部素材，供答题/回顾查看其它图、音（不按档位裁剪——
     // 出题仍严格用第 1/前 3/前 5，画廊只是额外练习资源）
     return {
@@ -225,8 +235,9 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
       media,
       assets: assetsOf(sp, type),
       crossAssets: assetsOf(sp, otherType),
-      answer: speciesName(sp, locale),
+      answer: nameOf(sp),
       sci: sp.nameSci,
+      nameMode: cfg.nameMode,
       family: sp.family,
       options: optionPairs.map((p) => p.name),
       optionIds: optionPairs.map((p) => p.id),
