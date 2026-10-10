@@ -239,7 +239,24 @@ const WATERBIRD_FAMILIES = new Set([
 const RAPTOR_FAMILIES = new Set(['鹰科', '隼科', '鸱鸮科', '草鸮科', '美洲鹫科', '鹗科'])
 
 /**
+ * **只按科名**解析类群，查不到返回 `null`（**不兜底 landbird**）。
+ *
+ * 050 P0 修订（用户 2026-10-10 明确要求）：没有信息就留空，不要靠推断填。
+ * 科名表由核心库 1,299 种的中文科名反推而来，与权威口径同源；
+ * 目名多数票那种"反推"已被弃用（六分类与习惯分类问题见 docs/051）。
+ * 权威层里查不到的种 → `group` 留空 → `SpeciesFacts` 不显示类群标签。
+ */
+export function groupOfKnown(family) {
+  if (family && FAMILY_GROUP[family]) return FAMILY_GROUP[family]
+  if (family && WATERBIRD_FAMILIES.has(family)) return 'waterbird'
+  if (family && RAPTOR_FAMILIES.has(family)) return 'raptor'
+  return null
+}
+
+/**
  * 类群解析：英文科名 → 目名 → 中文科名 → 兜底林鸟。
+ * ⚠️ 这个兜底版本只给**老数据**（如 build-bank 的 curated 覆盖）用；
+ *    产物侧一律用 `groupOfKnown`（查不到留空）。
  * 前两级实测覆盖 8,174 / 2,517 种（合计 98.6%）；余 153 种落在
  * "核心库无样本的目"（沙鸡、䴙䴘、鹤鸵、麝雉等），按原始集合的兜底口径落 landbird。
  */

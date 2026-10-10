@@ -10,7 +10,7 @@
  * 分桶规则:物种 id 首字符 a-z → 同名桶;数字/其它 → '0-9'。
  * 桶索引(core.buckets)只列**实际存在**的桶,前端据此拼接 URL。
  */
-import { groupOf } from './profiles.mjs'
+import { groupOfKnown } from './profiles.mjs'
 
 
 /** 核心条目保留的名录字段(其余如 desc/location/habit 等属详情层)。
@@ -228,7 +228,7 @@ export function toGlobalPool(manifest) {
  *  - `notes`（答疑四字段）随 core 带入；
  *  - `order` 从 species-index 补（族/目展示 + 后续按目分片的依据）。
  */
-export function toMeta(coreManifest, globalLedger, orderOf) {
+export function toMeta(coreManifest, globalLedger, orderOf, usageKeys) {
   const byId = new Map()
   // 口径：权威层 = **可玩全集**（至少 1 图或 1 音），与 catalog/global 池同口径（10,844）。
   // 台账里"完全无媒体"的种（实测 294 种）不进权威层——它们没有详情可展示，
@@ -245,6 +245,7 @@ export function toMeta(coreManifest, globalLedger, orderOf) {
   }
   let coreKept = 0
   let enriched = 0
+  const fromCore = new Set()
   for (const sp of coreManifest?.species || []) {
     const out = pick(sp, META_SPECIES_KEYS)
     // 全球层同名（理论为 0）：core 覆盖全球层，缺失字段回填
@@ -258,18 +259,41 @@ export function toMeta(coreManifest, globalLedger, orderOf) {
       byId.set(sp.id, out)
       coreKept++
     }
+    fromCore.add(sp.id)
   }
 
-  // P0：group 按目名重算（core 的 profile.group 是旧的科名派生结果）
+  // P0（修订版）：`group` 只按**科名**查表 —— 科是实在的分类单元，表由核心库的中文科名反推，
+  // 与权威口径同源。用户 2026-10-10 明确要求：**没有信息就留空，不要靠推断填**；
+  // 因此不再用「目名多数票」推断，也不再把查不到的种一律兜底成 landbird
+  // （那会让九千多种都被标成"林鸟"，等于伪造信息）。
   const groups = { waterbird: 0, raptor: 0, landbird: 0 }
-  let noOrder = 0
+  let groupBlank = 0
   for (const sp of byId.values()) {
     const order = sp.order || orderOf?.get(sp.id) || orderOf?.get(sp.nameSci) || ''
     if (!sp.order && order) sp.order = order
-    const g = groupOf(sp.family, order)
-    if (g) sp.profile = { ...sp.profile, group: g }
-    else noOrder++
-    if (sp.profile?.group) groups[sp.profile.group] = (groups[sp.profile.group] || 0) + 1
+    const next = { ...sp.profile }
+    // 核心库 1,299 种的 group 本来就是**权威中文科名**推出来的 → 原样保留（只补不改）。
+    // 全球种则按英文科名查表；查不到 → 留空（没有依据就不填，而不是伪造 landbird）。
+    const g = fromCore.has(sp.id) ? next.group : groupOfKnown(sp.family)
+    if (g) next.group = g
+    else if (!fromCore.has(sp.id)) delete next.group
+    sp.profile = Object.keys(next).length ? next : undefined
+    if (g) groups[g]++
+    else groupBlank++
+  }
+
+  // 050 P3：给**全球种**回填 taxonId（GBIF usageKey，取自 023 P1-b 的 gbif-match 缓存，离线）。
+  // 核心库的 taxonId 一律不动（它们是历史键，另立 P3b 修正）。
+  let taxonFilled = 0
+  if (usageKeys) {
+    for (const sp of byId.values()) {
+      if (sp.taxonId != null) continue
+      const key = usageKeys.get(sp.nameSci)
+      if (key != null) {
+        sp.taxonId = key
+        taxonFilled++
+      }
+    }
   }
 
   const species = [...byId.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)))
@@ -288,8 +312,9 @@ export function toMeta(coreManifest, globalLedger, orderOf) {
       withProfile: species.filter((s) => s.profile).length,
       withNotes: species.filter((s) => s.notes).length,
       withTaxonId: species.filter((s) => s.taxonId).length,
+      taxonFilled,
       groups,
-      noOrder,
+      groupBlank,
     },
     species,
   }

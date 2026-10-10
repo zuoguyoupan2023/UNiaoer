@@ -16,6 +16,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { toCore, toAssetBuckets, toGlobalPool, toMeta, splitLargeBuckets } from './lib/manifest-layers.mjs'
+import { loadGbifUsageKeys } from './lib/gbif-keys.mjs'
 import { pinyinKey } from './lib/pinyin-key.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -255,7 +256,9 @@ export async function writeManifestLayers(manifest, opts = {}) {
     } catch {
       /* 无台账：用 global.min（只有首图首音，字段仍在） */
     }
-    const meta = toMeta(manifest, ledger, orderOf)
+    // 050 P3：GBIF usageKey 缓存（离线；缺失时只是不填 taxonId，不报错）
+    const usageKeys = await loadGbifUsageKeys()
+    const meta = toMeta(manifest, ledger, orderOf, usageKeys)
     metaBytes = Buffer.byteLength(JSON.stringify(meta))
     metaTotal = meta.total
     stats_note.meta = meta.stats
@@ -323,8 +326,9 @@ export async function writeManifestLayers(manifest, opts = {}) {
     if (stats_note.meta) {
       const m = stats_note.meta
       console.log(
-        `  权威层:来自核心库 ${m.fromCore} 种 · 补齐 ${m.enriched} 种 · 有中文名 ${m.withNameZh} · 有 profile ${m.withProfile} · 有 taxonId ${m.withTaxonId}` +
-          ` · 类群 水鸟 ${m.groups.waterbird}/猛禽 ${m.groups.raptor}/林鸟 ${m.groups.landbird}` +
+        `  权威层:来自核心库 ${m.fromCore} 种 · 补齐 ${m.enriched} 种 · 有中文名 ${m.withNameZh} · 有 profile ${m.withProfile}` +
+          ` · 有 taxonId ${m.withTaxonId}（本次回填 ${m.taxonFilled}）` +
+          ` · 类群 水鸟 ${m.groups.waterbird}/猛禽 ${m.groups.raptor}/林鸟 ${m.groups.landbird}（留空 ${m.groupBlank}，无依据不填）` +
           (m.skippedNoMedia ? ` · 无媒体未入层 ${m.skippedNoMedia}` : ''),
       )
     }

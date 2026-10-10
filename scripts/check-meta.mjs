@@ -220,8 +220,9 @@ if (REPORT) {
   const noHabitat = meta.total - report.withHabitat
   console.log(`  - 无生境 habitat：${noHabitat} 种 —— 无数据源，需人工整理或引入新数据源`)
   console.log(`  - 无居留型 migration：${meta.total - report.withMigration} 种 —— 同上`)
-  console.log(`  - 无 taxonId：${meta.total - report.withTaxonId} 种 —— 地区类产物（季节/省分布）覆盖不到，需用 species-index 的 backboneTaxonId 回填`)
-  console.log(`  - 无中文名：${meta.total - report.withNameZh} 种 —— UI 回落英文名/学名`)
+  console.log(`  - 无 taxonId：${meta.total - report.withTaxonId} 种 —— gbif-match 缓存里也没有，需联网补（npm run taxonomy:gbif-match -- --limit N）`)
+  console.log(`  - 无中文名：${meta.total - report.withNameZh} 种 —— UI 回落英文名/学名；出题池需按 nameMode 过滤（docs/051 §1）
+  - 类群留空：${meta.stats?.groupBlank ?? '-'} 种 —— 无依据不填（050 P0 修订），六分类实现见 docs/051 §2`)
   console.log(`  - 完全无媒体：294 种（不在权威层，由 species-index 轻量详情兜底）`)
 }
 
