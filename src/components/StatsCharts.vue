@@ -2,9 +2,9 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { BarChart3, TrendingUp } from 'lucide-vue-next'
-import type { MediaType } from '@/types'
+import type { MediaType, Tier } from '@/types'
 import type { RoundRecord } from '@/core/historyDb'
-import { TIER_LIST, TIERS } from '@/core/difficulty'
+import { TIERS } from '@/core/difficulty'
 import { currentLocale } from '@/i18n'
 
 const { t } = useI18n()
@@ -53,7 +53,7 @@ function agg(list: RoundRecord[]) {
 }
 
 const byTier = computed(() =>
-  TIER_LIST.map((t) => t.tier)
+  ([1, 2, 3, 4, 5] as Tier[])
     .map((tier) => ({ key: tier, label: t(TIERS[tier].labelKey), ...agg(props.rounds.filter((r) => r.tier === tier)) }))
     .filter((x) => x.rounds > 0),
 )

@@ -692,10 +692,6 @@ export const messages = {
       label: 'L5 地狱',
       desc: 'L4 规格 · 限时 10s · 随机鸟鸣干扰',
     },
-    l6: {
-      label: 'L6 非人级别',
-      desc: '与 L5 同规格 · 选项全部为拉丁学名，不用中英文俗名',
-    },
   },
   badges: {
     series: {
@@ -729,7 +725,6 @@ export const messages = {
     omniscient: { label: '无所不知', desc: '全部 {n} 种鸟都答对过至少一次' },
     allTierPerfect: { label: '全档通关', desc: 'L1–L5 每个难度都有满分轮' },
     hellPerfect: { label: '炼狱满分', desc: 'L5 地狱难度满分轮' },
-    nonHumanPerfect: { label: 'L6 非人级别一轮全对', desc: '在「非人级别」（选项全为学名）拿到一轮满分' },
     perfectThree: { label: '连续完美', desc: '连续 3 轮满分' },
     hellCoach: { label: '地狱教官', desc: '完成 30 局 L5 且 L5 总正确率 ≥80%' },
     wrongTerminator: { label: '错题终结者', desc: '曾经错过、如今错题本已空且累计答对 200 题' },

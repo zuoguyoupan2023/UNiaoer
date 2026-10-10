@@ -705,10 +705,6 @@ const en: typeof zhMessages = {
       label: 'L5 Hell',
       desc: 'L4 rules · 10s · random interference calls',
     },
-    l6: {
-      label: 'L6 NOT-HUMAN Level',
-      desc: 'L5 rules · every option is a Latin scientific name — no common names',
-    },
   },
   badges: {
     series: {
@@ -745,7 +741,6 @@ const en: typeof zhMessages = {
     omniscient: { label: 'Omniscient', desc: 'Answered all {n} species correctly at least once' },
     allTierPerfect: { label: 'Full Sweep', desc: 'A perfect round at every tier L1–L5' },
     hellPerfect: { label: 'Hell Perfect', desc: 'A perfect round at L5 Hell' },
-    nonHumanPerfect: { label: 'Perfect L6 round', desc: 'Score a full round in NOT-HUMAN Level (scientific names only)' },
     perfectThree: { label: 'Hat Trick', desc: '3 consecutive perfect rounds' },
     hellCoach: { label: 'Hell Coach', desc: '30 L5 rounds with ≥80% overall L5 accuracy' },
     wrongTerminator: {

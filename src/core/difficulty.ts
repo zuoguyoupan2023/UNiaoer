@@ -1,4 +1,4 @@
-import type { CommonnessTier, Tier } from '@/types'
+import type { Tier } from '@/types'
 
 export type DistractorStrategy = 'cross' | 'mixed' | 'same'
 
@@ -16,14 +16,8 @@ export interface TierConfig {
   timeLimitSec?: number
   /** 隐藏选项的时长（秒）；缺省按限时的 1/3（见 pacing OPTION_REVEAL_RATIO） */
   optionRevealSec?: number
-  /** 允许的物种常见度（1 最常见 → 5 最少见）；**与难度档位无关**，L6 也不会引入 6 */
-  commonness: CommonnessTier[]
-  /**
-   * 选项与答案的命名体系（045）：
-   *  - 'name'（L1–L5）：俗名，按 locale 取中文名/英文名；
-   *  - 'sci'（**L6 非人级别**）：只用拉丁学名，不用中英文俗名。
-   */
-  nameMode: 'name' | 'sci'
+  /** 允许的物种常见度（1 最常见 → 4 最少见） */
+  commonness: number[]
   /**
    * 每次取材最多可选的素材数（分档取材，011 §8）：
    * L1 只用首选（标准照）；高档位在上限内随机，制造"多样姿态/环境"的难度梯度。
@@ -35,7 +29,6 @@ export interface TierConfig {
 export const TIERS: Record<Tier, TierConfig> = {
   1: {
     tier: 1,
-    nameMode: 'name',
     labelKey: 'difficulty.l1.label',
     descKey: 'difficulty.l1.desc',
     optionCount: 3,
@@ -47,7 +40,6 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   2: {
     tier: 2,
-    nameMode: 'name',
     labelKey: 'difficulty.l2.label',
     descKey: 'difficulty.l2.desc',
     optionCount: 4,
@@ -58,7 +50,6 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   3: {
     tier: 3,
-    nameMode: 'name',
     labelKey: 'difficulty.l3.label',
     descKey: 'difficulty.l3.desc',
     optionCount: 4,
@@ -69,7 +60,6 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   4: {
     tier: 4,
-    nameMode: 'name',
     labelKey: 'difficulty.l4.label',
     descKey: 'difficulty.l4.desc',
     optionCount: 6,
@@ -80,7 +70,6 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   5: {
     tier: 5,
-    nameMode: 'name',
     labelKey: 'difficulty.l5.label',
     descKey: 'difficulty.l5.desc',
     optionCount: 6,
@@ -89,28 +78,6 @@ export const TIERS: Record<Tier, TierConfig> = {
     commonness: [3, 4],
     mediaPoolSize: 5,
   },
-  /**
-   * 6 = 非人级别 NOT-HUMAN Level（045）：**设置与 L5 完全一致**（6 选项 / 同科干扰 / 10s 限时 /
-   * 常见度 3–4 / 素材池 5），唯一区别是**选项与答案只用拉丁学名**。
-   */
-  6: {
-    tier: 6,
-    nameMode: 'sci',
-    labelKey: 'difficulty.l6.label',
-    descKey: 'difficulty.l6.desc',
-    optionCount: 6,
-    distractor: 'same',
-    timeLimitSec: 10,
-    commonness: [3, 4],
-    mediaPoolSize: 5,
-  },
 }
 
-export const TIER_LIST: TierConfig[] = [
-  TIERS[1],
-  TIERS[2],
-  TIERS[3],
-  TIERS[4],
-  TIERS[5],
-  TIERS[6],
-]
+export const TIER_LIST: TierConfig[] = [TIERS[1], TIERS[2], TIERS[3], TIERS[4], TIERS[5]]

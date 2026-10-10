@@ -36,15 +36,6 @@ function consecutiveRounds(
   return best >= n
 }
 
-/**
- * L6 非人级别满一轮（045）。
- * 单设一枚徽章，**不改** `all-tier-perfect`（L1–L5 全档通关）的语义——
- * 否则老用户的既有成就会在版本更新后被判为"未达成"。
- */
-function nonHumanPerfect(rounds: RoundRecord[]): boolean {
-  return rounds.some((r) => r.tier === 6 && r.total > 0 && r.correct === r.total)
-}
-
 /** L1–L5 每个难度都有满分轮（全档通关） */
 function allTierPerfect(rounds: RoundRecord[]): boolean {
   const perfectTiers = new Set(
@@ -271,14 +262,6 @@ export const BADGES: BadgeDef[] = [
     descKey: 'badges.allTierPerfect.desc',
     series: 'master',
     test: (s, rounds) => allTierPerfect(rounds),
-  },
-  {
-    id: 'non-human-perfect',
-    labelKey: 'badges.nonHumanPerfect.label',
-    icon: 'skull',
-    descKey: 'badges.nonHumanPerfect.desc',
-    series: 'master',
-    test: (s, rounds) => nonHumanPerfect(rounds),
   },
   {
     id: 'hell-perfect',
