@@ -258,14 +258,14 @@ const liteLinks = computed(() => {
   width: 100%;
   max-height: 420px;
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #f0f4f2;
   margin: 12px 0;
 }
 .note {
   text-align: left;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #f7faf8;
   border: 1px dashed var(--border);
   margin-top: 12px;

@@ -443,7 +443,7 @@ function dropResults() {
 }
 .panel {
   background: #fff;
-  border-radius: 20px;
+  border-radius: var(--radius);
   width: min(960px, 100%);
   max-height: 92vh;
   display: flex;
@@ -466,7 +466,7 @@ function dropResults() {
   background: #f0f4f2;
   width: 32px;
   height: 32px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.9rem;
 }
@@ -485,7 +485,7 @@ function dropResults() {
 .preview {
   width: 100%;
   height: auto;
-  border-radius: 14px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   display: block;
   touch-action: none;
@@ -513,7 +513,7 @@ function dropResults() {
   gap: 10px;
   background: rgba(245, 248, 246, 0.82);
   border: 1px dashed var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   color: var(--text);
   font-size: 0.84rem;
 }
@@ -567,7 +567,7 @@ function dropResults() {
   background: #fdf3d8;
   color: #8a6d00;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
 }
 .swatches {
   display: flex;
@@ -577,7 +577,7 @@ function dropResults() {
 .swatch {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   border: 3px solid #fff;
   box-shadow: 0 0 0 1.5px var(--border);
   cursor: pointer;
@@ -638,7 +638,7 @@ function dropResults() {
 .thumb {
   width: 72px;
   height: 72px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 2px solid var(--border);
   background: #f5f5f5;
@@ -739,7 +739,7 @@ function dropResults() {
 .notice-panel {
   width: min(420px, 100%);
   padding: 20px 22px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: #fff;
   box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.5);
 }

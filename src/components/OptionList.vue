@@ -62,7 +62,7 @@ function state(opt: string): string {
   gap: 6px;
   padding: 26px 16px;
   border: 2px dashed var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: #f5f8f6;
   color: var(--text-light);
   font-size: 0.86rem;
@@ -73,7 +73,7 @@ function state(opt: string): string {
   justify-content: center;
   min-width: 26px;
   padding: 2px 7px;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: #eaf4ef;
   color: var(--primary);
   font-variant-numeric: tabular-nums;
@@ -95,7 +95,7 @@ function state(opt: string): string {
   gap: 10px;
   padding: 14px 16px;
   border: 2px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: #fff;
   color: var(--text);
   font-size: 0.92rem;
@@ -130,7 +130,7 @@ function state(opt: string): string {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #eaf4ef;
   color: var(--primary);
   font-size: 0.74rem;

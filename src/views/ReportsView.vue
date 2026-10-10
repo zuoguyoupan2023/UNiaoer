@@ -139,7 +139,7 @@ async function vote(r: PublicReport, value: 1 | -1) {
   font-size: 0.78rem;
   color: var(--primary);
   background: #eaf4ef;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 5px 12px;
   display: inline-block;
   margin-bottom: 14px;
@@ -166,7 +166,7 @@ async function vote(r: PublicReport, value: 1 | -1) {
   width: 64px;
   height: 52px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
   background: #f0f4f2;
 }
@@ -188,14 +188,14 @@ async function vote(r: PublicReport, value: 1 | -1) {
 .reason {
   font-size: 0.72rem;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fdf3d8;
   color: #8a6d00;
 }
 .status.fixed {
   font-size: 0.72rem;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #eaf4ef;
   color: var(--primary);
 }

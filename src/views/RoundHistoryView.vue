@@ -311,7 +311,7 @@ async function onCopy(round: RoundRecord) {
   align-items: center;
   gap: 3px;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fdecee;
   color: var(--wrong);
   font-size: 0.68rem;
@@ -334,7 +334,7 @@ async function onCopy(round: RoundRecord) {
   align-items: center;
   gap: 3px;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #eaf4ef;
   color: var(--primary);
   font-size: 0.68rem;
@@ -391,7 +391,7 @@ async function onCopy(round: RoundRecord) {
   width: 56px;
   height: 56px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   flex-shrink: 0;
   background: #f5f5f5;

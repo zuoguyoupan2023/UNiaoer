@@ -267,7 +267,7 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
   font-size: 0.78rem;
   color: var(--primary);
   background: #eaf4ef;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 5px 12px;
   display: inline-block;
   margin-bottom: 14px;
@@ -328,7 +328,7 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
   min-width: 24px;
   padding: 2px 4px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: #f2f7f4;
   color: var(--text-light);
   font-size: 0.72rem;
@@ -394,7 +394,7 @@ details[open] > summary .cat-caret {
   align-items: center;
   gap: 8px;
   padding: 3px 6px;
-  border-radius: 7px;
+  border-radius: var(--radius-xs);
   color: var(--text);
   font-size: 0.82rem;
 }

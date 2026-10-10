@@ -369,7 +369,7 @@ h2.sec {
   width: 90px;
   padding: 7px 10px;
   border: 2px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
 }
 .track-list {

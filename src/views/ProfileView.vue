@@ -277,13 +277,13 @@ async function saveNickname() {
   background: rgba(244, 251, 247, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-radius: 0 0 14px 14px;
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 .section-tabs a {
   flex-shrink: 0;
   padding: 7px 18px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fff;
   color: var(--text-light);
   font-size: 0.8rem;
@@ -302,7 +302,7 @@ async function saveNickname() {
   flex-shrink: 0;
   padding: 7px 18px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #f3f5f4;
   color: #b8c4bd;
   font-size: 0.8rem;
@@ -337,7 +337,7 @@ async function saveNickname() {
   gap: 5px;
   padding: 6px 14px;
   border: 2px solid var(--primary-light);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #f3fbf7;
   color: var(--primary-dark);
   font-size: 0.9rem;
@@ -350,7 +350,7 @@ async function saveNickname() {
   width: 200px;
   padding: 8px 12px;
   border: 2px solid var(--primary-light);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.9rem;
 }
@@ -384,7 +384,7 @@ async function saveNickname() {
 .archive-chip {
   padding: 5px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fff;
   color: var(--text-light);
   font-size: 0.78rem;
@@ -408,7 +408,7 @@ async function saveNickname() {
   width: 200px;
   padding: 7px 12px;
   border: 2px solid var(--primary-light);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.82rem;
 }

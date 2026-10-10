@@ -98,7 +98,7 @@ function totalCount(series: BadgeSeries) {
   color: var(--text-light);
   background: #eaf4ef;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
 }
 .badge-grid {
   display: grid;

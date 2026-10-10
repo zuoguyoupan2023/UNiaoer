@@ -1140,7 +1140,7 @@ function onTouchEnd(e: TouchEvent) {
   gap: 6px;
   padding: 6px 14px;
   margin-bottom: 14px;
-  border-radius: 20px;
+  border-radius: var(--radius);
   background: #fdecee;
   color: var(--wrong);
   font-size: 0.82rem;
@@ -1160,7 +1160,7 @@ function onTouchEnd(e: TouchEvent) {
 .wizard-panel {
   width: min(480px, 100%);
   background: #fff;
-  border-radius: 20px;
+  border-radius: var(--radius);
   padding: 24px;
   box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6);
 }
@@ -1181,7 +1181,7 @@ function onTouchEnd(e: TouchEvent) {
   width: 100%;
   padding: 10px 14px;
   border: 2px solid var(--primary-light);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.95rem;
   margin-bottom: 16px;
@@ -1362,7 +1362,7 @@ function onTouchEnd(e: TouchEvent) {
   min-width: 140px;
   padding: 7px 12px;
   border: 2px solid var(--primary-light);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.9rem;
 }
@@ -1382,7 +1382,7 @@ function onTouchEnd(e: TouchEvent) {
   max-width: 520px;
   margin: -12px auto 22px;
   padding: 6px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #eaf4ef;
   color: var(--primary-dark);
   font-size: 0.78rem;
@@ -1449,7 +1449,7 @@ function onTouchEnd(e: TouchEvent) {
   display: inline-block;
   margin-left: 6px;
   padding: 1px 7px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #eaf4ef;
   color: var(--primary);
   font-size: 0.68rem;
@@ -1458,7 +1458,7 @@ function onTouchEnd(e: TouchEvent) {
   font-variant-numeric: tabular-nums;
   background: #eaf4ef;
   padding: 3px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 .timer.warn {
   color: var(--wrong);
@@ -1478,7 +1478,7 @@ function onTouchEnd(e: TouchEvent) {
 .feedback {
   margin-top: 16px;
   padding: 15px 18px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   font-size: 0.9rem;
   line-height: 1.7;
   animation: pop 0.3s ease;
@@ -1533,7 +1533,7 @@ function onTouchEnd(e: TouchEvent) {
   margin-top: 12px;
   padding: 5px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #f0f4f2;
   color: var(--text-light);
   font-size: 0.76rem;
@@ -1563,7 +1563,7 @@ function onTouchEnd(e: TouchEvent) {
   width: fit-content;
   max-width: min(92vw, 560px);
   padding: 12px 18px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: linear-gradient(135deg, #eafaf1, #d8f3dc);
   border: 1px solid var(--correct);
   box-shadow: 0 18px 40px -18px rgba(20, 52, 42, 0.6);
@@ -1648,7 +1648,7 @@ function onTouchEnd(e: TouchEvent) {
   gap: 4px;
   padding: 5px 11px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #f0f4f2;
   color: var(--text-light);
   font-size: 0.76rem;
@@ -1679,7 +1679,7 @@ function onTouchEnd(e: TouchEvent) {
   gap: 4px;
   padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.88);
   color: var(--text-light);
   font-size: 0.72rem;

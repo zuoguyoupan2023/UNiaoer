@@ -169,13 +169,13 @@ const fmt = (n: number) => n.toLocaleString('en-US')
 .track {
   height: 10px;
   background: #eef3f0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 .fill {
   display: block;
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(90deg, var(--primary-light), var(--primary));
 }
 .num {

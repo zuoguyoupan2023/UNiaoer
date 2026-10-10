@@ -282,7 +282,7 @@ function fmt(at: number) {
 }
 .tab {
   padding: 8px 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: #fff;
   color: var(--text-light);
@@ -317,7 +317,7 @@ function fmt(at: number) {
   width: 56px;
   height: 56px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   flex-shrink: 0;
   background: #f5f5f5;

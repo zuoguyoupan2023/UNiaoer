@@ -278,7 +278,7 @@ h2 {
 .sel {
   padding: 4px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fff;
   font-size: 0.78rem;
   font-weight: 600;
@@ -309,7 +309,7 @@ h2 {
 }
 .spot {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #fff;
   overflow: hidden;
 }

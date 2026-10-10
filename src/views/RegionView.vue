@@ -940,7 +940,7 @@ function pickProvince(code: string) {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #f0f4f2;
 }
 .sp-text {

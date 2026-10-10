@@ -27,14 +27,14 @@ const { t } = useI18n()
   width: 100%;
   height: 8px;
   background: #dceee4;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   margin-bottom: 18px;
   overflow: hidden;
 }
 .progress-bar {
   height: 100%;
   background: var(--grad);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 0 0 12px rgba(64, 145, 108, 0.6);
 }

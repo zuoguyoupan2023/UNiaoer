@@ -251,7 +251,7 @@ function makeEmptyStats() {
   right: 10px;
   padding: 4px 12px;
   font-size: 0.72rem;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
 }
 @media (max-width: 640px) {
   .wear-line {
@@ -276,7 +276,7 @@ function makeEmptyStats() {
   gap: 2px;
   padding: 9px 12px;
   border: 2px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #fff;
   cursor: pointer;
   font-size: 0.85rem;

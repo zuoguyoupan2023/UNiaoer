@@ -146,7 +146,7 @@ function closeZoom() {
   gap: 5px;
   padding: 5px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #f0f4f2;
   color: var(--text-light);
   font-size: 0.76rem;
@@ -166,7 +166,7 @@ function closeZoom() {
   flex-direction: column;
   gap: 10px;
   padding: 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #f7faf8;
   border: 1px dashed var(--border);
   animation: pop 0.2s ease;
@@ -196,7 +196,7 @@ function closeZoom() {
   height: 46px;
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
   background: #fff;
   cursor: zoom-in;
@@ -221,7 +221,7 @@ function closeZoom() {
   gap: 4px;
   padding: 6px 12px;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fff;
   color: var(--text-light);
   font-size: 0.8rem;
@@ -276,7 +276,7 @@ function closeZoom() {
 .sg-lightbox img {
   max-width: 94vw;
   max-height: 92vh;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
   cursor: default;
 }

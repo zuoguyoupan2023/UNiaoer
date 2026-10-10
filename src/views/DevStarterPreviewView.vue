@@ -302,7 +302,7 @@ h3 {
 }
 .bird {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   padding: 10px;
   background: #fff;
 }
@@ -316,7 +316,7 @@ h3 {
   width: 64px;
   height: 52px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   flex: 0 0 auto;
 }
 .names {
@@ -363,7 +363,7 @@ audio {
 .more {
   margin-top: 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #f7faf8;
   padding: 4px 10px;
   font-size: 0.76rem;
@@ -381,7 +381,7 @@ audio {
   display: inline-block;
   margin: 2px 4px 0 0;
   padding: 1px 7px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: #f2f4f3;
 }
 .chip i {

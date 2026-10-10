@@ -90,7 +90,7 @@ onMounted(async () => {
   font-size: 0.78rem;
   color: var(--primary);
   background: #eaf4ef;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 5px 12px;
   margin-bottom: 12px;
   display: inline-block;
@@ -99,7 +99,7 @@ onMounted(async () => {
   font-size: 0.78rem;
   color: #8a6d00;
   background: #fdf3d8;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 5px 12px;
   margin-bottom: 12px;
 }

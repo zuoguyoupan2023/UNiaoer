@@ -553,7 +553,7 @@ async function again() {
   font-size: 0.8rem;
   font-weight: 700;
   padding: 5px 12px;
-  border-radius: 20px;
+  border-radius: var(--radius);
 }
 .mark.ok {
   color: var(--correct);
@@ -672,7 +672,7 @@ async function again() {
   margin-top: 10px;
   padding: 5px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #f0f4f2;
   color: var(--text-light);
   font-size: 0.76rem;

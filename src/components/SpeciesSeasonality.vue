@@ -102,7 +102,7 @@ function barTitle(i: number): string {
   margin-top: 14px;
   padding: 12px 14px;
   border: 1px dashed var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #f7faf8;
   text-align: left;
 }

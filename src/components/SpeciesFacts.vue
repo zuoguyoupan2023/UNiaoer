@@ -110,7 +110,7 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
 .facts {
   text-align: left;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #f7faf8;
   border: 1px dashed var(--border);
 }
@@ -146,7 +146,7 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
 .iucn {
   margin-left: 8px;
   padding: 1px 7px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #eaf4ef;
   color: var(--primary);
   font-size: 0.72rem;

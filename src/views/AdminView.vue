@@ -375,7 +375,7 @@ const count = computed(() => reports.value.length)
 .reason {
   font-size: 0.7rem;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #fdf3d8;
   color: #8a6d00;
 }
@@ -398,7 +398,7 @@ const count = computed(() => reports.value.length)
 .status {
   font-size: 0.7rem;
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: #eef1f0;
   color: var(--text-light);
 }

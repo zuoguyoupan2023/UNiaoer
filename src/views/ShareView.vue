@@ -229,7 +229,7 @@ const modeLabel = computed(() =>
 .items > li {
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #fbfdfc;
 }
 .line {
@@ -264,7 +264,7 @@ const modeLabel = computed(() =>
 .media img {
   max-width: 100%;
   max-height: 220px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 .media audio {

@@ -171,7 +171,7 @@ function fmtDay(at: number) {
 .range button {
   padding: 5px 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #fff;
   color: var(--text-light);
   font-size: 0.76rem;

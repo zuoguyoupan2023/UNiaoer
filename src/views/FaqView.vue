@@ -203,7 +203,7 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
   font-size: 0.78rem;
   color: var(--primary);
   background: #eaf4ef;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 5px 12px;
   display: inline-block;
   margin-bottom: 14px;
@@ -237,7 +237,7 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
   width: 64px;
   height: 52px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
   background: #f0f4f2;
 }

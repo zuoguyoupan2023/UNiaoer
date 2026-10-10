@@ -183,7 +183,7 @@ function closeZoom() {
 .img-wrap img {
   max-width: 100%;
   max-height: 300px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   object-fit: contain;
   background: #f5f5f5;
   border: 1px solid var(--border);
@@ -201,7 +201,7 @@ function closeZoom() {
   width: 100%;
   height: 100%;
   max-height: 300px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   object-fit: contain;
   border: none;
   box-shadow: none;
@@ -219,7 +219,7 @@ function closeZoom() {
   gap: 4px;
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.88);
   color: var(--text);
   font-size: 0.75rem;
@@ -242,7 +242,7 @@ function closeZoom() {
   color: var(--text-light);
   font-size: 0.85rem;
   background: #f5f8f6;
-  border-radius: 16px;
+  border-radius: var(--radius);
   border: 1px dashed var(--border);
 }
 .spin {
@@ -296,7 +296,7 @@ function closeZoom() {
 .lightbox img {
   max-width: 94vw;
   max-height: 92vh;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
   cursor: default;
 }
