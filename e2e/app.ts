@@ -97,7 +97,7 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
     }),
   )
   // 观鸟点（021 M4 腿 B）：网格聚合统计层（US/CN 各若干点）
-  // /region 观鸟点：与 /nearby 同源（eBird 派生点位按国分片）；旧 hotspots.json 已停用
+  // 观鸟点（/birding 观鸟点 tab 与附近模式同源，eBird 派生点位按国分片）；旧 hotspots.json 已停用
   await page.route('**/data/hotspots.json', (r) => r.fulfill({ status: 404, body: '' }))
   // 025 M2/M3:全球骨架与区系夹具(1 个 bank 种回桥 + 1 个全球未收录种)
   await page.route('**/data/species-index.json', (r) =>

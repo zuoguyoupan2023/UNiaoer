@@ -69,9 +69,9 @@ onMounted(async () => {
       </RouterLink>
     </div>
 
-    <RouterLink to="/region" class="region-link">
+    <RouterLink to="/birding" class="region-link">
       <Globe2 class="ic" :size="16" />
-      <span class="region-title">{{ t('nav.region') }}</span>
+      <span class="region-title">{{ t('nav.birding') }}</span>
       <span class="region-sub">{{ t('home.regionSub') }}</span>
     </RouterLink>
   </section>

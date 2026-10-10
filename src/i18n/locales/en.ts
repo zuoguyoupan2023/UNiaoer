@@ -22,8 +22,7 @@ const en: typeof zhMessages = {
     skipToMain: 'Skip to main content',
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
-    region: 'Regions',
-    nearby: 'Nearby',
+    birding: 'Birding',
     catalog: 'Catalogue',
     stats: 'Stats',
     reports: 'Review',
@@ -216,6 +215,10 @@ const en: typeof zhMessages = {
   },
   // 039 P1 nearby birding spots (/nearby; coarse location from Worker /api/geo, never stored)
   nearby: {
+    open: 'Nearby spots',
+    backToRegion: 'Browse by region',
+    on: 'On: showing the closest birding spots to you (coarse location, about 5 km — tap Precise for better).',
+    off: 'Browsing spots for the selected country/province. Turn on to sort by your location.',
     title: 'Birding spots nearby',
     lead: 'A text list of nearby birding spots by distance (no map). Distances are computed on your device; your location is never stored.',
     unavailable: 'Nearby-spot data is unavailable (not deployed, or the network is down).',
@@ -336,6 +339,7 @@ const en: typeof zhMessages = {
     hotspotSource: 'Birding-spot data source: {sources}',
     continentsLabel: 'Filter by continent',
     tabSpecies: 'Species',
+    tabRegions: 'Regions',
     tabHotspots: 'Birding spots',
     hotspotEmpty: 'No birding spots for this region yet',
     hotspotOnEbird: 'View this hotspot on eBird',
@@ -357,6 +361,10 @@ const en: typeof zhMessages = {
       oceania: 'Oceania',
       antarctica: 'Antarctica',
     },
+  },
+  birding: {
+    title: 'Birding',
+    lead: 'Browse birding spots and species by country or province — or turn on Nearby to sort by your location.',
   },
   report: {
     button: 'Report',

@@ -108,8 +108,7 @@ const immersive = computed(
       <span class="nav-group nav-primary">
         <RouterLink to="/quiz/image">{{ t('nav.imageQuiz') }}</RouterLink>
         <RouterLink to="/quiz/audio">{{ t('nav.audioQuiz') }}</RouterLink>
-        <RouterLink to="/region">{{ t('nav.region') }}</RouterLink>
-        <RouterLink to="/nearby">{{ t('nav.nearby') }}</RouterLink>
+        <RouterLink to="/birding">{{ t('nav.birding') }}</RouterLink>
         <RouterLink to="/catalog">{{ t('nav.catalog') }}</RouterLink>
         <!-- 大众评审（R35）：第二行主导航末尾，不占右上角固定 4 键的位置 -->
         <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports">

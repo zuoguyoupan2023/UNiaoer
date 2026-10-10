@@ -17,8 +17,7 @@ export const messages = {
     skipToMain: '跳到主内容',
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
-    region: '地区浏览',
-    nearby: '附近鸟点',
+    birding: '观鸟',
     catalog: '名录',
     stats: '统计',
     reports: '大众评审',
@@ -210,6 +209,10 @@ export const messages = {
   },
   // 039 P1 附近观鸟点（/nearby；粗定位来自 Worker /api/geo，坐标不落库）
   nearby: {
+    open: '附近鸟点',
+    backToRegion: '按地区浏览',
+    on: '已开启：按你的位置排序最近的观鸟点（粗定位约 5 公里精度，可再点「使用精确定位」）',
+    off: '默认按所选国家/省份浏览观鸟点；开启后按你的位置排序',
     title: '附近观鸟点',
     lead: '按距离列出附近的观鸟点（文本列表，不含地图）。距离在你设备上计算，位置不会被保存。',
     unavailable: '附近观鸟点数据暂不可用（未部署或网络不通）。',
@@ -330,6 +333,7 @@ export const messages = {
     hotspotSource: '观鸟点数据来源：{sources}（eBird 真实点位，按 {n}° 网格去重）',
     continentsLabel: '按大洲筛选',
     tabSpecies: '鸟种',
+    tabRegions: '地区浏览',
     tabHotspots: '观鸟点',
     hotspotEmpty: '该地区暂无观鸟点数据',
     hotspotOnEbird: '在 eBird 查看该热点',
@@ -351,6 +355,10 @@ export const messages = {
       oceania: '大洋洲',
       antarctica: '南极洲',
     },
+  },
+  birding: {
+    title: '观鸟',
+    lead: '按国家或省份查看当地观鸟点与鸟种；也可打开「附近鸟点」按你的位置排序。',
   },
   report: {
     button: '报错',

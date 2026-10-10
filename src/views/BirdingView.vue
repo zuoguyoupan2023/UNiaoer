@@ -1,7 +1,17 @@
 <script setup lang="ts">
+/**
+ * 042：「观鸟」页（合并原 `/region` 地区浏览与 `/nearby` 附近鸟点）。
+ *
+ * 结构：两个标签页 —— ①**观鸟点**（默认，含「附近鸟点」开关：关=按地区浏览点位，开=按定位排附近点位）
+ * ②**地区浏览**（只保留鸟种网格）。
+ * 地区选择器（大洲/国家/省）在页面级常驻，两个标签页共用。
+ * 旧路由 `/region` / `/nearby` 由 router 重定向到本页并还原状态（见 router/index.ts）。
+ */
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, Globe2, Search } from 'lucide-vue-next'
+import { ChevronDown, Crosshair, Globe2, MapPin, Search } from 'lucide-vue-next'
+import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
 import { loadGlobalPool } from '@/core/globalPool'
 import {
@@ -40,6 +50,8 @@ import {
 } from '@/core/speciesIndex'
 
 const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
 const provinceData = ref<ProvinceData | null>(null)
@@ -59,8 +71,10 @@ const continent = ref<Continent>('asia')
 const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
-/** 右侧面板标签页：鸟种 / 观鸟点（2026-10-09：从"上下堆叠"改为并列标签，避免观鸟点被淹没） */
-const activeTab = ref<'species' | 'hotspots'>('species')
+/** 右侧面板标签页：观鸟点（默认）/ 地区浏览（042） */
+const activeTab = ref<'spots' | 'regions'>('spots')
+/** 「附近鸟点」开关（默认关；开 → 观鸟点列表改为按定位排序的附近点位） */
+const nearby = ref(false)
 /** 选中国家的省级二级列表是否展开（点击已选国家切换） */
 const expanded = ref(true)
 /** 移动端「选择地区」面板是否展开（桌面端始终显示，见 style 媒体查询） */
@@ -70,7 +84,35 @@ const CELL_DEG = 0.25
 /** 目录排序：名称（zh 拼音 / en 首字母）或鸟种数；一级二级共用 */
 const sortMode = ref<'name' | 'count'>('name')
 
+/** 深链还原：`/region` → tab=regions；`/nearby` → tab=spots&nearby=1 */
+function applyQuery() {
+  const q = route.query
+  const tab = q.tab === 'regions' ? 'regions' : 'spots'
+  activeTab.value = tab
+  nearby.value = tab === 'spots' && q.nearby === '1'
+  if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
+  if (typeof q.sub === 'string') province.value = q.sub
+}
+
+/** 标签/开关变化 → 写回 URL（保证刷新与分享可还原） */
+function setTab(next: 'spots' | 'regions') {
+  activeTab.value = next
+  syncQuery()
+}
+function toggleNearby() {
+  nearby.value = !nearby.value
+  if (nearby.value) activeTab.value = 'spots'
+  syncQuery()
+}
+function syncQuery() {
+  const q: Record<string, string> = {}
+  if (activeTab.value === 'regions') q.tab = 'regions'
+  if (nearby.value) q.nearby = '1'
+  void router.replace({ query: q })
+}
+
 onMounted(async () => {
+  applyQuery()
   try {
     bank.value = await loadBank()
     const res = await fetch(`${import.meta.env.BASE_URL}data/distribution.json`)
@@ -318,9 +360,9 @@ function pickProvince(code: string) {
 </script>
 
 <template>
-  <section class="card region">
-    <h2 class="region-head"><Globe2 class="ic" :size="22" /> {{ t('region.title') }}</h2>
-    <p class="muted lead">{{ t('region.lead') }}</p>
+  <section class="card region birding">
+    <h2 class="region-head"><Globe2 class="ic" :size="22" /> {{ t('birding.title') }}</h2>
+    <p class="muted lead">{{ t('birding.lead') }}</p>
 
     <template v-if="stats.length">
       <nav class="continents" :aria-label="t('region.continentsLabel')">
@@ -418,129 +460,154 @@ function pickProvince(code: string) {
         </aside>
 
         <div class="species">
-          <!-- 右侧标签页：鸟种 / 观鸟点（2026-10-09：不再上下堆叠，观鸟点不再被淹没） -->
+          <!-- 042：标签页顺序为「观鸟点」（默认）/「地区浏览」 -->
           <div class="panel-tabs" role="tablist">
             <button
               type="button"
               role="tab"
               class="panel-tab"
-              :class="{ active: activeTab === 'species' }"
-              :aria-selected="activeTab === 'species'"
-              @click="activeTab = 'species'"
+              :class="{ active: activeTab === 'spots' }"
+              :aria-selected="activeTab === 'spots'"
+              @click="setTab('spots')"
             >
-              {{ t('region.tabSpecies') }}
-              <span class="tab-count">{{ gridItems.length }}</span>
+              {{ t('region.tabHotspots') }}
+              <span class="tab-count">
+                {{ nearby ? '' : hotspotList.length }}
+                <template v-if="!nearby && province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
+                  {{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}
+                </template>
+              </span>
             </button>
             <button
               type="button"
               role="tab"
               class="panel-tab"
-              :class="{ active: activeTab === 'hotspots' }"
-              :aria-selected="activeTab === 'hotspots'"
-              @click="activeTab = 'hotspots'"
+              :class="{ active: activeTab === 'regions' }"
+              :aria-selected="activeTab === 'regions'"
+              @click="setTab('regions')"
             >
-              {{ t('region.tabHotspots') }}
-              <span class="tab-count">
-                {{ hotspotList.length }}
-                <template v-if="province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
-                  {{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}
-                </template>
-              </span>
+              {{ t('region.tabRegions') }}
+              <span class="tab-count">{{ gridItems.length }}</span>
             </button>
           </div>
 
-          <p class="col-title">
-            {{
-              province
-                ? t('region.speciesTitleProvince', { province: provinceName })
-                : t('region.speciesTitle', { country: countryName(selected) })
-            }}
-          </p>
+          <!-- ---------- 标签页 1：观鸟点（默认） ---------- -->
+          <div v-show="activeTab === 'spots'" class="spots-pane">
+            <!-- 附近鸟点开关：默认关；开启后本页转为按定位排序的附近点位 -->
+            <div class="nearby-bar">
+              <button
+                type="button"
+                class="nearby-toggle"
+                :class="{ on: nearby }"
+                :aria-pressed="nearby"
+                @click="toggleNearby"
+              >
+                <MapPin v-if="nearby" class="ic" :size="15" />
+                <Crosshair v-else class="ic" :size="15" />
+                {{ nearby ? t('nearby.backToRegion') : t('nearby.open') }}
+              </button>
+              <p class="nearby-hint muted">
+                {{ nearby ? t('nearby.on') : t('nearby.off') }}
+              </p>
+            </div>
 
-          <ul v-show="activeTab === 'species'" class="species-grid">
-            <li v-for="gi in visibleItems" :key="gi.slug">
-              <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
-                <img
-                  v-if="gi.thumb"
-                  class="thumb"
-                  :src="gi.thumb"
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span class="sp-text">
-                  <span class="sp-name">{{ gi.name }}</span>
-                  <span class="sp-sci">{{ gi.nameSci }}</span>
-                  <span v-if="province && gi.bankId" class="sp-count muted">
-                    {{ t('region.provinceRecords', { n: countInProvince(gi.bankId) }) }}
+            <!-- 附近模式：定位 + 半径 + 附近点位（原 /nearby 页面） -->
+            <NearbySpotsPanel v-if="nearby" />
+
+            <!-- 地区模式：按所选国家/省份的观鸟点 -->
+            <div v-else class="hotspots">
+              <p v-if="!hotspotList.length" class="muted">{{ t('region.hotspotEmpty') }}</p>
+              <template v-else>
+                <p v-if="province && hotspotResult.fallback" class="hotspot-fallback muted">
+                  {{ t('region.hotspotFallback', { n: hotspotList.length }) }}
+                </p>
+                <p v-else-if="province" class="hotspot-scope muted">
+                  {{ t('region.hotspotProvinceOnly') }}
+                </p>
+                <ul class="hotspot-list">
+                  <li v-for="h in hotspotList" :key="h.id">
+                    <button
+                      type="button"
+                      class="hotspot-btn"
+                      :data-hot="h.id"
+                      :aria-expanded="expandedHotspot === h.id"
+                      @click="toggleHotspot(h.id)"
+                    >
+                      <span class="hotspot-name">
+                        {{ h.name || `${h.lat.toFixed(2)}, ${h.lng.toFixed(2)}` }}
+                      </span>
+                      <span class="hotspot-stat muted">
+                        {{ t('region.hotspotSpeciesN', { n: h.speciesCount }) }}
+                        <template v-if="h.latestObs"> · {{ t('region.hotspotLatest', { d: h.latestObs }) }}</template>
+                      </span>
+                    </button>
+                    <div v-if="expandedHotspot === h.id" class="hotspot-detail">
+                      <!-- 明确区分"本点"与"这一带"：本点用 eBird 鸟种数；网格是周边统计，不冒充本点 -->
+                      <p v-if="h.gridRecords" class="hotspot-meta muted">
+                        {{ t('region.hotspotGridNearby', { km: h.gridKm ?? 0, r: h.gridRecords }) }}
+                      </p>
+                      <p class="hotspot-sub">{{ t('region.hotspotTopSpecies') }}</p>
+                      <a class="hotspot-ext" :href="ebirdHotspotUrl(h.id)" target="_blank" rel="noopener noreferrer">
+                        {{ t('region.hotspotOnEbird') }}
+                      </a>
+                      <ul class="hotspot-spp">
+                        <li v-for="(s, si) in h.topSpecies" :key="si">
+                          <RouterLink v-if="s.id && speciesById(s.id)" :to="`/species/${s.id}`">
+                            {{ topSpeciesName(s) }}
+                          </RouterLink>
+                          <span v-else>{{ topSpeciesName(s) }}</span>
+                          <span class="muted"> ×{{ s.count }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                </ul>
+                <p class="hotspot-source muted">
+                  {{ t('region.hotspotSource', { sources: hotspotSources, n: CELL_DEG }) }}
+                </p>
+              </template>
+            </div>
+          </div>
+
+          <!-- ---------- 标签页 2：地区浏览（只保留鸟种） ---------- -->
+          <div v-show="activeTab === 'regions'" class="regions-pane">
+            <p class="col-title">
+              {{
+                province
+                  ? t('region.speciesTitleProvince', { province: provinceName })
+                  : t('region.speciesTitle', { country: countryName(selected) })
+              }}
+            </p>
+            <ul class="species-grid">
+              <li v-for="gi in visibleItems" :key="gi.slug">
+                <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
+                  <img
+                    v-if="gi.thumb"
+                    class="thumb"
+                    :src="gi.thumb"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="sp-text">
+                    <span class="sp-name">{{ gi.name }}</span>
+                    <span class="sp-sci">{{ gi.nameSci }}</span>
+                    <span v-if="province && gi.bankId" class="sp-count muted">
+                      {{ t('region.provinceRecords', { n: countInProvince(gi.bankId) }) }}
+                    </span>
+                    <span v-else-if="!gi.playable" class="sp-badge">{{ t('region.notInBank') }}</span>
                   </span>
-                  <span v-else-if="!gi.playable" class="sp-badge">{{ t('region.notInBank') }}</span>
-                </span>
-              </RouterLink>
-            </li>
-          </ul>
-          <div v-if="activeTab === 'species' && gridItems.length > visibleItems.length" class="grid-more">
-            <button class="btn btn-sm" type="button" @click="visibleCount += 200">
-              {{ t('region.showMore') }}
-            </button>
-          </div>
-
-          <p v-if="activeTab === 'species' && provinces.length" class="prov-source muted">
-            {{ t('region.provinceSource', { sources: provinceSources }) }}
-          </p>
-
-          <!-- 观鸟点标签页：就地列表 + 详情（本省过滤，回退时给出说明） -->
-          <div v-show="activeTab === 'hotspots'" class="hotspots">
-            <p v-if="!hotspotList.length" class="muted">{{ t('region.hotspotEmpty') }}</p>
-            <template v-else>
-              <p v-if="province && hotspotResult.fallback" class="hotspot-fallback muted">
-                {{ t('region.hotspotFallback', { n: hotspotList.length }) }}
-              </p>
-              <p v-else-if="province" class="hotspot-scope muted">
-                {{ t('region.hotspotProvinceOnly') }}
-              </p>
-              <ul class="hotspot-list">
-                <li v-for="h in hotspotList" :key="h.id">
-                  <button
-                    type="button"
-                    class="hotspot-btn"
-                    :data-hot="h.id"
-                    :aria-expanded="expandedHotspot === h.id"
-                    @click="toggleHotspot(h.id)"
-                  >
-                    <span class="hotspot-name">
-                      {{ h.name || `${h.lat.toFixed(2)}, ${h.lng.toFixed(2)}` }}
-                    </span>
-                    <span class="hotspot-stat muted">
-                      {{ t('region.hotspotSpeciesN', { n: h.speciesCount }) }}
-                      <template v-if="h.latestObs"> · {{ t('region.hotspotLatest', { d: h.latestObs }) }}</template>
-                    </span>
-                  </button>
-                  <div v-if="expandedHotspot === h.id" class="hotspot-detail">
-                    <!-- 明确区分"本点"与"这一带"：本点用 eBird 鸟种数；网格是周边统计，不冒充本点 -->
-                    <p v-if="h.gridRecords" class="hotspot-meta muted">
-                      {{ t('region.hotspotGridNearby', { km: h.gridKm ?? 0, r: h.gridRecords }) }}
-                    </p>
-                    <p class="hotspot-sub">{{ t('region.hotspotTopSpecies') }}</p>
-                    <a class="hotspot-ext" :href="ebirdHotspotUrl(h.id)" target="_blank" rel="noopener noreferrer">
-                      {{ t('region.hotspotOnEbird') }}
-                    </a>
-                    <ul class="hotspot-spp">
-                      <li v-for="(s, si) in h.topSpecies" :key="si">
-                        <RouterLink v-if="s.id && speciesById(s.id)" :to="`/species/${s.id}`">
-                          {{ topSpeciesName(s) }}
-                        </RouterLink>
-                        <span v-else>{{ topSpeciesName(s) }}</span>
-                        <span class="muted"> ×{{ s.count }}</span>
-                      </li>
-                    </ul>
-                  </div>
-                </li>
-              </ul>
-              <p class="hotspot-source muted">
-                {{ t('region.hotspotSource', { sources: hotspotSources, n: CELL_DEG }) }}
-              </p>
-            </template>
+                </RouterLink>
+              </li>
+            </ul>
+            <div v-if="gridItems.length > visibleItems.length" class="grid-more">
+              <button class="btn btn-sm" type="button" @click="visibleCount += 200">
+                {{ t('region.showMore') }}
+              </button>
+            </div>
+            <p v-if="provinces.length" class="prov-source muted">
+              {{ t('region.provinceSource', { sources: provinceSources }) }}
+            </p>
           </div>
         </div>
       </div>
@@ -843,6 +910,40 @@ function pickProvince(code: string) {
 .hotspot-fallback {
   margin: 0 0 8px;
   font-size: 0.72rem;
+}
+/* 042：附近鸟点开关条 */
+.nearby-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.nearby-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.nearby-toggle:hover {
+  background: #dceee4;
+}
+.nearby-toggle.on {
+  background: var(--grad);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 20px -12px rgba(45, 106, 79, 0.9);
+}
+.nearby-hint {
+  font-size: 0.76rem;
 }
 .hotspots {
   margin-top: 4px;

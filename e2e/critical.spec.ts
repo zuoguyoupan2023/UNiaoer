@@ -228,7 +228,7 @@ test.describe('入口与页面', () => {
   })
 
   test('冒烟：地区浏览 / 答疑专栏 / 大众评审 / 物种详情季节块', async ({ page }) => {
-    await page.goto('/region')
+    await page.goto('/birding?tab=regions')
     await expect(page.getByRole('button', { name: '亚洲' })).toBeVisible()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
 
@@ -259,7 +259,7 @@ test.describe('入口与页面', () => {
   })
 
   test('地区浏览：外国省级层（021 M2）筛选/折叠与署名', async ({ page }) => {
-    await page.goto('/region')
+    await page.goto('/birding?tab=regions')
     await page.getByRole('button', { name: '北美洲' }).click()
     const us = page.locator('.country-btn[data-code="US"]')
 
@@ -289,7 +289,7 @@ test.describe('入口与页面', () => {
   })
 
   test('地区浏览：中国省级层（021 M3）——默认国即中国，港澳台标注', async ({ page }) => {
-    await page.goto('/region') // 默认亚洲 + 中国（017）
+    await page.goto('/birding?tab=regions') // 默认亚洲 + 中国（017）
 
     // 左侧国家树下自动展开 CN 省级：中文全称 + 港澳台标注名（铁律 6）
     await expect(page.locator('.country-list .prov-list')).toBeVisible()
@@ -339,14 +339,11 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.beginner-hint')).toBeVisible()
   })
 
-  test('地区浏览：观鸟点（021 M4 腿 B / 2026-10-09 标签页）列表/就地详情/署名', async ({ page }) => {
-    await page.goto('/region')
+  test('观鸟：观鸟点（021 M4 腿 B / 042 合并后）列表/就地详情/署名', async ({ page }) => {
+    // 042：观鸟点为默认标签页，直接落在观鸟点
+    await page.goto('/birding')
     await page.getByRole('button', { name: '北美洲' }).click()
-
-    // 右侧面板：鸟种 / 观鸟点两个标签页（不再上下堆叠）
     const spotsTab = page.getByRole('tab', { name: /观鸟点/ })
-    await expect(spotsTab).toBeVisible()
-    await spotsTab.click()
     await expect(spotsTab).toHaveAttribute('aria-selected', 'true')
 
     // 数据源已统一为 eBird 派生点位（按国分片）：列表显示该点鸟种数与最近记录日期
@@ -362,15 +359,15 @@ test.describe('入口与页面', () => {
     await expect(detail.locator('a.hotspot-ext')).toHaveAttribute('href', 'https://ebird.org/hotspot/L2001')
     await expect(page.locator('.hotspot-source')).toContainText('eBird')
 
-    // 切回鸟种标签页：物种网格可见、观鸟点列表隐藏（v-show 保留节点但不可见）
-    const speciesTab = page.getByRole('tab', { name: /鸟种/ })
+    // 切到「地区浏览」标签页：物种网格可见、观鸟点列表隐藏（v-show 保留节点但不可见）
+    const speciesTab = page.getByRole('tab', { name: /地区浏览/ })
     await speciesTab.click()
     await expect(page.locator('.species-grid')).toBeVisible()
     await expect(page.locator('.hotspot-btn').first()).toBeHidden()
   })
 
   test('地区浏览：观鸟点按省过滤（选省后只见本省点）', async ({ page }) => {
-    await page.goto('/region')
+    await page.goto('/birding?tab=regions')
     // 默认中国：全国 2 个点位（北京 CN-11 + 上海 CN-31）；点省份「北京市」后只剩北京的 1 个
     await page.locator('.prov-btn[data-prov="CN-11"]').click()
     const spotsTab = page.getByRole('tab', { name: /观鸟点/ })
@@ -399,7 +396,7 @@ test.describe('入口与页面', () => {
 
   test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/region')
+    await page.goto('/birding?tab=regions')
 
     // 移动端：选择按钮可见、国家树默认收起（不占屏，鸟种直接可见）
     await expect(page.locator('.picker-toggle')).toBeVisible()
@@ -468,7 +465,7 @@ test.describe('入口与页面', () => {
   })
 
   test('附近观鸟点（039 P1）：粗定位 → 按距离列表 → 展开详情与署名', async ({ page }) => {
-    await page.goto('/nearby')
+    await page.goto('/birding?tab=spots&nearby=1')
 
     // 粗定位（/api/geo 桩）生效 → 显示"网络大致位置"并自动列出点位
     await expect(page.getByText(/网络大致位置/)).toBeVisible({ timeout: 10_000 })
@@ -499,8 +496,35 @@ test.describe('入口与页面', () => {
     await expect(page.getByText(/暂无符合条件的观鸟点/)).toBeVisible()
   })
 
+  test('042 观鸟页：默认「观鸟点」tab，附近开关可切到附近模式，旧路径重定向', async ({ page }) => {
+    // 默认入口：导航「观鸟」→ 落在「观鸟点」tab（不是地区浏览）
+    await page.goto('/birding')
+    await expect(page.getByRole('tab', { name: /观鸟点/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('.hotspot-list').first()).toBeVisible()
+    await expect(page.locator('.species-grid')).toBeHidden()
+
+    // 「附近鸟点」开关：开启后本页转为附近模式，出现定位卡与半径选择
+    await page.locator('.nearby-toggle').click()
+    await expect(page.locator('.nearby-toggle')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByText(/网络大致位置/)).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('.spot').first()).toBeVisible()
+    // 状态写回 URL：刷新后仍是附近模式
+    await expect(page).toHaveURL(/nearby=1/)
+
+    // 切到「地区浏览」tab：只有鸟种网格，观鸟点/附近面板都不在
+    await page.getByRole('tab', { name: /地区浏览/ }).click()
+    await expect(page.locator('.species-grid')).toBeVisible()
+    await expect(page.locator('.nearby-toggle')).toBeHidden()
+
+    // 旧路径兼容：/region → 地区浏览 tab；/nearby → 观鸟点 tab + 附近开关
+    await page.goto('/region')
+    await expect(page).toHaveURL(/tab=regions/)
+    await page.goto('/nearby')
+    await expect(page).toHaveURL(/nearby=1/)
+  })
+
   test('全球物种层（025）：未收录标记、轻量详情与 bank 回归', async ({ page }) => {
-    await page.goto('/region') // 默认亚洲 + 中国
+    await page.goto('/birding?tab=regions') // 默认亚洲 + 中国
 
     // 全球未收录种:网格显示「未收录媒体」标记;bank 种仍带头图可玩
     const globus = page.locator('.species-card', { hasText: 'Globus testus' })
@@ -521,7 +545,7 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.lite-src')).toContainText('AviList v2025b')
 
     // 省级选中时全球种不出现(省级层仅覆盖 bank 物种)
-    await page.goto('/region')
+    await page.goto('/birding?tab=regions')
     await page.locator('.country-list .prov-btn[data-prov="CN-44"]').click()
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
     await expect(page.getByText('Globus testus', { exact: true })).toBeHidden()

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
- * 039 P1：按位置找附近观鸟点（`/nearby`）。
+ * 042：「观鸟点」标签页内的**附近鸟点**面板（由 039 P1 的 `/nearby` 页面改造而来）。
+ * 由 `views/BirdingView.vue` 在 `nearby` 开关打开时渲染；原 `/nearby` 路由改为重定向到
+ * `/birding?tab=spots&nearby=1`，本页不再是独立路由。
  *
  * 两档定位（docs/039 §2.1）：
  *  - **粗定位（默认，自动）**：Worker `/api/geo` 读 Cloudflare `request.cf` 的 IP 归属地，
@@ -15,7 +17,7 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Compass, Crosshair, Leaf, Loader, MapPin, Radio } from 'lucide-vue-next'
+import { Crosshair, Leaf, Loader, MapPin, Radio } from 'lucide-vue-next'
 import { speciesName, speciesById, loadBank } from '@/core/bank'
 import {
   availableCountries,
@@ -132,7 +134,6 @@ function countryName(cc: string): string {
 
 <template>
   <section class="nearby">
-    <h2><Compass class="ic" :size="22" /> {{ t('nearby.title') }}</h2>
     <p class="lead muted">{{ t('nearby.lead') }}</p>
 
     <p v-if="loadingIndex" class="muted center"><Loader class="ic spin" :size="15" /> {{ t('common.loading') }}</p>
