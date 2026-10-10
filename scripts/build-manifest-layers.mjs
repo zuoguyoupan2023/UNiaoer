@@ -182,7 +182,8 @@ function buildCatalog(poolEntries, idx) {
  */
 export async function writeManifestLayers(manifest, opts = {}) {
   const dataDir = opts.dataDir || path.join(ROOT, 'public/data')
-  const globalLedger = opts.globalLedger || path.join(ROOT, 'data/manifest-global.json')
+  // 050 R1：台账已移入 data-cache/（不入库）；缺失时全球池保持现状不报错
+  const globalLedger = opts.globalLedger || path.join(ROOT, 'data-cache/manifest-global.json')
   const quiet = !!opts.quiet
   /** 附注统计(commonness 合并数等),随 stats 返回 */
   const stats_note = {}

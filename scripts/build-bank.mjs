@@ -65,7 +65,7 @@ const OPT = {
   xcKey: args['xc-key'] || process.env.XC_API_KEY || '',
   publicBase: (args['public-base'] || process.env.R2_PUBLIC_BASE || '').replace(/\/$/, ''),
   taxa: !!args.taxa, // 以 data/taxa.json 为物种清单（M1+）
-  global: !!args.global, // 023 P2:全球增量采集(物种来自 species-index.json,台账 data/manifest-global.json,不碰主 manifest)
+  global: !!args.global, // 023 P2:全球增量采集(物种来自 species-index.json,台账 data-cache/manifest-global.json,不碰主 manifest)
   slow: !!args.slow, // 假期模式:大幅放宽对外限速(429 高发期用)
   inatGap: args['inat-gap'] ? Number(args['inat-gap']) : args.slow ? 5000 : 1050, // iNat 全局最小间隔 ms(--slow=5s:假期/429 高发期)
   xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 1200, // XC 检索冷却下限 ms
@@ -319,7 +319,8 @@ async function main() {
       taxonKey: e.taxonKey,
       commonness: 2,
     }))
-    if (!OPT.out) OPT.out = 'data/manifest-global.json' // 全球台账:绝不覆盖主 manifest
+    // 全球台账（050 R1：移入 data-cache/，不再入库——33MB 产物类中间件，仓库零增长）
+    if (!OPT.out) OPT.out = 'data-cache/manifest-global.json'
     console.log(`\n🌐 全球增量池:${species.length} 种(骨架 ${index.species.length} − bank ${bankIds.size})`)
   } else {
     const raw = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))

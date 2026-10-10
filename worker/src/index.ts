@@ -206,18 +206,39 @@ function inlineAudio(r: SpeciesRow): Record<string, unknown> | null {
 /**
  * 题库索引：优先 R2 快照，回退 Pages 静态。
  * 029 M1 起支持分层产物：/api/manifest → 完整层；/api/manifest-core → 启动层（默认前端使用）。
- * `name` 仅允许白名单文件名,避免路径穿越。
+ * 050 O3：新增 /api/manifest-meta → 权威名录层（10,844 种，不含媒体）。
+ * `name` 仅允许白名单文件名，避免路径穿越。
+ *
+ * **ETag / 304（050 O3）**：此前本端点**完全没有条件请求**——
+ * manifest-core 1.6MB、manifest 12.6MB、global 11MB 都是每次全量传输，
+ * 缓存过期后必然重下整个文件。现按 `If-None-Match` 返回 304（零字节），
+ * R2 用对象自带的 `etag`，Pages 回退用 `Last-Modified` 派生。
+ * 同时把 `cache-control` 的 max-age 提到 86400（配合 SWR）——
+ * manifest 是构建产物，发布频率极低（天级），分钟级缓存没有意义。
  */
-async function handleManifest(env: Env, name = 'manifest.json'): Promise<Response> {
-  const allowed = ['manifest.json', 'manifest-core.json', 'manifest-global.min.json']
+async function handleManifest(env: Env, request: Request, name = 'manifest.json'): Promise<Response> {
+  const allowed = [
+    'manifest.json',
+    'manifest-core.json',
+    'manifest-global.min.json',
+    'manifest-meta.json',
+  ]
   const file = allowed.includes(name) ? name : 'manifest.json'
+  const cacheControl = 'public, max-age=86400, stale-while-revalidate=604800'
+  const inm = request.headers.get('if-none-match')
+
   // 1) 优先 R2 上的 data/<file>（若已上传）
   const obj = await env.MEDIA.get(`data/${file}`)
   if (obj) {
+    const etag = `"${obj.etag}"`
+    if (inm && inm.split(',').some((t) => t.trim() === etag)) {
+      return new Response(null, { status: 304, headers: { etag, 'cache-control': cacheControl, ...CORS } })
+    }
     return new Response(await obj.text(), {
       headers: {
         'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'public, max-age=300, stale-while-revalidate=86400',
+        'cache-control': cacheControl,
+        etag,
         ...CORS,
       },
     })
@@ -225,15 +246,23 @@ async function handleManifest(env: Env, name = 'manifest.json'): Promise<Respons
   // 2) 回退 Pages 静态文件（始终与部署同步）
   const origin = env.MANIFEST_ORIGIN || 'https://uniaoer.com'
   const upstream = await fetch(`${origin}/data/${file}`, {
-    cf: { cacheTtl: 300, cacheEverything: true },
-  } as RequestInit & { cf: Record<string, unknown> })
+    cf: { cacheTtl: 86400, cacheEverything: true },
+  } as RequestInit & { cf: Record<Record<string, unknown>, unknown> })
   if (!upstream.ok) {
     return json({ error: 'manifest_unavailable', status: upstream.status }, { status: 502 })
+  }
+  // Pages 静态由 SW/vite 生成，没有可用强 ETag → 用 Last-Modified 派生一个弱校验器。
+  // 弱校验器（`W/` 前缀）语义正确：只要内容变，Last-Modified 必变。
+  const lm = upstream.headers.get('last-modified')
+  const etag = lm ? `W/"${lm}"` : ''
+  if (etag && inm && inm.split(',').some((t) => t.trim() === etag)) {
+    return new Response(null, { status: 304, headers: { etag, 'cache-control': cacheControl, ...CORS } })
   }
   return new Response(await upstream.text(), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'public, max-age=300, stale-while-revalidate=86400',
+      'cache-control': cacheControl,
+      ...(etag ? { etag } : {}),
       ...CORS,
     },
   })
@@ -1403,8 +1432,10 @@ export default {
         if (path === '/api/health') {
           return json({ ok: true, ts: Date.now(), hasXcKey: Boolean(env.XC_API_KEY) })
         }
-        if (path === '/api/manifest') return await handleManifest(env)
-        if (path === '/api/manifest-core') return await handleManifest(env, 'manifest-core.json')
+        if (path === '/api/manifest') return await handleManifest(env, request)
+        if (path === '/api/manifest-core') return await handleManifest(env, request, 'manifest-core.json')
+        // 050 O3：权威名录层（唯一权威口径，10,844 种，不含媒体）
+        if (path === '/api/manifest-meta') return await handleManifest(env, request, 'manifest-meta.json')
         // 039 P1：粗定位（CF request.cf，四舍五入 0.05°；不落库/不进日志）
         if (path === '/api/geo') return handleGeo(request)
         if (path === '/api/questions') return await handleQuestionsCached(request, env, url, ctx)
