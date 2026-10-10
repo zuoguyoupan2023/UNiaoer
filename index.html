@@ -14,6 +14,12 @@
       crossorigin="anonymous"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 050 O1：权威名录层（manifest-meta.json，10,844 种 × 全字段、不含媒体，约 3.8MB）
+         提前发起请求，省掉「HTML 下载 → JS 解析 → fetch」的一个完整 RTT（移动端 100–400ms）。
+         · as="fetch" 必须配 crossorigin，否则浏览器会用第二个 key 再请求一次；
+         · 不阻塞渲染：只是提前发起、结果进内存；
+         · 失败可降级：loadMeta() 的三级回退链不受影响。 -->
+    <link rel="preload" as="fetch" type="application/json" href="/data/manifest-meta.json" crossorigin="anonymous" />
     <meta
       name="description"
       content="UNiaoer · 鸟语识别：观鸟学习与鸟类识别练习（看图认鸟 / 听音认鸟）"

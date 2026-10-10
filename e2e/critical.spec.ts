@@ -496,6 +496,22 @@ test.describe('入口与页面', () => {
     await expect(page.getByText(/暂无符合条件的观鸟点/)).toBeVisible()
   })
 
+  test('050 P2：权威层物种走完整详情（不再退回轻量空壳）', async ({ page }) => {
+    // core 物种：仍走完整详情（有 hero 图与署名）
+    await page.goto('/species/sp-01')
+    await expect(page.locator('.species-detail .name')).toContainText('测试鸟1')
+    await expect(page.locator('img.hero')).toBeVisible()
+    await expect(page.locator('.credits')).toBeVisible()
+
+    // 只存在于权威层的物种（真实世界 = 全球池物种）：必须有 hero 图 + 音频 + 署名，
+    // 且**不得**出现轻量详情的"暂无媒体"文案
+    await page.goto('/species/globus-metaonly')
+    await expect(page.locator('.species-detail .name')).toContainText('全球权威鸟')
+    await expect(page.locator('img.hero')).toBeVisible()
+    await expect(page.locator('.credits')).toBeVisible()
+    await expect(page.getByText(/暂无媒体/)).toHaveCount(0)
+  })
+
   test('042 观鸟页：默认「观鸟点」tab，附近开关可切到附近模式，旧路径重定向', async ({ page }) => {
     // 默认入口：导航「观鸟」→ 落在「观鸟点」tab（不是地区浏览）
     await page.goto('/birding')

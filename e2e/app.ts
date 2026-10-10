@@ -10,6 +10,40 @@ type Routable = Page | import('@playwright/test').BrowserContext
 
 const bank = buildBank()
 
+/**
+ * 050 P2：权威名录层夹具 = 全部 core 物种 + 一条"只在权威层"的全球种。
+ * 真实世界里这类物种的媒体来自全球池（`manifest-global.min.json`），
+ * e2e 不加载全球池（保持离线），所以给它直接带上 image/audio。
+ */
+function metaManifest(): Record<string, unknown> {
+  const species: Record<string, unknown>[] = (bank.species as unknown as Record<string, unknown>[]).map((sp) => ({
+    ...sp,
+    order: 'Testiformes',
+    profile: (sp.profile as Record<string, unknown>) ?? { group: 'landbird' },
+  }))
+  species.push({
+    id: 'globus-metaonly',
+    nameZh: '全球权威鸟',
+    nameSci: 'Globus metaonly',
+    nameEn: 'Global Authority Bird',
+    family: 'Testidae',
+    order: 'Testiformes',
+    taxonKey: 'avibase-META0001',
+    commonness: 3,
+    playable: true,
+    profile: { group: 'waterbird' },
+    image: { url: 'https://example.test/meta.webp', license: 'CC0', author: 'a', source: 's', sourceUrl: 'u', type: 'image', speciesId: 'globus-metaonly' },
+    audio: { url: 'https://example.test/meta.mp3', license: 'CC0', author: 'a', source: 's', sourceUrl: 'u', type: 'audio', speciesId: 'globus-metaonly' },
+  })
+  return {
+    layer: 'meta',
+    schemaVersion: 1,
+    generatedAt: new Date(0).toISOString(),
+    total: species.length,
+    species,
+  }
+}
+
 async function fulfillMedia(route: Route) {
   const url = route.request().url()
   await route.fulfill({
@@ -28,6 +62,10 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
   await page.route('**/data/assets/*.json', (r) => r.fulfill({ status: 404, body: '' }))
   // 029 M2:全球池与区系层不加载真实产物（e2e 纯夹具,保持离线与速度）
   await page.route('**/data/manifest-global.min.json', (r) => r.fulfill({ status: 404, body: '' }))
+  // 050 P2:权威名录层（meta）——夹具里额外塞一条"只有 meta 有、core 没有"的物种，
+  // 用来验证详情页不再退回轻量空壳（真实世界里这类物种由全球池提供媒体）。
+  await page.route('**/api/manifest-meta', (r) => r.fulfill({ json: metaManifest() }))
+  await page.route('**/data/manifest-meta.json', (r) => r.fulfill({ json: metaManifest() }))
   await page.route('**/data/species-distribution.json', (r) =>
     r.fulfill({ json: { schemaVersion: 1, sources: [], counts: {}, byCountry: {} } }),
   )

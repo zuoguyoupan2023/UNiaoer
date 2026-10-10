@@ -12,7 +12,8 @@
 const VERSION = 'uniaoer-v3'
 const MEDIA_CACHE = `${VERSION}-media`
 const RUNTIME_CACHE = `${VERSION}-runtime`
-/** 构建版本标记的存储键（存放最近一次见到的 manifest-core.generatedAt） */
+/** 构建版本标记的存储键（存放最近一次见到的 **权威层 manifest-meta.generatedAt**；
+ *  缺失时回退 manifest-core.generatedAt —— 050 P2 起权威层是唯一口径） */
 const BUILD_TAG_KEY = `${VERSION}-build-tag`
 
 /**
@@ -20,15 +21,29 @@ const BUILD_TAG_KEY = `${VERSION}-build-tag`
  *
  * 问题：assets 分片（/data/assets/*.json）改 cache-first 后，构建更新时 **URL 不变**，
  * 旧缓存会一直命中——用户看到的是上一版的素材元数据。
- * 做法：用构建产物自带的 `manifest-core.generatedAt` 作为版本标记；
+ * 做法：用构建产物自带的 **`manifest-meta.generatedAt`（权威名录层，050 P2）** 作为版本标记，
+ * 取不到时回退 `manifest-core.generatedAt`（迁移期兼容）；
  * 每次启动比对，发现变化就清空运行时缓存（媒体缓存不动，媒体 URL 含物种目录,不受构建版本影响）。
  */
 async function refreshBuildTag() {
   try {
-    const res = await fetch('/data/manifest-core.json', { cache: 'no-store' })
-    if (!res.ok) return
-    const doc = await res.json()
-    const tag = String(doc?.generatedAt || '')
+    // 050 P2：权威层优先（唯一口径）；取不到再回退 core（迁移期兼容）
+    let tag = ''
+    try {
+      const metaRes = await fetch('/data/manifest-meta.json', { cache: 'no-store' })
+      if (metaRes.ok) {
+        const metaDoc = await metaRes.json()
+        tag = String(metaDoc?.generatedAt || '')
+      }
+    } catch {
+      /* 离线或尚未部署 → 试 core */
+    }
+    if (!tag) {
+      const res = await fetch('/data/manifest-core.json', { cache: 'no-store' })
+      if (!res.ok) return
+      const doc = await res.json()
+      tag = String(doc?.generatedAt || '')
+    }
     if (!tag) return
     const cache = await caches.open(RUNTIME_CACHE)
     const prev = await cache.match(BUILD_TAG_KEY)
@@ -86,7 +101,8 @@ self.addEventListener('fetch', (event) => {
   //   · 启动层 core：stale-while-revalidate —— 首屏立刻可用（缓存），后台更新下次生效
   //   · 详情层 assets/*：cache-first —— 构建产物、内容稳定，命中即零网络（省 R2 Class B）
   //   · 大产物（catalog / global.min）：stale-while-revalidate —— 体积大，优先本地
-  if (url.pathname.includes('/data/manifest-core')) {
+  // 050 P2：权威名录层与 core 同策略（stale-while-revalidate：首屏立刻可用，后台更新）
+  if (url.pathname.includes('/data/manifest-meta') || url.pathname.includes('/data/manifest-core')) {
     event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
     return
   }
