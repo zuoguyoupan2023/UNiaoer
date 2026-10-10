@@ -32,6 +32,20 @@ export interface MetaManifest {
   source?: string
   total: number
   stats?: Record<string, unknown>
+  /** S6：assets 最终分片清单（前端解析媒体分片用） */
+  buckets?: string[]
+  /** S6：全量可玩口径（构建期烘焙） */
+  universe?: {
+    coreTotal?: number
+    globalTotal?: number
+    total: number
+    withImage: number
+    withAudio: number
+    imageOnly: number
+    audioOnly: number
+    withNameZh: number
+    notCovered: number
+  }
   species: MetaSpecies[]
 }
 

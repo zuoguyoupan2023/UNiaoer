@@ -35,7 +35,7 @@ const poolSpecies = [
   sp('sp-both', 'CCC00003'),
 ]
 
-const globalDoc = { layer: 'global', total: 3, species: poolSpecies }
+const globalDoc = { layer: 'meta', total: poolSpecies.length, species: poolSpecies, buckets: [] }
 const distribution = {
   schemaVersion: 1,
   sources: [],
@@ -50,7 +50,7 @@ function stubFetch(opts: { pool?: boolean; dist?: boolean; fail?: boolean } = {}
     vi.fn(async (input: unknown) => {
       const u = String(input)
       calls.push(u)
-      if (u.includes('manifest-global.min.json')) {
+      if (u.includes('manifest-meta.json')) {
         if (opts.fail) throw new Error('network')
         if (opts.pool === false) return new Response('nope', { status: 404 })
         return new Response(JSON.stringify(globalDoc), {
@@ -85,7 +85,7 @@ describe('loadGlobalPool', () => {
     const [a, b] = await Promise.all([loadGlobalPool(), loadGlobalPool()])
     expect(a).toHaveLength(3)
     expect(b).toBe(a)
-    expect(calls.filter((u) => u.includes('manifest-global.min.json'))).toHaveLength(1)
+    expect(calls.filter((u) => u.includes('manifest-meta.json'))).toHaveLength(1)
     expect(globalPoolReady()).toHaveLength(3)
   })
 

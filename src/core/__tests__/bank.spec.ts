@@ -152,13 +152,13 @@ describe('speciesProfileById / speciesProfileText（C1 物种档案）', () => {
   })
 })
 
-describe('loadBank（029 M1：优先 core 分层，逐级回退）', () => {
+describe('loadBank（S6：优先权威层 meta 作唯一名单源）', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
   })
 
-  it('生产：优先请求 /api/manifest-core', async () => {
+  it('优先请求静态 /data/manifest-meta.json（与 index.html preload 同 URL）', async () => {
     _resetBankCache()
     vi.stubEnv('PROD', true)
     const calls: string[] = []
@@ -166,17 +166,18 @@ describe('loadBank（029 M1：优先 core 分层，逐级回退）', () => {
       'fetch',
       vi.fn(async (input: unknown) => {
         calls.push(String(input))
-        return new Response(JSON.stringify(manifest), {
+        return new Response(JSON.stringify({ ...manifest, layer: 'meta', buckets: [] }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         })
       }),
     )
-    await loadBank()
-    expect(calls[0]).toContain('/api/manifest-core')
+    const m = await loadBank()
+    expect(m.layer).toBe('meta')
+    expect(calls[0]).toContain('data/manifest-meta.json')
   })
 
-  it('生产：/api/manifest-core 失败 → 静态 core → 完整 manifest 逐级回退', async () => {
+  it('meta 不可用 → 回退旧 core → 完整 manifest 逐级回退', async () => {
     _resetBankCache()
     vi.stubEnv('PROD', true)
     const calls: string[] = []
@@ -185,6 +186,9 @@ describe('loadBank（029 M1：优先 core 分层，逐级回退）', () => {
       vi.fn(async (input: unknown) => {
         const u = String(input)
         calls.push(u)
+        if (u.includes('manifest-meta')) {
+          return new Response('boom', { status: 500, headers: { 'content-type': 'text/plain' } })
+        }
         if (u.includes('/api/') || u.includes('data/manifest-core.json')) {
           return new Response('boom', { status: 500, headers: { 'content-type': 'text/plain' } })
         }
@@ -196,8 +200,8 @@ describe('loadBank（029 M1：优先 core 分层，逐级回退）', () => {
     )
     const m = await loadBank()
     expect(m.total).toBe(2)
+    expect(calls.some((u) => u.includes('manifest-meta'))).toBe(true)
     expect(calls.some((u) => u.includes('/api/manifest-core'))).toBe(true)
-    expect(calls.some((u) => u.includes('data/manifest-core.json'))).toBe(true)
     expect(calls.some((u) => u.includes('data/manifest.json'))).toBe(true)
   })
 })

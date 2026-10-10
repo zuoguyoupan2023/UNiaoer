@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { assetsOf, buildQuestions, pickDistractors, shuffle, usableInNameMode } from '../questionEngine'
+import { loadBank, _resetBankCache } from '../bank'
 import { isStarterBird } from '../starterBirds'
 import { TIERS } from '../difficulty'
 import type { BankSpecies } from '../bank'
@@ -49,20 +50,20 @@ const bank: BankSpecies[] = [
 ]
 
 describe('buildQuestions', () => {
-  it('只使用具备所需媒体的物种', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 10 })
+  it('只使用具备所需媒体的物种', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 10 })
     expect(qs.every((q) => q.type === 'image')).toBe(true)
     expect(qs.find((q) => q.answer === '无图鸟')).toBeUndefined()
     expect(qs.length).toBe(5)
   })
 
-  it('音频模式只取有音频的物种', () => {
-    const qs = buildQuestions(bank, { type: 'audio', count: 10 })
+  it('音频模式只取有音频的物种', async () => {
+    const qs = await buildQuestions(bank, { type: 'audio', count: 10 })
     expect(qs.length).toBe(6)
   })
 
-  it('每题选项包含正确答案且无重复，数量不超过档位配置', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 10, tier: 2 })
+  it('每题选项包含正确答案且无重复，数量不超过档位配置', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 10, tier: 2 })
     for (const q of qs) {
       expect(q.options).toContain(q.answer)
       expect(new Set(q.options).size).toBe(q.options.length)
@@ -70,20 +71,20 @@ describe('buildQuestions', () => {
     }
   })
 
-  it('携带学名与科，便于反馈展示', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 1 })
+  it('携带学名与科，便于反馈展示', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 1 })
     expect(qs[0]!.sci).toContain('scientific')
     expect(qs[0]!.family).toBeTruthy()
   })
 
-  it('数量受 count 限制', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 2 })
+  it('数量受 count 限制', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 2 })
     expect(qs.length).toBe(2)
   })
 
-  it('A2 speciesPool：只从指定集合出题，干扰项仍可来自全库', () => {
+  it('A2 speciesPool：只从指定集合出题，干扰项仍可来自全库', async () => {
     const ids = new Set(['a', 'c'])
-    const qs = buildQuestions(bank, { type: 'image', count: 10, speciesPool: ids })
+    const qs = await buildQuestions(bank, { type: 'image', count: 10, speciesPool: ids })
     expect(qs.length).toBe(2)
     expect(qs.every((q) => ['a', 'c'].includes(q.media.speciesId))).toBe(true)
     // 干扰项不限于错题池（否则选项太少）
@@ -91,8 +92,8 @@ describe('buildQuestions', () => {
     expect(allOpts.length).toBeGreaterThan(new Set(qs.map((q) => q.answer)).size)
   })
 
-  it('A2 speciesPool 命中无素材物种时被过滤，可能为空', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 10, speciesPool: new Set(['noimg']) })
+  it('A2 speciesPool 命中无素材物种时被过滤，可能为空', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 10, speciesPool: new Set(['noimg']) })
     expect(qs.length).toBe(0)
   })
 })
@@ -104,9 +105,9 @@ describe('buildQuestions', () => {
  * 表内不足 count → 放宽到"表内任意档位"（仍排除表外物种）；表内全空才兜底整池（绝不出空）。
  */
 describe('buildQuestions · regionTiers（036 地区档位）', () => {
-  it('地区档位覆盖全局档位：本地稀有（5 档）不被 L1 选中（严格档位足够时）', () => {
+  it('地区档位覆盖全局档位：本地稀有（5 档）不被 L1 选中（严格档位足够时）', async () => {
     // 全部 5 种全局都是 commonness=2（L1 允许 [1,2]）→ 不加 regionTiers 时 L1 都有资格
-    const noRegion = buildQuestions(bank, { type: 'image', count: 4, tier: 1 })
+    const noRegion = await buildQuestions(bank, { type: 'image', count: 4, tier: 1 })
     expect(noRegion.length).toBeGreaterThan(0)
 
     // 表内 a..d 是 1–2 档（4 种 ≥ count），e 本地 5 档 → L1 严格池不含 e（不应放宽）
@@ -118,12 +119,12 @@ describe('buildQuestions · regionTiers（036 地区档位）', () => {
       ['e', 5],
     ])
     for (let i = 0; i < 12; i++) {
-      const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
+      const qs = await buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
       expect(qs.some((q) => q.media.speciesId === 'e')).toBe(false)
     }
   })
 
-  it('表外物种不回退全局档位：本地没有的鸟不出题（长尾鹦鹉场景）', () => {
+  it('表外物种不回退全局档位：本地没有的鸟不出题（长尾鹦鹉场景）', async () => {
     // 地区表只含 a/b/c；d/e 不在表里（= 该地区罕见/无记录）。
     // 旧语义下 d/e 会因全局 commonness=2 混进 L2；新语义必须排除。
     const regionTiers = new Map([
@@ -132,7 +133,7 @@ describe('buildQuestions · regionTiers（036 地区档位）', () => {
       ['c', 3],
     ])
     for (let i = 0; i < 20; i++) {
-      const qs = buildQuestions(bank, { type: 'image', count: 3, tier: 2, regionTiers })
+      const qs = await buildQuestions(bank, { type: 'image', count: 3, tier: 2, regionTiers })
       const ids = qs.map((q) => q.media.speciesId)
       expect(ids.every((id) => ['a', 'b', 'c'].includes(id))).toBe(true)
       expect(ids).not.toContain('d')
@@ -140,35 +141,35 @@ describe('buildQuestions · regionTiers（036 地区档位）', () => {
     }
   })
 
-  it('表内严格档位不足 count → 放宽到表内其余档位（仍不出表外物种）', () => {
+  it('表内严格档位不足 count → 放宽到表内其余档位（仍不出表外物种）', async () => {
     // L1 允许 [1,2]；表内只有 a(1)；b/c/d/e 不在表内 → 放宽到表内任意档位仍是 {a}
     const regionTiers = new Map([['a', 1]])
-    const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
+    const qs = await buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
     expect(qs.length).toBe(1)
     expect(qs[0]!.media.speciesId).toBe('a')
   })
 
-  it('地区表存在但全表为空 → 兜底整池（绝不出空）', () => {
+  it('地区表存在但全表为空 → 兜底整池（绝不出空）', async () => {
     // 空 Map 走全局语义（与"无表"等价）
-    const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: new Map() })
+    const qs = await buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: new Map() })
     expect(qs.length).toBeGreaterThan(0)
   })
 
-  it('regionTiers 把表内物种全标为稀有 → 放宽到表内任意档位，仍能出题（绝不出空）', () => {
+  it('regionTiers 把表内物种全标为稀有 → 放宽到表内任意档位，仍能出题（绝不出空）', async () => {
     const regionTiers = new Map(bank.map((s) => [s.id, 5]))
-    const qs = buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
+    const qs = await buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
     expect(qs.length).toBeGreaterThan(0) // 放宽到表内全部（不引入表外物种）
     expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
   })
 
-  it('null / 缺省等价于不使用地区档位', () => {
-    const a = buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: null })
-    const b = buildQuestions(bank, { type: 'image', count: 4, tier: 2 })
+  it('null / 缺省等价于不使用地区档位', async () => {
+    const a = await buildQuestions(bank, { type: 'image', count: 4, tier: 2, regionTiers: null })
+    const b = await buildQuestions(bank, { type: 'image', count: 4, tier: 2 })
     expect(a.length).toBe(b.length)
   })
 
-  it('轮内不重复：同一轮里每只鸟最多出现一次', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 10, tier: 2 })
+  it('轮内不重复：同一轮里每只鸟最多出现一次', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 10, tier: 2 })
     const ids = qs.map((q) => q.media.speciesId)
     expect(new Set(ids).size).toBe(ids.length)
   })
@@ -183,40 +184,40 @@ describe('分档取材 (mediaPoolSize)', () => {
     }
   }
 
-  it('assetsOf 优先多素材数组', () => {
+  it('assetsOf 优先多素材数组', async () => {
     expect(assetsOf(multi(5), 'image').length).toBe(5)
   })
 
-  it('L1 只用首选素材（标准照）', () => {
+  it('L1 只用首选素材（标准照）', async () => {
     const qsBank = [multi(5)]
     for (let i = 0; i < 10; i++) {
-      const qs = buildQuestions(qsBank, { type: 'image', count: 1, tier: 1 })
+      const qs = await buildQuestions(qsBank, { type: 'image', count: 1, tier: 1 })
       expect(qs[0]!.media.id).toBe('multi-img-0')
     }
   })
 
-  it('L4 只在前 5 个素材内随机（不会用到第 6 个及以后）', () => {
+  it('L4 只在前 5 个素材内随机（不会用到第 6 个及以后）', async () => {
     const qsBank = [multi(8)]
     const allowed = new Set(Array.from({ length: 5 }, (_, i) => `multi-img-${i}`))
     for (let i = 0; i < 30; i++) {
-      const qs = buildQuestions(qsBank, { type: 'image', count: 1, tier: 4 })
+      const qs = await buildQuestions(qsBank, { type: 'image', count: 1, tier: 4 })
       expect(allowed.has(qs[0]!.media.id!)).toBe(true)
     }
   })
 
-  it('素材不足时按实际数量，不报错', () => {
-    const qs = buildQuestions([multi(2)], { type: 'image', count: 1, tier: 5 })
+  it('素材不足时按实际数量，不报错', async () => {
+    const qs = await buildQuestions([multi(2)], { type: 'image', count: 1, tier: 5 })
     expect(qs[0]!.media).toBeTruthy()
   })
 
-  it('C3：题目带同种全部素材（画廊不按档位裁剪），且当前题面在其中', () => {
+  it('C3：题目带同种全部素材（画廊不按档位裁剪），且当前题面在其中', async () => {
     // 即便 L1（出题只用第 1 个），画廊仍应拿到全部素材
-    const qs = buildQuestions([multi(5)], { type: 'image', count: 1, tier: 1 })
+    const qs = await buildQuestions([multi(5)], { type: 'image', count: 1, tier: 1 })
     expect(qs[0]!.assets).toHaveLength(5)
     expect(qs[0]!.assets!.some((m) => m.url === qs[0]!.media.url)).toBe(true)
   })
 
-  it('C3：跨类型素材也一并提供（看图听音 / 听音看图）', () => {
+  it('C3：跨类型素材也一并提供（看图听音 / 听音看图）', async () => {
     const species: BankSpecies = {
       ...sp('dual', '双材鸟', '甲科'),
       image: null,
@@ -224,35 +225,35 @@ describe('分档取材 (mediaPoolSize)', () => {
       images: Array.from({ length: 5 }, (_, i) => asset(`dual-i${i}`, 'image')),
       audios: Array.from({ length: 5 }, (_, i) => asset(`dual-a${i}`, 'audio')),
     }
-    const qs = buildQuestions([species], { type: 'image', count: 1, tier: 1 })
+    const qs = await buildQuestions([species], { type: 'image', count: 1, tier: 1 })
     expect(qs[0]!.assets).toHaveLength(5)
     expect(qs[0]!.crossAssets).toHaveLength(5)
   })
 })
 
 describe('难度梯度', () => {
-  it('L1 选项数为 3、限时 25s', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 1 })
+  it('L1 选项数为 3、限时 25s', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 1 })
     expect(qs[0]!.options.length).toBe(3)
     expect(qs[0]!.timeLimitSec).toBe(25)
     expect(qs[0]!.tier).toBe(1)
   })
 
-  it('L4 限时 10s，且选项数多于 L1', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
+  it('L4 限时 10s，且选项数多于 L1', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
     expect(qs[0]!.timeLimitSec).toBe(10)
     expect(qs[0]!.options.length).toBeGreaterThan(3)
     expect(qs[0]!.options.length).toBeLessThanOrEqual(TIERS[4].optionCount)
   })
 
-  it('常见度不足时回退到全部物种（不会空题）', () => {
+  it('常见度不足时回退到全部物种（不会空题）', async () => {
     // bank 里都是 commonness=2，L4 只允许 3-4，应回退而不是返回空
-    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
+    const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
     expect(qs.length).toBeGreaterThan(0)
   })
 
-  it('L5 地狱：L4 规格（6 选项、8s 限时），题目正常生成', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 5 })
+  it('L5 地狱：L4 规格（6 选项、8s 限时），题目正常生成', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 5 })
     expect(qs.length).toBeGreaterThan(0)
     expect(qs[0]!.tier).toBe(5)
     expect(qs[0]!.timeLimitSec).toBe(10)
@@ -264,7 +265,7 @@ describe('难度梯度', () => {
 })
 
 describe('pickDistractors', () => {
-  it('mixed：优先放 1 个同科，且不含答案', () => {
+  it('mixed：优先放 1 个同科，且不含答案', async () => {
     const target = bank[0]! // 甲鸟 / 甲科
     const names = pickDistractors(target, bank, 3, 'mixed')
     expect(names).not.toContain('甲鸟')
@@ -272,14 +273,14 @@ describe('pickDistractors', () => {
     expect(names.length).toBe(3)
   })
 
-  it('cross：优先跨科（不同科在前）', () => {
+  it('cross：优先跨科（不同科在前）', async () => {
     const target = bank[0]! // 甲科
     const names = pickDistractors(target, bank, 2, 'cross')
     // 乙鸟同科应排后，跨科的丙/丁/戊在前
     expect(names[0]).not.toBe('乙鸟')
   })
 
-  it('same：同科优先', () => {
+  it('same：同科优先', async () => {
     const target = bank[0]!
     const names = pickDistractors(target, bank, 2, 'same')
     expect(names[0]).toBe('乙鸟')
@@ -287,8 +288,8 @@ describe('pickDistractors', () => {
 })
 
 describe('options 与 optionIds 配对（015 #1）', () => {
-  it('optionIds 与 options 等长且一一对应物种', () => {
-    const qs = buildQuestions(bank, { type: 'image', count: 5, tier: 2 })
+  it('optionIds 与 options 等长且一一对应物种', async () => {
+    const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 2 })
     for (const q of qs) {
       expect(q.optionIds).toHaveLength(q.options.length)
       const ai = q.options.indexOf(q.answer)
@@ -301,7 +302,7 @@ describe('options 与 optionIds 配对（015 #1）', () => {
 })
 
 describe('shuffle', () => {
-  it('不改变元素集合', () => {
+  it('不改变元素集合', async () => {
     const src = [1, 2, 3, 4, 5]
     expect([...shuffle(src)].sort()).toEqual([1, 2, 3, 4, 5])
   })
@@ -322,28 +323,28 @@ describe('buildQuestions · starterOnly（新手福利，2026-10-09）', () => {
     sp('random-bird-e', '陌生鸟E', '某科'),
   ]
 
-  it('L1 + starterOnly：只出新手池物种（喜鹊/麻雀/白头鹎…）', () => {
+  it('L1 + starterOnly：只出新手池物种（喜鹊/麻雀/白头鹎…）', async () => {
     for (let i = 0; i < 12; i++) {
-      const qs = buildQuestions(starterBank, { type: 'image', count: 4, tier: 1, starterOnly: true })
+      const qs = await buildQuestions(starterBank, { type: 'image', count: 4, tier: 1, starterOnly: true })
       expect(qs.length).toBe(4)
       expect(qs.every((q) => isStarterBird(q.media.speciesId))).toBe(true)
     }
   })
 
-  it('池内不足一轮 → 回退常规 L1（绝不出空）', () => {
+  it('池内不足一轮 → 回退常规 L1（绝不出空）', async () => {
     // 新手池只有 6 只，但要 7 题 → 收窄不成立，放行常规池
-    const qs = buildQuestions(starterBank, { type: 'image', count: 7, tier: 1, starterOnly: true })
+    const qs = await buildQuestions(starterBank, { type: 'image', count: 7, tier: 1, starterOnly: true })
     expect(qs.length).toBe(7)
     expect(qs.some((q) => !isStarterBird(q.media.speciesId))).toBe(true)
   })
 
-  it('仅 L1 生效：L2 带 starterOnly 不改变行为', () => {
-    const a = buildQuestions(starterBank, { type: 'image', count: 6, tier: 2, starterOnly: true })
-    const b = buildQuestions(starterBank, { type: 'image', count: 6, tier: 2 })
+  it('仅 L1 生效：L2 带 starterOnly 不改变行为', async () => {
+    const a = await buildQuestions(starterBank, { type: 'image', count: 6, tier: 2, starterOnly: true })
+    const b = await buildQuestions(starterBank, { type: 'image', count: 6, tier: 2 })
     expect(a.length).toBe(b.length)
   })
 
-  it('与地区档位叠加：表内非新手鸟不因 starterOnly 泄漏，表外新手鸟仍被地区排除', () => {
+  it('与地区档位叠加：表内非新手鸟不因 starterOnly 泄漏，表外新手鸟仍被地区排除', async () => {
     // 新手池 6 种；地区表只含 4 种（其中 1 只非新手鸟）→ 先收窄新手池，再按地区档位筛
     const regionTiers = new Map([
       ['pica-serica', 1],
@@ -351,12 +352,12 @@ describe('buildQuestions · starterOnly（新手福利，2026-10-09）', () => {
       ['pycnonotus-sinensis', 2],
       ['corvus-macrorhynchos', 1],
     ])
-    const qs = buildQuestions(starterBank, { type: 'image', count: 3, tier: 1, starterOnly: true, regionTiers })
+    const qs = await buildQuestions(starterBank, { type: 'image', count: 3, tier: 1, starterOnly: true, regionTiers })
     expect(qs.length).toBe(3)
     expect(qs.every((q) => ['pica-serica', 'passer-montanus', 'pycnonotus-sinensis', 'corvus-macrorhynchos'].includes(q.media.speciesId))).toBe(true)
   })
 
-  it('本地新手鸟不足一轮 → 回退常规本地 L1（保 10 题，不出短轮）', () => {
+  it('本地新手鸟不足一轮 → 回退常规本地 L1（保 10 题，不出短轮）', async () => {
     // 地区表只含 2 只新手鸟（AU-NT 场景）→ 新手池撑不满 10 题 → 用本地全池出满 10 题
     const regionTiers = new Map([
       ['pica-serica', 1],
@@ -368,7 +369,7 @@ describe('buildQuestions · starterOnly（新手福利，2026-10-09）', () => {
       ['random-bird-e', 2],
     ])
     for (let i = 0; i < 10; i++) {
-      const qs = buildQuestions(starterBank, { type: 'image', count: 7, tier: 1, starterOnly: true, regionTiers })
+      const qs = await buildQuestions(starterBank, { type: 'image', count: 7, tier: 1, starterOnly: true, regionTiers })
       expect(qs.length).toBe(7) // 仍是满轮
       // 且全部来自本地表（新手池不足时不得把表外新手鸟塞进来）
       expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
@@ -388,8 +389,8 @@ describe('S1 命名体系过滤', () => {
   }
   const mixed: BankSpecies[] = [...(bank as BankSpecies[]), noZh]
 
-  it('中文模式：无中文名的种既不出题、也不进选项', () => {
-    const qs = buildQuestions(mixed, { type: 'image', count: 4, tier: 2, nameMode: 'zh' })
+  it('中文模式：无中文名的种既不出题、也不进选项', async () => {
+    const qs = await buildQuestions(mixed, { type: 'image', count: 4, tier: 2, nameMode: 'zh' })
     expect(qs.length).toBeGreaterThan(0)
     const zhSet = new Set((bank as BankSpecies[]).map((s) => s.nameZh))
     for (const q of qs) {
@@ -400,15 +401,15 @@ describe('S1 命名体系过滤', () => {
     }
   })
 
-  it('英文模式：无中文名不影响（英文名全覆盖）', () => {
-    const qs = buildQuestions(mixed, { type: 'image', count: 4, tier: 2, nameMode: 'en' })
+  it('英文模式：无中文名不影响（英文名全覆盖）', async () => {
+    const qs = await buildQuestions(mixed, { type: 'image', count: 4, tier: 2, nameMode: 'en' })
     expect(qs.length).toBeGreaterThan(0)
     expect(qs.every((q) => q.nameMode === 'en')).toBe(true)
   })
 
-  it('学名模式：全量可用（含无中文名、无英文名的极端情况）', () => {
+  it('学名模式：全量可用（含无中文名、无英文名的极端情况）', async () => {
     const noNames: BankSpecies = { ...(bank[0] as BankSpecies), id: 'sci-only', nameZh: '', nameEn: '', nameSci: 'Sci only avis' }
-    const qs = buildQuestions([...(bank as BankSpecies[]), noNames], {
+    const qs = await buildQuestions([...(bank as BankSpecies[]), noNames], {
       type: 'image',
       count: 4,
       tier: 2,
@@ -418,15 +419,86 @@ describe('S1 命名体系过滤', () => {
     expect(qs.every((q) => q.nameMode === 'sci')).toBe(true)
   })
 
-  it('缺省按 locale 推断：未显式传 nameMode 时 en→en / 其他→zh', () => {
-    expect(buildQuestions(mixed, { type: 'image', count: 2, locale: 'en' })[0]?.nameMode).toBe('en')
-    expect(buildQuestions(mixed, { type: 'image', count: 2, locale: 'zh-CN' })[0]?.nameMode).toBe('zh')
+  it('缺省按 locale 推断：未显式传 nameMode 时 en→en / 其他→zh', async () => {
+    expect((await buildQuestions(mixed, { type: 'image', count: 2, locale: 'en' }))[0]?.nameMode).toBe('en')
+    expect((await buildQuestions(mixed, { type: 'image', count: 2, locale: 'zh-CN' }))[0]?.nameMode).toBe('zh')
   })
 
-  it('可用性判定：严格匹配本体系的字段，不跨语言回退', () => {
+  it('可用性判定：严格匹配本体系的字段，不跨语言回退', async () => {
     expect(usableInNameMode(noZh, 'zh')).toBe(false) // 无中文名 → 中文卷不可用（即便有英文名/学名）
     expect(usableInNameMode(noZh, 'en')).toBe(true)
     expect(usableInNameMode(noZh, 'sci')).toBe(true)
     expect(usableInNameMode({ ...noZh, nameEn: '' } as BankSpecies, 'en')).toBe(false)
+  })
+})
+
+/**
+ * S6：名单来自 meta（**不含媒体**）时，出题按 `assets` 分片懒加载媒体。
+ * 这是「meta 名单 + assets 懒加载」的核心路径（e2e 夹具带内联媒体，覆盖不到）。
+ */
+describe('S6 · meta 名单 + assets 懒加载', () => {
+  afterEach(() => {
+    _resetBankCache()
+    vi.unstubAllGlobals()
+  })
+
+  it('无内联媒体、仅有 playable 标记的物种 → 按需从分片取媒体出题', async () => {
+    const img = asset('sp01-img', 'image')
+    const aud = asset('sp01-aud', 'audio')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        if (u.includes('manifest-meta')) {
+          return new Response(
+            JSON.stringify({
+              layer: 'meta',
+              schemaVersion: 1,
+              generatedAt: '',
+              total: 1,
+              buckets: ['sp'],
+              species: [
+                {
+                  id: 'sp-01',
+                  nameZh: '甲鸟',
+                  nameSci: 'A avis',
+                  family: 'F',
+                  commonness: 2,
+                  playableImage: true,
+                  playableAudio: true,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        if (u.includes('data/assets/sp.json')) {
+          return new Response(
+            JSON.stringify({ layer: 'assets', bucket: 'sp', species: { 'sp-01': { images: [img], audios: [aud] } } }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        return new Response('nope', { status: 404 })
+      }),
+    )
+    await loadBank() // 建立 buckets 索引
+    const noMedia: BankSpecies = {
+      id: 'sp-01',
+      nameZh: '甲鸟',
+      nameSci: 'A avis',
+      family: 'F',
+      commonness: 2,
+      desc: '',
+      location: '',
+      habit: '',
+      image: null,
+      audio: null,
+      playableImage: true,
+      playableAudio: true,
+    }
+    const qs = await buildQuestions([noMedia], { type: 'image', count: 1 })
+    expect(qs).toHaveLength(1)
+    expect(qs[0]!.media.url).toBe(img.url)
+    expect(qs[0]!.crossAssets?.[0]?.url).toBe(aud.url)
   })
 })

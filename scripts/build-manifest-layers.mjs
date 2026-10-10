@@ -191,7 +191,17 @@ export async function writeManifestLayers(manifest, opts = {}) {
   const stats_note = {}
 
   const core = toCore(manifest)
-  const buckets = splitLargeBuckets(toAssetBuckets(manifest))
+  // 全球采集台账（raw，含 1+1 素材）；S6 起 assets 分片要覆盖**全量可玩种**。
+  let rawLedger = null
+  try {
+    rawLedger = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
+  } catch {
+    rawLedger = null // 无台账：分片仅覆盖 core（旧行为，不报错）
+  }
+  // S6：assets 覆盖 core（5+5）+ 全球台账（1+1）的并集 →
+  // 前端只需 meta（名单）+ assets（媒体）即可出题，不再 core+global 拼接。
+  const assetSource = { species: [...(manifest.species || []), ...(rawLedger?.species || [])] }
+  const buckets = splitLargeBuckets(toAssetBuckets(assetSource))
   const bucketNames = Object.keys(buckets).sort()
   core.buckets = bucketNames // 以实际分片为准(大桶拆分后桶名可能与首字母不同)
   const coreText = JSON.stringify(core)
@@ -216,8 +226,8 @@ export async function writeManifestLayers(manifest, opts = {}) {
 
   let global = null
   try {
-    const g = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
-    global = toGlobalPool(g)
+    if (!rawLedger) throw new Error('无台账')
+    global = toGlobalPool(rawLedger)
     // 029 M2:全球池的 commonness 用骨架合成值覆盖台账占位值(台账采集期统一填 2)。
     // 按 nameSci 精确联表(骨架 11,131 种全覆盖,含台账全部物种)。
     try {
@@ -250,13 +260,7 @@ export async function writeManifestLayers(manifest, opts = {}) {
     const orderOfByKey = new Map(idx.species.map((e) => [e.taxonKey, e.order]).filter(([k]) => k))
     const orderOf = { get: (k) => orderOfByKey.get(k) || orderOfBySci.get(k) }
     let ledger = global ? JSON.parse(JSON.stringify(global)) : { species: [] }
-    let raw = null
-    try {
-      raw = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
-      ledger = raw
-    } catch {
-      /* 无台账：用 global.min（只有首图首音，字段仍在） */
-    }
+    if (rawLedger) ledger = rawLedger
     // 050 P3：GBIF usageKey 缓存（离线；缺失时只是不填 taxonId，不报错）
     const usageKeys = await loadGbifUsageKeys()
     // 051 S2：生活型台账（data/class-records.json；缺失/为空 → 全部物种不挂 group6，UI 不显示）
@@ -270,6 +274,22 @@ export async function writeManifestLayers(manifest, opts = {}) {
       classTable = null
     }
     const meta = toMeta(manifest, ledger, orderOf, usageKeys, classTable)
+    // S6：把 assets 最终分片清单挂到 meta —— 前端只用 meta（名单 + 分片索引）
+    // + assets（媒体）即可解析全量物种的媒体，无需 core/global 的 buckets。
+    meta.buckets = bucketNames
+    // S6：全量可玩口径（不再区分 core/global；FAQ / 首页统计用）
+    const withImg = meta.species.filter((s) => s.playableImage === true).length
+    const withAud = meta.species.filter((s) => s.playableAudio === true).length
+    const uniqueConcepts = new Set(meta.species.map((s) => s.taxonKey).filter(Boolean)).size
+    meta.universe = {
+      total: meta.total,
+      withImage: withImg,
+      withAudio: withAud,
+      imageOnly: meta.species.filter((s) => s.playableImage === true && s.playableAudio !== true).length,
+      audioOnly: meta.species.filter((s) => s.playableAudio === true && s.playableImage !== true).length,
+      withNameZh: meta.species.filter((s) => s.nameZh).length,
+      notCovered: Math.max(0, idx.species.length - uniqueConcepts),
+    }
     metaBytes = Buffer.byteLength(JSON.stringify(meta))
     metaTotal = meta.total
     stats_note.meta = meta.stats

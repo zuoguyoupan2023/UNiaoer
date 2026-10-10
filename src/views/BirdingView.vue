@@ -13,7 +13,6 @@ import { useI18n } from 'vue-i18n'
 import { ChevronDown, Crosshair, Globe2, MapPin, Search } from 'lucide-vue-next'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
-import { loadGlobalPool } from '@/core/globalPool'
 import {
   buildCountryIndex,
   countriesInContinent,
@@ -201,15 +200,13 @@ interface GridItem {
   bankId: string | null
 }
 /**
- * 029 M2:全球池懒加载(11k 可玩池,1 图 1 音/种)。
- * 「可玩」判定改用合并后的 playable——核心库或全球池任一带素材即可玩。
+ * S6：名单统一到 bank（权威层 meta，10,844 种，唯一源）。
+ * 「可玩」判定改用合并后的 playable——名单内任一带素材即可玩。
  */
-const globalPool = ref<BankSpecies[] | null>(null)
-void loadGlobalPool().then((p) => (globalPool.value = p))
-/** 短码 → 全球池条目(用于徽标/缩略图;排除质量降级种) */
+/** 短码 → 物种条目（用于徽标/缩略图；排除质量降级种） */
 const poolByCode = computed<Map<string, BankSpecies>>(() => {
   const m = new Map<string, BankSpecies>()
-  for (const sp of globalPool.value ?? []) {
+  for (const sp of bank.value?.species ?? []) {
     if (sp.taxonKey && !sp.quizExcluded) m.set(shortCodeOf(sp.taxonKey), sp)
   }
   return m

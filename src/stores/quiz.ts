@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MediaType, NameMode, Question, QuizRegime, Tier } from '@/types'
-import { loadBank, registerSpecies, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
-import { assetsOf, buildQuestions } from '@/core/questionEngine'
+import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
+import { buildQuestions, speciesPlayable } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
 import { regionTierMap } from '@/core/provinceCommonness'
@@ -104,27 +104,17 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
 }
 
 /**
- * 029 M2:合入全球池（懒加载；失败静默回退核心 1299）。
+ * S6：出题名单 = **权威层 meta（唯一源）**，不再 core（1,299）+ 全球池（9,545）拼接。
  * 只收「可玩」物种（图/音任一有素材，且未被质量降级 quizExcluded）。
- * 地区过滤（D-029-2）：L1–L3 走地区包（用户地区偏好），L4–L5 全球开放。
+ * 地区过滤（D-029-2）：L1–L3 走地区（元数据按国家区系过滤），L4–L5 全球开放。
  */
 async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
   const bank = await loadBank()
-  const core = bank.species.filter(
-    (sp) => assetsOf(sp, type).length > 0 && !sp.quizExcluded,
-  )
   const settings = useSettingsStore()
   const region = tier <= 3 ? settings.region : 'ALL'
-  const global = await loadRegionalPool(region).catch(() => null)
-  if (!global?.length) return core
-  const usable = global.filter(
-    (sp) =>
-      !sp.quizExcluded &&
-      (type === 'image' ? sp.playableImage !== false && !!sp.image : sp.playableAudio !== false && !!sp.audio),
-  )
-  registerSpecies(usable) // 历史/错题本的名字解析需要
-  const seen = new Set(core.map((s) => s.id))
-  return [...core, ...usable.filter((sp) => !seen.has(sp.id))]
+  const regional = await loadRegionalPool(region).catch(() => null)
+  const list = regional ?? bank.species
+  return list.filter((sp) => !sp.quizExcluded && speciesPlayable(sp, type))
 }
 
 /** 各赛制的派生集合（按「物种 × 媒体类型」；computePool 与 regimeCounts 共用） */
@@ -254,8 +244,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
             speciesForBuild = filtered
           }
         }
-        registerSpecies(online.species)
-        if (online.distractors.length) registerSpecies(online.distractors)
       } else {
         speciesForBuild = (await poolData(type, tier.value)).species
       }
@@ -268,7 +256,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         const rm = await regionTierMap(settingsForRegion.region).catch(() => null)
         regionTiers = rm?.tiers ?? null
       }
-      const qs = buildQuestions(speciesForBuild, {
+      const qs = await buildQuestions(speciesForBuild, {
         type,
         count,
         tier: tier.value,

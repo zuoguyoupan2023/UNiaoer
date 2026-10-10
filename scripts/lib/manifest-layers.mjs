@@ -78,9 +78,11 @@ const CORE_ASSET_KEYS = [
 ]
 
 /**
- * 大桶自适应拆分(029 M1 DoD:单桶 ≤400KB):
- * 桶 JSON 超过 `maxBytes` 时,按 id 前两位字母拆成子桶(如 p → pa/pe/ph…)。
- * 确定性:同一输入必得同一输出;核心的 `buckets` 列出**最终**桶名,前端据此解析。
+ * 大桶自适应拆分(029 M1 DoD:单桶 ≤400KB;S6 起支持**多级**拆分):
+ * 桶 JSON 超过 `maxBytes` 时按 id 前缀逐级加长拆分(如 p → pa/pe/… → paa/pab/…),
+ * 直到每片 ≤ `maxBytes` 或已拆到单物种(不可再分)。
+ * 确定性:同一输入必得同一输出;meta.buckets / core.buckets 列出**最终**桶名,前端据此解析。
+ * 前端解析用「最长前缀优先」:同一物种只需在各前缀里命中最长的一个(见 resolveBucket)。
  */
 export const BUCKET_SPLIT_THRESHOLD = 400_000
 
@@ -93,34 +95,63 @@ export function subBucketOf(id) {
   return /^[a-z]$/.test(one) ? `${one}_` : '0-9'
 }
 
+/** 前缀桶名:id 的前 `len` 个小写字符(len=1 时非字母 → '0-9') */
+export function prefixBucketOf(id, len) {
+  const s = String(id || '').toLowerCase()
+  if (len <= 1) {
+    const c = s.charAt(0)
+    return /^[a-z]$/.test(c) ? c : '0-9'
+  }
+  const p = s.slice(0, len)
+  return p || '0-9'
+}
+
 export function splitLargeBuckets(buckets, maxBytes = BUCKET_SPLIT_THRESHOLD) {
   const out = {}
+  const place = (name, entries) => {
+    out[name] = entries
+  }
+  /** @param {Record<string,object>} entries @param {string} fallbackName @param {number} len */
+  const recurse = (entries, fallbackName, len) => {
+    const ids = Object.keys(entries)
+    if (JSON.stringify(entries).length <= maxBytes || ids.length <= 1 || len > 8) {
+      place(fallbackName, entries)
+      return
+    }
+    const byPrefix = {}
+    for (const id of ids) {
+      const key = prefixBucketOf(id, len)
+      ;(byPrefix[key] ??= {})[id] = entries[id]
+    }
+    // 拆不动(前缀没变化)→ 落盘,避免死循环
+    if (Object.keys(byPrefix).length <= 1) {
+      place(fallbackName, entries)
+      return
+    }
+    for (const [key, sub] of Object.entries(byPrefix)) recurse(sub, key, len + 1)
+  }
   for (const [name, entries] of Object.entries(buckets)) {
-    const text = JSON.stringify(entries)
-    if (text.length <= maxBytes || name === '0-9') {
-      out[name] = entries
+    if (name === '0-9' || JSON.stringify(entries).length <= maxBytes) {
+      place(name, entries)
       continue
     }
-    for (const [id, entry] of Object.entries(entries)) {
-      const sub = subBucketOf(id)
-      if (!out[sub]) out[sub] = {}
-      out[sub][id] = entry
-    }
+    recurse(entries, name, 2)
   }
   return out
 }
 
 /**
- * 前端(与 core.buckets 配合)解析某物种的素材分片名:
- * 先试两位子桶,再试一位桶;都不在 buckets 清单时回退一位桶名(容错)。
+ * 前端(与 meta.buckets 配合)解析某物种的素材分片名:
+ * **最长前缀优先**——多级拆分后桶名可能 2/3/4… 位,命中最长者即为该物种所在片。
  */
 export function resolveBucket(id, knownBuckets) {
   const set = knownBuckets instanceof Set ? knownBuckets : new Set(knownBuckets || [])
-  const two = subBucketOf(id)
-  if (set.has(two)) return two
-  const one = bucketOf(id)
-  if (set.has(one)) return one
-  return one
+  const s = String(id || '').toLowerCase()
+  for (let len = 8; len >= 1; len--) {
+    const p = prefixBucketOf(s, len)
+    if (set.has(p)) return p
+  }
+  return set.has('0-9') ? '0-9' : prefixBucketOf(s, 1)
 }
 
 /** 桶名:物种 id 首字符是 a-z 用它,否则 '0-9' */

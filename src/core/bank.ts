@@ -1,4 +1,5 @@
 import type { MediaAsset } from '@/types'
+import { loadMeta, _resetMetaCache } from './meta'
 
 /** 答疑专栏说明（011 §9）：物种 id → 图文说明，双语；构建期并入 manifest */
 export interface SpeciesNote {
@@ -91,13 +92,16 @@ export interface Manifest {
   stats: { withImage: number; withAudio: number }
   species: BankSpecies[]
   /** 029 M1 分层:core 层带实际分片清单与层级标记(旧完整层无此字段) */
-  layer?: 'core' | 'global'
+  layer?: 'core' | 'global' | 'meta'
   buckets?: string[]
   schemaVersion?: number
-  /** 029 M2:全量可玩口径(核心+全球,构建期烘焙;旧部署无此字段时回退本层 stats) */
+  /**
+   * 029 M2 / S6:全量可玩口径（构建期烘焙）。
+   * S6 统一到 meta 后不再区分 core/global（故 coreTotal/globalTotal 可选）。
+   */
   universe?: {
-    coreTotal: number
-    globalTotal: number
+    coreTotal?: number
+    globalTotal?: number
     total: number
     withImage: number
     withAudio: number
@@ -121,15 +125,17 @@ const bucketLoaded = new Set<string>()
 /** 分片请求进行中的 Promise(并发去重:多个视图同时要同桶只发一次) */
 const bucketInflight = new Map<string, Promise<void>>()
 
-/** 029 M1:由 core.buckets 与 id 解析分片名(两位子桶优先,回退一位桶)。 */
+/** 029 M1 / S6:由 buckets 清单与 id 解析分片名(**最长前缀优先**,支持多级拆分)。 */
 function bucketNameFor(id: string): string {
   const buckets = cache?.buckets
   if (!buckets || !buckets.length) return ''
+  const set = new Set(buckets)
   const s = String(id || '').toLowerCase()
-  const two = s.slice(0, 2)
-  if (/^[a-z][a-z0-9]$/.test(two) && buckets.includes(two)) return two
-  const one = /^[a-z]$/.test(s.charAt(0)) ? s.charAt(0) : '0-9'
-  return buckets.includes(one) ? one : ''
+  for (let len = 8; len >= 1; len--) {
+    const p = len === 1 ? (/^[a-z]$/.test(s.charAt(0)) ? s.charAt(0) : '0-9') : s.slice(0, len) || '0-9'
+    if (set.has(p)) return p
+  }
+  return set.has('0-9') ? '0-9' : ''
 }
 
 /**
@@ -327,12 +333,44 @@ async function fetchManifest(url: string): Promise<Manifest> {
 }
 
 /**
- * 加载题库。029 M1 起优先加载分层产物 core（名录 + 首图首音，约 1.7MB，
- * 取代原先 12MB 完整 manifest）；core 不存在时回退完整 manifest（旧部署/离线夹具兼容）。
- * 生产环境优先走 Worker 的 `/api/manifest`（B3），失败自动回退静态文件。
+ * 加载题库。**S6 起以权威层 `manifest-meta.json` 为唯一名单源**（10,844 种）——
+ * 不再 core（1,299）+ 全球池（9,545）拼接。媒体不含在名单里，按需走 `assets` 分片
+ * （`loadSpeciesAssets`）。
+ *
+ * 过渡期回退：meta 不可用（未部署/离线夹具）时，退回旧 core → 完整 manifest 链路，
+ * 保证可用性；这些旧文件在 P5 退役。
  */
 export async function loadBank(): Promise<Manifest> {
   if (cache) return cache
+  // ① 权威层（唯一名单源；与 meta.ts 共用缓存，避免重复下载——index.html preload 的也是它）
+  try {
+    const meta = await loadMeta()
+    if (meta?.species?.length) {
+      const species = meta.species as unknown as BankSpecies[]
+      cache = {
+        generatedAt: meta.generatedAt,
+        policy: meta.policy ?? '',
+        mediaMode: 'sharded',
+        total: meta.total,
+        stats: {
+          withImage: species.filter((s) => s.playableImage === true || !!s.image || !!s.images?.length)
+            .length,
+          withAudio: species.filter((s) => s.playableAudio === true || !!s.audio || !!s.audios?.length)
+            .length,
+        },
+        species,
+        layer: 'meta',
+        buckets: meta.buckets,
+        schemaVersion: meta.schemaVersion,
+        universe: meta.universe,
+      }
+      buildSpeciesIndex(cache)
+      return cache
+    }
+  } catch {
+    /* 回退旧链路 */
+  }
+  // ② 过渡回退：旧 core → 完整 manifest
   const base = import.meta.env.BASE_URL
   const coreUrl = `${base}data/manifest-core.json`
   const staticUrl = `${base}data/manifest.json`
@@ -363,4 +401,5 @@ export function _resetBankCache() {
   assetCache.clear()
   bucketLoaded.clear()
   bucketInflight.clear()
+  _resetMetaCache()
 }

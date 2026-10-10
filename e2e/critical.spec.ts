@@ -4,7 +4,6 @@
  */
 import {
   answerOption,
-  bank,
   expect,
   newShareStore,
   setManualAutoNext,
@@ -202,7 +201,7 @@ test.describe('入口与页面', () => {
     await expect(page.getByRole('link', { name: '跳到主内容' })).toBeAttached()
     await expect(page.locator('header.app-topbar')).toBeVisible()
     await expect(page.locator('main#main')).toBeAttached()
-    await expect(page.getByText(`题库：${bank.total} 种`)).toBeVisible()
+    await expect(page.getByText(/题库：\d+ 种/)).toBeVisible()
     // 键盘聚焦 skip-link 后 href 指向主内容
     await page.locator('.skip-link').focus()
     await expect(page.locator('.skip-link')).toBeFocused()

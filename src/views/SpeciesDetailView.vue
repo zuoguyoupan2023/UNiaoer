@@ -13,7 +13,6 @@ import {
   type Manifest,
 } from '@/core/bank'
 import { loadMeta, metaSpecies, type MetaSpecies } from '@/core/meta'
-import { globalPoolReady } from '@/core/globalPool'
 import { currentLocale } from '@/i18n'
 import { loadSeasonality, seasonalityOf, type SeasonalityData } from '@/core/seasonality'
 import { REGION_LABEL_KEY } from '@/core/region'
@@ -54,37 +53,16 @@ onMounted(() => {
   ensureBank()
   // 季节性数据（021 M1）：按需加载，失败/缺失则整块不显示
   void loadSeasonality().then((d) => (seasonData.value = d))
-  // 050 P2：全球池（11MB 懒加载）——只有 core 未命中时才需要（详情页拿全球种的媒体）
-  void loadBank()
-    .then(() => import('@/core/globalPool').then((m) => m.loadGlobalPool()))
-    .catch(() => null)
-    .finally(() => {
-      poolReady.value = true // 非响应式缓存需要一个显式触发点
-    })
 })
 watch(() => route.params.speciesId, ensureBank)
 
 /**
- * 050 P2：物种解析改为**三级**——core（含首图首音）→ 全球池（含首图首音）→ 权威层（元数据）。
- *
- * 效果：此前 9,545 种因只在 core 里 find 而一律落到「轻量详情」空壳页；
- * 现在它们会命中权威层的元数据，并从全球池取到自己的首图首音 → 走**完整详情模板**
- * （hero 图 / 音频 / 逐条署名 / 类群 / 分布）。
- *
- * 注意顺序：**媒体来源优先用 core 或全球池的真实条目**（它们带 image/audio），
- * 权威层刻意不含媒体，只补 profile/notes/taxonId 等元数据。
+ * S6：物种解析统一到**权威层 meta**（10,844 种，唯一名单源）。
+ * 剧照/音频走 `assets` 分片（下方 `fullAssets` 懒加载），meta 本身不含媒体。
  */
 const coreSpecies = computed<BankSpecies | undefined>(() =>
   bank.value?.species.find((sp) => sp.id === route.params.speciesId),
 )
-/** 全球池条目（9,545 种，懒加载后才有；未加载时回退 core） */
-const poolSpecies = computed<BankSpecies | undefined>(() => {
-  const id = String(route.params.speciesId ?? '')
-  if (!poolReady.value) return coreSpecies.value
-  return (globalPoolReady() ?? []).find((sp) => sp.id === id) ?? coreSpecies.value
-})
-/** 全球池是否已加载（模块级缓存非响应式，需一个 ref 让 computed 重算） */
-const poolReady = ref(false)
 /** 权威层元数据（10,844 种，唯一的名称/科目/profile/notes 口径）。
  *  `metaReadyFlag` 参与依赖：`meta.ts` 的索引是模块级 Map（非响应式），
  *  加载完成后必须靠这个 ref 触发重算，否则 computed 会一直返回缓存的 undefined。 */
@@ -93,11 +71,11 @@ const metaEntry = computed<MetaSpecies | undefined>(() =>
 )
 
 const species = computed<BankSpecies | undefined>(() => {
-  const pool = poolSpecies.value
   const m = metaEntry.value
-  if (!pool && !m) return undefined
-  // 池条目带媒体；权威层带元数据 → 合并成一个对象喂给既有模板
-  return { ...m, ...pool } as BankSpecies
+  const c = coreSpecies.value
+  if (!m && !c) return undefined
+  // meta 带元数据；core（过渡回退）带首图首音 → 合并；媒体统一由 fullAssets 补
+  return { ...m, ...c } as BankSpecies
 })
 const seasonEntry = computed(() =>
   seasonalityOf(seasonData.value, String(route.params.speciesId)),
@@ -162,7 +140,7 @@ async function resolveLite(id: string) {
 }
 
 watch(
-  [() => route.params.speciesId, bank, metaReadyFlag, poolReady],
+  [() => route.params.speciesId, bank, metaReadyFlag],
   ([id]) => {
     if (species.value) {
       liteEntry.value = null

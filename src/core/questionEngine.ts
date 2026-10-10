@@ -1,5 +1,5 @@
 import type { MediaAsset, MediaType, NameMode, Question, Tier } from '@/types'
-import { speciesName, type BankSpecies } from './bank'
+import { speciesName, loadSpeciesAssets, type BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
 
@@ -121,8 +121,33 @@ export function assetsOf(sp: BankSpecies, type: MediaType): MediaAsset[] {
   return single ? [single] : []
 }
 
+/**
+ * 某物种在该题型下**是否可玩**（有可用媒体）。
+ * S6：名单来自 meta（不含媒体），故先看内联素材，无则看 `playableImage/playableAudio` 标记
+ * （构建期已按「有图/有音」烘焙）。真正的素材在 `ensureMedia` 里按需从 assets 分片取。
+ */
+export function speciesPlayable(sp: BankSpecies, type: MediaType): boolean {
+  const inline = type === 'image' ? sp.images?.length || (sp.image ? 1 : 0) : sp.audios?.length || (sp.audio ? 1 : 0)
+  if (inline) return true
+  return type === 'image' ? sp.playableImage === true : sp.playableAudio === true
+}
+
 function mediaPool(bank: BankSpecies[], type: MediaType): BankSpecies[] {
-  return bank.filter((s) => assetsOf(s, type).length > 0)
+  return bank.filter((s) => speciesPlayable(s, type))
+}
+
+/** S6：为出题种补齐素材——内联缺失时按需从 assets 分片取（分片含 images+audios 全部）。 */
+async function ensureMedia(sp: BankSpecies, type: MediaType): Promise<BankSpecies> {
+  if (assetsOf(sp, type).length) return sp
+  const a = await loadSpeciesAssets(sp.id).catch(() => null)
+  if (!a) return sp
+  return {
+    ...sp,
+    images: a.images ?? sp.images,
+    audios: a.audios ?? sp.audios,
+    image: a.images?.[0] ?? sp.image ?? null,
+    audio: a.audios?.[0] ?? sp.audio ?? null,
+  }
 }
 
 /**
@@ -182,7 +207,7 @@ export function filterByNameMode(list: BankSpecies[], mode: NameMode): BankSpeci
   return list.filter((s) => usableInNameMode(s, mode))
 }
 
-export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Question[] {
+export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Promise<Question[]> {
   const {
     type,
     count = 10,
@@ -248,7 +273,9 @@ export function buildQuestions(bank: BankSpecies[], opts: BuildOptions): Questio
   const picked = shuffle(unique).slice(0, Math.min(count, unique.length))
 
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
-  return picked.map((sp, i) => {
+  // S6：名单（meta）不含媒体 → 只对**入选的**物种按需拉取 assets 分片（在线路径已带媒体则跳过）
+  const enriched = await Promise.all(picked.map((sp) => ensureMedia(sp, type)))
+  return enriched.map((sp, i) => {
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractorPairs(
       sp,
