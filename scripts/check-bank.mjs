@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * A3 构建后一致性校验
- * 校验 public/data/manifest.json 的结构与媒体地址归属：
- *   1) 结构：total/stats 与实际一致；媒体必须带完整署名（author/license/source/sourceUrl）
- *   2) 归属：媒体 URL 必须指向 R2 公开域名（防止 Pages 构建跑 bank 覆盖成 remote 版 manifest）
- *   3) 抽查：随机抽 N 个 R2 媒体 HEAD 一次，期望 200（可用 --no-net 跳过）
+ * A3 / S6：构建后一致性校验 —— **权威层 meta + 全量 assets 分片**。
+ *   1) 结构：meta.total/stats 与实际一致；id 唯一；基础字段齐备（中文名可缺）。
+ *   2) 可玩：meta 的 playableImage/playableAudio 与 assets 分片实际素材一致。
+ *   3) 署名与归属：每条素材必须带完整署名（author/license/source/sourceUrl）；
+ *      媒体 URL 必须指向 R2 公开域名（防 Pages 构建跑 bank 覆盖成 remote 版）。
+ *   4) 抽查：随机抽 N 个 R2 媒体 HEAD 一次，期望 200（--no-net 跳过）。
  *
- * 用法：node scripts/check-bank.mjs [--public-base https://… ] [--max-source 8]
- *                 [--sample 5] [--no-net] [--manifest public/data/manifest.json]
+ * 用法：node scripts/check-bank.mjs [--public-base https://… ] [--max-source 8] [--sample 5] [--no-net]
  * 环境变量：R2_PUBLIC_BASE（也可写在 .env）
- * 退出码：0 全部通过；1 存在问题（详情见输出）
+ * 退出码：0 全部通过；1 存在问题
  */
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
@@ -19,11 +19,8 @@ import { parseArgs, loadEnv } from './lib/util.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = parseArgs(process.argv.slice(2))
-
 await loadEnv(path.join(ROOT, '.env'))
 
-// 与 SUMMARY §3.7 对应： Pages 构建若误跑 bank 会生成 remote 版 manifest（URL 指向源站），
-// 这里默认按仓库里提交的 R2 域名断言；域名变更时用 --public-base / R2_PUBLIC_BASE 覆盖。
 const DEFAULT_PUBLIC_BASE = 'https://bird.wewalk.world'
 let PUBLIC_BASE = String(args['public-base'] || process.env.R2_PUBLIC_BASE || DEFAULT_PUBLIC_BASE)
 if (!/^https?:\/\//i.test(PUBLIC_BASE)) PUBLIC_BASE = 'https://' + PUBLIC_BASE
@@ -31,24 +28,14 @@ PUBLIC_BASE = PUBLIC_BASE.replace(/\/$/, '')
 const MAX_SOURCE_URL = args['max-source'] ? Number(args['max-source']) : 8
 const SAMPLE = args.sample ? Number(args.sample) : 5
 const DO_NET = !args['no-net']
-const MANIFEST = path.resolve(ROOT, args.manifest || 'public/data/manifest.json')
 
+const DATA = path.join(ROOT, 'public/data')
 const problems = []
 const warn = []
 const fail = (msg) => problems.push(msg)
 
 function isR2Url(url) {
   return url.startsWith(`${PUBLIC_BASE}/`)
-}
-
-/** 物种的全部素材（manifest v2 多素材优先，兼容单张 image/audio） */
-function assetsOf(sp) {
-  const images = sp.images && sp.images.length ? sp.images : sp.image ? [sp.image] : []
-  const audios = sp.audios && sp.audios.length ? sp.audios : sp.audio ? [sp.audio] : []
-  return [
-    ...images.map((a) => ({ a, kind: 'image' })),
-    ...audios.map((a) => ({ a, kind: 'audio' })),
-  ]
 }
 
 async function headOk(url) {
@@ -63,155 +50,134 @@ async function headOk(url) {
   }
 }
 
-// ---- 1. 结构 ----
-let manifest
+const readJson = async (p) => JSON.parse(await fs.readFile(p, 'utf8'))
+
+// ---- 0. 读取 meta + assets ----
+let meta
 try {
-  manifest = JSON.parse(await fs.readFile(MANIFEST, 'utf8'))
+  meta = await readJson(path.join(DATA, 'manifest-meta.json'))
 } catch (e) {
-  console.error(`❌ 无法读取 manifest（${MANIFEST}）：${e.message}`)
+  console.error(`❌ 无法读取 manifest-meta.json：${e.message}`)
   process.exit(1)
 }
+const assetFiles = (await fs.readdir(path.join(DATA, 'assets')).catch(() => [])).filter((f) => f.endsWith('.json'))
+const assetById = new Map()
+for (const f of assetFiles) {
+  const doc = await readJson(path.join(DATA, 'assets', f))
+  for (const [id, e] of Object.entries(doc.species || {})) {
+    assetById.set(id, { images: e.images || [], audios: e.audios || [] })
+  }
+}
 
-if (!Array.isArray(manifest.species) || !manifest.species.length) {
-  fail('species 为空或不是数组')
+// ---- 1. 结构 ----
+if (!Array.isArray(meta.species) || !meta.species.length) {
+  fail('meta.species 为空或不是数组')
 } else {
-  if (manifest.total !== manifest.species.length) {
-    fail(`total(${manifest.total}) 与 species.length(${manifest.species.length}) 不一致`)
+  if (meta.total !== meta.species.length) {
+    fail(`total(${meta.total}) 与 species.length(${meta.species.length}) 不一致`)
   }
-  const withImage = manifest.species.filter((s) => s.image).length
-  const withAudio = manifest.species.filter((s) => s.audio).length
-  if (manifest.stats?.withImage !== withImage) {
-    fail(`stats.withImage(${manifest.stats?.withImage}) 与实际(${withImage}) 不一致`)
-  }
-  if (manifest.stats?.withAudio !== withAudio) {
-    fail(`stats.withAudio(${manifest.stats?.withAudio}) 与实际(${withAudio}) 不一致`)
-  }
-  const imageCount = manifest.species.reduce((n, s) => n + (s.images ? s.images.length : 0), 0)
-  const audioCount = manifest.species.reduce((n, s) => n + (s.audios ? s.audios.length : 0), 0)
-  if (manifest.stats?.imageCount != null && manifest.stats.imageCount !== imageCount) {
-    fail(`stats.imageCount(${manifest.stats.imageCount}) 与实际(${imageCount}) 不一致`)
-  }
-  if (manifest.stats?.audioCount != null && manifest.stats.audioCount !== audioCount) {
-    fail(`stats.audioCount(${manifest.stats.audioCount}) 与实际(${audioCount}) 不一致`)
-  }
-
   const seenIds = new Set()
+  let badPlayable = 0
   let missOriginal = 0
   let missSourceId = 0
-  let badPlayable = 0
-  for (const sp of manifest.species) {
-    if (!sp.id || !sp.nameZh || !sp.nameSci || !sp.family) {
-      fail(`物种缺少基础字段：${sp.id || sp.nameZh || JSON.stringify(sp).slice(0, 60)}`)
+  let withImg = 0
+  let withAud = 0
+  for (const sp of meta.species) {
+    // 中文名可缺（长尾全球种约半数无中文名）；id/学名/科必填
+    if (!sp.id || !sp.nameSci || !sp.family) {
+      fail(`物种缺少基础字段：${sp.id || sp.nameSci || JSON.stringify(sp).slice(0, 60)}`)
     }
     if (seenIds.has(sp.id)) fail(`物种 id 重复：${sp.id}`)
     seenIds.add(sp.id)
 
-    // 023 P2(D-023-3 拆维度):playable* 静态基线与素材计数一致(playable=图或音可用)
-    const pi = (sp.images ? sp.images.length : 0) >= 1
-    const pa = (sp.audios ? sp.audios.length : 0) >= 1
-    if (sp.playableImage !== undefined && (sp.playableImage !== pi || sp.playableAudio !== pa || sp.playable !== (pi || pa))) {
+    const e = assetById.get(sp.id)
+    const pi = (e?.images?.length || 0) >= 1
+    const pa = (e?.audios?.length || 0) >= 1
+    if (pi) withImg++
+    if (pa) withAud++
+    if (sp.playableImage !== pi || sp.playableAudio !== pa || sp.playable !== (pi || pa)) {
       badPlayable++
       if (badPlayable <= 5) fail(`playable* 与素材不一致：${sp.id}(image ${sp.playableImage}/${pi} audio ${sp.playableAudio}/${pa})`)
     }
 
-    // 029 M3(D-029-5):quizExcluded 必须是布尔且只在"有素材"时出现
-    // （无素材的种本就 playable=false，不属于"降级"；降级语义 = 有素材但不进题库）
-    if (sp.quizExcluded !== undefined) {
-      if (typeof sp.quizExcluded !== 'boolean') fail(`quizExcluded 非布尔：${sp.id}`)
-      else if (sp.quizExcluded && !pi && !pa) fail(`quizExcluded 但本就无素材（应省略该字段）：${sp.id}`)
-    }
-
-    // 答疑专栏说明（011 §9）：出现时四字段（中英标题+正文）必须为非空字符串
+    // 答疑专栏说明（011 §9）：出现时四字段必须非空
     if (sp.notes) {
       for (const f of ['titleZh', 'titleEn', 'bodyZh', 'bodyEn']) {
         const v = sp.notes[f]
         if (typeof v !== 'string' || !v.trim()) fail(`${sp.id}.notes.${f} 缺失或为空`)
       }
     }
-
-    // 物种档案（C1）：类群/居留型枚举合法，分布国家码为非空字符串数组
+    // 物种档案（C1）：枚举合法
     if (sp.profile) {
       const { group, migration, distribution } = sp.profile
-      if (group && !['waterbird', 'raptor', 'landbird'].includes(group)) {
-        fail(`${sp.id}.profile.group 非法：${group}`)
-      }
+      if (group && !['waterbird', 'raptor', 'landbird'].includes(group)) fail(`${sp.id}.profile.group 非法：${group}`)
       if (migration && !['resident', 'summer', 'winter', 'passage', 'migrant', 'vagrant'].includes(migration)) {
         fail(`${sp.id}.profile.migration 非法：${migration}`)
       }
-      if (distribution && typeof distribution.count !== 'number') {
-        fail(`${sp.id}.profile.distribution.count 不是数字`)
+      if (distribution && typeof distribution.count !== 'number') fail(`${sp.id}.profile.distribution.count 不是数字`)
+    }
+  }
+  if (badPlayable > 5) fail(`playable* 与素材不一致共 ${badPlayable} 处（仅列前 5）`)
+
+  // universe 口径与 assets 实际一致
+  if (meta.universe) {
+    if (meta.universe.withImage !== withImg) fail(`universe.withImage(${meta.universe.withImage}) ≠ 分片实际(${withImg})`)
+    if (meta.universe.withAudio !== withAud) fail(`universe.withAudio(${meta.universe.withAudio}) ≠ 分片实际(${withAud})`)
+  }
+
+  // ---- 2. 署名 + 归属（逐条素材） ----
+  const nonR2 = []
+  const sampleUrls = []
+  for (const [id, e] of assetById) {
+    for (const [kind, list] of [['image', e.images], ['audio', e.audios]]) {
+      for (const a of list) {
+        if (!a.url) fail(`${id}.${kind} 缺少 url`)
+        for (const f of ['license', 'author', 'source', 'sourceUrl']) {
+          if (!a[f]) fail(`${id}.${kind} 署名缺少 ${f}（CC 合规要求）`)
+        }
+        if (!a.originalUrl) missOriginal++
+        if (!a.sourceId) missSourceId++
+        for (const field of ['url', 'thumbUrl', 'xlUrl', 'avifUrl']) {
+          const u = a[field]
+          if (u && !isR2Url(u)) nonR2.push(`${id}.${kind}.${field}: ${u}`)
+        }
+        if (a.url && isR2Url(a.url)) sampleUrls.push(a.url)
       }
     }
+  }
+  if (missOriginal) warn.push(`有 ${missOriginal} 个素材缺少 originalUrl（重跑 M3 后应归零）`)
+  if (missSourceId) warn.push(`有 ${missSourceId} 个素材缺少 sourceId（可接受但建议补）`)
+  if (nonR2.length > MAX_SOURCE_URL) {
+    fail(`非 R2 媒体地址 ${nonR2.length} 个，超过阈值 ${MAX_SOURCE_URL}（疑似被 remote 版覆盖）`)
+    nonR2.slice(0, 5).forEach((u) => fail(`  · ${u}`))
+  } else if (nonR2.length) {
+    warn.push(`非 R2 媒体地址 ${nonR2.length} 个（源站 404 保留原址，可接受）`)
+  }
 
-    for (const { a, kind } of assetsOf(sp)) {
-      if (!a.url) fail(`${sp.id}.${kind} 缺少 url`)
-      for (const f of ['license', 'author', 'source', 'sourceUrl']) {
-        if (!a[f]) fail(`${sp.id}.${kind} 署名缺少 ${f}（CC 合规要求）`)
+  // ---- 3. 抽查 ----
+  let checked = 0
+  let bad = 0
+  if (DO_NET) {
+    const picked = [...sampleUrls].sort(() => Math.random() - 0.5).slice(0, Math.max(0, SAMPLE))
+    console.log(`🌐 抽查 ${picked.length}/${sampleUrls.length} 个 R2 媒体…`)
+    for (const url of picked) {
+      checked++
+      if (!(await headOk(url))) {
+        bad++
+        fail(`R2 媒体不可达（HEAD 非 2xx）：${url}`)
       }
-      // M3 溯源字段（011 §5）：构建脚本必写 originalUrl/sourceId；
-      // 旧版 manifest 尚无这些字段，故此处只告警不硬失败（重建 M3 后应归零）。
-      if (!a.originalUrl) missOriginal++
-      if (!a.sourceId) missSourceId++
     }
   }
-  if (missOriginal) {
-    warn.push(`有 ${missOriginal} 个素材缺少 originalUrl（旧版 manifest；重跑 M3 后应归零）`)
-  }
-  if (missSourceId) {
-    warn.push(`有 ${missSourceId} 个素材缺少 sourceId（覆盖表/无 id 源，可接受但建议补）`)
-  }
-  if (badPlayable > 5) {
-    fail(`playable* 与素材不一致共 ${badPlayable} 处（仅列前 5）`)
-  }
-}
 
-// ---- 2. 归属：媒体 URL 必须是 R2 公开域名 ----
-const nonR2 = []
-for (const sp of manifest.species) {
-  for (const { a, kind } of assetsOf(sp)) {
-    for (const field of ['url', 'thumbUrl', 'xlUrl', 'avifUrl']) {
-      const u = a[field]
-      if (u && !isR2Url(u)) nonR2.push(`${sp.id}.${kind}.${field}: ${u}`)
-    }
+  // ---- 汇总 ----
+  for (const w of warn) console.log(`⚠️  ${w}`)
+  if (problems.length) {
+    console.error(`\n❌ 一致性校验未通过（${problems.length} 项）：`)
+    problems.forEach((p) => console.error('   ' + p))
+    process.exit(1)
   }
+  console.log(
+    `\n✅ 一致性校验通过：${meta.total} 个物种 · ${assetFiles.length} 分片 · 媒体归属 ${PUBLIC_BASE}` +
+      (DO_NET ? `，抽查 ${checked} 个（失败 ${bad}）` : '，未联网抽查（--no-net）'),
+  )
 }
-if (nonR2.length > MAX_SOURCE_URL) {
-  fail(`非 R2 媒体地址 ${nonR2.length} 个，超过阈值 ${MAX_SOURCE_URL}（疑似被 remote 版 manifest 覆盖）`)
-  nonR2.slice(0, 5).forEach((u) => fail(`  · ${u}`))
-} else if (nonR2.length) {
-  warn.push(`非 R2 媒体地址 ${nonR2.length} 个（源站 404 保留原址，可接受）：`)
-  nonR2.forEach((u) => warn.push(`  · ${u}`))
-}
-
-// ---- 3. 抽查可达 ----
-let checked = 0
-let bad = 0
-if (DO_NET) {
-  const r2Urls = []
-  for (const sp of manifest.species) {
-    for (const { a } of assetsOf(sp)) {
-      if (a.url && isR2Url(a.url)) r2Urls.push(a.url)
-    }
-  }
-  const picked = [...r2Urls].sort(() => Math.random() - 0.5).slice(0, Math.max(0, SAMPLE))
-  console.log(`🌐 抽查 ${picked.length}/${r2Urls.length} 个 R2 媒体…`)
-  for (const url of picked) {
-    checked++
-    if (!(await headOk(url))) {
-      bad++
-      fail(`R2 媒体不可达（HEAD 非 2xx）：${url}`)
-    }
-  }
-}
-
-// ---- 汇总 ----
-for (const w of warn) console.log(`⚠️  ${w}`)
-if (problems.length) {
-  console.error(`\n❌ 一致性校验未通过（${problems.length} 项）：`)
-  problems.forEach((p) => console.error('   ' + p))
-  process.exit(1)
-}
-console.log(
-  `\n✅ 一致性校验通过：${manifest.species.length} 个物种，媒体归属 ${PUBLIC_BASE}` +
-    (DO_NET ? `，抽查 ${checked} 个（失败 ${bad}）` : '，未联网抽查（--no-net）'),
-)

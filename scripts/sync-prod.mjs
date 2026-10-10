@@ -55,20 +55,32 @@ function step(title) {
 }
 
 // ─────────────────────────────────────────────
-step('1/5 刷新分层产物（core / assets / global.min）')
+step('1/5 刷新分层产物（meta / assets）')
 // ─────────────────────────────────────────────
 {
   const { writeManifestLayers } = await import('./build-manifest-layers.mjs')
-  const manifest = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/manifest.json'), 'utf8'))
-  const stats = await writeManifestLayers(manifest)
-  if (stats.coreBytes > 1_800_000) console.warn(`⚠ core 超 1.8MB 参考线（${(stats.coreBytes / 1e6).toFixed(2)}MB）`)
+  const corePaths = [path.join(ROOT, 'data-cache/manifest-core-full.json'), path.join(ROOT, 'public/data/manifest.json')]
+  let manifest = null
+  for (const p of corePaths) {
+    try {
+      manifest = JSON.parse(await fs.readFile(p, 'utf8'))
+      break
+    } catch {
+      /* 试下一个 */
+    }
+  }
+  if (!manifest) {
+    console.error('❌ 找不到 core 完整层（data-cache/manifest-core-full.json）——先跑 npm run bank')
+    process.exit(1)
+  }
+  await writeManifestLayers(manifest)
 }
 
 // ─────────────────────────────────────────────
 step(SKIP_R2 ? '2/5 R2 上传（--skip-r2 跳过）' : '2/5 上传 R2（发布通道，--remote）')
 // ─────────────────────────────────────────────
-// 发布通道文件：题库三层 + 区系矩阵（Worker 地区过滤读它）+ 省级常见度（036 地区档位）
-const R2_FILES = ['manifest.json', 'manifest-core.json', 'manifest-global.min.json', 'species-distribution.json', 'province-commonness.json']
+// 发布通道文件：权威名录层（/api/manifest-meta 优先读）+ 区系矩阵（Worker 地区过滤读它）+ 省级常见度（036 地区档位）
+const R2_FILES = ['manifest-meta.json', 'species-distribution.json', 'province-commonness.json']
 /** 036 分片目录（Worker 按省读 `data/province-commonness/<CC>.json`；索引给前端发现） */
 const R2_PROVINCE_DIR = 'province-commonness'
 if (!SKIP_R2) {

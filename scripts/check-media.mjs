@@ -23,7 +23,6 @@ const args = parseArgs(process.argv.slice(2))
 
 await loadEnv(path.join(ROOT, '.env'))
 const BUCKET = process.env.R2_BUCKET || ''
-const MANIFEST = path.resolve(ROOT, args.manifest || 'public/data/manifest.json')
 const PUBLIC_MEDIA = path.join(ROOT, 'public/media')
 const CONCURRENCY = args.concurrency ? Number(args.concurrency) : 6
 
@@ -54,26 +53,25 @@ async function wranglerPut(key, file) {
   )
 }
 
-const manifest = JSON.parse(await fs.readFile(MANIFEST, 'utf8'))
-
-/** 物种的全部素材（manifest v2 多素材优先，兼容单张 image/audio） */
-function assetsOf(sp) {
-  const images = sp.images && sp.images.length ? sp.images : sp.image ? [sp.image] : []
-  const audios = sp.audios && sp.audios.length ? sp.audios : sp.audio ? [sp.audio] : []
-  return [
-    ...images.map((a, i) => ({ a, kind: `image-${i + 1}` })),
-    ...audios.map((a, i) => ({ a, kind: `audio-${i + 1}` })),
-  ]
-}
-
 const targets = []
-for (const sp of manifest.species) {
-  for (const { a, kind } of assetsOf(sp)) {
-    if (!a.url) continue
-    // 主文件 + 派生图（thumb/xl/avif）一并检查
-    for (const field of ['url', 'thumbUrl', 'xlUrl', 'avifUrl']) {
-      const u = a[field]
-      if (u) targets.push({ speciesId: sp.id, kind: `${kind}.${field}`, url: u })
+// P5：媒体清单来自 assets 分片（不再读已退役的 manifest.json）。
+{
+  const assetsDir = path.join(ROOT, 'public/data/assets')
+  const files = (await fs.readdir(assetsDir).catch(() => [])).filter((f) => f.endsWith('.json'))
+  for (const f of files) {
+    const doc = JSON.parse(await fs.readFile(path.join(assetsDir, f), 'utf8'))
+    for (const [id, e] of Object.entries(doc.species || {})) {
+      const list = [
+        ...(e.images || []).map((a, i) => ({ a, kind: `image-${i + 1}` })),
+        ...(e.audios || []).map((a, i) => ({ a, kind: `audio-${i + 1}` })),
+      ]
+      for (const { a, kind } of list) {
+        if (!a.url) continue
+        for (const field of ['url', 'thumbUrl', 'xlUrl', 'avifUrl']) {
+          const u = a[field]
+          if (u) targets.push({ speciesId: id, kind: `${kind}.${field}`, url: u })
+        }
+      }
     }
   }
 }

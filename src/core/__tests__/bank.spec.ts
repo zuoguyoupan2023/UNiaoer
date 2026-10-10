@@ -177,32 +177,14 @@ describe('loadBank（S6：优先权威层 meta 作唯一名单源）', () => {
     expect(calls[0]).toContain('data/manifest-meta.json')
   })
 
-  it('meta 不可用 → 回退旧 core → 完整 manifest 逐级回退', async () => {
+  it('meta 不可用 → 抛 BankError（旧 core/manifest 已退役，无回退）', async () => {
     _resetBankCache()
     vi.stubEnv('PROD', true)
-    const calls: string[] = []
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: unknown) => {
-        const u = String(input)
-        calls.push(u)
-        if (u.includes('manifest-meta')) {
-          return new Response('boom', { status: 500, headers: { 'content-type': 'text/plain' } })
-        }
-        if (u.includes('/api/') || u.includes('data/manifest-core.json')) {
-          return new Response('boom', { status: 500, headers: { 'content-type': 'text/plain' } })
-        }
-        return new Response(JSON.stringify(manifest), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        })
-      }),
+      vi.fn(async () => new Response('nope', { status: 404 })),
     )
-    const m = await loadBank()
-    expect(m.total).toBe(2)
-    expect(calls.some((u) => u.includes('manifest-meta'))).toBe(true)
-    expect(calls.some((u) => u.includes('/api/manifest-core'))).toBe(true)
-    expect(calls.some((u) => u.includes('data/manifest.json'))).toBe(true)
+    await expect(loadBank()).rejects.toMatchObject({ code: 'bankMissing' })
   })
 })
 
@@ -228,10 +210,10 @@ describe('loadSpeciesAssets（029 M1：assets 分片懒加载）', () => {
       vi.fn(async (input: unknown) => {
         const u = String(input)
         calls.push(u)
-        if (u.includes('data/manifest-core.json')) {
-          // core 带 buckets 清单(含两位子桶)
+        if (u.includes('data/manifest-meta.json')) {
+          // meta 带 buckets 清单（多级前缀桶）
           return new Response(
-            JSON.stringify({ ...manifest, layer: 'core', buckets: ['sp', 'a'] }),
+            JSON.stringify({ ...manifest, layer: 'meta', buckets: ['sp', 'a'] }),
             { status: 200, headers: { 'content-type': 'application/json' } },
           )
         }
@@ -253,7 +235,7 @@ describe('loadSpeciesAssets（029 M1：assets 分片懒加载）', () => {
     expect(calls.filter((u) => u.includes('data/assets/')).length).toBe(1)
   })
 
-  it('core 无 buckets（旧完整层）时返回 null，调用方回退 core 素材', async () => {
+  it('meta 无 buckets 时返回 null（调用方不展示分片素材）', async () => {
     _resetBankCache()
     vi.stubGlobal(
       'fetch',

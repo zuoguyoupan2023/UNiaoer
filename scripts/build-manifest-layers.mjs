@@ -15,7 +15,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { toCore, toAssetBuckets, toGlobalPool, toMeta, splitLargeBuckets } from './lib/manifest-layers.mjs'
+import { toAssetBuckets, toMeta, splitLargeBuckets } from './lib/manifest-layers.mjs'
 import { loadGbifUsageKeys } from './lib/gbif-keys.mjs'
 import { buildClassTable } from './lib/class-taxonomy.mjs'
 import { pinyinKey } from './lib/pinyin-key.mjs'
@@ -92,6 +92,8 @@ const ORDER_ZH = {
  * 由 unknownPy 回调统计拼音库未收录的字,供构建日志发现新增脏数据。
  */
 function buildCatalog(poolEntries, idx) {
+  const hasImage = (s) => !!(s.playableImage === true || s.image || s.images?.length)
+  const hasAudio = (s) => !!(s.playableAudio === true || s.audio || s.audios?.length)
   const unknownPy = new Map()
   const onUnknown = (chars) => chars.forEach((ch) => unknownPy.set(ch, (unknownPy.get(ch) || 0) + 1))
   /** 无值返回 undefined(JSON 中省略键),避免 catalog 里塞满 null */
@@ -120,7 +122,7 @@ function buildCatalog(poolEntries, idx) {
       o._fm.set(familySci, f)
       o.families.push(f)
     }
-    const rec = { id: sp.id, sci: sp.nameSci, image: !!sp.image, audio: !!sp.audio }
+    const rec = { id: sp.id, sci: sp.nameSci, image: hasImage(sp), audio: hasAudio(sp) }
     if (sp.nameEn) rec.en = sp.nameEn
     if (sp.nameZh) {
       rec.zh = sp.nameZh
@@ -151,8 +153,8 @@ function buildCatalog(poolEntries, idx) {
       familyCount++
     }
   }
-  const withImage = poolEntries.filter((s) => s.image).length
-  const withAudio = poolEntries.filter((s) => s.audio).length
+  const withImage = poolEntries.filter(hasImage).length
+  const withAudio = poolEntries.filter(hasAudio).length
   const pinyin = {
     keys: orders.reduce(
       (n, o) => n + o.families.reduce((m, f) => m + f.species.filter((s) => s.py).length, 0),
@@ -190,22 +192,21 @@ export async function writeManifestLayers(manifest, opts = {}) {
   /** 附注统计(commonness 合并数等),随 stats 返回 */
   const stats_note = {}
 
-  const core = toCore(manifest)
-  // 全球采集台账（raw，含 1+1 素材）；S6 起 assets 分片要覆盖**全量可玩种**。
+  // 全球采集台账（raw，含 1+1 素材）——S6 起 assets 分片要覆盖**全量可玩种**。
   let rawLedger = null
   try {
     rawLedger = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
   } catch {
     rawLedger = null // 无台账：分片仅覆盖 core（旧行为，不报错）
   }
+  const idx = JSON.parse(await fs.readFile(path.join(dataDir, 'species-index.json'), 'utf8'))
+
   // S6：assets 覆盖 core（5+5）+ 全球台账（1+1）的并集 →
   // 前端只需 meta（名单）+ assets（媒体）即可出题，不再 core+global 拼接。
+  // P5：不再产出 manifest-core.json / manifest-global.min.json（已退役）。
   const assetSource = { species: [...(manifest.species || []), ...(rawLedger?.species || [])] }
   const buckets = splitLargeBuckets(toAssetBuckets(assetSource))
   const bucketNames = Object.keys(buckets).sort()
-  core.buckets = bucketNames // 以实际分片为准(大桶拆分后桶名可能与首字母不同)
-  const coreText = JSON.stringify(core)
-  await writeJsonAtomic(path.join(dataDir, 'manifest-core.json'), coreText)
 
   const assetsDir = path.join(dataDir, 'assets')
   await fs.mkdir(assetsDir, { recursive: true })
@@ -224,43 +225,28 @@ export async function writeManifestLayers(manifest, opts = {}) {
     if (text.length > maxBucket.bytes) maxBucket = { name, bytes: text.length }
   }
 
-  let global = null
-  try {
-    if (!rawLedger) throw new Error('无台账')
-    global = toGlobalPool(rawLedger)
-    // 029 M2:全球池的 commonness 用骨架合成值覆盖台账占位值(台账采集期统一填 2)。
-    // 按 nameSci 精确联表(骨架 11,131 种全覆盖,含台账全部物种)。
-    try {
-      const idx = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
-      const byName = new Map(idx.species.map((s) => [s.nameSci, s]))
-      let merged = 0
-      for (const sp of global.species) {
-        const e = byName.get(sp.nameSci)
-        if (e && Number.isInteger(e.commonness)) {
-          sp.commonness = e.commonness
-          merged++
-        }
-      }
-      stats_note.commonness = merged
-    } catch {
-      stats_note.commonness = 0
-    }
-    await writeJsonAtomic(path.join(dataDir, 'manifest-global.min.json'), JSON.stringify(global))
-  } catch {
-    global = null // 无台账:跳过(不报错)
-  }
-
   // 050 P1：权威名录层（10,844 种 × 全字段，不含媒体）。
-  // 台账缺失时用 core + 现有 global.min 兜底，保证 meta 永远是「当前可玩全集」。
   let metaBytes = 0
   let metaTotal = 0
+  let catalogBytes = 0
+  let catalogTotal = 0
   try {
-    const idx = JSON.parse(await fs.readFile(path.join(dataDir, 'species-index.json'), 'utf8'))
     const orderOfBySci = new Map(idx.species.map((e) => [e.nameSci, e.order]))
     const orderOfByKey = new Map(idx.species.map((e) => [e.taxonKey, e.order]).filter(([k]) => k))
     const orderOf = { get: (k) => orderOfByKey.get(k) || orderOfBySci.get(k) }
-    let ledger = global ? JSON.parse(JSON.stringify(global)) : { species: [] }
-    if (rawLedger) ledger = rawLedger
+    const ledger = rawLedger ? JSON.parse(JSON.stringify(rawLedger)) : { species: [] }
+    // 029 M2 / S6：台账 commonness 是**采集期占位值**（统一填 2）→ 用骨架合成值覆盖，
+    // 否则全球种在本地池里全被当成"常见 2 档"（与 D1 不一致，污染档位筛选）。
+    const byName = new Map(idx.species.map((e) => [e.nameSci, e]))
+    let merged = 0
+    for (const sp of ledger.species || []) {
+      const e = byName.get(sp.nameSci)
+      if (e && Number.isInteger(e.commonness)) {
+        sp.commonness = e.commonness
+        merged++
+      }
+    }
+    stats_note.commonness = merged
     // 050 P3：GBIF usageKey 缓存（离线；缺失时只是不填 taxonId，不报错）
     const usageKeys = await loadGbifUsageKeys()
     // 051 S2：生活型台账（data/class-records.json；缺失/为空 → 全部物种不挂 group6，UI 不显示）
@@ -275,7 +261,7 @@ export async function writeManifestLayers(manifest, opts = {}) {
     }
     const meta = toMeta(manifest, ledger, orderOf, usageKeys, classTable)
     // S6：把 assets 最终分片清单挂到 meta —— 前端只用 meta（名单 + 分片索引）
-    // + assets（媒体）即可解析全量物种的媒体，无需 core/global 的 buckets。
+    // + assets（媒体）即可解析全量物种的媒体。
     meta.buckets = bucketNames
     // S6：全量可玩口径（不再区分 core/global；FAQ / 首页统计用）
     const withImg = meta.species.filter((s) => s.playableImage === true).length
@@ -294,32 +280,9 @@ export async function writeManifestLayers(manifest, opts = {}) {
     metaTotal = meta.total
     stats_note.meta = meta.stats
     await writeJsonAtomic(path.join(dataDir, 'manifest-meta.json'), JSON.stringify(meta))
-  } catch (e) {
-    if (!quiet) console.warn(`⚠ 权威名录层 meta 跳过：${e.message}`)
-  }
 
-  // 统计与全量目录：依赖 species-index（order/family/extinct）；缺失则跳过(不阻塞分层产物)。
-  // 统计烘焙进 core（首页/答疑页展示),避免前端为显示数字多拉 10MB 全球池。
-  let catalogBytes = 0
-  let catalogTotal = 0
-  try {
-    const idx = JSON.parse(await fs.readFile(path.join(dataDir, 'species-index.json'), 'utf8'))
-    const poolEntries = [...core.species, ...(global ? global.species : [])]
-    const uniqueConcepts = new Set(poolEntries.map((s) => s.taxonKey).filter(Boolean)).size
-    core.universe = {
-      coreTotal: core.species.length,
-      globalTotal: global ? global.species.length : 0,
-      total: poolEntries.length,
-      withImage: poolEntries.filter((s) => s.image).length,
-      withAudio: poolEntries.filter((s) => s.audio).length,
-      imageOnly: poolEntries.filter((s) => s.image && !s.audio).length,
-      audioOnly: poolEntries.filter((s) => !s.image && s.audio).length,
-      withNameZh: poolEntries.filter((s) => s.nameZh).length,
-      notCovered: Math.max(0, idx.species.length - uniqueConcepts),
-    }
-    await writeJsonAtomic(path.join(dataDir, 'manifest-core.json'), JSON.stringify(core))
-
-    const { catalog, pinyin } = buildCatalog(poolEntries, idx)
+    // 全量目录（/catalog）：由 meta 派生（媒体标记用 playable*）。
+    const { catalog, pinyin } = buildCatalog(meta.species, idx)
     const text = JSON.stringify(catalog)
     await writeJsonAtomic(path.join(dataDir, 'catalog.json'), text)
     catalogBytes = Buffer.byteLength(text)
@@ -327,18 +290,14 @@ export async function writeManifestLayers(manifest, opts = {}) {
     stats_note.catalog = catalogTotal
     stats_note.pinyin = pinyin
   } catch (e) {
-    if (!quiet) console.warn(`⚠ 目录/统计产物跳过：${e.message}`)
+    if (!quiet) console.warn(`⚠ 权威名录层 meta 跳过：${e.message}`)
   }
 
   const stats = {
-    coreBytes: Buffer.byteLength(JSON.stringify(core)),
-    coreTotal: core.total,
     buckets: bucketNames.length,
     bucketBytes,
     maxBucket,
-    globalBytes: global ? Buffer.byteLength(JSON.stringify(global)) : 0,
-    globalTotal: global ? global.total : 0,
-    globalCommonnessMerged: stats_note.commonness || 0,
+    commonnessMerged: stats_note.commonness || 0,
     catalogBytes,
     catalogTotal,
     metaBytes,
@@ -347,12 +306,9 @@ export async function writeManifestLayers(manifest, opts = {}) {
   if (!quiet) {
     const MB = (b) => `${(b / 1e6).toFixed(2)}MB`
     console.log(
-      `分层产物:core ${MB(stats.coreBytes)}(${stats.coreTotal} 种,${stats.buckets} 桶) · assets ${MB(stats.bucketBytes)}(最大桶 ${stats.maxBucket.name} ${(stats.maxBucket.bytes / 1024).toFixed(0)}KB)` +
-        (global
-          ? ` · global.min ${MB(stats.globalBytes)}(${stats.globalTotal} 种,commonness 联表 ${stats.globalCommonnessMerged})`
-          : ' · 无全球台账,global.min 跳过') +
-        (stats.catalogTotal ? ` · catalog ${MB(stats.catalogBytes)}(${stats.catalogTotal} 种)` : '') +
-        (stats.metaTotal ? ` · meta ${MB(stats.metaBytes)}(${stats.metaTotal} 种)` : ''),
+      `分层产物:assets ${MB(stats.bucketBytes)}(${bucketNames.length} 桶,最大桶 ${stats.maxBucket.name} ${(stats.maxBucket.bytes / 1024).toFixed(0)}KB)` +
+        ` · meta ${MB(stats.metaBytes)}(${stats.metaTotal} 种,commonness 联表 ${stats.commonnessMerged})` +
+        (stats.catalogTotal ? ` · catalog ${MB(stats.catalogBytes)}(${stats.catalogTotal} 种)` : ''),
     )
     if (stats_note.meta) {
       const m = stats_note.meta
@@ -378,8 +334,23 @@ export async function writeManifestLayers(manifest, opts = {}) {
 /** CLI 入口(直接运行时) */
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
-    const manifestPath = path.join(ROOT, 'public/data/manifest.json')
-    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
+    // P5：core 完整层是 data-cache 中间件（不再入库）；旧路径 public/data/manifest.json 仅过渡兼容。
+    const candidates = [
+      path.join(ROOT, 'data-cache/manifest-core-full.json'),
+      path.join(ROOT, 'public/data/manifest.json'),
+    ]
+    let manifestPath = candidates[0]
+    let manifest = null
+    for (const p of candidates) {
+      try {
+        manifest = JSON.parse(await fs.readFile(p, 'utf8'))
+        manifestPath = p
+        break
+      } catch {
+        /* 试下一个 */
+      }
+    }
+    if (!manifest) throw new Error(`找不到 core 完整层（${candidates.map((p) => path.relative(ROOT, p)).join(' / ')}）——先跑 npm run bank`)
     console.log(`读 ${path.relative(ROOT, manifestPath)}(${manifest.species?.length || 0} 种)`)
     const stats = await writeManifestLayers(manifest)
     if (stats.maxBucket.bytes > 400_000) {

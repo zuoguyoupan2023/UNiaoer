@@ -124,49 +124,37 @@ try {
     if (counts[k] !== fact[k]) fail(`counts.${k}=${counts[k]} ≠ 实际 ${fact[k]}`)
   }
 
-  // ---- C. 与 manifest（core + global）一致 ----
-  const core = await readJson(path.join(DATA, 'manifest-core.json'))
-  const global = await readJson(path.join(DATA, 'manifest-global.min.json'))
-  if (!core) fail('缺 manifest-core.json（先跑 npm run layers）')
-  if (!global) fail('缺 manifest-global.min.json（全球池未纳入时也应产出；缺失说明 layers 未跑全）')
-  const poolById = new Map() // 供 D 段（科归属性比对）取池条目的 family 兜底
-  if (core && global) {
+  // ---- C. 与权威层 meta 一致（P5：名单唯一源） ----
+  const meta = await readJson(path.join(DATA, 'manifest-meta.json')).catch(() => null)
+  if (!meta) fail('缺 manifest-meta.json（先跑 npm run layers）')
+  const poolById = new Map() // 供 D 段（taxonKey 兜底）取池条目
+  if (meta) {
     const expect = new Map()
-    for (const sp of core.species || []) expect.set(sp.id, { sp, layer: 'core' })
-    let overlap = 0
-    for (const sp of global.species || []) {
-      if (expect.has(sp.id)) overlap++
-      expect.set(sp.id, { sp, layer: 'global' })
-    }
-    for (const [id, e] of expect) poolById.set(id, e.sp)
-    if (overlap) fail(`manifest-core 与 manifest-global 有 ${overlap} 个 id 重叠（层级应互斥）`)
-    if (counts.total !== expect.size) fail(`counts.total=${counts.total} ≠ core+global 物种数 ${expect.size}`)
+    for (const sp of meta.species || []) expect.set(sp.id, sp)
+    for (const [id, sp] of expect) poolById.set(id, sp)
+    if (counts.total !== expect.size) fail(`counts.total=${counts.total} ≠ meta 物种数 ${expect.size}`)
 
     let missing = 0
     let extra = 0
     let mismatch = 0
     for (const sp of all) {
-      const e = expect.get(sp.id)
-      if (!e) {
+      const m = expect.get(sp.id)
+      if (!m) {
         extra++
-        if (extra <= 5) fail(`catalog 多出物种 ${sp.id}（不在 core/global）`)
+        if (extra <= 5) fail(`catalog 多出物种 ${sp.id}（不在 meta）`)
         continue
       }
-      const m = e.sp
       const expZh = m.nameZh ? m.nameZh : undefined
       const expEn = m.nameEn ? m.nameEn : undefined
-      const bad =
-        sp.sci !== m.nameSci ||
-        sp.image !== !!m.image ||
-        sp.audio !== !!m.audio ||
-        sp.zh !== expZh ||
-        sp.en !== expEn
+      const expImg = !!(m.playableImage === true || m.image || m.images?.length)
+      const expAud = !!(m.playableAudio === true || m.audio || m.audios?.length)
+      const bad = sp.sci !== m.nameSci || sp.image !== expImg || sp.audio !== expAud || sp.zh !== expZh || sp.en !== expEn
       if (bad) {
         mismatch++
         if (mismatch <= 5) {
           fail(
-            `catalog 与 manifest(${e.layer}) 不一致 ${sp.id}：` +
-              `sci=${sp.sci}/${m.nameSci} image=${sp.image}/${!!m.image} audio=${sp.audio}/${!!m.audio} ` +
+            `catalog 与 meta 不一致 ${sp.id}：` +
+              `sci=${sp.sci}/${m.nameSci} image=${sp.image}/${expImg} audio=${sp.audio}/${expAud} ` +
               `zh=${sp.zh}/${expZh} en=${sp.en}/${expEn}`,
           )
         }
@@ -175,20 +163,20 @@ try {
     for (const id of expect.keys()) {
       if (!seenId.has(id)) {
         missing++
-        if (missing <= 5) fail(`catalog 缺物种 ${id}（在 core/global 中）`)
+        if (missing <= 5) fail(`catalog 缺物种 ${id}（在 meta 中）`)
       }
     }
-    if (mismatch > 5) fail(`…共 ${mismatch} 处 catalog↔manifest 字段不一致`)
+    if (mismatch > 5) fail(`…共 ${mismatch} 处 catalog↔meta 字段不一致`)
     if (extra > 5) fail(`…共 ${extra} 个 catalog 多出物种`)
     if (missing > 5) fail(`…共 ${missing} 个 catalog 缺失物种`)
-    if (!mismatch && !extra && !missing) note(`与 manifest 一致：${all.length} 种（core ${core.species?.length ?? 0} + global ${global.species?.length ?? 0}）`)
+    if (!mismatch && !extra && !missing) note(`与 meta 一致：${all.length} 种`)
 
-    // core 内联 universe 汇总（首页/答疑页数字）与名录口径交叉
-    const u = core.universe
+    // meta.universe 汇总（首页/答疑页数字）与名录口径交叉
+    const u = meta.universe
     if (u) {
-      if (u.total !== expect.size) fail(`core.universe.total=${u.total} ≠ core+global ${expect.size}`)
-      if (u.withImage !== fact.withImage) fail(`core.universe.withImage=${u.withImage} ≠ catalog 实际 ${fact.withImage}`)
-      if (u.withAudio !== fact.withAudio) fail(`core.universe.withAudio=${u.withAudio} ≠ catalog 实际 ${fact.withAudio}`)
+      if (u.total !== expect.size) fail(`meta.universe.total=${u.total} ≠ meta ${expect.size}`)
+      if (u.withImage !== fact.withImage) fail(`meta.universe.withImage=${u.withImage} ≠ catalog 实际 ${fact.withImage}`)
+      if (u.withAudio !== fact.withAudio) fail(`meta.universe.withAudio=${u.withAudio} ≠ catalog 实际 ${fact.withAudio}`)
     }
   }
 

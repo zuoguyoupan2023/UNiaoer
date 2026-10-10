@@ -1,6 +1,6 @@
 /**
- * 023 P0:全球物种骨架 + manifest 映射校验(纯本地,不联网;对齐 check-region 惯例)。
- * 校验对象:public/data/species-index.json(骨架)+ public/data/manifest.json(taxonKey/playable 只增字段)。
+ * 023 P0 / S6:全球物种骨架 + 权威层映射校验(纯本地,不联网;对齐 check-region 惯例)。
+ * 校验对象:public/data/species-index.json(骨架)+ public/data/manifest-meta.json(taxonKey/playable 字段)。
  * 敏感项:产物中不得出现坐标/几何类字段(骨架是纯分类名录,与铁律 6 一致)。
  * 用法:npm run check:index [-- --index <path>] [--no-net]
  */
@@ -13,7 +13,7 @@ import { normalizeSciName } from './taxonomy/avilist-lib.mjs'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = parseArgs(process.argv.slice(2))
 const INDEX_PATH = path.resolve(ROOT, args.index || 'public/data/species-index.json')
-const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
+const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest-meta.json')
 
 const problems = []
 const fail = (msg) => problems.push(msg)
@@ -158,12 +158,12 @@ try {
 
   checkGeoKeys(index, '顶层')
 
-  // manifest 交叉校验:现有 1299 全部 playable=true 且 taxonKey 能对回骨架。
-  // 学名不一致仅在 bankMappingNotes 有注记时放行(概念合并:AviList 并入父种,manifest 保留旧学名)。
+  // 权威层(meta)交叉校验:全部 playable=true 且 taxonKey 能对回骨架。
+  // 学名不一致仅在 bankMappingNotes 有注记时放行(概念合并:AviList 并入父种,保留旧学名)。
   const notes = Array.isArray(index.bankMappingNotes) ? index.bankMappingNotes : []
   const noteByKeyId = new Map(notes.map((n) => [`${n.id}|${n.taxonKey}`, n]))
   if (!Array.isArray(manifest.species) || !manifest.species.length) {
-    fail('manifest.species 为空(无法交叉校验)')
+    fail('manifest-meta.species 为空(无法交叉校验)')
   } else {
     const byKey = new Map(index.species.map((e) => [e.taxonKey, e]))
     const noKey = []
@@ -184,14 +184,14 @@ try {
       if (normalizeSciName(e.nameSci) !== normalizeSciName(s.nameSci)) {
         const n = noteByKeyId.get(`${s.id}|${s.taxonKey}`)
         if (n && n.resolvedTo && normalizeSciName(n.resolvedTo) === normalizeSciName(e.nameSci)) noted++
-        else keyMismatch.push(`${s.id}:骨架学名 ${e.nameSci} ≠ manifest ${s.nameSci}(同 taxonKey,无 bankMappingNotes 注记)`)
+        else keyMismatch.push(`${s.id}:骨架学名 ${e.nameSci} ≠ meta ${s.nameSci}(同 taxonKey,无 bankMappingNotes 注记)`)
       }
     }
-    if (noKey.length) fail(`${noKey.length} 个 manifest 物种缺 taxonKey(如 ${noKey.slice(0, 5).join(', ')})`)
-    if (noPlayable.length) fail(`${noPlayable.length} 个 manifest 物种 playable≠true`)
+    if (noKey.length) fail(`${noKey.length} 个 meta 物种缺 taxonKey(如 ${noKey.slice(0, 5).join(', ')})`)
+    if (noPlayable.length) fail(`${noPlayable.length} 个 meta 物种 playable≠true`)
     if (keyMismatch.length) for (const x of keyMismatch.slice(0, 10)) fail(`映射不一致:${x}`)
     console.log(
-      `· manifest 交叉:${manifest.species.length} 物种 · taxonKey 全存在 ✓ · playable 全 true ✓ · 概念合并注记 ${notes.length} 条(命中 ${noted})${keyMismatch.length ? ` · 映射不一致 ${keyMismatch.length} ✗` : ''}`,
+      `· meta 交叉:${manifest.species.length} 物种 · taxonKey 全存在 ✓ · playable 全 true ✓ · 概念合并注记 ${notes.length} 条(命中 ${noted})${keyMismatch.length ? ` · 映射不一致 ${keyMismatch.length} ✗` : ''}`,
     )
   }
 
@@ -200,7 +200,7 @@ try {
     for (const p of problems) console.error(`  - ${p}`)
     process.exit(1)
   }
-  console.log(`\n✓ check:index:骨架结构与 1299 映射校验通过(${rel})`)
+  console.log(`\n✓ check:index:骨架结构与权威层映射校验通过(${rel})`)
 } catch (e) {
   console.error(`✗ check:index:${e.message}`)
   process.exit(1)

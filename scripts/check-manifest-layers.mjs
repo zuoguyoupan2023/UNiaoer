@@ -27,8 +27,6 @@ const fail = (m) => problems.push(m)
 
 try {
   const meta = JSON.parse(await fs.readFile(path.join(DATA, 'manifest-meta.json'), 'utf8'))
-  const core = JSON.parse(await fs.readFile(path.join(DATA, 'manifest-core.json'), 'utf8'))
-  const full = JSON.parse(await fs.readFile(path.join(DATA, 'manifest.json'), 'utf8'))
   const bucketNames = (await fs.readdir(path.join(DATA, 'assets')).catch(() => []))
     .filter((f) => f.endsWith('.json'))
     .map((f) => f.slice(0, -5))
@@ -50,7 +48,6 @@ try {
     buckets[name] = JSON.parse(text).species || {}
   }
 
-  const coreById = new Map(core.species.map((s) => [s.id, s]))
   let missingInBucket = 0
   let mediaMismatch = 0
   let assetless = 0
@@ -78,49 +75,18 @@ try {
       mediaMismatch++
       fail(`物种 ${sp.id}:playableAudio=${wantsAud} 但分片 audios=${hasAud}`)
     }
-    // core 物种首图/首音必须与分片首条一致
-    const c = coreById.get(sp.id)
-    if (c) {
-      if (c.image && entry.images?.[0]?.url && c.image.url !== entry.images[0].url) {
-        fail(`物种 ${sp.id}:core 首图 ${c.image.url} ≠ 分片 images[0] ${entry.images[0].url}`)
-      }
-      if (c.audio && entry.audios?.[0]?.url && c.audio.url !== entry.audios[0].url) {
-        fail(`物种 ${sp.id}:core 首音 ${c.audio.url} ≠ 分片 audios[0] ${entry.audios[0].url}`)
-      }
-    }
-    if (entry.notes || entry.profile) fail(`物种 ${sp.id}:分片携带 notes/profile(应在 meta/core)`)
-  }
-
-  // core 与完整层（manifest.json，core 真源）一致
-  if (core.layer !== 'core') fail(`core.layer=${core.layer},期望 'core'`)
-  if (core.total !== full.species.length) fail(`core.total ${core.total} ≠ manifest ${full.species.length}`)
-
-  const coreBytes = (await fs.stat(path.join(DATA, 'manifest-core.json'))).size
-  if (coreBytes > 1_800_000) fail(`core ${(coreBytes / 1e6).toFixed(2)}MB 超 1.8MB DoD 线`)
-
-  // global.min（逐步退役，存在才校验）
-  let globalNote = 'global.min 不存在'
-  const globalText = await fs.readFile(path.join(DATA, 'manifest-global.min.json'), 'utf8').catch(() => null)
-  if (globalText) {
-    const g = JSON.parse(globalText)
-    if (g.layer !== 'global') fail(`global.layer=${g.layer},期望 'global'`)
-    if (g.total !== g.species.length) fail(`global.total ${g.total} ≠ species ${g.species.length}`)
-    for (const s of g.species) {
-      if (!s.image && !s.audio) fail(`global 物种 ${s.id} 既无 image 也无 audio(不应入池)`)
-      if (s.images || s.audios) fail(`global 物种 ${s.id} 携带完整素材数组(应为 core 同构)`)
-    }
-    globalNote = `global.min ${(globalText.length / 1e6).toFixed(2)}MB(${g.total} 种,待退役)`
+    if (entry.notes || entry.profile) fail(`物种 ${sp.id}:分片携带 notes/profile(应在 meta)`)
   }
 
   console.log(
-    `· 分层:meta ${meta.total} 种(${(JSON.stringify(meta).length / 1e6).toFixed(2)}MB) · 分片 ${bucketNames.length} 桶 · 覆盖 ${meta.total - assetless} 种 · 缺片 ${missingInBucket} · 媒体不符 ${mediaMismatch} · core ${(coreBytes / 1e6).toFixed(2)}MB(${core.total} 种) · ${globalNote}`,
+    `· 分层：meta ${meta.total} 种(${(JSON.stringify(meta).length / 1e6).toFixed(2)}MB) · assets ${bucketNames.length} 桶 · 覆盖 ${meta.total - assetless} 种 · 缺片 ${missingInBucket} · 媒体不符 ${mediaMismatch}`,
   )
   if (problems.length) {
     console.error(`\n✗ check:layers 失败(${problems.length} 项):`)
     for (const p of problems.slice(0, 15)) console.error(`  - ${p}`)
     process.exit(1)
   }
-  console.log('\n✓ check:layers:meta 名单 / assets 全量分片 / core 启动层一致')
+  console.log('\n✓ check:layers:meta 名单 / assets 全量分片一致')
 } catch (e) {
   console.error(`✗ check:layers:${e.message}`)
   process.exit(1)

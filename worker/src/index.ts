@@ -205,25 +205,17 @@ function inlineAudio(r: SpeciesRow): Record<string, unknown> | null {
 
 /**
  * 题库索引：优先 R2 快照，回退 Pages 静态。
- * 029 M1 起支持分层产物：/api/manifest → 完整层；/api/manifest-core → 启动层（默认前端使用）。
- * 050 O3：新增 /api/manifest-meta → 权威名录层（10,844 种，不含媒体）。
+ * P5 起唯一文件为**权威名录层** `manifest-meta.json`（10,844 种，不含媒体）；
+ * 旧 `/api/manifest`、`/api/manifest-core` 已 301 到 `/api/manifest-meta`。
  * `name` 仅允许白名单文件名，避免路径穿越。
  *
- * **ETag / 304（050 O3）**：此前本端点**完全没有条件请求**——
- * manifest-core 1.6MB、manifest 12.6MB、global 11MB 都是每次全量传输，
- * 缓存过期后必然重下整个文件。现按 `If-None-Match` 返回 304（零字节），
+ * **ETag / 304（050 O3）**：按 `If-None-Match` 返回 304（零字节），
  * R2 用对象自带的 `etag`，Pages 回退用 `Last-Modified` 派生。
- * 同时把 `cache-control` 的 max-age 提到 86400（配合 SWR）——
- * manifest 是构建产物，发布频率极低（天级），分钟级缓存没有意义。
+ * `cache-control` max-age 86400（配合 SWR）——meta 是构建产物，发布频率极低。
  */
-async function handleManifest(env: Env, request: Request, name = 'manifest.json'): Promise<Response> {
-  const allowed = [
-    'manifest.json',
-    'manifest-core.json',
-    'manifest-global.min.json',
-    'manifest-meta.json',
-  ]
-  const file = allowed.includes(name) ? name : 'manifest.json'
+async function handleManifest(env: Env, request: Request, name = 'manifest-meta.json'): Promise<Response> {
+  const allowed = ['manifest-meta.json']
+  const file = allowed.includes(name) ? name : 'manifest-meta.json'
   const cacheControl = 'public, max-age=86400, stale-while-revalidate=604800'
   const inm = request.headers.get('if-none-match')
 
@@ -1432,9 +1424,11 @@ export default {
         if (path === '/api/health') {
           return json({ ok: true, ts: Date.now(), hasXcKey: Boolean(env.XC_API_KEY) })
         }
-        if (path === '/api/manifest') return await handleManifest(env, request)
-        if (path === '/api/manifest-core') return await handleManifest(env, request, 'manifest-core.json')
-        // 050 O3：权威名录层（唯一权威口径，10,844 种，不含媒体）
+        // P5：旧端点退役 → 301 到权威层（保留一个发布周期）
+        if (path === '/api/manifest' || path === '/api/manifest-core') {
+          return Response.redirect(`${url.origin}/api/manifest-meta`, 301)
+        }
+        // 050 O3 / S6：权威名录层（唯一名单源，10,844 种，不含媒体）
         if (path === '/api/manifest-meta') return await handleManifest(env, request, 'manifest-meta.json')
         // 039 P1：粗定位（CF request.cf，四舍五入 0.05°；不落库/不进日志）
         if (path === '/api/geo') return handleGeo(request)

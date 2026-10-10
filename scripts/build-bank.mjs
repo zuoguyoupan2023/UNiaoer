@@ -547,14 +547,20 @@ async function main() {
     manifest.repairedSpecies = records.map((r) => r.id)
   }
 
-  const outFile = OPT.out ? path.resolve(ROOT, OPT.out) : path.join(PUBLIC_DATA, 'manifest.json')
+  // P5：core 完整层落到 data-cache（**不再入库**；前端只读 meta）。
+  // 全球增量走台账 data-cache/manifest-global.json。
+  const outFile = OPT.out
+    ? path.resolve(ROOT, OPT.out)
+    : OPT.global
+      ? path.join(ROOT, 'data-cache/manifest-global.json')
+      : path.join(ROOT, 'data-cache/manifest-core-full.json')
   await ensureDir(path.dirname(outFile))
   await writeJsonAtomic(outFile, JSON.stringify(manifest, null, 2))
 
-  // 029 M1:manifest 分层产物(core + assets 分片 + 全球池)——前端启动只加载 core。
-  // 主 manifest 仍是"完整层"(构建真源/check-bank 校验对象),分层产物由它派生、随构建同步刷新。
-  if (!args['no-layers']) {
-    await writeManifestLayers(manifest, outFile)
+  // 029/S6：分层产物仅核心库采集时刷新（由 data-cache 中间件 + 台账派生到 public/data）。
+  if (!OPT.global && !args['no-layers']) {
+    const { writeManifestLayers: writeLayers } = await import('./build-manifest-layers.mjs')
+    await writeLayers(manifest, { dataDir: PUBLIC_DATA })
   }
 
   console.log(`\n✅ 完成：处理 ${records.length} 种，输出 ${outputSpecies.length} 种（图片 ${withImage}，音频 ${withAudio}）`)
@@ -573,17 +579,6 @@ async function main() {
       console.log(`   失败清单 → data-cache/bank-global-failed.json`)
     }
   }
-}
-
-/**
- * 029 M1:由完整 manifest 派生分层产物(core + assets 分片 + 全球池)。
- * 实现复用 scripts/build-manifest-layers.mjs(npm run layers 同源),仅当输出是
- * 正式主 manifest 时产出,避免定向/离线构建污染真产物目录。
- */
-async function writeManifestLayers(manifest, outFile) {
-  if (path.basename(outFile) !== 'manifest.json') return
-  const { writeManifestLayers: writeLayers } = await import('./build-manifest-layers.mjs')
-  await writeLayers(manifest, { dataDir: path.dirname(outFile) })
 }
 
 async function buildSpecies(sp, useXc) {

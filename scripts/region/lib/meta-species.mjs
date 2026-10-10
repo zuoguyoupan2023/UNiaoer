@@ -39,32 +39,19 @@ export async function loadMetaSpecies(root, opts = {}) {
 
   if (!opts.withMedia) return species
 
-  // 媒体月份：核心库（完整层）+ 全球采集台账
+  // 媒体月份（P5）：直接读 assets 分片（已覆盖全量种，含 month 字段；
+  // 不再依赖已退役的 manifest.json / 采集台账）。
   const byId = new Map(species.map((sp) => [sp.id, sp]))
-  const core = JSON.parse(await fs.readFile(path.join(root, 'public/data/manifest.json'), 'utf8'))
-  for (const sp of core.species || []) {
-    const target = byId.get(sp.id)
-    if (!target) continue
-    const images = (sp.images || []).concat(sp.image ? [sp.image] : [])
-    const audios = (sp.audios || []).concat(sp.audio ? [sp.audio] : [])
-    if (images.length) target.images = images
-    if (audios.length) target.audios = audios
-  }
-  // 全球台账（33MB，gitignore）：只在需要媒体月份时读，且容忍缺失
-  try {
-    const ledger = JSON.parse(
-      await fs.readFile(path.join(root, 'data-cache/manifest-global.json'), 'utf8'),
-    )
-    for (const sp of ledger.species || []) {
-      const target = byId.get(sp.id)
+  const assetsDir = path.join(root, 'public/data/assets')
+  const files = (await fs.readdir(assetsDir).catch(() => [])).filter((f) => f.endsWith('.json'))
+  for (const f of files) {
+    const doc = JSON.parse(await fs.readFile(path.join(assetsDir, f), 'utf8'))
+    for (const [id, e] of Object.entries(doc.species || {})) {
+      const target = byId.get(id)
       if (!target) continue
-      const images = (sp.images || []).concat(sp.image ? [sp.image] : [])
-      const audios = (sp.audios || []).concat(sp.audio ? [sp.audio] : [])
-      if (images.length) target.images = images
-      if (audios.length) target.audios = audios
+      if (e.images?.length) target.images = e.images
+      if (e.audios?.length) target.audios = e.audios
     }
-  } catch {
-    /* 台账不存在（已按 050 P5 退役）→ 全球种只剩 taxonId，无媒体月份 */
   }
   return species
 }

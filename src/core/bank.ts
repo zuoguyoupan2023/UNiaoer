@@ -314,83 +314,38 @@ export class BankError extends Error {
   }
 }
 
-/** 取一个 manifest URL，统一校验状态/内容类型/解析；失败抛 BankError */
-async function fetchManifest(url: string): Promise<Manifest> {
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new BankError('bankMissing', { status: res.status, url })
-  }
-  const contentType = res.headers.get('content-type') || ''
-  if (!contentType.includes('json')) {
-    // 常见于 SPA 回退把缺失的 manifest 改写成了 index.html
-    throw new BankError('bankNotJson', { url })
-  }
-  try {
-    return (await res.json()) as Manifest
-  } catch {
-    throw new BankError('bankParseFailed', { url })
-  }
-}
-
 /**
- * 加载题库。**S6 起以权威层 `manifest-meta.json` 为唯一名单源**（10,844 种）——
- * 不再 core（1,299）+ 全球池（9,545）拼接。媒体不含在名单里，按需走 `assets` 分片
- * （`loadSpeciesAssets`）。
- *
- * 过渡期回退：meta 不可用（未部署/离线夹具）时，退回旧 core → 完整 manifest 链路，
- * 保证可用性；这些旧文件在 P5 退役。
+ * 加载题库。**S6/P5 起以权威层 `manifest-meta.json` 为唯一名单源**（10,844 种）——
+ * 不再 core（1,299）+ 全球池（9,545）拼接，也不再有旧 core/manifest 回退
+ * （那些文件已退役）。媒体不含在名单里，按需走 `assets` 分片（`loadSpeciesAssets`）。
  */
 export async function loadBank(): Promise<Manifest> {
   if (cache) return cache
-  // ① 权威层（唯一名单源；与 meta.ts 共用缓存，避免重复下载——index.html preload 的也是它）
-  try {
-    const meta = await loadMeta()
-    if (meta?.species?.length) {
-      const species = meta.species as unknown as BankSpecies[]
-      cache = {
-        generatedAt: meta.generatedAt,
-        policy: meta.policy ?? '',
-        mediaMode: 'sharded',
-        total: meta.total,
-        stats: {
-          withImage: species.filter((s) => s.playableImage === true || !!s.image || !!s.images?.length)
-            .length,
-          withAudio: species.filter((s) => s.playableAudio === true || !!s.audio || !!s.audios?.length)
-            .length,
-        },
-        species,
-        layer: 'meta',
-        buckets: meta.buckets,
-        schemaVersion: meta.schemaVersion,
-        universe: meta.universe,
-      }
-      buildSpeciesIndex(cache)
-      return cache
-    }
-  } catch {
-    /* 回退旧链路 */
+  // 权威层（唯一名单源；与 meta.ts 共用缓存，避免重复下载——index.html preload 的也是它）
+  const meta = await loadMeta().catch(() => null)
+  if (!meta?.species?.length) {
+    throw new BankError('bankMissing', { url: '/data/manifest-meta.json' })
   }
-  // ② 过渡回退：旧 core → 完整 manifest
-  const base = import.meta.env.BASE_URL
-  const coreUrl = `${base}data/manifest-core.json`
-  const staticUrl = `${base}data/manifest.json`
-  const urls = import.meta.env.PROD
-    ? ['/api/manifest-core', coreUrl, staticUrl]
-    : [coreUrl, staticUrl]
-  let lastError: unknown
-  for (const url of urls) {
-    try {
-      const m = await fetchManifest(url)
-      cache = m
-      buildSpeciesIndex(cache)
-      return cache
-    } catch (err) {
-      lastError = err
-    }
+  const species = meta.species as unknown as BankSpecies[]
+  cache = {
+    generatedAt: meta.generatedAt,
+    policy: meta.policy ?? '',
+    mediaMode: 'sharded',
+    total: meta.total,
+    stats: {
+      withImage: species.filter((s) => s.playableImage === true || !!s.image || !!s.images?.length)
+        .length,
+      withAudio: species.filter((s) => s.playableAudio === true || !!s.audio || !!s.audios?.length)
+        .length,
+    },
+    species,
+    layer: 'meta',
+    buckets: meta.buckets,
+    schemaVersion: meta.schemaVersion,
+    universe: meta.universe,
   }
-  throw lastError instanceof BankError
-    ? lastError
-    : new BankError('bankMissing', { url: staticUrl })
+  buildSpeciesIndex(cache)
+  return cache
 }
 
 /** 测试用：清空缓存 */
