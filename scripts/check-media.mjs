@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * A4 媒体完整性检查
- * 对 manifest 里每一个媒体 URL 做 HEAD（并发受限），产出缺失/不可达清单：
+ * 对 assets 分片里每一个媒体 URL 做 HEAD（并发受限），产出缺失/不可达清单：
  *   - R2 媒体不可达 → 尝试 --fix：若 public/media 里有同名文件，用 wrangler r2 object put --remote 重传
  *   - 本地也没有 → 提示重跑 `npm run bank:stage`（有 data-cache，很便宜）再 `npm run r2:push`
  *
- * 用法：node scripts/check-media.mjs [--concurrency 6] [--fix] [--manifest public/data/manifest.json]
+ * 用法：node scripts/check-media.mjs [--concurrency 6] [--fix]
  * 输出：data-cache/media-missing.json（最终仍缺失的清单）
  * 退出码：0 全部可达；1 仍有缺失
  */

@@ -40,7 +40,7 @@ const IUCN_SYNONYMS = await (async () => {
 
 const args = parseArgs(process.argv.slice(2))
 const OPT = {
-  manifest: args.manifest || 'public/data/manifest.json',
+  manifest: args.manifest || 'data-cache/manifest-core-full.json',
   policy: args.policy || 'relaxed',
   concurrency: args.concurrency ? Number(args.concurrency) : 1,
   limit: args.limit ? Number(args.limit) : Infinity,

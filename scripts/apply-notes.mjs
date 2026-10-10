@@ -17,7 +17,7 @@ import { loadSpeciesNotes, applySpeciesNotes, unmatchedNoteIds } from './lib/not
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = parseArgs(process.argv.slice(2))
-const MANIFEST = path.resolve(ROOT, args.manifest || 'public/data/manifest.json')
+const MANIFEST = path.resolve(ROOT, args.manifest || 'data-cache/manifest-core-full.json')
 
 const notes = await loadSpeciesNotes(ROOT)
 const total = Object.keys(notes).length
