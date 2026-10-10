@@ -98,6 +98,7 @@ const immersive = computed(
   <!-- 键盘用户跳过导航直达主内容（H3） -->
   <a class="skip-link" href="#main">{{ t('nav.skipToMain') }}</a>
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
+  <!-- R35：工具条固定 4 键（统计·我的·设置·喇叭）→ 右上角；大众评审归入第二行主导航 -->
   <header v-if="!immersive" class="app-topbar">
     <RouterLink to="/" class="brand" :aria-label="t('nav.brandHome')">
       <Bird class="brand-icon" :size="26" />
@@ -110,12 +111,14 @@ const immersive = computed(
         <RouterLink to="/region">{{ t('nav.region') }}</RouterLink>
         <RouterLink to="/nearby">{{ t('nav.nearby') }}</RouterLink>
         <RouterLink to="/catalog">{{ t('nav.catalog') }}</RouterLink>
-        <RouterLink to="/stats">{{ t('nav.stats') }}</RouterLink>
-      </span>
-      <span class="nav-group nav-utility">
+        <!-- 大众评审（R35）：第二行主导航末尾，不占右上角固定 4 键的位置 -->
         <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports">
           {{ t('nav.reports') }}
         </RouterLink>
+      </span>
+      <span class="nav-group nav-utility">
+        <!-- 统计（R35）：工具条首位，移动端右上角 = 统计·我的·设置·喇叭 -->
+        <RouterLink to="/stats">{{ t('nav.stats') }}</RouterLink>
         <RouterLink to="/profile">{{ t('nav.profile') }}</RouterLink>
         <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
         <button

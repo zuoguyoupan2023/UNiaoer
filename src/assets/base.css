@@ -14,8 +14,16 @@
   --border: #dcebe3;
   --gold: #d4a017;
 
-  --radius: 14px;
-  --radius-sm: 9px;
+  /* 圆角三级（R35 密度收敛）：卡片 10 / 控件 6 / 小块 4；胶囊仍用 999px */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-xs: 4px;
+  /* 间距 scale：4/6/8/12/16 */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
   --shadow-sm: 0 2px 8px rgba(20, 52, 42, 0.06);
   --shadow: 0 14px 34px -18px rgba(20, 52, 42, 0.4), 0 2px 8px rgba(20, 52, 42, 0.05);
   --shadow-lg: 0 30px 70px -28px rgba(20, 52, 42, 0.5);
