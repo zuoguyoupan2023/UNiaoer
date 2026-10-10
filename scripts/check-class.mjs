@@ -49,14 +49,14 @@ let live = 0
 let disputed = 0
 records.forEach((r, i) => {
   const { issues, live: isLive } = checkRecord(r)
-  const tag = `${r.familySci || r.orderSci || `#${i}`}`
+  const tag = `${r.speciesSci || r.familySci || r.orderSci || `#${i}`}`
   if (issues.length) fail(`记录 ${tag}：${issues.join('；')}`)
   if (isLive) live++
   if (r.status === 'disputed') disputed++
 })
 
 // ── E 键冲突（同一科/目多条都是 ok）────────────────────────
-for (const key of ['familySci', 'orderSci']) {
+for (const key of ['speciesSci', 'familySci', 'orderSci']) {
   const seen = new Map()
   for (const r of records) {
     if (!r[key] || r.status === 'disputed') continue
@@ -75,14 +75,22 @@ let covered = 0
 let unmatchedKeys = []
 try {
   const meta = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/manifest-meta.json'), 'utf8'))
-  const withClass = meta.species.filter((s) => resolveGroup6(table, s.family, s.order))
+  const withClass = meta.species.filter((s) =>
+    resolveGroup6(table, { speciesSci: s.nameSci, familySci: s.family, orderSci: s.order }),
+  )
   covered = withClass.length
+  const sciSet = new Set(meta.species.map((s) => s.nameSci).filter(Boolean))
   const famSet = new Set(meta.species.map((s) => s.family).filter(Boolean))
   const ordSet = new Set(meta.species.map((s) => s.order).filter(Boolean))
   unmatchedKeys = records
     .filter((r) => checkRecord(r).live)
-    .filter((r) => (r.familySci && !famSet.has(r.familySci)) || (r.orderSci && !ordSet.has(r.orderSci)))
-    .map((r) => r.familySci || r.orderSci)
+    .filter(
+      (r) =>
+        (r.speciesSci && !sciSet.has(r.speciesSci)) ||
+        (r.familySci && !famSet.has(r.familySci)) ||
+        (r.orderSci && !ordSet.has(r.orderSci)),
+    )
+    .map((r) => r.speciesSci || r.familySci || r.orderSci)
 } catch {
   warn('未找到 manifest-meta.json，跳过覆盖度检查（先跑 npm run layers）')
 }

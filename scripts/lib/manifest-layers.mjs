@@ -303,18 +303,19 @@ export function toMeta(coreManifest, globalLedger, orderOf, usageKeys, classTabl
   const classes = {}
   if (classTable) {
     for (const sp of byId.values()) {
-      const hit = resolveGroup6(classTable, sp.family, sp.order)
+      const hit = resolveGroup6(classTable, { speciesSci: sp.nameSci, familySci: sp.family, orderSci: sp.order })
       if (!hit) continue
       classCovered++
       sp.profile = { ...sp.profile, group6: hit.groups }
-      const key = hit.record.familySci || `order:${hit.record.orderSci}`
+      const key =
+        hit.record.speciesSci || hit.record.familySci || `order:${hit.record.orderSci}`
       if (!classes[key]) {
         classes[key] = {
           groups: hit.groups,
           source: hit.record.source,
           contributor: hit.record.contributor,
           at: hit.record.at,
-          matchedBy: hit.record.familySci ? 'family' : 'order',
+          matchedBy: hit.matchedBy,
         }
       }
     }

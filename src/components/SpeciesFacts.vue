@@ -14,8 +14,19 @@ const { t } = useI18n()
 /** 人工文本按 locale 取（缺英文回退中文） */
 const text = computed(() => speciesProfileText(props.profile, currentLocale()))
 const dist = computed(() => props.profile?.distribution)
+/**
+ * 三分类（waterbird/raptor/landbird，050 P0）—— **暂时隐藏**。
+ *
+ * 用户 2026-10-10：「三分类先隐藏，后期合适的时候删除它」+「六分类独立从零做，不要和三分类混淆，
+ * 因为名称本身有重合」。`landbird`（林鸟）与六分类的 `woodland`（林鸟）同名，两套并存必然混淆；
+ * 且三分类本身是"查表 + 兜底"的产物，对 1,371 种无依据者是留空、对核心库 1,299 种是历史口径，
+ * 两者都不足以直接展示。**数据仍保留在产物里**（不删），只是不渲染；
+ * 等六分法覆盖足够、或确实需要回看三分类时，用一个开关恢复。
+ */
 const groupLabel = computed(() =>
-  props.profile?.group ? t(`species.groups.${props.profile.group}`) : '',
+  import.meta.env.VITE_SHOW_TRI_GROUP === '1' && props.profile?.group
+    ? t(`species.groups.${props.profile.group}`)
+    : '',
 )
 /**
  * 051 S2：生活型六分法。**只渲染有出处的记录**（`profile.group6` 缺失 = 没有依据 = 不显示），

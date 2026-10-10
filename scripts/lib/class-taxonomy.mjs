@@ -26,7 +26,7 @@ export const GROUP6_SET = new Set(GROUP6)
 
 /** 出处类型：`handbook` 手册 / `iucn` 权威名录 / `community` 社区投稿 / `manual` 人工整理 */
 /** @type {readonly string[]} */
-export const SOURCE_TYPES = ['handbook', 'iucn', 'community', 'manual']
+export const SOURCE_TYPES = ['handbook', 'dataset', 'iucn', 'community', 'manual']
 export const SOURCE_TYPE_SET = new Set(SOURCE_TYPES)
 
 /**
@@ -39,7 +39,8 @@ export const SOURCE_TYPE_SET = new Set(SOURCE_TYPES)
 
 /**
  * @typedef {object} ClassRecord
- * @property {string} [familySci] 英文科名（主键）
+ * @property {string} [speciesSci] 拉丁学名（**最精确的键**：USGS PWRC 等来源就是物种级的）
+ * @property {string} [familySci] 英文科名（科级记录才用；科级属于我们的归纳，需谨慎）
  * @property {string} [orderSci] 英文目名（科查不到时的兜底键）
  * @property {string[]} groups 生活型六分法取值
  * @property {ClassSource} [source] 出处（必填，否则不生效）
@@ -50,6 +51,7 @@ export const SOURCE_TYPE_SET = new Set(SOURCE_TYPES)
 
 /**
  * @typedef {object} ClassTable
+ * @property {Map<string, ClassRecord>} bySpecies 生效记录（学名 → 记录，优先级最高）
  * @property {Map<string, ClassRecord>} byFamily 生效记录（科名 → 记录）
  * @property {Map<string, ClassRecord>} byOrder 生效记录（目名 → 记录）
  * @property {ClassRecord[]} all 全部记录（含未生效的）
@@ -63,7 +65,7 @@ export const SOURCE_TYPE_SET = new Set(SOURCE_TYPES)
 export function checkRecord(r) {
   /** @type {string[]} */
   const issues = []
-  if (!r.familySci && !r.orderSci) issues.push('缺少 familySci / orderSci（至少要有一个键）')
+  if (!r.speciesSci && !r.familySci && !r.orderSci) issues.push('缺少 speciesSci / familySci / orderSci（至少要有一个键）')
   if (!Array.isArray(r.groups) || !r.groups.length) issues.push('groups 为空')
   else {
     for (const g of r.groups) if (!GROUP6_SET.has(g)) issues.push(`groups 含非法值 "${g}"`)
@@ -86,27 +88,32 @@ export function checkRecord(r) {
 /** @param {ClassRecord[]} records @returns {ClassTable} */
 export function buildClassTable(records) {
   /** @type {Map<string, ClassRecord>} */
+  /** @type {Map<string, ClassRecord>} */
+  const bySpecies = new Map()
+  /** @type {Map<string, ClassRecord>} */
   const byFamily = new Map()
   /** @type {Map<string, ClassRecord>} */
   const byOrder = new Map()
   for (const r of records) {
     if (!checkRecord(r).live) continue
+    if (r.speciesSci) bySpecies.set(r.speciesSci, r)
     if (r.familySci) byFamily.set(r.familySci, r)
     if (r.orderSci) byOrder.set(r.orderSci, r)
   }
-  return { byFamily, byOrder, all: records }
+  return { bySpecies, byFamily, byOrder, all: records }
 }
 
 /** 解析某物种的生活型：科优先、目兜底；都没有 → null（UI 不显示） */
 /**
  * @param {ClassTable} table
- * @param {string} [familySci]
- * @param {string} [orderSci]
+ * @param {{speciesSci?: string, familySci?: string, orderSci?: string}} keys
  * @returns {{ groups: string[], record: ClassRecord } | null}
  */
-export function resolveGroup6(table, familySci, orderSci) {
+export function resolveGroup6(table, keys) {
+  const { speciesSci, familySci, orderSci } = keys || {}
+  const bySpecies = speciesSci ? table.bySpecies.get(speciesSci) : undefined
   const byFamily = familySci ? table.byFamily.get(familySci) : undefined
   const byOrder = orderSci ? table.byOrder.get(orderSci) : undefined
-  const record = byFamily ?? byOrder
-  return record ? { groups: record.groups, record } : null
+  const record = bySpecies ?? byFamily ?? byOrder
+  return record ? { groups: record.groups, record, matchedBy: bySpecies ? 'species' : byFamily ? 'family' : 'order' } : null
 }
