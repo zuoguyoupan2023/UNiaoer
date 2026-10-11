@@ -303,8 +303,18 @@ async function main() {
   if (OPT.global) {
     // 023 P2:待采池 = 骨架 − bank 已收录(id=slug(学名));优先级代理排序:有中文名 → 有 eBird 码 → 学名字母序
     const index = JSON.parse(await fs.readFile(path.join(ROOT, source), 'utf8'))
-    const bankManifest = JSON.parse(await fs.readFile(path.join(PUBLIC_DATA, 'manifest.json'), 'utf8'))
-    const bankIds = new Set((bankManifest.species || []).map((s) => s.id))
+    // P4/P5 拆旧后 public/data/manifest.json 退役:核心库 id 清单改读完整层
+    // data-cache/manifest-core-full.json(旧 manifest 仅作回退,兼容未拆旧的工作副本)
+    let bankIds
+    try {
+      const coreFull = JSON.parse(
+        await fs.readFile(path.join(ROOT, 'data-cache/manifest-core-full.json'), 'utf8'),
+      )
+      bankIds = new Set((coreFull.species || []).map((s) => s.id))
+    } catch {
+      const bankManifest = JSON.parse(await fs.readFile(path.join(PUBLIC_DATA, 'manifest.json'), 'utf8'))
+      bankIds = new Set((bankManifest.species || []).map((s) => s.id))
+    }
     const pool = index.species
       .filter((e) => !bankIds.has(slug(e.nameSci)))
       .sort(
@@ -337,12 +347,14 @@ async function main() {
 
   // 定向修复：只挑有问题的物种，结果合并回旧 manifest（不破坏其余物种）
   let prevManifest = null
+  let prevById = null // 全球模式:台账按 id 索引(补采复用同位素材用;retry-failed 不复用,避免把坏素材保留下来)
   let list = species.slice(0, OPT.limit)
   // 023 P2:全球模式在**任何**分支(--ids/全量/续跑)都先加载台账——结果一律合并,绝不整写覆盖
   // (2026-10-06 事故:--ids 冒烟未加载台账,最终写盘把 2,664 种进度抹成 1 种;媒体文件无损,重走即恢复)
   if (OPT.global) {
     const fromAbs = path.resolve(ROOT, OPT.out)
     prevManifest = JSON.parse(await fs.readFile(fromAbs, 'utf8').catch(() => null))
+    if (prevManifest) prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
   }
   if (OPT.ids.length) {
     const set = new Set(OPT.ids)
@@ -358,7 +370,6 @@ async function main() {
   } else if (OPT.global) {
     // 023 P2:增量台账——已完成的种跳过(断点续跑),结果合并回台账
     if (prevManifest) {
-      const prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
       const pending = list.filter((sp) => needsRepair(prevById.get(sp.id)))
       const done = list.length - pending.length
       list = pending
@@ -449,7 +460,7 @@ async function main() {
       pendingSkip.add(sp.id)
       return stub(sp)
     }
-    const rec = await buildSpecies(sp, useXc)
+    const rec = await buildSpecies(sp, useXc, OPT.global ? prevById?.get(sp.id) : null)
     done++
     // D-023-3:playable* 按素材计数逐条写入(检查点落盘即携带;收尾主写入兜底)
     rec.playableImage = (rec.images ? rec.images.length : 0) >= 1
@@ -589,7 +600,7 @@ async function main() {
   }
 }
 
-async function buildSpecies(sp, useXc) {
+async function buildSpecies(sp, useXc, prev) {
   const id = slug(sp.nameSci)
   const base = stub(sp)
 
@@ -628,7 +639,7 @@ async function buildSpecies(sp, useXc) {
     base.audio = base.audios[0] || null
 
     if (OPT.media === 'download' || OPT.media === 'stage' || OPT.media === 'r2') {
-      await materialize(base, id)
+      await materialize(base, id, prev)
     }
   } catch (e) {
     if (/429/.test(e.message)) note429()
@@ -929,16 +940,53 @@ function asset(url, rawLicense, author, source, sourceUrl, sourceId) {
 }
 
 /** 下载 →（可选）转码 → 落盘 public/media，或 stage（本地暂存+URL 指向 R2），或上传 R2 */
-async function materialize(rec, id) {
+async function materialize(rec, id, prev) {
   // 序号即"从优到劣"排名（011 §6）：image-1/audio-1 为首选
   for (let i = 0; i < (rec.images || []).length; i++) {
-    rec.images[i] = await persistImage(rec.images[i], id, i + 1)
+    const kept = reusableAsset(prev?.images?.[i], rec.images[i])
+    rec.images[i] = kept || (await persistImage(rec.images[i], id, i + 1))
   }
   for (let i = 0; i < (rec.audios || []).length; i++) {
-    rec.audios[i] = await persistOne(rec.audios[i], id, `audio-${i + 1}`, 'mp3')
+    const kept = reusableAsset(prev?.audios?.[i], rec.audios[i])
+    rec.audios[i] = kept || (await persistOne(rec.audios[i], id, `audio-${i + 1}`, 'mp3'))
+  }
+  // 053 补采:新取材比台账短时(源站下架/过滤变化),台账里已物化的多余素材原样保留
+  // (仍合规、文件已在 R2);按 sourceId/url 去重,防取材顺序漂移造成重复条目。
+  if (prev && PUBLIC_BASE) {
+    const seen = new Set(
+      [...rec.images, ...rec.audios]
+        .map((a) => a && `${a.type}|${a.sourceId || a.url}`)
+        .filter(Boolean),
+    )
+    for (const [kind, list] of [['images', prev.images], ['audios', prev.audios]]) {
+      for (let i = rec[kind].length; i < (list?.length || 0); i++) {
+        const a = list[i]
+        if (!a || !String(a.url || '').startsWith(PUBLIC_BASE + '/')) continue
+        const sig = `${a.type}|${a.sourceId || a.url}`
+        if (seen.has(sig)) continue
+        seen.add(sig)
+        rec[kind].push(a)
+      }
+    }
+    rec.images = rec.images.slice(0, OPT.per)
+    rec.audios = rec.audios.slice(0, OPT.per)
   }
   rec.image = rec.images[0] || null
   rec.audio = rec.audios[0] || null
+}
+
+/**
+ * 053 补采:台账同位素材已物化(URL 指向 R2 公开域)且与本次取材同源时,原样沿用——
+ * 免重下载重转码重推送(约省一半工作量),首图首音因此天然不变(D1 不受影响)。
+ */
+function reusableAsset(prevAsset, newAsset) {
+  if (!prevAsset || !newAsset) return null
+  if (!PUBLIC_BASE || !String(prevAsset.url || '').startsWith(PUBLIC_BASE + '/')) return null
+  if (prevAsset.sourceId !== newAsset.sourceId) return null
+  if ((prevAsset.sourceUrl || '') !== (newAsset.sourceUrl || '')) return null
+  if (prevAsset.license !== newAsset.license) return null
+  if (prevAsset.type !== newAsset.type) return null
+  return prevAsset
 }
 
 /**
