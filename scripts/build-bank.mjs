@@ -210,6 +210,10 @@ function needsRepair(prev) {
     if (PUBLIC_BASE && !a.url.startsWith(PUBLIC_BASE + '/')) return true
     if (a.type === 'image' && a.transcode && !a.thumbUrl) return true
   }
+  // 053 §2-1:素材数未达 --per 上限的种也进待采池(全球种 1+1 → 最多 5+5);
+  // 取材按同序(默认图→票数、XC 质量→时长),同缓存下首图首音不变,D1 不受影响。
+  if ((prev.images?.length ?? 0) < OPT.per) return true
+  if ((prev.audios?.length ?? 0) < OPT.per) return true
   return false
 }
 
@@ -465,7 +469,11 @@ async function main() {
   // 修复模式：把重跑结果按 id 合并回旧 manifest，保持原顺序
   let outputSpecies = records
   if (prevManifest) {
-    const recordById = new Map(records.map((r) => [r.id, r]))
+    // 因预算/磁盘跳过的种返回的是空 stub,不能拿它覆盖台账里的旧条目
+    // (否则低磁盘一次就会把待采种的 1+1 元数据抹成空;跳过的种保留旧条目,下轮照常补采)
+    const recordById = new Map(
+      records.filter((r) => !pendingSkip.has(r.id)).map((r) => [r.id, r]),
+    )
     const seen = new Set()
     outputSpecies = (prevManifest.species || []).map((s) => {
       const r = recordById.get(s.id)
@@ -1037,9 +1045,14 @@ async function finalizeImage(a, id, n, { thumbhash, avif }) {
   delete out.altUrl
   if (OPT.media === 'r2') {
     for (const rel of Object.values(rels)) {
-      const body = await fs.readFile(path.join(PUBLIC_MEDIA, rel))
+      const local = path.join(PUBLIC_MEDIA, rel)
+      const body = await fs.readFile(local)
       await R2CLIENT.put(rel, body, 'image/webp')
+      // 053:传后即删——R2 是唯一持久副本,派生图不在本地累积(全量补采约 +20GB)
+      await fs.rm(local, { force: true })
     }
+    // 顺带清掉该种派生图目录里可能残留的旧文件(如历史 avif);r2 模式音频不走这里
+    await fs.rm(path.join(PUBLIC_MEDIA, id), { recursive: true, force: true })
   }
   for (const [field, rel] of Object.entries(rels)) {
     if (OPT.media === 'stage') out[field] = `${PUBLIC_BASE}/${rel}`
