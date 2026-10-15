@@ -274,7 +274,7 @@ function chooseRegion(v: string) {
  * 不选则用国家级档位（降级链：省 → 国家 → 全局 commonness）。
  * 仅在所选国家有省级数据（15 国）时显示。
  */
-const regionProvince = ref('')
+const regionProvince = ref(settings.region.includes('-') ? settings.region : '')
 const provinceChoices = computed(() => {
   const data = provinceData.value
   const cc = selectedCountry.value
@@ -1018,6 +1018,7 @@ function onTouchEnd(e: TouchEvent) {
       </button>
 
       <OptionList
+        :key="quiz.current.id"
         :options="quiz.current.options"
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"

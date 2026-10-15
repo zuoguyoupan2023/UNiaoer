@@ -198,10 +198,10 @@
 .app-footer {
   position: relative;
   text-align: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   font-size: 0.76rem;
   color: var(--text-light);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 /* 答疑专栏入口：与 UNiaoer 同字号；宽屏右下，窄屏居中居下 */
 .app-footer .faq-entry {
@@ -223,25 +223,22 @@
     margin: 4px auto 0;
   }
 }
-/* 标语：左「有鸟儿」/ 右「友鸟儿」夹 UNiaoer；窄屏分三行、UNiaoer 居中（015 #6） */
+/* 标语：左「友鸟儿」/ 右「有鸟儿」夹 UNiaoer；始终同一行、必要时才换行（015 #6；避免窄屏堆成三行占高） */
 .app-footer .tagline {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 .app-footer .tag-brand {
   font-weight: 700;
   color: var(--text);
 }
-@media (max-width: 420px) {
+/* 英文标语较长：窄屏略缩字号，尽量保持单行 */
+@media (max-width: 600px) {
   .app-footer .tagline {
-    flex-direction: column;
-    gap: 2px;
-  }
-  .app-footer .tagline .tag-sep {
-    display: none;
+    font-size: 0.7rem;
   }
 }
 

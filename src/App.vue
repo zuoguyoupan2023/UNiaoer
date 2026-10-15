@@ -142,7 +142,7 @@ const immersive = computed(
 
   <footer class="app-footer">
     <p>{{ t('footer.source') }}</p>
-    <!-- 标语：左「有鸟儿」/ 右「友鸟儿」夹 UNiaoer（015 #6）；窄屏分三行、UNiaoer 居中 -->
+    <!-- 标语：左「友鸟儿」/ 右「有鸟儿」夹 UNiaoer（015 #6）；保持单行、必要时才换行 -->
     <p class="tagline">
       <span class="tag-side">{{ t('footer.taglineLeft') }}</span>
       <span class="tag-sep" aria-hidden="true">·</span>
