@@ -27,3 +27,10 @@ zone_name = "uniaoer.com"
 [[routes]]
 pattern = "uniaoer.com/s/*"
 zone_name = "uniaoer.com"
+
+# www → apex 收敛（2026-10-15）：此前 www 由 Pages 直供、未挂 Worker，
+# www 上的 /api/* 落到静态资源（GET 返回 HTML、POST 405）→ 统计/分享/反馈静默失败。
+# 本 Worker 对 www.* 一律 301 到 apex（见 src/index.ts fetch 顶部）。
+[[routes]]
+pattern = "www.uniaoer.com/*"
+zone_name = "uniaoer.com"

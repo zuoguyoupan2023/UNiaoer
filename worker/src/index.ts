@@ -1405,6 +1405,13 @@ async function handleAdminPatch(request: Request, env: Env, id: string): Promise
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
+    // 权威域名是 apex（uniaoer.com）；www 未接入 Worker 的 /api 路由，
+    // 导致 www 上 /api/* 落到 Pages 静态资源（GET 回 HTML、POST 405）→
+    // 统计/分享上传/反馈上传在 www 上静默失败。统一 301 收敛到 apex（含路径与查询串）。
+    if (url.hostname === 'www.uniaoer.com') {
+      url.hostname = 'uniaoer.com'
+      return Response.redirect(url.toString(), 301)
+    }
     const path = url.pathname.replace(/\/+$/, '') || '/'
     const method = request.method.toUpperCase()
 
