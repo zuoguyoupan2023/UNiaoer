@@ -223,7 +223,7 @@
     margin: 4px auto 0;
   }
 }
-/* 标语：左「友鸟儿」/ 右「有鸟儿」夹 UNiaoer；始终同一行、必要时才换行（015 #6；避免窄屏堆成三行占高） */
+/* 标语：UNiaoer「友鸟儿」「有鸟儿」；始终同一行、必要时才换行（015 #6；中英同序） */
 .app-footer .tagline {
   display: flex;
   align-items: baseline;
