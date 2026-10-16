@@ -64,6 +64,7 @@
     "taxonomy:gbif-match": "node scripts/taxonomy/fetch-gbif-match.mjs",
     "species-index": "node scripts/taxonomy/build-species-index.mjs",
     "check:index": "node scripts/check-species-index.mjs",
+    "check:model-labels": "node scripts/check-model-labels.mjs",
     "worker:dev": "wrangler dev -c worker/wrangler.toml --remote",
     "worker:deploy": "wrangler deploy -c worker/wrangler.toml",
     "worker:check": "wrangler deploy -c worker/wrangler.toml --dry-run",
