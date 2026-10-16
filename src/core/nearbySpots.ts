@@ -173,13 +173,41 @@ export async function fetchCoarseGeo(): Promise<GeoResult | null> {
   }
 }
 
+/**
+ * 设备精定位的结果。
+ *
+ * 为什么不是简单的 `{lat,lng} | null`：浏览器**在多种情况下都不弹授权框而直接失败**，
+ * 只回一个 null 会让 UI 把「系统级拒绝」「超时」「非安全上下文」全说成「未获得授权」，
+ * 用户按提示去点授权却找不到地方（2026-10-17 实测：macOS 上系统定位服务没给浏览器开权限时，
+ * Chrome/Safari 会**立刻**返回 PERMISSION_DENIED，永远不弹框）。
+ */
+export type PreciseGeo =
+  | { ok: true; lat: number; lng: number }
+  | { ok: false; reason: 'unsupported' | 'insecure' | 'denied' | 'unavailable' | 'timeout' }
+
 /** 设备精定位（需用户点击 + 系统授权；坐标只在本函数返回值里，不落任何存储） */
-export function fetchPreciseGeo(): Promise<{ lat: number; lng: number } | null> {
+export function fetchPreciseGeo(): Promise<PreciseGeo> {
   return new Promise((resolve) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null)
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return resolve({ ok: false, reason: 'unsupported' })
+    }
+    // 非安全上下文（http 且非 localhost）浏览器直接禁掉地理定位，连授权框都不给
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      return resolve({ ok: false, reason: 'insecure' })
+    }
     navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => resolve(null),
+      (p) => resolve({ ok: true, lat: p.coords.latitude, lng: p.coords.longitude }),
+      (err) => {
+        const reason =
+          err.code === err.PERMISSION_DENIED
+            ? 'denied'
+            : err.code === err.POSITION_UNAVAILABLE
+              ? 'unavailable'
+              : err.code === err.TIMEOUT
+                ? 'timeout'
+                : 'unavailable'
+        resolve({ ok: false, reason })
+      },
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
     )
   })

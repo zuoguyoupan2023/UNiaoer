@@ -48,7 +48,9 @@ const loadingSpots = ref(false)
 const source = ref<'coarse' | 'precise' | null>(null)
 const coords = ref<{ lat: number; lng: number } | null>(null)
 /** 定位失败/不可用说明键（i18n） */
-const geoNote = ref<'none' | 'noCoarse' | 'noPrecise'>('none')
+const geoNote = ref<
+  'none' | 'noCoarse' | 'preciseDenied' | 'preciseInsecure' | 'preciseUnsupported' | 'preciseUnavailable'
+>('none')
 const preciseBusy = ref(false)
 
 /** 使用者手动选择的国家（粗定位识别不出时用；只列有数据的国家） */
@@ -86,18 +88,25 @@ watch(country, async (cc) => {
   loadingSpots.value = false
 })
 
-/** 设备精定位（显式点按；拒绝/超时 → 保持粗定位） */
+/** 设备精定位（显式点按；失败按原因给不同提示，绝不含糊说成「未授权」） */
 async function usePrecise() {
   if (preciseBusy.value) return
   preciseBusy.value = true
   try {
-    const p = await fetchPreciseGeo()
-    if (p) {
-      coords.value = p
+    const r = await fetchPreciseGeo()
+    if (r.ok) {
+      coords.value = { lat: r.lat, lng: r.lng }
       source.value = 'precise'
       geoNote.value = 'none'
     } else {
-      geoNote.value = 'noPrecise'
+      geoNote.value =
+        r.reason === 'denied'
+          ? 'preciseDenied'
+          : r.reason === 'insecure'
+            ? 'preciseInsecure'
+            : r.reason === 'unsupported'
+              ? 'preciseUnsupported'
+              : 'preciseUnavailable'
     }
   } finally {
     preciseBusy.value = false
@@ -161,7 +170,10 @@ function countryName(cc: string): string {
           <Crosshair class="ic" :size="14" />
           {{ preciseBusy ? t('nearby.locating') : t('nearby.usePrecise') }}
         </button>
-        <p v-if="geoNote === 'noPrecise'" class="muted small">{{ t('nearby.preciseDenied') }}</p>
+        <p v-if="geoNote === 'preciseDenied'" class="muted small">{{ t('nearby.preciseDenied') }}</p>
+        <p v-else-if="geoNote === 'preciseInsecure'" class="muted small">{{ t('nearby.preciseInsecure') }}</p>
+        <p v-else-if="geoNote === 'preciseUnsupported'" class="muted small">{{ t('nearby.preciseUnsupported') }}</p>
+        <p v-else-if="geoNote === 'preciseUnavailable'" class="muted small">{{ t('nearby.preciseUnavailable') }}</p>
         <p v-if="!coords" class="muted small">{{ t('nearby.manualHint') }}</p>
         <p class="muted tiny">{{ t('nearby.privacy') }}</p>
       </div>

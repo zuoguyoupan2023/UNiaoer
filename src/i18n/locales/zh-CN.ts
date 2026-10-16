@@ -222,7 +222,11 @@ export const messages = {
     noCoords: '还没有可用位置。',
     usePrecise: '使用我的精确位置',
     locating: '定位中…',
-    preciseDenied: '未获得定位授权（或超时），继续使用网络大致位置。',
+    preciseDenied:
+      '浏览器拒绝了定位。若没弹出授权框，多半是之前拒绝过、或系统没给浏览器定位权限：到「系统设置 → 隐私与安全性 → 定位服务」允许你的浏览器，再在地址栏的站点权限里把「位置」改为允许。',
+    preciseInsecure: '当前页面不是安全上下文（http），浏览器不允许定位。请用 https 或 localhost 访问。',
+    preciseUnsupported: '这个浏览器不支持地理定位。',
+    preciseUnavailable: '拿不到位置信息（设备定位关闭、无信号或超时），继续使用网络大致位置。',
     manualHint: '也可以先在下方选择国家，再开启定位或稍后重试。',
     privacy: '隐私：位置仅用于本次计算距离，不上传、不保存；本页不记录你的坐标。',
     country: '国家/地区',

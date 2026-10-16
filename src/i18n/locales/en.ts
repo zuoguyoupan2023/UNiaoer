@@ -228,7 +228,12 @@ const en: typeof zhMessages = {
     noCoords: 'No location available yet.',
     usePrecise: 'Use my precise location',
     locating: 'Locating…',
-    preciseDenied: 'Location permission was denied (or timed out); still using the approximate location.',
+    preciseDenied:
+      'The browser denied location. If no prompt appeared, you probably denied it earlier, or the OS has not given your browser location access: open System Settings → Privacy & Security → Location Services, allow your browser, then set the site permission for Location to Allow.',
+    preciseInsecure: 'This page is not a secure context (http), so the browser blocks geolocation. Use https or localhost.',
+    preciseUnsupported: 'This browser does not support geolocation.',
+    preciseUnavailable:
+      'Could not get a fix (device location off, no signal, or timeout). Still using the approximate network location.',
     manualHint: 'You can also pick a country below and retry later.',
     privacy: 'Privacy: your location is used only to compute distances right here — never uploaded or stored, and this page keeps no record of your coordinates.',
     country: 'Country / region',
