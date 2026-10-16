@@ -11,7 +11,8 @@ const cand = (label: string, score: number, entry: Candidate['entry'], speciesId
   speciesId,
 })
 const exact = { s: 'cettia-cetti', t: 1, z: '宽尾树莺', g: null }
-const noMedia = { s: null, t: 1, z: '东方冠斑犀鸟', g: null }
+// 「收录了但没素材」——判据是名录给的 p===false（不是 speciesId 缺失）
+const noMedia = { s: 'anthracoceros-albirostris', t: 1, z: '东方冠斑犀鸟', g: null, p: false as const }
 const genus = { s: null, t: TIER_GENUS, z: null, g: 'accipiter' }
 const none = { s: null, t: TIER_NONE, z: null, g: null }
 
@@ -76,10 +77,10 @@ describe('present 三档行为', () => {
 })
 
 describe('present 三种状态标记（ACCURACY §5 UI 验收标准）', () => {
-  it('标出「已对上但本项目暂无素材」', () => {
-    const v = present(res([cand('a', 0.9, noMedia, null)]))
+  it('标出「本项目收录了但暂无素材」（判据为 p===false）', () => {
+    const v = present(res([cand('a', 0.9, noMedia, 'anthracoceros-albirostris')]))
     expect(v.hasMappedButNoMedia).toBe(true)
-    expect(v.shown[0]!.speciesId).toBeNull()
+    expect(v.shown[0]!.speciesId).toBe('anthracoceros-albirostris')
   })
 
   it('标出「只能确定到属」', () => {

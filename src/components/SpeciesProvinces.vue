@@ -15,7 +15,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MapPinned } from 'lucide-vue-next'
 import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
-import { REGION_LABEL_KEY } from '@/core/region'
+import { regionLabel } from '@/core/region'
 import { currentLocale } from '@/i18n'
 
 const props = defineProps<{ speciesId: string }>()
@@ -28,15 +28,9 @@ onMounted(async () => {
   data.value = await loadProvinces()
 })
 
-/** 国家码 → 本地化名（港澳台单独列出：铁律 6，见 REGION_LABEL_KEY） */
+/** 地区名：统一入口（铁律 6） */
 function countryName(code: string): string {
-  const key = REGION_LABEL_KEY[code]
-  if (key) return t(key)
-  try {
-    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
-  } catch {
-    return code
-  }
+  return regionLabel(code, t, currentLocale())
 }
 
 interface Row {

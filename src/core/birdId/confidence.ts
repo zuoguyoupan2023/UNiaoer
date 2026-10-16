@@ -55,7 +55,9 @@ export function present(result: BirdIdResult, topN = 3): Presented {
   // 注意这里**不是**置信度分流：只要有任何候选过线就展示，不给用户看数字。
   const shown = all.filter((c) => bandOf(c.score) !== 'none')
 
-  const hasMappedButNoMedia = shown.some((c) => c.entry && c.entry.t <= 3 && !c.speciesId)
+  // 判据是「名录明确说没有素材」(entry.p === false)，**不是** speciesId 缺失 ——
+  // 后者只是因为产物过去只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎）。
+  const hasMappedButNoMedia = shown.some((c) => c.entry && c.entry.t <= 3 && c.entry.p === false)
   const hasGenusOnly = shown.some((c) => c.entry && c.entry.t === 4)
 
   // 文案一律返回 i18n key，由视图 t(messageKey) 渲染(015 §8: no CJK literals in core layer)

@@ -134,17 +134,34 @@ if (EXPECT_CLASSES > 0 && orderedLabels.length !== EXPECT_CLASSES) {
 const indexRaw = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
 const index = indexRaw.species ?? indexRaw
 
-// speciesId 只存在于台账，且台账只含「可播放」的种 —— 这正是我们要的：
-// 对得上但还没采到素材的种，映射为 null，UI 会显示「已对上但暂无素材」。
+// speciesId 的来源顺序（2026-10-17 修）：
+//   ① 名录权威层 manifest-meta.json —— 随前端一起发布的产物，覆盖全部 10,844 种，
+//      含 taxonKey 与 playableImage/playableAudio；
+//   ② 采集台账 data-cache/manifest-global.json —— 只是**构建期**的采集状态，会滞后，
+//      而且**不含核心库的种**（实测：白头鹎 pycnonotus-sinensis 在名录里 img/audio 都有，
+//      台账里却没有）→ 旧实现只查台账，把这类种全判成 s:null，UI 就对用户说
+//      「已对上但暂无素材」，而素材其实就在。
+const byIdTaxon = new Map() // taxonKey -> { id, hasMedia }
+const addSource = (doc, pick) => {
+  const list = doc && typeof doc === 'object' && !Array.isArray(doc) ? (doc.species ?? doc) : doc
+  for (const s of Array.isArray(list) ? list : Object.values(list || {})) {
+    if (!s || !s.taxonKey || !s.id || byIdTaxon.has(s.taxonKey)) continue
+    byIdTaxon.set(s.taxonKey, { id: s.id, hasMedia: pick(s) })
+  }
+}
+
+const metaPath = path.join(ROOT, 'public/data/manifest-meta.json')
+if (fs.existsSync(metaPath)) {
+  const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'))
+  addSource(meta, (s) => Boolean(s.playableImage || s.playableAudio))
+}
 const ledgerPath = path.join(ROOT, 'data-cache/manifest-global.json')
-let idByTaxon = new Map()
 if (fs.existsSync(ledgerPath)) {
   const led = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'))
-  const sp = led.species ?? led
-  idByTaxon = new Map(
-    (Array.isArray(sp) ? sp : Object.values(sp)).filter((x) => x.taxonKey).map((x) => [x.taxonKey, x.id]),
-  )
+  addSource(led, (s) => Boolean((s.images || []).length || (s.audios || []).length))
 }
+const idByTaxon = new Map([...byIdTaxon].map(([k, v]) => [k, v.id]))
+const mediaByTaxon = new Map([...byIdTaxon].map(([k, v]) => [k, v.hasMedia]))
 
 const bySci = new Map()
 const byEn = new Map()
@@ -242,6 +259,13 @@ for (const { label, sci, en } of parsed) {
     t: tier,
     z: forcedId ? (nameById.get(forcedId) ?? null) : hit ? (hit.nameZh || hit.nameEn || null) : null,
     g: genus,
+    // 有无素材（名录权威层口径）：false 时 UI 才能诚实说「本项目收录了，但暂无素材」；
+    // 未参与 overrides 的种按 taxonKey 查，overrides 的种按 id 判（无台账信息时给 null）
+    p: forcedId
+      ? null
+      : hit
+        ? (mediaByTaxon.get(hit.taxonKey) ?? null)
+        : null,
   }
 }
 

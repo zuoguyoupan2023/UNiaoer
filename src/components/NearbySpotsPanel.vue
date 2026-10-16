@@ -32,7 +32,7 @@ import {
   type NearbyIndex,
 } from '@/core/nearbySpots'
 import { currentLocale } from '@/i18n'
-import { REGION_LABEL_KEY } from '@/core/region'
+import { regionLabel } from '@/core/region'
 
 const { t } = useI18n()
 
@@ -129,15 +129,9 @@ const topName = (s: { id?: string; sci?: string }) => {
 const hotspotUrl = (id: string) => `https://ebird.org/hotspot/${id}`
 const sourcesLine = computed(() => (index.value?.sources ?? []).map((s) => s.name).join(' · '))
 
-/** ISO 3166-1 alpha-2 → 本地化地区名（港澳台走固定标注；与 /region 同一口径，铁律 6） */
+/** 地区名：统一入口（铁律 6） */
 function countryName(cc: string): string {
-  const key = REGION_LABEL_KEY[cc]
-  if (key) return t(key)
-  try {
-    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(cc) ?? cc
-  } catch {
-    return cc
-  }
+  return regionLabel(cc, t, currentLocale())
 }
 </script>
 

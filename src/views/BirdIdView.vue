@@ -39,7 +39,7 @@ import type { Candidate } from '@/core/birdId/types'
 import { loadSpeciesAssets } from '@/core/bank'
 import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
-import { REGION_LABEL_KEY } from '@/core/region'
+import { regionLabel } from '@/core/region'
 import { useSettingsStore } from '@/stores/settings'
 import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 
@@ -297,7 +297,7 @@ const regionKey = computed(() =>
 const provinceOptions = computed(() =>
   regionCountry.value === 'ALL' ? [] : provincesOf(provinceData.value, regionCountry.value, String(locale.value)),
 )
-const countryName = (cc: string) => (cc === 'ALL' ? t('birdId.region.all') : (REGION_LABEL_KEY[cc] ?? cc))
+const countryName = (cc: string) => (cc === 'ALL' ? t('birdId.region.all') : regionLabel(cc, t, String(locale.value)))
 
 loadProvinces().then((d) => {
   provinceData.value = d
@@ -380,7 +380,9 @@ function onCountryChange() {
               <div class="cSci">{{ c.label }}</div>
               <p v-if="c.regionTier" class="cTier">{{ t(`birdId.region.tier.${c.regionTier}`) }}</p>
               <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
-              <p v-else-if="c.entry && !c.speciesId" class="cNote">{{ t('birdId.noMedia') }}</p>
+              <!-- 只有名录明确说「没有素材」时才这么讲（p===false）；speciesId 缺失不再作为判据——
+                 产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
+              <p v-else-if="c.entry && c.entry.p === false" class="cNote">{{ t('birdId.noMedia') }}</p>
             </div>
 
             <!-- 素材 -->

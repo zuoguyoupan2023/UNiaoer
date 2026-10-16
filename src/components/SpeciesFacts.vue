@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Globe2 } from 'lucide-vue-next'
 import { speciesProfileText, type SpeciesProfile } from '@/core/bank'
+import { regionLabel } from '@/core/region'
 import { currentLocale } from '@/i18n'
 
 const props = withDefaults(
@@ -76,13 +77,9 @@ async function onToggle(e: Event) {
   loading.value = false
 }
 
-/** ISO 3166-1 alpha-2 → 本地化地区名（Intl.DisplayNames；不支持时回退代码） */
+/** 地区名：走统一入口（港澳台/CN 固定文案，铁律 6） */
 function countryName(code: string): string {
-  try {
-    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
-  } catch {
-    return code
-  }
+  return regionLabel(code, t, currentLocale())
 }
 const countryNames = computed(() => (countries.value ?? []).map(countryName))
 const countrySep = computed(() => (currentLocale() === 'en' ? ', ' : '、'))

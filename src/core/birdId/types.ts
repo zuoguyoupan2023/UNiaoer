@@ -22,6 +22,11 @@ export interface LabelEntry {
   z: string | null
   /** 属名，仅 T4 有值 */
   g?: string | null
+  /**
+   * 本项目是否有该种的素材（名录权威层口径）。
+   * false 才能诚实说「本项目收录了，但暂无素材」；null/undefined = 不知道（别据此下结论）。
+   */
+  p?: boolean | null
 }
 
 export interface LabelMapFile {

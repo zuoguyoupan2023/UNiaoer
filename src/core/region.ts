@@ -92,6 +92,24 @@ export function continentOf(code: string): Continent | undefined {
   return CONTINENT_BY_COUNTRY[code]
 }
 
+/**
+ * 国家/地区码 → 显示名。**这是唯一的取名入口**，别在各组件里另写一份 ——
+ * 2026-10-17 就是物种详情的地区分布漏了这个分支，直接用裸 `Intl.DisplayNames`，
+ * 于是台湾按 CLDR 显示成「台湾 / Taiwan」（违反铁律 6）。
+ *
+ * @param t      vue-i18n 的 t（core 层不引 i18n 实例，避免循环依赖）
+ * @param locale 仅用于 CLDR 回退分支
+ */
+export function regionLabel(code: string, t: (key: string) => string, locale: string): string {
+  const key = REGION_LABEL_KEY[code]
+  if (key) return t(key)
+  try {
+    return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+
 export interface CountryStat {
   code: string
   count: number
