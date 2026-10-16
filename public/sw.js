@@ -110,6 +110,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(req, RUNTIME_CACHE))
     return
   }
+  // 055 P1 模型标签表（633KB 静态产物，内容随构建变）——同 assets 口径走 cache-first。
+  // 注意：识别模型权重走 /models/，**故意不匹配任何分支**，由 modelCache.ts 自己
+  // 用 Cache API 管理，避免落到 /media/ 那套「去 Range 取全量 + 拒收 206」的媒体逻辑。
+  if (url.pathname.includes('/data/model-labels-')) {
+    event.respondWith(cacheFirst(req, RUNTIME_CACHE))
+    return
+  }
   if (url.pathname.includes('/data/catalog.json') || url.pathname.includes('/data/manifest-global')) {
     event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
     return

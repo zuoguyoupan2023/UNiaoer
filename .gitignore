@@ -79,3 +79,8 @@ blob-report/
 /experiments/birdid/vendor/
 /experiments/birdid/out/*.json
 /experiments/birdid/out/report.txt
+
+# 055 P1 端上识鸟模型权重(25MB 二进制):本地开发放这里便于调试,生产走 R2(同媒体口径)
+/public/models/
+# 055 P1 tfjs-tflite 的 WASM 运行时(约 5MB 二进制):由 scripts/fetch-birdnet-model.mjs 拷贝
+/public/wasm-tflite/

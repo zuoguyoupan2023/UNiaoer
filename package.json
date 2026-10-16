@@ -75,9 +75,11 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "build:model-labels": "node scripts/build-model-label-map.mjs"
   },
   "dependencies": {
+    "@tensorflow/tfjs-tflite": "^0.0.1-alpha.10",
     "lucide-vue-next": "^0.577.0",
     "pinia": "^4.0.3",
     "qrcode-generator": "^2.0.4",

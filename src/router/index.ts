@@ -78,6 +78,13 @@ const router = createRouter({
       component: () => import('../views/SpeciesDetailView.vue'),
     },
     {
+      path: '/identify',
+      name: 'identify',
+      // 端上识鸟（docs/055 P1）：路由级 code-split —— 该页要拉 ~25MB 模型，
+      // 绝不能混进首页首屏 bundle
+      component: () => import('../views/BirdIdView.vue'),
+    },
+    {
       // B6 大众评审：公开报错列表 + 投票
       path: '/reports',
       name: 'reports',
