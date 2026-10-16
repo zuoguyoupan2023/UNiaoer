@@ -18,6 +18,10 @@
    - `0xx-*.md`（规划文档）、`docs/`（开发过程文档，另有私有 repo `uniaoer-private` 存档）、`legacy/`（旧单文件 demo）已在 `.gitignore`，不要提交。
 
 4. **改完必须自检。** 交付前跑：`npm run lint` && `npm test` && `npm run build`。
+   - **`npm run build` 现在自带部署体积门禁**（`check:dist-size`，已挂进 build）：Cloudflare Pages 对
+     **单个文件有 25 MiB 上限**，超了整次部署会在上传阶段失败，而本地/CI 全绿 → 线上静默停在旧版本。
+     2026-10-17 事故：`import 'onnxruntime-web'` 带进 27 MiB 的 WebGPU wasm，导致连续两次部署 Failure
+     （改引 `onnxruntime-web/wasm` → 13.58 MiB）。**新增依赖后务必看构建末尾的门禁输出。**
    - **动了 D1 相关代码或 schema/seed，必须再手动跑 `npm run check:sync`**（CI 不跑它；
      2026-10-08 事故正是「Worker 部署了带新列的查询、D1 结构没同步」——见 `docs/032`）。
    - 动了产物构建脚本（`build-manifest-layers` / `build-hotspots-gbif` / `region:*` 等），同步跑对应门禁：

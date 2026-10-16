@@ -48,6 +48,10 @@ jobs:
       - name: Check catalog
         run: npm run check:catalog
 
+      # Pages 单文件 25 MiB 上限：超限会导致部署静默失败（2026-10-17 事故）
+      - name: Check dist size (Pages 25 MiB limit)
+        run: npm run check:dist-size
+
       # 057：模型标签对表 + overrides 有效性（纯本地；标签表不入库，只校验产物与人工表）
       - name: Check model labels (audio)
         run: npm run check:model-labels -- --quiet

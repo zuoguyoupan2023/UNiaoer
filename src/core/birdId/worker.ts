@@ -21,7 +21,15 @@
  * 支持 batch → 一次 forward 跑完全部滑窗，比 TFLite 逐窗推理高效得多。
  */
 
-import * as ort from 'onnxruntime-web'
+/**
+ * 只引 `onnxruntime-web/wasm`（纯 wasm 构建），**不要**引包根。
+ *
+ * 包根/`/all` 会带上 WebGPU 用的 `ort-wasm-simd-threaded.jsep.wasm` —— **27 MiB**，
+ * 超过 Cloudflare Pages 的单文件 25 MiB 上限，整次部署会在上传阶段失败
+ * （2026-10-17 事故：CI 绿、Pages 连续两次 Failure，线上一直停在旧版本）。
+ * 我们只用 `executionProviders: ['wasm']`，`/wasm` 的 13.58 MiB 那份足够。
+ */
+import * as ort from 'onnxruntime-web/wasm'
 
 export type TaskKind = 'audio' | 'image'
 
