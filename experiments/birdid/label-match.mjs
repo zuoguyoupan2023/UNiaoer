@@ -184,6 +184,9 @@ fs.writeFileSync(
       rows: rows.map(({ idx, label, sci, en, zh, tier, matchedBy, genus }) => ({
         idx,
         label,
+        sci,
+        en,
+        zh,
         tier,
         matchedBy,
         genus,
