@@ -1,13 +1,22 @@
 /**
- * 置信度分流 —— P1 UI 的核心规则
+ * 候选筛选 —— P1 UI 的核心规则
  *
- * 依据 experiments/birdid/out/ACCURACY.md 的实测（60 条 R2 样本）：
- *   top-1 置信度 ≥30% 的子集 → top-3 准确率 82.1%
- *   10~30% 的子集           → 明显不可靠
- *   <10% 时命中时/未命中时的置信度中位数是 94.8% vs 10.2%（信号很强）
+ * ## 为什么**不显示置信度**（用户决策，2026-10-16）
  *
- * 所以**不能把 top-3 无差别平铺**：低置信度时给候选等于误导用户。
- * 低于 LOW 阈值直接不展示候选，只说「没听出来」。
+ * 原本按 ACCURACY.md 的实测设了三档（≥30% / 10~30% / <10%），现在**取消置信度展示**，
+ * 理由是置信度对用户没有行动价值：
+ *
+ * - 图像侧实测 top-3 是 99.9% / 99.7% / 99.1%，**即使认错了也饱和**，完全零区分度；
+ * - 有些鸟本就极像（近似种、雌雄差异、幼鸟羽色），图像质量差时也会「既像 A 又像 B」，
+ *   这时模型给出多个相近高置信度是**正确行为**，不是 bug；
+ * - 给了数字反而制造「>50% 就该对」的错觉。
+ *
+ * 改为只说一句话「**可能是这几种之一**」，然后把本项目里这几种的**真实素材**
+ * 摆出来（带署名），由用户自己判断 —— 这也正是本项目的价值所在：
+ * 我们提供的是**可核对的证据**，不是一个断言。
+ *
+ * 置信度仍保留在内部数据结构里：用于①过滤噪声尾巴（<10% 的尾巴基本是噪声）
+ * ②单测断言 ③将来若要埋点统计准确率。**只是不呈现给用户。**
  */
 import type { BirdIdResult, Candidate, ConfidenceBand } from './types'
 
@@ -42,19 +51,19 @@ export function present(result: BirdIdResult, topN = 3): Presented {
   const top = all[0]
   const band: ConfidenceBand = top ? bandOf(top.score) : 'none'
 
-  const shown = band === 'none' ? [] : all.filter((c) => bandOf(c.score) !== 'none')
+  // 只滤掉 <10% 的噪声尾巴（实测未命中时置信度中位数仅 3.3%~10.2%，那基本是噪声）。
+  // 注意这里**不是**置信度分流：只要有任何候选过线就展示，不给用户看数字。
+  const shown = all.filter((c) => bandOf(c.score) !== 'none')
 
   const hasMappedButNoMedia = shown.some((c) => c.entry && c.entry.t <= 3 && !c.speciesId)
   const hasGenusOnly = shown.some((c) => c.entry && c.entry.t === 4)
 
   let message: string
   if (!top) message = '没有识别出结果'
-  else if (band === 'none')
-    message = `没太听出来(最高置信度仅 ${(top.score * 100).toFixed(1)}%),这通常意味着录音太短、背景噪音太大,或者不是鸟叫`
-  else if (band === 'low')
-    message = `模型不太确定(最高置信度 ${(top.score * 100).toFixed(1)}%),下面的候选仅供参考`
+  else if (shown.length === 0)
+    message = '没太听出来 —— 可能是录音太短、背景噪音太大,或者不是鸟叫'
   else if (!shown.some((c) => c.entry && c.entry.t <= 3 && c.speciesId))
-    message = '模型听到了一些东西,但都不是本项目收录的鸟种,可能是蛙、虫或环境音'
+    message = '听到了一些声音,但都不属于本项目收录的鸟种,可能是蛙、虫或环境音'
   else message = ''
 
   return { band, shown, all, message, hasMappedButNoMedia, hasGenusOnly }

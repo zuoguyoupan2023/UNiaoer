@@ -627,6 +627,11 @@ const en: typeof zhMessages = {
     title: 'Identify a bird',
     disclaimer:
       'AI is a guide, not an answer. Everything runs on your device — the recording and photo are never uploaded. Results below 30% confidence are usually unreliable.',
+    maybe: {
+      first: 'Most likely',
+      other: 'Or possibly',
+      hint: 'The model can only suggest candidates — it cannot decide for you. Below are real photos and recordings this project holds for these species (each credited); compare them and judge for yourself.',
+    },
     crossTitle: 'Both results side by side',
     redo: 'Redo',
     chooseImage: 'Choose a photo',

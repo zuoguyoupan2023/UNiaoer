@@ -34,7 +34,7 @@ import {
   MODELS,
   ensureModel,
 } from '@/core/birdId'
-import { CONF_OK, type Presented } from '@/core/birdId/confidence'
+import type { Presented } from '@/core/birdId/confidence'
 import { compare, topResult, type CrossResult, type Modality } from '@/core/birdId/crossModal'
 import type { Candidate } from '@/core/birdId/types'
 import { loadSpeciesAssets } from '@/core/bank'
@@ -259,7 +259,6 @@ onMounted(async () => {
   }
 })
 
-const pct = (s: number) => `${(s * 100).toFixed(1)}%`
 const fmtMB = (b: number) => (b / 1048576).toFixed(1)
 </script>
 
@@ -299,7 +298,7 @@ const fmtMB = (b: number) => (b / 1048576).toFixed(1)
             </button>
           </div>
 
-          <div v-else-if="runs[m]!.band === 'none'" class="laneNone">
+          <div v-else-if="!runs[m]!.shown.length" class="laneNone">
             {{ t('birdId.band.none') }}
           </div>
 
@@ -307,14 +306,15 @@ const fmtMB = (b: number) => (b / 1048576).toFixed(1)
             <div v-for="(c, i) in runs[m]!.shown" :key="c.label" class="cand" :class="{ top: i === 0 }">
               <div class="cHead">
                 <span class="rank">{{ i + 1 }}</span>
-                <span class="cBar"><i :style="{ width: pct(c.score) }" :class="c.score >= CONF_OK ? 'good' : 'weak'" /></span>
-                <span class="cPct">{{ pct(c.score) }}</span>
+                <span class="cLabel">{{ i === 0 ? t('birdId.maybe.first') : t('birdId.maybe.other') }}</span>
               </div>
               <div class="cName">{{ c.entry?.z || c.label.split('_')[1] || c.label }}</div>
               <div class="cSci">{{ c.label }}</div>
               <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
               <p v-else-if="c.entry && !c.speciesId" class="cNote">{{ t('birdId.noMedia') }}</p>
             </div>
+
+            <p class="maybeNote">{{ t('birdId.maybe.hint') }}</p>
 
             <!-- 素材 -->
             <div v-for="c in runs[m]!.shown.filter((x) => x.speciesId)" :key="'m' + c.label" class="media">
@@ -573,6 +573,16 @@ h3 {
   gap: 8px;
   margin-bottom: 4px;
 }
+.cLabel {
+  font-size: 11px;
+  color: var(--text-3, #6b7280);
+}
+.maybeNote {
+  font-size: 12px;
+  color: var(--text-3, #6b7280);
+  line-height: 1.7;
+  margin: 8px 0 0;
+}
 .rank {
   width: 18px;
   height: 18px;
@@ -582,29 +592,6 @@ h3 {
   place-items: center;
   font-size: 11px;
   font-weight: 700;
-}
-.cBar {
-  flex: 1;
-  height: 4px;
-  background: var(--line, #e5e7eb);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.cBar i {
-  display: block;
-  height: 100%;
-}
-.cBar i.good {
-  background: #16a34a;
-}
-.cBar i.weak {
-  background: #f59e0b;
-}
-.cPct {
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  min-width: 42px;
-  text-align: right;
 }
 .cName {
   font-size: 14px;

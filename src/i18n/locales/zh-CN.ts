@@ -362,6 +362,11 @@ export const messages = {
   },
   birdId: {
     title: '识鸟',
+    maybe: {
+      first: '可能是它',
+      other: '也可能是',
+      hint: '模型只能给出候选，不能替代你的判断。下面摆的是本项目里这几种鸟的真实素材（照片与录音，均标注了来源），请对照着看，自己判断是哪一种。',
+    },
     crossTitle: '两路结果对照',
     redo: '重做',
     reset: '清空重来',
