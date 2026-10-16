@@ -367,11 +367,9 @@ export const messages = {
   },
   birdId: {
     title: '识别',
-    privacyShort: '识别在你的设备上完成，录音不会上传。',
+    privacyShort: '端上识别，录音不上传。',
     maybe: {
-      first: '可能是它',
-      other: '也可能是',
-      hint: '模型只能给出候选，不能替代你的判断。下面摆的是本项目里这几种鸟的真实素材（照片与录音，均标注了来源），请对照着看，自己判断是哪一种。',
+      one: '可能是 {name}',
     },
     crossTitle: '两路结果对照',
     redo: '重做',
@@ -382,8 +380,8 @@ export const messages = {
       image: '看图识别',
     },
     hint: {
-      audio: '录 3~15 秒清晰的鸟鸣。背景噪音大、多只鸟重叠时准确率会明显下降。',
-      image: '选一张主体清楚、光线均匀的照片。远距离剪影、夜间红外、幼鸟羽色都会让准确率下降。',
+      audio: '录 3~15 秒鸟鸣。',
+      image: '选一张主体清楚的照片。',
     },
     cross: {
       noSpecies: '这一路没认出具体物种。换张照片试试，往往能直接锁定。',
@@ -406,10 +404,9 @@ export const messages = {
     genusOnly: '只能确定到属：{genus}。本项目暂时没有精确到种的对应条目。',
     noMedia: '本项目收录了这个物种，但目前还没有它的图片和音频素材。',
     band: {
-      low: '模型不太确定，下面的候选仅供参考。',
-      none: '没太听出来 —— 可能是录音太短、背景噪音太大，或者不是鸟叫。',
-      notOurBirds: '听到了一些声音，但都不属于本项目收录的鸟种，可能是蛙、虫或环境音。',
-      noResult: '没有识别出结果。',
+      none: '没听出来，换一段试试。',
+      notOurBirds: '这些声音本项目没有收录。',
+      noResult: '没听出来。',
     },
     model: {
       audioLabel: '鸟声识别模型（BirdNET v2.4）',

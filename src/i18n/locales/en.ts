@@ -631,13 +631,11 @@ const en: typeof zhMessages = {
   },
   birdId: {
     title: 'Identify',
-    privacyShort: 'Recognition runs on your device; recordings are never uploaded.',
+    privacyShort: 'Runs on your device; recordings are not uploaded.',
     disclaimer:
       'AI is a guide, not an answer. Everything runs on your device — the recording and photo are never uploaded. The model can only suggest candidates; compare them with the media below and judge for yourself.',
     maybe: {
-      first: 'Most likely',
-      other: 'Or possibly',
-      hint: 'The model can only suggest candidates — it cannot decide for you. Below are real photos and recordings this project holds for these species (each credited); compare them and judge for yourself.',
+      one: 'Possibly {name}',
     },
     crossTitle: 'Both results side by side',
     redo: 'Redo',
@@ -648,7 +646,7 @@ const en: typeof zhMessages = {
     },
     hint: {
       audio: 'A clear 3–15 second clip works best. Heavy background noise or overlapping birds reduces accuracy noticeably.',
-      image: 'Pick a photo with a clear subject and even light. Distant silhouettes, night vision and juvenile plumage all reduce accuracy.',
+      image: 'Pick a clear photo.',
     },
     cross: {
       noSpecies: 'This pass did not identify a species. Trying a photo often pins it down.',
@@ -670,10 +668,9 @@ const en: typeof zhMessages = {
     genusOnly: 'Only the genus is certain: {genus}. No species-level entry here yet.',
     noMedia: 'This species is in our catalogue, but we have no photos or audio for it yet.',
     band: {
-      low: 'The model is unsure — treat these as hints only.',
-      none: "Didn't really catch it — the clip may be too short, too noisy, or not a bird.",
-      notOurBirds: 'Heard something, but not a species this project covers — could be a frog, insect, or ambient sound.',
-      noResult: 'No result.',
+      none: "Didn't catch it — try another clip.",
+      notOurBirds: 'These sounds are not in this project.',
+      noResult: "Didn't catch it.",
     },
     model: {
       audioLabel: 'Bird sound model (BirdNET v2.4)',

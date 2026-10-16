@@ -371,49 +371,46 @@ function onCountryChange() {
           </div>
 
           <div v-else class="laneBody">
+            <!-- 每个候选一块：一句「可能是 X」+ 该种现有的图/音 + 详情链接。
+                 不写「模型不是 100% 准」这类反复解释——用户知道，说了反而像免责声明。 -->
             <div v-for="(c, i) in runs[m]!.shown" :key="c.label" class="cand" :class="{ top: i === 0 }">
-              <div class="cHead">
-                <span class="rank">{{ i + 1 }}</span>
-                <span class="cLabel">{{ i === 0 ? t('birdId.maybe.first') : t('birdId.maybe.other') }}</span>
-              </div>
-              <div class="cName">{{ c.entry?.z || c.label.split('_')[1] || c.label }}</div>
+              <div class="cName">{{ t('birdId.maybe.one', { name: c.entry?.z || c.label.split('_')[1] || c.label }) }}</div>
               <div class="cSci">{{ c.label }}</div>
               <p v-if="c.regionTier" class="cTier">{{ t(`birdId.region.tier.${c.regionTier}`) }}</p>
               <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
               <!-- 只有名录明确说「没有素材」时才这么讲（p===false）；speciesId 缺失不再作为判据——
-                 产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
+                   产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
               <p v-else-if="c.entry && c.entry.p === false" class="cNote">{{ t('birdId.noMedia') }}</p>
-            </div>
 
-            <!-- 素材 -->
-            <div v-for="c in runs[m]!.shown.filter((x) => x.speciesId)" :key="'m' + c.label" class="media">
-              <div v-if="mediaLoading.has(c.speciesId!)" class="spinWrap"><Loader2 :size="16" class="spin" /></div>
-              <template v-else>
-                <div v-if="mediaById[c.speciesId!]?.images?.length && m === 'audio'" class="thumbs">
-                  <img
-                    v-for="im in mediaById[c.speciesId!]!.images!.slice(0, 4)"
-                    :key="im.url"
-                    :src="im.thumbUrl || im.url"
-                    :alt="c.label"
-                    loading="lazy"
-                  />
-                </div>
-                <div v-if="mediaById[c.speciesId!]?.audios?.length" class="audio">
-                  <button
-                    v-for="au in mediaById[c.speciesId!]!.audios!.slice(0, 3)"
-                    :key="au.url"
-                    class="play"
-                    :aria-label="t('birdId.playOne')"
-                    @click="toggle(au)"
-                  >
-                    <Play :size="14" />
-                    <!-- 跨域媒体必须 crossorigin 先于 src（AGENTS.md 铁律 5 / docs/033） -->
-                    <audio crossorigin="anonymous" :src="au.url" preload="none" />
+              <template v-if="c.speciesId">
+                <div v-if="mediaLoading.has(c.speciesId)" class="spinWrap"><Loader2 :size="16" class="spin" /></div>
+                <template v-else>
+                  <div v-if="mediaById[c.speciesId]?.images?.length" class="thumbs">
+                    <img
+                      v-for="im in mediaById[c.speciesId]!.images!.slice(0, 4)"
+                      :key="im.url"
+                      :src="im.thumbUrl || im.url"
+                      :alt="c.label"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div v-if="mediaById[c.speciesId]?.audios?.length" class="audio">
+                    <button
+                      v-for="au in mediaById[c.speciesId]!.audios!.slice(0, 3)"
+                      :key="au.url"
+                      class="play"
+                      :aria-label="t('birdId.playOne')"
+                      @click="toggle(au)"
+                    >
+                      <Play :size="14" />
+                      <!-- 跨域媒体必须 crossorigin 先于 src（AGENTS.md 铁律 5 / docs/033） -->
+                      <audio crossorigin="anonymous" :src="au.url" preload="none" />
+                    </button>
+                  </div>
+                  <button class="link" @click="router.push(`/species/${c.speciesId}`)">
+                    {{ t('birdId.viewSpecies') }}
                   </button>
-                </div>
-                <button class="link" @click="router.push(`/species/${c.speciesId}`)">
-                  {{ t('birdId.viewSpecies') }}
-                </button>
+                </template>
               </template>
             </div>
           </div>
