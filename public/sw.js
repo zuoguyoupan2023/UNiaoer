@@ -7,8 +7,12 @@
  *   - 构建后的同源 /assets/：cache-first（内容哈希，可长缓存）
  *   - 页面导航：network-first，断网回退缓存的首页
  */
+// v4（2026-10-17）：构建标记改用 data/build.json（每次部署都变）——修「只改前端/只重建对表产物
+// 时缓存永不清，用户看到旧对表产物」。
+// ⚠️ 本次**故意不递增 VERSION**：VERSION 递增会在 activate 时按前缀清掉 `*-media`，
+// 用户几百 MB 的媒体缓存要重下。构建标记的变化只清 RUNTIME_CACHE（assets 分片/对表产物），
+// 与媒体无关。只有**媒体缓存格式**变更（如 docs/033 的 206/opaque 修复）时才该递增。
 // v3（2026-10-08）：媒体缓存策略修复（去 Range 取全量 + CORS 模式音频，见 docs/033）
-// —— 版本号必须随本次变更递增：activate 时按前缀清理旧缓存，把历史不透明/206 片段清干净。
 const VERSION = 'uniaoer-v3'
 const MEDIA_CACHE = `${VERSION}-media`
 const RUNTIME_CACHE = `${VERSION}-runtime`
@@ -27,16 +31,24 @@ const BUILD_TAG_KEY = `${VERSION}-build-tag`
  */
 async function refreshBuildTag() {
   try {
-    // 050 P2：权威层优先（唯一口径）；取不到再回退 core（迁移期兼容）
+    // ① 首选构建标记（每次部署都变）：data/build.json —— 覆盖「只改前端/只重建对表产物」
+    //    这类**不动名录层**的部署（2026-10-17 事故：manifest-meta 的 generatedAt 十天没变，
+    //    缓存永不清，用户一直看到旧的对表产物 → 识别出的种被误判成「暂无素材」）。
     let tag = ''
     try {
-      const metaRes = await fetch('/data/manifest-meta.json', { cache: 'no-store' })
-      if (metaRes.ok) {
-        const metaDoc = await metaRes.json()
-        tag = String(metaDoc?.generatedAt || '')
-      }
+      const buildRes = await fetch('/data/build.json', { cache: 'no-store' })
+      if (buildRes.ok) tag = String((await buildRes.json())?.buildId || '')
     } catch {
-      /* 离线或尚未部署 → 试 core */
+      /* 老版本部署还没有这个文件 → 回退下面的名录层标记 */
+    }
+    // ② 回退：权威名录层（唯一口径），再回退 core（迁移期兼容）
+    if (!tag) {
+      try {
+        const metaRes = await fetch('/data/manifest-meta.json', { cache: 'no-store' })
+        if (metaRes.ok) tag = String((await metaRes.json())?.generatedAt || '')
+      } catch {
+        /* 离线或尚未部署 → 试 core */
+      }
     }
     if (!tag) {
       const res = await fetch('/data/manifest-core.json', { cache: 'no-store' })

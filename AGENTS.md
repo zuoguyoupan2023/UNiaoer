@@ -109,6 +109,10 @@
 ## 架构速览
 
 - **前端**：Vue 3 + Vite + TS + Pinia；纯静态 SPA，生产优先读 Worker `/api/manifest`（失败回退 `public/data/manifest.json`）。
+  - **SW 缓存失效标记 = 构建期生成的 `data/build.json`（每次部署都变）**。别再用 `manifest-meta.generatedAt`
+    当标记：只重建前端/对表产物时它**不变** → 缓存永不清，用户一直看到旧数据
+    （2026-10-17 事故：线上产物已修好，浏览器里还是旧的，识别出的白头鹎被误判「暂无素材」）。
+  - `/data/model-labels-*`、`data/assets/*` 都是 cache-first，改产物后**必须**确认部署 + 用户端失效。
 - **媒体**：存在 Cloudflare **R2**（`media/<物种id>/…`），经公开域名（r2.dev 或自定义域名）访问。
 - **元数据**：`manifest.json` 仍是主索引；**D1 已启用**（`uniaoer`：species/media/questions，1299 物种 / 12938 媒体）。
 - **后端**：独立 Worker `uniaoer-api`（`worker/`），挂 `uniaoer.com/api/*`：`/api/health`、`/api/manifest`、`/api/questions`、`/api/media/:id`、`/api/reports`（提交/公开列表/投票）、`/api/reports/:id/vote`、`/api/reports/admin`（受保护）；`XC_API_KEY` 存 Worker secret，`ADMIN_KEY` 存 Worker secret（前端不接触）。
