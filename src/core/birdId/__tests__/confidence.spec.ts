@@ -52,9 +52,9 @@ describe('present 三档行为', () => {
     const v = present(res([cand('a', 0.2, exact, 'x'), cand('b', 0.05, exact, 'y')]))
     expect(v.band).toBe('low')
     expect(v.shown.length).toBeGreaterThan(0)
-    // 不再出现任何置信度数字或"不太确定"字样
-    expect(v.message).not.toContain('不太确定')
-    expect(v.message).not.toContain('%')
+    // 不再出现任何置信度数字或「不确定」字样：文案是 i18n key，不含数字
+    expect(v.messageKey).not.toContain('%')
+    expect(v.messageKey).not.toContain('confidence')
   })
 
   it('极低置信度：不展示任何候选（避免误导）', () => {
@@ -62,16 +62,16 @@ describe('present 三档行为', () => {
     expect(v.band).toBe('none')
     expect(v.shown).toHaveLength(0)
     expect(v.all).toHaveLength(2) // 仍保留完整结果供调试
-    // 提示语里也不该带置信度数字
-    expect(v.message).toContain('没太听出来')
-    expect(v.message).not.toContain('%')
+    // 文案 key 指向「没太听出来」那句
+    expect(v.messageKey).toBe('birdId.band.none')
+    expect(v.messageKey).not.toContain('%')
   })
 
   it('空结果也有话可说', () => {
     const v = present(res([]))
     expect(v.band).toBe('none')
-    expect(v.message).toBe('没有识别出结果')
-    expect(v.message).not.toContain('%')
+    expect(v.messageKey).toBe('birdId.band.noResult')
+    expect(v.messageKey).not.toContain('%')
   })
 })
 
@@ -90,11 +90,11 @@ describe('present 三种状态标记（ACCURACY §5 UI 验收标准）', () => {
   it('全是名录外的非鸟：给出明确解释而不是硬给候选', () => {
     const v = present(res([cand('frog', 0.8, none, null)]))
     expect(v.hasMappedButNoMedia).toBe(false)
-    expect(v.message).toContain('不属于本项目收录的鸟种')
+    expect(v.messageKey).toBe('birdId.band.notOurBirds')
   })
 
-  it('正常命中时 message 留空（避免噪声）', () => {
+  it('正常命中时 messageKey 留空（避免噪声）', () => {
     const v = present(res([cand('a', 0.9, exact, 'cettia-cetti')]))
-    expect(v.message).toBe('')
+    expect(v.messageKey).toBe('')
   })
 })

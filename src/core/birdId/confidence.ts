@@ -37,8 +37,8 @@ export interface Presented {
   shown: Candidate[]
   /** 完整 top-N，保留用于调试与「为什么没显示」的解释 */
   all: Candidate[]
-  /** 建议给用户的一句话 */
-  message: string
+  /** 建议给用户的一句话——**i18n key**（空串 = 不必多说），由视图 `t(messageKey)` 渲染 */
+  messageKey: string
   /** 是否存在「已对上但项目暂无素材」的候选，UI 要显式表达 */
   hasMappedButNoMedia: boolean
   /** 是否存在只能到属的候选 */
@@ -58,13 +58,13 @@ export function present(result: BirdIdResult, topN = 3): Presented {
   const hasMappedButNoMedia = shown.some((c) => c.entry && c.entry.t <= 3 && !c.speciesId)
   const hasGenusOnly = shown.some((c) => c.entry && c.entry.t === 4)
 
-  let message: string
-  if (!top) message = '没有识别出结果'
-  else if (shown.length === 0)
-    message = '没太听出来 —— 可能是录音太短、背景噪音太大,或者不是鸟叫'
+  // 文案一律返回 i18n key，由视图 t(messageKey) 渲染(015 §8: no CJK literals in core layer)
+  let messageKey: string
+  if (!top) messageKey = 'birdId.band.noResult'
+  else if (shown.length === 0) messageKey = 'birdId.band.none'
   else if (!shown.some((c) => c.entry && c.entry.t <= 3 && c.speciesId))
-    message = '听到了一些声音,但都不属于本项目收录的鸟种,可能是蛙、虫或环境音'
-  else message = ''
+    messageKey = 'birdId.band.notOurBirds'
+  else messageKey = ''
 
-  return { band, shown, all, message, hasMappedButNoMedia, hasGenusOnly }
+  return { band, shown, all, messageKey, hasMappedButNoMedia, hasGenusOnly }
 }

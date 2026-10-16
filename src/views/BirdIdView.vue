@@ -40,8 +40,11 @@ import type { Candidate } from '@/core/birdId/types'
 import { loadSpeciesAssets } from '@/core/bank'
 import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
+import { REGION_LABEL_KEY } from '@/core/region'
+import { useSettingsStore } from '@/stores/settings'
+import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 
 type Phase = 'idle' | 'capturing' | 'decoding' | 'loading-model' | 'thinking' | 'error'
@@ -178,14 +181,14 @@ async function handleAudio(blob: Blob) {
     await ensureReady('audio')
     phase.value = 'thinking'
     track('birdid_infer', { modality: 'audio', seconds: Math.round(samples.length / 48000) })
-    const r = await identifyAudio(blob)
+    const r = await identifyAudio(blob, undefined, regionKey.value)
     runs.audio = r.view
     metas.audio = { durationSec: r.result.durationSec, windows: r.result.windows }
     phase.value = 'idle'
     await loadMedia(r.view.all)
   } catch (e) {
     phase.value = 'error'
-    console.error('[birdId] 音频识别失败:', e)
+    console.error('[birdId] audio identify failed:', e)
     const m = e instanceof Error ? e.message : String(e)
     errMsg.value = m === 'too-short' ? t('birdId.err.tooShort') : t('birdId.err.generic')
     track('birdid_error', { modality: 'audio', reason: m.slice(0, 40) })
@@ -199,14 +202,14 @@ async function handleImage(blob: Blob) {
     await ensureReady('image')
     phase.value = 'thinking'
     track('birdid_infer', { modality: 'image' })
-    const r = await identifyImage(blob)
+    const r = await identifyImage(blob, undefined, regionKey.value)
     runs.image = r.view
     metas.image = { durationSec: 0, windows: 1 }
     phase.value = 'idle'
     await loadMedia(r.view.all)
   } catch (e) {
     phase.value = 'error'
-    console.error('[birdId] 图像识别失败:', e)
+    console.error('[birdId] image identify failed:', e)
     errMsg.value = t('birdId.err.generic')
     track('birdid_error', { modality: 'image' })
   }
@@ -260,6 +263,34 @@ onMounted(async () => {
 })
 
 const fmtMB = (b: number) => (b / 1048576).toFixed(1)
+
+/* ═══ 地域先验 ═══
+ * 模型的概率饱和在 99%+，单靠分数排序等于按噪声排。真实的强约束是
+ * 「你拍到的鸟大概率就在当地」—— Merlin 认得准主要就靠这个。
+ * 这里让用户选地点，识别后按当地常见度档位重排候选（src/core/birdId/regionPrior.ts）。
+ * 默认跟随全局设置里的地区，不额外打断用户；可临时改，不写回设置。
+ */
+const settings = useSettingsStore()
+const regionCountry = ref(String(settings.region ?? 'ALL').split('-')[0] || 'ALL')
+const regionCode = ref<string>(settings.region?.includes('-') ? settings.region : '')
+const provinceData = ref<ProvinceData | null>(null)
+const REGION_COUNTRIES = ['CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL', 'IN', 'VN']
+
+const regionKey = computed(() =>
+  regionCountry.value === 'ALL' ? 'ALL' : regionCode.value ? `${regionCountry.value}-${regionCode.value.replace(`${regionCountry.value}-`, '')}` : regionCountry.value,
+)
+const provinceOptions = computed(() =>
+  regionCountry.value === 'ALL' ? [] : provincesOf(provinceData.value, regionCountry.value, String(locale.value)),
+)
+const countryName = (cc: string) => (cc === 'ALL' ? t('birdId.region.all') : (REGION_LABEL_KEY[cc] ?? cc))
+
+loadProvinces().then((d) => {
+  provinceData.value = d
+})
+
+function onCountryChange() {
+  regionCode.value = ''
+}
 </script>
 
 <template>
@@ -270,6 +301,31 @@ const fmtMB = (b: number) => (b / 1048576).toFixed(1)
       <Info :size="15" />
       <span>{{ t('birdId.disclaimer') }}</span>
     </p>
+
+    <!-- 地域先验：模型概率饱和到 99%+ 分不出高下，用「你拍到的鸟就在当地」来排 -->
+    <section class="panel regionPick">
+      <div class="row between">
+        <h2>{{ t('birdId.region.title') }}</h2>
+        <span v-if="regionKey !== 'ALL'" class="applied">{{ t('birdId.region.applied') }}</span>
+      </div>
+      <div class="picks">
+        <label>
+          <span class="pLabel">{{ t('birdId.region.country') }}</span>
+          <select v-model="regionCountry" @change="onCountryChange">
+            <option value="ALL">{{ t('birdId.region.all') }}</option>
+            <option v-for="cc in REGION_COUNTRIES" :key="cc" :value="cc">{{ countryName(cc) }}</option>
+          </select>
+        </label>
+        <label v-if="provinceOptions.length">
+          <span class="pLabel">{{ t('birdId.region.province') }}</span>
+          <select v-model="regionCode">
+            <option value="">{{ countryName(regionCountry) }}</option>
+            <option v-for="p in provinceOptions" :key="p.code" :value="p.code">{{ p.name }}</option>
+          </select>
+        </label>
+      </div>
+      <p class="pHint">{{ t('birdId.region.hint') }}</p>
+    </section>
 
     <!-- ═══ 跨模态互证：并排两路结果 ═══ -->
     <section v-if="runs.audio || runs.image" class="panel" :class="{ agree: verdict.agree }">
@@ -310,6 +366,7 @@ const fmtMB = (b: number) => (b / 1048576).toFixed(1)
               </div>
               <div class="cName">{{ c.entry?.z || c.label.split('_')[1] || c.label }}</div>
               <div class="cSci">{{ c.label }}</div>
+              <p v-if="c.regionTier" class="cTier">{{ t(`birdId.region.tier.${c.regionTier}`) }}</p>
               <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
               <p v-else-if="c.entry && !c.speciesId" class="cNote">{{ t('birdId.noMedia') }}</p>
             </div>
@@ -352,8 +409,8 @@ const fmtMB = (b: number) => (b / 1048576).toFixed(1)
       </ol>
 
       <!-- 互证结论 + 主动引导 -->
-      <div v-if="verdict.text" class="verdict" :class="verdict.agree ? 'ok' : 'warnBox'">
-        {{ verdict.agree ? '✓ ' : '' }}{{ verdict.text }}
+      <div v-if="verdict.textKey" class="verdict" :class="verdict.agree ? 'ok' : 'warnBox'">
+        {{ verdict.agree ? '✓ ' : '' }}{{ t(verdict.textKey) }}
       </div>
       <button
         v-if="suggest && suggestTask"
@@ -468,6 +525,50 @@ h3 {
 }
 .panel.agree {
   border-color: #16a34a;
+}
+.regionPick .applied {
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+.regionPick .picks {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.regionPick label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.regionPick .pLabel {
+  color: var(--muted, #6b7280);
+}
+.regionPick select {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e5e7eb);
+  background: var(--surface-1, #fff);
+  color: inherit;
+  min-width: 180px;
+}
+.regionPick .pHint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted, #6b7280);
+  margin: 10px 0 0;
+}
+.cTier {
+  display: inline-block;
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2, #f3f4f6);
+  color: var(--muted, #6b7280);
 }
 .twoUp {
   display: grid;

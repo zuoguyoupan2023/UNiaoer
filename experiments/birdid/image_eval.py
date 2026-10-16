@@ -39,47 +39,47 @@ def infer(path):
     return 1/(1+np.exp(-out)), float(x.max())
 
 def main():
-    idx = json.loads((ROOT/"public/data/species-index.json").read_text())["species"]
-    led = json.loads((ROOT/"data-cache/manifest-global.json").read_text())
-    sp = led["species"] if isinstance(led["species"], list) else list(led["species"].values())
-    bySci = {s["nameSci"].lower().replace(" ",""): s for s in idx if s.get("nameSci")}
-    byEn  = {s["nameEn"].lower(): s for s in idx if s.get("nameEn")}
-    sid2sp = {s["id"]: s for s in sp}
-    sid2sci = {}
-    for s2 in sp:
-        if s2.get("nameSci"):
-            t = next((x for x in idx if x.get("taxonKey")==s2.get("taxonKey")), None)
-            if t: sid2sci[t["nameSci"].lower().replace(" ","")] = dict(t, images=s2.get("images"), audios=s2.get("audios"))
+    # 真值：manifest-meta 是权威名录产物（台账只含已采到素材的种，会误报"跳过"）
+    meta = json.loads((ROOT/"public/data/manifest-meta.json").read_text())["species"]
+    byId = {s["id"]: s for s in meta if s.get("id")}
+    # 对表：与线上运行时同一条路径 —— labels[i] 取标签 → entries 映射 → 剔掉无映射
+    doc = json.loads((ROOT/"public/data/model-labels-image.json").read_text())
+    LABELS, ENTRIES = doc["labels"], doc["entries"]
 
-    hits=0; tot=0
-    args=[]
+    hits1 = hits3 = tot = 0
+    args = []
     for a in sys.argv[1:]:
         args += open(a).read().split() if a.endswith('.txt') else [a]
     for arg in args:
         p = Path(arg); sid = p.parent.name
-        truth = sid2sp.get(sid) or sid2sci.get(sid) or {}
+        truth = byId.get(sid)
         if not truth:
-            print(f"  (跳过 {sid}:台账里还没有该种,053 未采到)")
+            print(f"  (跳过 {sid}:不在 manifest-meta 名录里)")
             continue
         try:
             sc,_ = infer(p)
         except Exception as e:
             print(f"  (跳过 {sid}:无法解码 {type(e).__name__})")
             continue
-        order = np.argsort(-sc)[:3]
-        print(f"\n  {sid}/{p.name}   真值: {truth.get('nameZh') or '?'} ({truth.get('nameSci')})")
-        rank=None
-        for r,i in enumerate(order,1):
-            lab=LABELS[int(i)]
-            m=bySci.get(lab["sci"].lower().replace(" ","")) or byEn.get(lab["en"].lower())
-            tag = "✓命中" if (m and m.get("taxonKey")==truth.get("taxonKey")) else ("✓" if m else "✗对不上")
-            print(f"   {tag} [{r}] {sc[i]*100:5.1f}%  {lab['cls']:<12}{lab['sci'][:34]:<36}{lab['en'][:30]}")
-            if m and m.get("taxonKey")==truth.get("taxonKey"): rank=r
-        tot+=1
-        if rank and rank<=3: hits+=1
-
-        if truth.get("images"):
-            print(f"       该种本项目素材:图 {len(truth['images'])} 张 / 音 {len(truth['audios'] or [])} 段")
-    if tot: print(f"\n  样本 {tot} · top-3 命中真值 {hits} ({hits/tot*100:.0f}%)")
+        order = np.argsort(-sc)
+        # 运行时：下标 → 标签 → 有映射才保留（'bird' 这类无映射标签恒占 top-1，必须剔）
+        cands = [(i, sc[i], LABELS[int(i)]) for i in order[:12]
+                 if LABELS[int(i)] in ENTRIES][:3]
+        print(f"\n  {sid}/{p.name}   真值: {truth.get('nameZh')} ({truth.get('nameSci')})")
+        rank = None
+        for r,(i,s,lab) in enumerate(cands,1):
+            e = ENTRIES[lab]; mapped = e.get("s")
+            ok = mapped == sid
+            if ok: rank = r
+            print(f"   {'✓命中' if ok else ('·已对上' if mapped else '✗无素材')} [{r}] {s*100:5.1f}%  "
+                  f"{(e.get('z') or '—'):<12}{lab[:44]}" + (f"  → {mapped}" if mapped else ""))
+        if not cands:
+            print("   （种级候选为空：top-12 全是「bird」这类无映射标签）")
+        tot += 1
+        hits1 += 1 if rank == 1 else 0
+        hits3 += 1 if rank and rank <= 3 else 0
+        m = truth.get("playableImage"), truth.get("playableAudio")
+        print(f"       本项目素材:图 {'有' if m[0] else '无'} / 音 {'有' if m[1] else '无'}")
+    if tot: print(f"\n  样本 {tot} · top-1 命中 {hits1} ({hits1/tot*100:.0f}%) · top-3 命中 {hits3} ({hits3/tot*100:.0f}%)")
 
 main()

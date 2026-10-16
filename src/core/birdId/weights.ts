@@ -16,7 +16,7 @@
  */
 
 /** 独立模型桶基址；VITE_BIRDID_MODEL_BASE 可覆盖(本地/staging)，留空=同源 /models/ */
-const MODEL_BASE = import.meta.env.VITE_BIRDID_MODEL_BASE ?? 'https://models.bird.wewalk.world'
+const MODEL_BASE = import.meta.env.VITE_BIRDID_MODEL_BASE ?? 'https://models.uniaoer.com'
 
 export interface ModelRef {
   key: TaskName
@@ -26,7 +26,8 @@ export interface ModelRef {
   labels: string
   /** UI 展示的体积（MB），用于首次下载前的提示 */
   sizeMB: number
-  label: string
+  /** 模型名的 i18n key（UI 用 t(labelKey) 渲染，core 层不留文案） */
+  labelKey: string
 }
 
 export type TaskName = 'audio' | 'image'
@@ -41,14 +42,14 @@ export const MODELS: Record<TaskName, ModelRef> = {
     file: 'birdnet-v2.4-int8-arm.onnx',
     labels: 'birdnet-v2.4-labels.txt',
     sizeMB: 44,
-    label: '鸟声识别模型（BirdNET v2.4）',
+    labelKey: 'birdId.model.audioLabel',
   },
   image: {
     key: 'image',
     file: 'speciesnet-whole.onnx',
     labels: 'speciesnet-labels.txt',
     sizeMB: 0, // 待实测后回填
-    label: '鸟图识别模型',
+    labelKey: 'birdId.model.imageLabel',
   },
 }
 

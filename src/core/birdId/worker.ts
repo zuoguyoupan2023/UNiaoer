@@ -93,7 +93,7 @@ self.onmessage = async (ev: MessageEvent<InferRequest>) => {
   if (!req) return
   const t0 = Date.now()
   try {
-    if (!req.buffer) throw new Error('缺少模型 buffer：权重没有随消息送达（见 docs/056 §2）')
+    if (!req.buffer) throw new Error('missing model buffer: weights were not transferred (see docs/056 §2)')
     const s = await getSession(req.kind, req.buffer)
     const inName = s.inputNames[0]!
     const outName = s.outputNames[0]!

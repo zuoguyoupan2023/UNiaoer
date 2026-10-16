@@ -53,6 +53,11 @@ export interface Candidate {
   entry: LabelEntry | null
   /** 本项目 speciesId；已对上但无素材时为 null */
   speciesId: string | null
+  /**
+   * 当地常见度档位 1~5（regionPrior 填）；null = 未选地区或查不到。
+   * **null 不等于「当地没有」** —— 只是没有记录，不要据此断言不存在。
+   */
+  regionTier?: number | null
 }
 
 /** 置信度分流档（依据 experiments/birdid/out/ACCURACY.md 实测） */

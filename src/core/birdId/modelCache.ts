@@ -24,6 +24,22 @@ const PARALLEL = 4
 /** 小于该值不分块，直接单流（分块反而多几次往返） */
 const CHUNK_THRESHOLD = 4 * 1024 * 1024
 
+/**
+ * 权重指纹（前 4MB 的 FNV-1a）——只在日志里用。
+ * 用途：浏览器 Cache Storage 的键只有文件名，模型一旦被替换，
+ * 老用户会继续用旧权重且毫无察觉（实测症状：识别结果全错但不报错）。
+ * 打印出来与本地文件对一下，能立刻判断「跑的是不是同一份权重」。
+ */
+export function fingerprint(buf: ArrayBuffer): string {
+  const u8 = new Uint8Array(buf, 0, Math.min(buf.byteLength, 4 * 1024 * 1024))
+  let h = 0x811c9dc5
+  for (let i = 0; i < u8.length; i++) {
+    h ^= u8[i]!
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return `${buf.byteLength}B/${h.toString(16).padStart(8, '0')}`
+}
+
 export type ModelState =
   | { phase: 'idle' }
   | { phase: 'missing'; bytes: number }
@@ -83,7 +99,7 @@ async function downloadChunked(
           const buf = new Uint8Array(await r.arrayBuffer())
           // 服务端若忽略 Range 会回 200 全量，此时只取需要的切片
           const slice = buf.length === total ? buf.slice(s, e + 1) : buf
-          if (slice.length !== want) throw new Error(`分块长度 ${slice.length} ≠ ${want}`)
+          if (slice.length !== want) throw new Error(`chunk length ${slice.length} != ${want}`)
           parts[i] = slice
           done += slice.length
           onProgress?.(done, total)
@@ -93,7 +109,7 @@ async function downloadChunked(
           await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
         }
       }
-      throw lastErr instanceof Error ? lastErr : new Error('分块下载失败')
+      throw lastErr instanceof Error ? lastErr : new Error('chunked download failed')
     }),
   )
   const merged = new Uint8Array(total)
@@ -110,21 +126,32 @@ export async function ensureModel(
   onProgress?: (received: number, total: number) => void,
 ): Promise<ArrayBuffer> {
   const hit = await cachedModel(m)
-  if (hit) return hit.arrayBuffer()
+  if (hit) {
+    const buf = await hit.arrayBuffer()
+    if (import.meta.env.DEV) console.info(`[birdId] weights from cache ${m.file} fp=${fingerprint(buf)}`)
+    return buf
+  }
 
   const url = weightsUrl(m)
   const total = await head(url)
-  if (!total) throw new Error(`拿不到模型大小（${url} 无 Content-Length）`)
+  if (!total) throw new Error(`cannot get model size (${url} has no Content-Length)`)
 
   let buf: ArrayBuffer
   if (total < CHUNK_THRESHOLD) {
     const r = await fetch(url)
-    if (!r.ok) throw new Error(`模型下载失败：${r.status}`)
+    if (!r.ok) throw new Error(`model download failed: ${r.status}`)
     buf = await r.arrayBuffer()
     onProgress?.(buf.byteLength, total)
   } else {
     buf = await downloadChunked(url, total, onProgress)
   }
+
+  // 长度必须与 Content-Length 一致：分块拼接出错时 ORT 会报些看不懂的解析错误，
+  // 不如在这里说人话。
+  if (buf.byteLength !== total) {
+    throw new Error(`model size mismatch: got ${buf.byteLength} bytes, expected ${total}`)
+  }
+  if (import.meta.env.DEV) console.info(`[birdId] weights downloaded ${m.file} fp=${fingerprint(buf)}`)
 
   try {
     if (typeof caches !== 'undefined') {

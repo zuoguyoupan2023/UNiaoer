@@ -14,13 +14,13 @@ export async function loadLabelMap(task = 'audio'): Promise<LabelMapFile> {
   if (cache) return cache
   const url = `${import.meta.env.BASE_URL}data/model-labels-${task}.json`
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`加载模型标签表失败：${res.status} ${url}`)
+  if (!res.ok) throw new Error(`failed to load label map: ${res.status} ${url}`)
   const map = (await res.json()) as LabelMapFile
   // 必须走 labels：entries 是**过滤后**的映射表（图像侧剔除了非鸟与上位分类标签），
   // 用 Object.keys(entries) 当下标表会让每个预测都挂到不相干的物种上。
   // 老产物没有 labels 字段时宁可报错，也不要静默给出错误物种。
   if (!Array.isArray(map.labels) || !map.labels.length) {
-    throw new Error(`模型标签表缺少 labels 下标数组：${url}（请重新构建 build:model-labels）`)
+    throw new Error(`label map has no "labels" index array: ${url} (rebuild via build:model-labels)`)
   }
   cache = map
   labelArray = map.labels
@@ -76,6 +76,14 @@ export function toResult(
     }
   })
   const candidates = all.filter((c) => c.entry !== null)
+  if (import.meta.env.DEV) {
+    // 本地实测用：把原始 top-N（含被剔除的无映射标签）打出来，
+    // 否则「模型说了什么」与「页面显示什么」对不上时无从查证。
+    console.info(
+      `[birdId] raw top${all.length} -> kept ${candidates.length} (dropped ${all.length - candidates.length})`,
+      all.map((c) => `${(c.score * 100).toFixed(1)}% ${c.label}${c.entry ? '' : ' [unmapped]'}`),
+    )
+  }
   return {
     candidates,
     skippedUnmapped: all.length - candidates.length,

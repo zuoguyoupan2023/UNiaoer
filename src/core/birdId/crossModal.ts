@@ -33,8 +33,8 @@ export interface CrossVerdict {
   degraded: boolean
   /** 该不该建议用户去用另一个模态复核 */
   suggest: Modality | null
-  /** 给用户的一句话 */
-  text: string
+  /** 给用户的一句话——i18n key（空串 = 不必多说），由视图 t(textKey) 渲染 */
+  textKey: string
 }
 
 /** 取该模态下「能落到具体物种」的最高分候选（跳过笼统标签与未命中） */
@@ -68,7 +68,7 @@ export function compare(
   const suggest = (other: Modality): Modality => other
 
   if (!first) {
-    return { agree: false, degraded: true, suggest: suggest('image'), text: '' }
+    return { agree: false, degraded: true, suggest: suggest('image'), textKey: '' }
   }
   const degraded = !first.speciesId
 
@@ -79,7 +79,7 @@ export function compare(
         agree: false,
         degraded: true,
         suggest: suggest('image'),
-        text: '这一路没认出具体物种。换张照片试试，往往能直接锁定。',
+        textKey: 'birdId.cross.noSpecies',
       }
     }
     if (!hasOtherMedia) {
@@ -87,14 +87,14 @@ export function compare(
         agree: false,
         degraded: false,
         suggest: null,
-        text: '本项目暂时没有这个物种的另一种素材，没法互相印证。',
+        textKey: 'birdId.cross.noOtherMedia',
       }
     }
     return {
       agree: false,
       degraded: false,
       suggest: suggest('image'),
-      text: '',
+      textKey: '',
     }
   }
 
@@ -104,7 +104,7 @@ export function compare(
       agree: true,
       degraded: false,
       suggest: null,
-      text: '声音与照片指向同一个物种，互相印证 —— 这个判断比较可靠。',
+      textKey: 'birdId.cross.agree',
     }
   }
   if (!second.speciesId) {
@@ -112,13 +112,13 @@ export function compare(
       agree: false,
       degraded: true,
       suggest: null,
-      text: '照片没能给出更具体的结果，仍以第一路为准。',
+      textKey: 'birdId.cross.imageWeaker',
     }
   }
   return {
     agree: false,
     degraded: false,
     suggest: null,
-    text: '两个模态给出了不同物种 —— 可能其中一路认错了。若两路分数都不高，建议当作「没把握」，再补一段更清晰的素材。',
+    textKey: 'birdId.cross.mismatch',
   }
 }
