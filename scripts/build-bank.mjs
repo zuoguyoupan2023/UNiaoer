@@ -1155,9 +1155,17 @@ async function persistOne(a, id, kind, ext) {
   const tmpDir = path.join(TMP, id)
   await ensureDir(tmpDir)
 
-  // 未转码（ND 或转码失败）时保留原始扩展名，避免出现 image.src 这种怪文件名
-  const outExt = a.transcode ? ext : extFromUrl(a.url) || (kind.startsWith('image') ? 'jpg' : 'mp3')
-  const localPath = path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}`)
+  // 未转码（ND 或转码失败）时保留原始字节，扩展名必须跟着实际格式走，
+  // 不能靠 URL 猜 —— XC 的 /download 无扩展名且实际常返回 WAV（见 sniffExtFile 注释）。
+  let outExt = a.transcode ? ext : extFromUrl(a.url) || (kind.startsWith('image') ? 'jpg' : 'mp3')
+  let localPath = path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}`)
+  if (!a.transcode && (await fs.access(localPath).then(() => true, () => false))) {
+    const sniffed = await sniffExtFile(localPath)
+    if (sniffed) {
+      outExt = sniffed
+      localPath = path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}`)
+    }
+  }
 
   // stage 增量：目标文件已在本地则跳过下载（补抓只拉缺失的）
   if (
@@ -1188,15 +1196,25 @@ async function persistLocalFile(a, id, kind, raw, srcUrl, ext) {
 
   let outExt = extFromUrl(srcUrl) || (kind.startsWith('image') ? 'jpg' : 'mp3')
   let file = raw
+  let transcoded = false
   if (a.transcode) {
     const out = path.join(tmpDir, `${kind}.${ext}`)
     try {
       await transcode(kind, raw, out)
       file = out
       outExt = ext
+      transcoded = true
       await fs.rm(raw, { force: true })
     } catch {
       file = raw
+    }
+  }
+  if (!transcoded) {
+    // 没转码成功（或本就不许转码）→ 以实际字节纠正扩展名与后续 Content-Type
+    const sniffed = await sniffExtFile(file)
+    if (sniffed && sniffed !== outExt) {
+      console.warn(`      ↳ ${kind} 实际是 .${sniffed} 而非 .${outExt},按真实格式落盘`)
+      outExt = sniffed
     }
   }
 
@@ -1217,6 +1235,44 @@ async function persistLocalFile(a, id, kind, raw, srcUrl, ext) {
   const out = { ...a, url }
   delete out.altUrl
   return out
+}
+
+/**
+ * 从文件头嗅探真实格式,返回 '' 表示认不出。
+ *
+ * 用途:ND 等「不转码」的素材必须原样保留字节(转码即违约),于是文件扩展名只能
+ * 跟着**实际字节**走,不能靠 URL 猜。XC 的 /download 地址不带扩展名
+ * (https://xeno-canto.org/1160726/download),历史上默认猜 .mp3,但 XC 实际
+ * 经常返回 WAV —— 一旦猜错,R2 会按 .mp3 发 Content-Type: audio/mpeg,
+ * WebKit 会直接拒播(docs/033 同类故障),且未压缩 PCM 体积是转码 mp3 的 5~8 倍。
+ */
+function sniffExtBuf(b) {
+  if (b.length < 4) return ''
+  const a = (s, e) => b.subarray(s, e).toString('latin1')
+  if (a(0, 4) === 'RIFF') return a(8, 12) === 'WAVE' ? 'wav' : ''
+  if (a(0, 3) === 'ID3') return 'mp3'
+  if (b[0] === 0xff && (b[1] & 0xe0) === 0xe0) return 'mp3' // MPEG 帧同步(无 ID3 头)
+  if (a(0, 3) === 'OggS') return 'ogg'
+  if (a(4, 8) === 'ftyp') return /^M4A|^mp4|^isom|^M4B/.test(a(8, 12)) ? 'm4a' : ''
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpg'
+  if (b[0] === 0x89 && a(1, 4) === 'PNG') return 'png'
+  if (a(0, 4) === 'RIFF') return a(8, 12) === 'WEBP' ? 'webp' : a(8, 12) === 'WAVE' ? 'wav' : ''
+  if (a(4, 8) === 'ftyp' && /ftypavif|ftypavis/.test(a(8, 16))) return 'avif'
+  return ''
+}
+
+async function sniffExtFile(file) {
+  let fd
+  try {
+    fd = await fs.open(file, 'r')
+    const buf = Buffer.alloc(16)
+    const { bytesRead } = await fd.read(buf, 0, 16, 0)
+    return sniffExtBuf(buf.subarray(0, bytesRead))
+  } catch {
+    return ''
+  } finally {
+    await fd?.close()
+  }
 }
 
 /** 从 URL 猜原始扩展名 */
@@ -1241,8 +1297,20 @@ async function transcode(kind, src, out) {
 }
 
 function guessContentType(url, kind, ext) {
-  if (ext === 'webp') return 'image/webp'
-  if (ext === 'mp3') return 'audio/mpeg'
+  // 扩展名是嗅探出来的真实格式，优先于 URL 猜测定 —— 否则 .wav 会掉到下面的
+  // `audio/mpeg` 兜底分支，R2 就会对 WAV 字节错报 Content-Type。
+  const byExt = {
+    webp: 'image/webp',
+    avif: 'image/avif',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    m4a: 'audio/mp4',
+    ogg: 'audio/ogg',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+  }
+  if (byExt[ext]) return byExt[ext]
   const u = (url || '').toLowerCase()
   if (u.includes('.png')) return 'image/png'
   if (u.includes('.webp')) return 'image/webp'
