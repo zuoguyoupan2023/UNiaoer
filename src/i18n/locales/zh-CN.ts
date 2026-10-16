@@ -18,6 +18,7 @@ export const messages = {
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
     birding: '观鸟',
+    identify: '识别',
     catalog: '名录',
     stats: '统计',
     reports: '大众评审',
@@ -361,7 +362,8 @@ export const messages = {
     lead: '按国家或省份查看当地观鸟点与鸟种；也可打开「附近鸟点」按你的位置排序。',
   },
   birdId: {
-    title: '识鸟',
+    title: '识别',
+    privacyShort: '识别在你的设备上完成，录音不会上传。',
     maybe: {
       first: '可能是它',
       other: '也可能是',

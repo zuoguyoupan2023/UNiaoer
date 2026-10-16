@@ -15,7 +15,6 @@ import { useRouter } from 'vue-router'
 import {
   Bird,
   Camera,
-  Info,
   Loader2,
   Mic,
   Play,
@@ -47,6 +46,20 @@ import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 const { t, locale } = useI18n()
 const router = useRouter()
 
+/**
+ * 图像识别（SpeciesNet）暂时下线（2026-10-17）
+ *
+ * 实测结论：这个 fp16 ONNX 导出的输出饱和在 99%+、排序基本不可信
+ * （同一张渡鸦照片 → 灰噪钟鹊；角叫鸭 → 鸡鵟；拍什么都能排到啄木鸟）。
+ * 已验证与以下因素无关：缩放算法、12 种预处理口径、5 种裁切比例、
+ * 浏览器/Node 运行时（权重指纹一致）、权重文件本身。故判定为模型侧问题。
+ *
+ * 代码与产物全部保留（`identifyImage`、model-labels-image.json、overrides、门禁都在），
+ * 换模型后把这里改回 true 即可恢复 —— 候选池 `IMAGE_TOP_K` 不宜超过 12（见 regionPrior 注释）。
+ * 后续路线见 docs/059。
+ */
+const ENABLE_IMAGE = false
+
 type Phase = 'idle' | 'capturing' | 'decoding' | 'loading-model' | 'thinking' | 'error'
 const phase = ref<Phase>('idle')
 const errMsg = ref('')
@@ -70,6 +83,8 @@ const elapsed = ref(0)
 const busy = computed(
   () => phase.value === 'decoding' || phase.value === 'loading-model' || phase.value === 'thinking',
 )
+/** 当前启用的模态。图像侧下线期间只跑音频（见 ENABLE_IMAGE） */
+const modalities = computed<Modality[]>(() => (ENABLE_IMAGE ? ['audio', 'image'] : ['audio']))
 const dlPct = computed(() => (dl.total ? Math.round((dl.received / dl.total) * 100) : 0))
 
 const firstModality = computed<Modality | null>(() => (runs.audio ? 'audio' : runs.image ? 'image' : null))
@@ -297,10 +312,8 @@ function onCountryChange() {
   <div class="wrap">
     <h1><Bird :size="22" /> {{ t('birdId.title') }}</h1>
 
-    <p class="disclaimer">
-      <Info :size="15" />
-      <span>{{ t('birdId.disclaimer') }}</span>
-    </p>
+    <!-- 隐私说明保留一行：识别全在端上、录音不上传（055 §5.3 的红线）。要更干净可直接删。 -->
+    <p class="privacy">{{ t('birdId.privacyShort') }}</p>
 
     <!-- 地域先验：模型概率饱和到 99%+ 分不出高下，用「你拍到的鸟就在当地」来排 -->
     <section class="panel regionPick">
@@ -324,7 +337,6 @@ function onCountryChange() {
           </select>
         </label>
       </div>
-      <p class="pHint">{{ t('birdId.region.hint') }}</p>
     </section>
 
     <!-- ═══ 跨模态互证：并排两路结果 ═══ -->
@@ -335,7 +347,7 @@ function onCountryChange() {
       </div>
 
       <ol class="lanes">
-        <li v-for="m in (['audio', 'image'] as Modality[])" :key="m" class="lane" :class="{ empty: !runs[m] }">
+        <li v-for="m in modalities" :key="m" class="lane" :class="{ empty: !runs[m] }">
           <div class="laneHead">
             <Mic v-if="m === 'audio'" :size="15" />
             <Camera v-else :size="15" />
@@ -370,8 +382,6 @@ function onCountryChange() {
               <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
               <p v-else-if="c.entry && !c.speciesId" class="cNote">{{ t('birdId.noMedia') }}</p>
             </div>
-
-            <p class="maybeNote">{{ t('birdId.maybe.hint') }}</p>
 
             <!-- 素材 -->
             <div v-for="c in runs[m]!.shown.filter((x) => x.speciesId)" :key="'m' + c.label" class="media">
@@ -413,7 +423,7 @@ function onCountryChange() {
         {{ verdict.agree ? '✓ ' : '' }}{{ t(verdict.textKey) }}
       </div>
       <button
-        v-if="suggest && suggestTask"
+        v-if="ENABLE_IMAGE && suggest && suggestTask"
         class="cta"
         :disabled="busy"
         @click="switchTo(suggest)"
@@ -429,7 +439,7 @@ function onCountryChange() {
       <div class="twoUp">
         <div class="col">
           <h3><Mic :size="17" /> {{ t('birdId.mod.audio') }}</h3>
-          <p class="hint">{{ t('birdId.hint.audio') }}</p>
+          <p v-if="!runs.audio" class="hint">{{ t('birdId.hint.audio') }}</p>
           <div class="row">
             <button class="btn primary" :disabled="busy" @click="startRecording">
               <Mic :size="16" /> {{ t('birdId.record') }}
@@ -437,9 +447,9 @@ function onCountryChange() {
             <label class="btn">{{ t('birdId.upload') }}<input type="file" accept="audio/*" hidden @change="onAudioFile" /></label>
           </div>
         </div>
-        <div class="col">
+        <!-- 图像侧已下线（ENABLE_IMAGE）；恢复时无需改结构 -->
+        <div v-if="ENABLE_IMAGE" class="col">
           <h3><Camera :size="17" /> {{ t('birdId.mod.image') }}</h3>
-          <p class="hint">{{ t('birdId.hint.image') }}</p>
           <label class="btn">
             {{ t('birdId.chooseImage') }}<input type="file" accept="image/*" hidden @change="onImageFile" />
           </label>
@@ -465,7 +475,7 @@ function onCountryChange() {
       <p v-if="phase === 'error'" class="err">✗ {{ errMsg }}</p>
 
       <div class="modelRow">
-        <template v-for="m in (['audio', 'image'] as Modality[])" :key="m">
+        <template v-for="m in modalities" :key="m">
           <span v-if="modelState[m].ready" class="ok">✓</span>
           <TriangleAlert v-else :size="14" />
           <span class="modelTxt">{{
@@ -476,7 +486,6 @@ function onCountryChange() {
           <button v-if="modelState[m].ready" class="link sm" @click="dropModel(m)">{{ t('birdId.model.drop') }}</button>
         </template>
       </div>
-      <p class="hint">{{ t('birdId.cross.why') }}</p>
     </section>
   </div>
 </template>
@@ -515,6 +524,11 @@ h3 {
   font-size: 13px;
   line-height: 1.6;
   margin: 0 0 14px;
+}
+.privacy {
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  margin: 0 0 12px;
 }
 .panel {
   background: var(--surface-1, #fff);

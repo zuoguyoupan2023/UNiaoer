@@ -23,6 +23,7 @@ const en: typeof zhMessages = {
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
     birding: 'Birding',
+    identify: 'Identify',
     catalog: 'Catalogue',
     stats: 'Stats',
     reports: 'Review',
@@ -624,7 +625,8 @@ const en: typeof zhMessages = {
     practiceAudio: 'Practice · sounds',
   },
   birdId: {
-    title: 'Identify a bird',
+    title: 'Identify',
+    privacyShort: 'Recognition runs on your device; recordings are never uploaded.',
     disclaimer:
       'AI is a guide, not an answer. Everything runs on your device — the recording and photo are never uploaded. The model can only suggest candidates; compare them with the media below and judge for yourself.',
     maybe: {
