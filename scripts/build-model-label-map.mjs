@@ -82,25 +82,31 @@ const rawLines = fs
  *  - image：SpeciesNet 的 `uuid;class;order;family;genus;species;俗名`
  *    只留 `class === 'aves'` 的**种级**标签（species 字段是 order/family/genus/species
  *    这类上位分类占位符的直接丢掉 —— 它们根本不是种，展示没有意义，见 docs/057 §0）。
+ *
+ * ⚠️ `orderedLabels` 必须**保留每一行**（含被过滤掉的），顺序即模型输出下标：
+ * 运行时按 `labels[i]` 取标签（src/core/birdId/labels.ts），一旦这里少一行，
+ * 后面所有下标全部错位 → 每个预测都会挂到不相干的物种上。实测踩过这个坑。
  */
 const UPPER_RANK = new Set(['order', 'family', 'genus', 'species', 'subspecies', 'suborder', 'subfamily'])
 const parsed = []
+const orderedLabels = []
 let skippedNonAves = 0
 let skippedUpper = 0
 
 for (const line of rawLines) {
   if (IS_IMAGE) {
-    if (/^uuid\b/i.test(line)) continue
+    if (/^uuid\b/i.test(line)) continue // 元数据表头，不是类别
     const p = line.split(';')
-    if ((p[1] || '').trim().toLowerCase() !== 'aves') {
-      skippedNonAves++
-      continue
-    }
     const genus = (p[4] || '').trim()
     const species = (p[5] || '').trim().toLowerCase()
     const en = (p[6] || '').trim()
-    if (!genus || !species || UPPER_RANK.has(species)) {
-      skippedUpper++
+    const aves = (p[1] || '').trim().toLowerCase() === 'aves'
+    const isSpecies = aves && genus && species && !UPPER_RANK.has(species)
+    // 非鸟 / 上位分类标签也占一个模型下标，必须占位，否则下标错位
+    orderedLabels.push(genus && species ? `${genus} ${species}${en ? '_' + en : ''}` : en)
+    if (!isSpecies) {
+      if (!aves) skippedNonAves++
+      else skippedUpper++
       continue
     }
     const sci = `${genus} ${species}`
@@ -109,10 +115,21 @@ for (const line of rawLines) {
     const u = line.indexOf('_')
     const sci = u > 0 ? line.slice(0, u).trim() : ''
     const en = u > 0 ? line.slice(u + 1).trim() : line
+    orderedLabels.push(line)
     parsed.push({ label: line, sci, en })
   }
 }
 const rawLabels = parsed.map((x) => x.label)
+
+// 模型输出类别数对不上就别写产物：宁可什么都不产出，也不要一个下标错位的产物
+const EXPECT_CLASSES = Number(argOf('--classes', '0'))
+if (EXPECT_CLASSES > 0 && orderedLabels.length !== EXPECT_CLASSES) {
+  console.error(
+    `✗ 标签表 ${orderedLabels.length} 行 ≠ 模型输出 ${EXPECT_CLASSES} 类；` +
+      `产物下标会错位，拒绝写入。核对模型版本或用 --classes 显式声明类别数。`,
+  )
+  process.exit(2)
+}
 
 const indexRaw = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
 const index = indexRaw.species ?? indexRaw
@@ -241,7 +258,14 @@ const out = {
   task: TASK,
   model: path.basename(path.dirname(LABELS)) + '/' + path.basename(LABELS),
   generatedAt: new Date().toISOString(),
-  labelCount: rawLabels.length,
+  /** 模型输出类别数 = labels.length（运行时按下标取标签，两者必须相等） */
+  classCount: orderedLabels.length,
+  /** labels[i] = 模型第 i 类输出的标签原文，**顺序即下标，不可过滤** */
+  labels: orderedLabels,
+  /** labels.length（含被过滤的非鸟/上位分类标签） */
+  labelCount: orderedLabels.length,
+  /** entries 的条数（种级标签数） */
+  speciesLabelCount: rawLabels.length,
   exactRate: Number(rate.toFixed(4)),
   tiers,
   entries,
@@ -254,7 +278,7 @@ console.log(`\n模型标签 → 项目物种 对表（${TASK}）`)
 if (IS_IMAGE) {
   console.log(`  原始行数      ${rawLines.length}（非鸟 ${skippedNonAves} · 上位分类标签 ${skippedUpper} 已丢弃）`)
 }
-console.log(`  标签总数      ${rawLabels.length}`)
+console.log(`  标签总数      ${rawLabels.length}（模型类别 ${orderedLabels.length}）`)
 console.log(`  T1 学名精确   ${tiers[1]}`)
 console.log(`  T2 英文名精确 ${tiers[2]}`)
 console.log(`  T3 中文名     ${tiers[3]}`)

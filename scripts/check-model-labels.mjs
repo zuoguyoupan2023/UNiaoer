@@ -56,7 +56,9 @@ async function loadKnownIds() {
 }
 
 const knownIds = await loadKnownIds()
-const overrides = (await read(OVERRIDES, {})) || {}
+// overrides 表里的键全是 SpeciesNet 标签原文，只对 image 任务有意义（与 build 脚本口径一致）
+const appliesOverrides = TASK === 'image'
+const overrides = appliesOverrides ? (await read(OVERRIDES, {})) || {} : {}
 
 // ── 1. overrides 的 speciesId 有效性 + 重复占用 ────────────────────────────────
 const owner = new Map() // speciesId -> 标签原文
@@ -86,6 +88,22 @@ if (!doc.entries || typeof doc.entries !== 'object') fail('产物缺 entries')
 
 const labels = Object.keys(doc.entries || {})
 if (!labels.length) fail('产物 entries 为空')
+
+// labels 必须存在且与 classCount 一致：运行时按下标取标签，缺了下标全错
+if (!Array.isArray(doc.labels) || !doc.labels.length) {
+  fail('产物缺 labels 下标数组（运行时按 labels[i] 取模型输出；用 Object.keys(entries) 会下标错位）')
+} else {
+  if (typeof doc.classCount === 'number' && doc.classCount !== doc.labels.length) {
+    fail(`classCount=${doc.classCount} ≠ labels.length=${doc.labels.length}`)
+  }
+  for (const [label, i] of [...new Set(doc.labels)].entries()) {
+    if (!Object.hasOwn(doc.entries, label) && /_/.test(label)) {
+      // 带 `_` 的种级标签理应都在 entries 里；不在说明过滤与下标表口径不一致
+      const near = doc.labels.filter((x, j) => j !== i && x === label).length
+      if (near === 0) fail(`labels[${i}]「${label}」在 entries 里没有对应条目`)
+    }
+  }
+}
 
 // overrides 的键必须真的在产物里(打错键 = 静默失效)
 for (const label of Object.keys(overrides)) {
@@ -120,7 +138,7 @@ console.log(`  产物          ${path.relative(ROOT, OUT)}  (${labels.length} �
 console.log(`  精确命中率    ${(rate * 100).toFixed(1)}%  (T1 ${tiers[1]} / T2 ${tiers[2]} / T3 ${tiers[3]})  门槛 ${(MIN_EXACT * 100).toFixed(0)}%`)
 console.log(`  T4 仅属名     ${tiers[4]}`)
 console.log(`  T5 未命中     ${tiers[5]}`)
-console.log(`  overrides     ${Object.keys(overrides).length} 条（speciesId 全部校验）`)
+console.log(`  overrides     ${appliesOverrides ? `${Object.keys(overrides).length} 条（speciesId 全部校验）` : '不适用（仅 image 任务）'}`)
 
 if (!QUIET) {
   const t5 = needWork.filter((x) => x.tier === 5)

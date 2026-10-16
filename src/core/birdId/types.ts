@@ -28,6 +28,15 @@ export interface LabelMapFile {
   task: string
   model: string
   generatedAt: string
+  /** 模型输出类别数，必须等于 labels.length */
+  classCount?: number
+  /**
+   * labels[i] = 模型第 i 类输出的标签原文，**顺序即下标，不可过滤**。
+   * 必需：entries 是过滤后的映射表（图像侧剔除了非鸟与上位分类标签），
+   * 它的键顺序对不上模型输出下标，只有 labels 能按下标取标签。
+   */
+  labels?: string[]
+  /** 种级标签数（旧字段，保留兼容） */
   labelCount: number
   exactRate: number
   tiers: Record<string, number>
@@ -50,8 +59,10 @@ export interface Candidate {
 export type ConfidenceBand = 'none' | 'low' | 'ok'
 
 export interface BirdIdResult {
-  /** top-N 候选（含未命中的，用于解释「没听出来」） */
+  /** top-N 候选（已剔除无映射标签），含未命中的，用于解释「没听出来」 */
   candidates: Candidate[]
+  /** 因无映射被剔除的候选数（图像侧多为「bird」这类上位分类标签） */
+  skippedUnmapped?: number
   /** 音频时长秒 */
   durationSec: number
   /** 实际推理的 3 秒窗口数 */

@@ -106,13 +106,14 @@ function ensureWorker(): Worker {
 async function runInfer(
   task: TaskName,
   payload: Record<string, unknown>,
+  topN: number,
   onProgress?: (received: number, total: number) => void,
 ) {
   const ref = MODELS[task]
   const buffer = await ensureModel(ref, onProgress)
   const w = ensureWorker()
   sentModels.delete(task)
-  const msg: Record<string, unknown> = { kind: task, ...payload, topN: 5 }
+  const msg: Record<string, unknown> = { kind: task, ...payload, topN }
   msg.buffer = buffer
   sentModels.add(task)
   return (await new Promise<InferResponse>((resolve, reject) => {
@@ -137,11 +138,18 @@ export async function identifyAudio(
   const res = await runInfer(
     'audio',
     { samples, windowSize: WIN, hop: WIN >> 1, maxWindows: 12 },
+    5,
     onProgress,
   )
   const result = toResult(res.indices, res.scores, map, samples.length / SR, res.windows)
   return { result, view: present(result, 3) }
 }
+
+/**
+ * 图像侧的原始 topK 取 12：概率饱和到 99.9% 且 top-1 恒是 `bird` 这类无映射标签，
+ * 少取几个就会把真正的种挤掉（labels.ts 的 toResult 会剔掉无映射候选）。
+ */
+const IMAGE_TOP_K = 12
 
 /** 识别一张图片 */
 export async function identifyImage(
@@ -150,7 +158,12 @@ export async function identifyImage(
 ): Promise<{ result: BirdIdResult; view: Presented }> {
   const map = await loadLabelMap('image')
   const samples = await prepareImage(blob)
-  const res = await runInfer('image', { samples, imageSize: [IMAGE_SIZE, IMAGE_SIZE] }, onProgress)
+  const res = await runInfer(
+    'image',
+    { samples, imageSize: [IMAGE_SIZE, IMAGE_SIZE] },
+    IMAGE_TOP_K,
+    onProgress,
+  )
   const result = toResult(res.indices, res.scores, map, 0, 1)
   return { result, view: present(result, 3) }
 }

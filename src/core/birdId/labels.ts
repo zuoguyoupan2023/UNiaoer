@@ -7,7 +7,7 @@
 import { TIER_EXACT, TIER_EN, TIER_ZH, type BirdIdResult, type Candidate, type LabelMapFile } from './types'
 
 let cache: LabelMapFile | null = null
-/** 标签按模型输出索引排列的数组 —— 推理只回传索引，映射时按下标取，避免每次重建 6522 个字符串 */
+/** 标签按模型输出下标排列的数组 —— 推理只回传索引，映射时按下标取，避免每次重建几千个字符串 */
 let labelArray: string[] = []
 
 export async function loadLabelMap(task = 'audio'): Promise<LabelMapFile> {
@@ -15,8 +15,15 @@ export async function loadLabelMap(task = 'audio'): Promise<LabelMapFile> {
   const url = `${import.meta.env.BASE_URL}data/model-labels-${task}.json`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`加载模型标签表失败：${res.status} ${url}`)
-  cache = (await res.json()) as LabelMapFile
-  labelArray = Object.keys(cache.entries)
+  const map = (await res.json()) as LabelMapFile
+  // 必须走 labels：entries 是**过滤后**的映射表（图像侧剔除了非鸟与上位分类标签），
+  // 用 Object.keys(entries) 当下标表会让每个预测都挂到不相干的物种上。
+  // 老产物没有 labels 字段时宁可报错，也不要静默给出错误物种。
+  if (!Array.isArray(map.labels) || !map.labels.length) {
+    throw new Error(`模型标签表缺少 labels 下标数组：${url}（请重新构建 build:model-labels）`)
+  }
+  cache = map
+  labelArray = map.labels
   return cache
 }
 
@@ -45,7 +52,13 @@ export function labelAt(i: number): string {
   return labelArray[i] ?? ''
 }
 
-/** 把原始推理输出整理成 BirdIdResult（分数已归一化到 0~1） */
+/**
+ * 把原始推理输出整理成 BirdIdResult（分数已归一化到 0~1）
+ *
+ * 剔除 `entry === null` 的候选：图像侧 top-1 几乎恒是 `bird` 这类上位分类标签
+ * （概率饱和到 99.9%，实测没有区分度），留在候选里只会挤掉真正的种。
+ * 故图像侧要多取一些原始 topK 再过滤（见 index.ts 的 topN）。
+ */
 export function toResult(
   indices: number[],
   scores: number[],
@@ -53,8 +66,22 @@ export function toResult(
   durationSec: number,
   windows: number,
 ): BirdIdResult {
-  const labels = indices.map((i) => labelAt(i))
-  return { candidates: mapCandidates(labels, scores, map), durationSec, windows }
+  const all = indices.map((i) => labelAt(i)).map((label, k) => {
+    const entry = map.entries[label] ?? null
+    return {
+      label,
+      score: scores[k] ?? 0,
+      entry,
+      speciesId: entry && entry.t <= TIER_ZH ? entry.s : null,
+    }
+  })
+  const candidates = all.filter((c) => c.entry !== null)
+  return {
+    candidates,
+    skippedUnmapped: all.length - candidates.length,
+    durationSec,
+    windows,
+  }
 }
 
 export { TIER_EXACT, TIER_EN, TIER_ZH }
