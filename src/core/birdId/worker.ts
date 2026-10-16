@@ -108,10 +108,26 @@ self.onmessage = async (ev: MessageEvent<InferRequest>) => {
       const tensor = new ort.Tensor('float32', req.samples!, [n, h, w, 3])
       const out = await s.run({ [inName]: tensor })
       const flat = out[outName]!.data as Float32Array
-      // image 模型输出可能是 logits 或已归一化；用 sigmoid 前先看量级
-      const isLogit = Math.max(...Array.from(flat.slice(0, 50))) > 1.01
+      // 输出可能是 logits 或已归一化的概率，两种都归一到 0~1。
+      // 原实现只取**前 50 类**判量级，若恰好那 50 类都是低分(logit << 0)，
+      // 就会把 logits 当成已归一化的概率，sigmoid 整个漏掉。
+      // 改成对**全量**判断，并在真概率时归一化而非原样使用。
+      let mx = -Infinity
+      let mn = Infinity
+      for (let i = 0; i < flat.length; i++) {
+        const v = Number(flat[i] ?? 0)
+        if (v > mx) mx = v
+        if (v < mn) mn = v
+      }
+      const looksLikeLogits = mn < -0.01 || mx > 1.01
       const sc = new Float32Array(flat.length)
-      for (let i = 0; i < flat.length; i++) sc[i] = isLogit ? sigmoid(Number(flat[i])) : Number(flat[i])
+      if (looksLikeLogits) {
+        for (let i = 0; i < flat.length; i++) sc[i] = sigmoid(Number(flat[i] ?? 0))
+      } else {
+        let sum = 0
+        for (let i = 0; i < flat.length; i++) sum += Math.max(0, Number(flat[i] ?? 0))
+        for (let i = 0; i < flat.length; i++) sc[i] = sum > 0 ? Math.max(0, Number(flat[i] ?? 0)) / sum : 0
+      }
       const { order, values } = topK(sc, req.topN || 5)
       res = { type: 'result', indices: order, scores: values, windows: 1, elapsedMs: Date.now() - t0 }
     } else {
