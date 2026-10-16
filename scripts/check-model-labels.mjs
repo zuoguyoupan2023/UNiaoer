@@ -39,7 +39,14 @@ const read = async (p, fallback = null) => {
   }
 }
 
-/** 本项目认识的 speciesId 全集:manifest-meta(上线产物) ∪ taxa(1299) ∪ 台账(可播放种)。 */
+/**
+ * 本项目认识的 speciesId 全集:manifest-meta(上线产物) ∪ taxa(1299) ∪ 台账(可播放种)。
+ *
+ * ⚠️ CI 里**没有台账**(`data-cache/` 被 gitignore),而产物里的 `s` 字段恰恰是从台账来的
+ * —— 台账缺席时若照旧校验「条目指向的 id 是否存在」,会把每个新采到媒体的种都判为未知,
+ * CI 必红(2026-10-17 踩过:verify 卡在 Check model labels (audio))。
+ * 故返回 hasLedger,台账缺席时跳过条目校验、只校验 overrides 与产物结构。
+ */
 async function loadKnownIds() {
   const ids = new Map() // id -> 来源
   const add = (doc, source) => {
@@ -51,11 +58,12 @@ async function loadKnownIds() {
   const meta = await read(path.join(ROOT, 'public/data/manifest-meta.json'))
   add(meta && (meta.species ?? meta), 'manifest-meta')
   add(await read(path.join(ROOT, 'data/taxa.json')), 'taxa')
-  add(await read(path.join(ROOT, 'data-cache/manifest-global.json')), '台账')
-  return ids
+  const ledger = await read(path.join(ROOT, 'data-cache/manifest-global.json'))
+  add(ledger, '台账')
+  return { ids, hasLedger: !!ledger }
 }
 
-const knownIds = await loadKnownIds()
+const { ids: knownIds, hasLedger } = await loadKnownIds()
 // overrides 表里的键全是 SpeciesNet 标签原文，只对 image 任务有意义（与 build 脚本口径一致）
 const appliesOverrides = TASK === 'image'
 const overrides = appliesOverrides ? (await read(OVERRIDES, {})) || {} : {}
@@ -120,7 +128,10 @@ for (const [label, e] of Object.entries(doc.entries || {})) {
   }
   tiers[t]++
   if (t >= 4) needWork.push({ label, tier: t, genus: e.g ?? null, zh: e.z ?? null })
-  if (e.s && !knownIds.has(e.s)) fail(`条目「${label}」指向未知 speciesId "${e.s}"`)
+  // 台账缺席（CI）时无法校验「条目指向的种是否真实存在」——产物的 s 就是台账给的
+  if (hasLedger && e.s && !knownIds.has(e.s)) {
+    fail(`条目「${label}」指向未知 speciesId "${e.s}"`)
+  }
   if (t <= 3 && !e.s) {
     // 对上了但还没采到素材是可接受的(053 采集完成后上升),不算问题
   }
@@ -138,6 +149,7 @@ console.log(`  产物          ${path.relative(ROOT, OUT)}  (${labels.length} �
 console.log(`  精确命中率    ${(rate * 100).toFixed(1)}%  (T1 ${tiers[1]} / T2 ${tiers[2]} / T3 ${tiers[3]})  门槛 ${(MIN_EXACT * 100).toFixed(0)}%`)
 console.log(`  T4 仅属名     ${tiers[4]}`)
 console.log(`  T5 未命中     ${tiers[5]}`)
+console.log(`  台账          ${hasLedger ? '已加载（校验条目 id 存在性）' : '缺席（CI 环境）→ 跳过条目 id 校验'}`)
 console.log(`  overrides     ${appliesOverrides ? `${Object.keys(overrides).length} 条（speciesId 全部校验）` : '不适用（仅 image 任务）'}`)
 
 if (!QUIET) {
