@@ -1,55 +1,106 @@
 <script setup lang="ts">
 /**
- * 端上识鸟（docs/055 P1）
+ * 端上识鸟（docs/055 P1 / docs/056）
  *
  * 定位红线：这是「识鸟 → 看本项目素材」的独立探索工具，**不接答题链路**。
- * 全程端上，用户的录音不上传任何服务器。
+ * 全程端上，用户的录音与照片不上传任何服务器。
+ *
+ * 核心交互是**跨模态互证**：先任选一个模态识别 → 主动引导用另一个模态复核 →
+ * 并排显示两路结果。理由见 src/core/birdId/crossModal.ts：两个模型的失效模式
+ * 不相关（乌鸫会学别的鸟叫，声音会认错；照片在羽色体型上几乎不会犯这类错）。
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Bird, Info, Loader2, Mic, Play, Square, Trash2, TriangleAlert } from 'lucide-vue-next'
 import {
-  identify,
+  Bird,
+  Camera,
+  Info,
+  Loader2,
+  Mic,
+  Play,
+  Square,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-vue-next'
+import {
+  identifyAudio,
+  identifyImage,
   loadLabelMap,
   cachedModel,
   modelSize,
   clearModelCache,
   decodeAudio,
+  MODELS,
   ensureModel,
 } from '@/core/birdId'
 import { CONF_OK, type Presented } from '@/core/birdId/confidence'
-import { loadSpeciesAssets } from '@/core/bank'
+import { compare, topResult, type CrossResult, type Modality } from '@/core/birdId/crossModal'
 import type { Candidate } from '@/core/birdId/types'
+import { loadSpeciesAssets } from '@/core/bank'
 import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
 
 const { t } = useI18n()
 const router = useRouter()
 
-type Phase = 'idle' | 'recording' | 'decoding' | 'loading-model' | 'thinking' | 'done' | 'error'
+type Phase = 'idle' | 'capturing' | 'decoding' | 'loading-model' | 'thinking' | 'error'
 const phase = ref<Phase>('idle')
 const errMsg = ref('')
-const view = ref<Presented | null>(null)
-const resultMeta = ref<{ durationSec: number; windows: number } | null>(null)
-const modelReady = ref(false)
-const modelBytes = ref(0)
-const dlReceived = ref(0)
-const dlTotal = ref(0)
+
+/** 两路结果并存，便于并排显示与互证 */
+const runs = reactive<Record<Modality, Presented | null>>({ audio: null, image: null })
+const metas = reactive<Record<Modality, { durationSec: number; windows: number } | null>>({
+  audio: null,
+  image: null,
+})
+const mediaById = ref<Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }>>({})
+const mediaLoading = ref(new Set<string>())
+
+const modelState = reactive<Record<Modality, { ready: boolean; bytes: number }>>({
+  audio: { ready: false, bytes: 0 },
+  image: { ready: false, bytes: 0 },
+})
+const dl = reactive({ received: 0, total: 0 })
 const elapsed = ref(0)
 
-/** 候选 → 该种素材（复用 bank 的按需分片加载） */
-const mediaById = ref<Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }>>({})
-const mediaLoading = ref<Set<string>>(new Set())
+const busy = computed(
+  () => phase.value === 'decoding' || phase.value === 'loading-model' || phase.value === 'thinking',
+)
+const dlPct = computed(() => (dl.total ? Math.round((dl.received / dl.total) * 100) : 0))
 
-async function loadMedia(c: Candidate[]) {
-  for (const cand of c) {
-    const id = cand.speciesId
+const firstModality = computed<Modality | null>(() => (runs.audio ? 'audio' : runs.image ? 'image' : null))
+const firstResult = computed<CrossResult | null>(() =>
+  firstModality.value ? topResult(firstModality.value, runs[firstModality.value]!.all) : null,
+)
+const secondResult = computed<CrossResult | null>(() => {
+  const m = firstModality.value
+  if (!m) return null
+  const other: Modality = m === 'audio' ? 'image' : 'audio'
+  return runs[other] ? topResult(other, runs[other]!.all) : null
+})
+/** 第一路识别出的种，项目里是否还有另一模态的素材可看 */
+const hasOtherMedia = computed(() => {
+  const r = firstResult.value
+  if (!r?.speciesId) return false
+  const m = mediaById.value[r.speciesId]
+  if (!m) return false
+  const other: Modality = r.modality === 'audio' ? 'image' : 'audio'
+  const n = other === 'image' ? (m.images?.length ?? 0) : (m.audios?.length ?? 0)
+  return n > 0
+})
+const verdict = computed(() => compare(firstResult.value, secondResult.value, hasOtherMedia.value))
+/** 该提示用户用哪个模态复核 */
+const suggest = computed<Modality | null>(() => verdict.value.suggest)
+const suggestTask = computed(() => (suggest.value ? MODELS[suggest.value] : null))
+
+async function loadMedia(cands: Candidate[]) {
+  for (const c of cands) {
+    const id = c.speciesId
     if (!id || mediaById.value[id] || mediaLoading.value.has(id)) continue
     mediaLoading.value.add(id)
     try {
-      const a = await loadSpeciesAssets(id)
-      mediaById.value = { ...mediaById.value, [id]: a ?? {} }
+      mediaById.value = { ...mediaById.value, [id]: (await loadSpeciesAssets(id)) ?? {} }
     } catch {
       mediaById.value = { ...mediaById.value, [id]: {} }
     } finally {
@@ -60,13 +111,18 @@ async function loadMedia(c: Candidate[]) {
   }
 }
 
-const hasAnyMedia = computed(() =>
-  Object.values(mediaById.value).some((m) => (m.images?.length ?? 0) + (m.audios?.length ?? 0) > 0),
-)
-
-const dlPct = computed(() =>
-  dlTotal.value ? Math.round((dlReceived.value / dlTotal.value) * 100) : 0,
-)
+async function ensureReady(kind: Modality) {
+  if (modelState[kind].ready) return
+  phase.value = 'loading-model'
+  dl.total = (await modelSize(MODELS[kind])) || MODELS[kind].sizeMB * 1024 * 1024
+  dl.received = 0
+  await ensureModel(MODELS[kind], (r, t) => {
+    dl.received = r
+    dl.total = t
+  })
+  modelState[kind].ready = true
+  modelState[kind].bytes = dl.total
+}
 
 // ---------- 录音 ----------
 let mediaRec: MediaRecorder | null = null
@@ -75,19 +131,19 @@ let recTimer: number | undefined
 let startedAt = 0
 
 async function startRecording() {
-  if (phase.value === 'thinking' || phase.value === 'decoding') return
+  if (busy.value) return
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     chunks = []
     mediaRec = new MediaRecorder(stream)
     mediaRec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
     mediaRec.onstop = () => {
-      stream.getTracks().forEach((t) => t.stop())
-      void handleBlob(new Blob(chunks, { type: mediaRec?.mimeType || 'audio/webm' }))
+      stream.getTracks().forEach((tr) => tr.stop())
+      void handleAudio(new Blob(chunks, { type: mediaRec?.mimeType || 'audio/webm' }))
     }
     startedAt = Date.now()
     mediaRec.start()
-    phase.value = 'recording'
+    phase.value = 'capturing'
     recTimer = window.setInterval(() => (elapsed.value = (Date.now() - startedAt) / 1000), 200)
     track('birdid_record_start')
   } catch {
@@ -101,265 +157,276 @@ function stopRecording() {
   if (recTimer) clearInterval(recTimer)
 }
 
-async function onFile(e: Event) {
+async function onAudioFile(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
-  if (f) await handleBlob(f)
+  if (f) await handleAudio(f)
   ;(e.target as HTMLInputElement).value = ''
 }
 
-async function handleBlob(blob: Blob) {
+async function onImageFile(e: Event) {
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (f) await handleImage(f)
+  ;(e.target as HTMLInputElement).value = ''
+}
+
+async function handleAudio(blob: Blob) {
   phase.value = 'decoding'
-  view.value = null
-  resultMeta.value = null
+  errMsg.value = ''
   try {
     const samples = await decodeAudio(blob)
-    const seconds = samples.length / 48000
-    if (seconds < 1) throw new Error('too-short')
-    if (!modelReady.value) {
-      phase.value = 'loading-model'
-      dlTotal.value = (await modelSize()) || 25 * 1024 * 1024
-      dlReceived.value = 0
-      await ensureModel((r, t) => {
-        dlReceived.value = r
-        dlTotal.value = t
-      })
-      modelReady.value = true
-    }
+    if (samples.length < 12000) throw new Error('too-short')
+    await ensureReady('audio')
     phase.value = 'thinking'
-    track('birdid_infer', { seconds: Math.round(seconds) })
-    const r = await identify(blob)
-    view.value = r.view
-    resultMeta.value = { durationSec: r.result.durationSec, windows: r.result.windows }
-    phase.value = 'done'
+    track('birdid_infer', { modality: 'audio', seconds: Math.round(samples.length / 48000) })
+    const r = await identifyAudio(blob)
+    runs.audio = r.view
+    metas.audio = { durationSec: r.result.durationSec, windows: r.result.windows }
+    phase.value = 'idle'
     await loadMedia(r.view.all)
   } catch (e) {
     phase.value = 'error'
-    const msg = e instanceof Error ? e.message : String(e)
-    // 真实原因只进 console：用户看到的是友好文案，但出问题时 console 里有据可查
-    // （i18n 文案是通用兜底，单独看它无法定位是模型下载、Worker 还是解码挂了）
-    console.error('[birdId] 识别失败:', e)
-    errMsg.value = msg === 'too-short' ? t('birdId.err.tooShort') : t('birdId.err.generic')
-    track('birdid_error', { reason: msg.slice(0, 40) })
+    console.error('[birdId] 音频识别失败:', e)
+    const m = e instanceof Error ? e.message : String(e)
+    errMsg.value = m === 'too-short' ? t('birdId.err.tooShort') : t('birdId.err.generic')
+    track('birdid_error', { modality: 'audio', reason: m.slice(0, 40) })
   }
 }
 
-function reset() {
-  phase.value = 'idle'
-  view.value = null
-  resultMeta.value = null
+async function handleImage(blob: Blob) {
+  phase.value = 'decoding'
   errMsg.value = ''
-  mediaById.value = {}
+  try {
+    await ensureReady('image')
+    phase.value = 'thinking'
+    track('birdid_infer', { modality: 'image' })
+    const r = await identifyImage(blob)
+    runs.image = r.view
+    metas.image = { durationSec: 0, windows: 1 }
+    phase.value = 'idle'
+    await loadMedia(r.view.all)
+  } catch (e) {
+    phase.value = 'error'
+    console.error('[birdId] 图像识别失败:', e)
+    errMsg.value = t('birdId.err.generic')
+    track('birdid_error', { modality: 'image' })
+  }
 }
 
-async function checkModel() {
-  const hit = await cachedModel()
-  modelReady.value = !!hit
-  if (hit) modelBytes.value = (await hit.arrayBuffer()).byteLength
+/** 一键切到另一模态：录音结束 → 直接开图片选择；图片识别完 → 直接开录音 */
+function switchTo(kind: Modality) {
+  if (kind === 'image') (document.getElementById('birdid-image-input') as HTMLInputElement)?.click()
+  else startRecording()
+}
+
+function toggle(m: MediaAsset) {
+  const el = document.querySelector<HTMLAudioElement>(`audio[src="${CSS.escape(m.url)}"]`)
+  if (!el) return
+  if (el.paused) {
+    document.querySelectorAll<HTMLAudioElement>('audio').forEach((a) => a !== el && a.pause())
+    void el.play()
+  } else el.pause()
+}
+
+function reset(kind?: Modality) {
+  if (kind) runs[kind] = null
+  else {
+    runs.audio = null
+    runs.image = null
+  }
+  metas.audio = null
+  metas.image = null
+  errMsg.value = ''
+  phase.value = 'idle'
+}
+
+async function dropModel(kind: Modality) {
+  await clearModelCache(MODELS[kind])
+  modelState[kind].ready = false
+  modelState[kind].bytes = 0
 }
 
 onMounted(async () => {
   try {
     await loadLabelMap('audio')
+    await loadLabelMap('image')
   } catch {
     /* 标签表缺失时用户点开始才会报错 */
   }
-  await checkModel()
-})
-
-watch(modelReady, async (v) => {
-  if (v && !modelBytes.value) {
-    const hit = await cachedModel()
-    if (hit) modelBytes.value = (await hit.arrayBuffer()).byteLength
+  for (const k of ['audio', 'image'] as Modality[]) {
+    const hit = await cachedModel(MODELS[k])
+    modelState[k].ready = !!hit
+    if (hit) modelState[k].bytes = (await hit.clone().arrayBuffer()).byteLength
   }
 })
 
-async function dropModel() {
-  await clearModelCache()
-  modelReady.value = false
-  modelBytes.value = 0
-  reset()
-}
-
-const fmtMB = (b: number) => (b / 1048576).toFixed(1)
 const pct = (s: number) => `${(s * 100).toFixed(1)}%`
-
-const busy = computed(
-  () => phase.value === 'decoding' || phase.value === 'loading-model' || phase.value === 'thinking',
-)
-
-/** 播放该候选的音频：一次只放一个，避免多段叠音 */
-function toggle(m: MediaAsset) {
-  const el = document.querySelector<HTMLAudioElement>(`audio[src="${CSS.escape(m.url)}"]`)
-  if (!el) return
-  if (el.paused) {
-    document.querySelectorAll<HTMLAudioElement>('audio').forEach((a) => {
-      if (a !== el) a.pause()
-    })
-    void el.play()
-  } else {
-    el.pause()
-  }
-}
+const fmtMB = (b: number) => (b / 1048576).toFixed(1)
 </script>
 
 <template>
   <div class="wrap">
     <h1><Bird :size="22" /> {{ t('birdId.title') }}</h1>
 
-    <!-- 红线声明：不是答案 -->
     <p class="disclaimer">
       <Info :size="15" />
       <span>{{ t('birdId.disclaimer') }}</span>
     </p>
 
-    <!-- ── 输入区 ── -->
-    <section class="panel">
-      <div class="row">
-        <button v-if="phase !== 'recording'" class="btn primary" :disabled="busy" @click="startRecording">
-          <Mic :size="17" /> {{ t('birdId.record') }}
-        </button>
-        <button v-else class="btn danger" @click="stopRecording">
-          <Square :size="17" /> {{ t('birdId.stop') }} {{ elapsed.toFixed(1) }}s
-        </button>
-        <label class="btn">
-          {{ t('birdId.upload') }}
-          <input type="file" accept="audio/*" hidden @change="onFile" />
-        </label>
-        <button v-if="phase !== 'idle'" class="btn ghost" @click="reset">
-          <Trash2 :size="16" /> {{ t('birdId.reset') }}
-        </button>
+    <!-- ═══ 跨模态互证：并排两路结果 ═══ -->
+    <section v-if="runs.audio || runs.image" class="panel" :class="{ agree: verdict.agree }">
+      <div class="row between">
+        <h2>{{ t('birdId.crossTitle') }}</h2>
+        <button class="btn ghost sm" @click="reset()"><Trash2 :size="15" /> {{ t('birdId.reset') }}</button>
       </div>
 
-      <p class="hint">{{ t('birdId.inputHint') }}</p>
+      <ol class="lanes">
+        <li v-for="m in (['audio', 'image'] as Modality[])" :key="m" class="lane" :class="{ empty: !runs[m] }">
+          <div class="laneHead">
+            <Mic v-if="m === 'audio'" :size="15" />
+            <Camera v-else :size="15" />
+            <span>{{ m === 'audio' ? t('birdId.mod.audio') : t('birdId.mod.image') }}</span>
+            <button v-if="runs[m]" class="link sm" @click="reset(m)">{{ t('birdId.redo') }}</button>
+          </div>
 
-      <!-- 模型状态：绝不自动预取 -->
-      <div class="model">
-        <template v-if="phase === 'loading-model'">
-          <Loader2 :size="16" class="spin" />
-          <span>{{ t('birdId.model.downloading', { pct: dlPct }) }}</span>
-          <div class="bar"><i :style="{ width: dlPct + '%' }" /></div>
-        </template>
-        <template v-else-if="modelReady">
-          <span class="ok">✓</span>
-          <span>{{ t('birdId.model.ready', { mb: fmtMB(modelBytes) }) }}</span>
-          <button class="link" @click="dropModel">{{ t('birdId.model.drop') }}</button>
-        </template>
-        <template v-else>
-          <TriangleAlert :size="15" />
-          <span>{{ t('birdId.model.need', { mb: fmtMB(modelBytes || 25 * 1024 * 1024) }) }}</span>
-        </template>
-      </div>
+          <div v-if="!runs[m]" class="laneEmpty">
+            <p>{{ m === 'audio' ? t('birdId.hint.audio') : t('birdId.hint.image') }}</p>
+            <label v-if="m === 'image'" class="btn sm">
+              {{ t('birdId.chooseImage') }}
+              <input id="birdid-image-input" type="file" accept="image/*" hidden @change="onImageFile" />
+            </label>
+            <button v-else class="btn sm" :disabled="busy" @click="startRecording">
+              <Mic :size="14" /> {{ t('birdId.record') }}
+            </button>
+          </div>
 
-      <p v-if="phase === 'thinking'" class="thinking">
-        <Loader2 :size="16" class="spin" /> {{ t('birdId.thinking') }}
-      </p>
-      <p v-if="phase === 'error'" class="err">✗ {{ errMsg }}</p>
-    </section>
+          <div v-else-if="runs[m]!.band === 'none'" class="laneNone">
+            {{ t('birdId.band.none') }}
+          </div>
 
-    <!-- ── 结果 ── -->
-    <template v-if="view">
-      <section class="panel">
-        <div class="row between">
-          <h2>{{ t('birdId.result') }}</h2>
-          <span v-if="resultMeta" class="meta">
-            {{ t('birdId.meta', { sec: resultMeta.durationSec.toFixed(1), n: resultMeta.windows }) }}
-          </span>
-        </div>
-
-        <p v-if="view.band === 'low'" class="warn">
-          <TriangleAlert :size="15" /> {{ t('birdId.band.low') }}
-        </p>
-
-        <!-- 没听出来：不硬给候选 -->
-        <div v-if="view.band === 'none'" class="none">
-          <p>{{ view.message || t('birdId.band.none') }}</p>
-          <details v-if="view.all.length">
-            <summary>{{ t('birdId.seeRaw') }}</summary>
-            <ol class="raw">
-              <li v-for="c in view.all" :key="c.label">
-                {{ c.label }} — {{ pct(c.score) }}
-              </li>
-            </ol>
-          </details>
-        </div>
-
-        <!-- 正常候选 -->
-        <ol v-else class="cards">
-          <li v-for="(c, i) in view.shown" :key="c.label" class="card" :class="{ top: i === 0 }">
-            <div class="head">
-              <span class="rank">{{ i + 1 }}</span>
-              <span class="conf">
-                <i :style="{ width: pct(c.score) }" :class="c.score >= CONF_OK ? 'good' : 'weak'" />
-                {{ pct(c.score) }}
-              </span>
-            </div>
-
-            <div class="name">
-              <strong>{{ c.entry?.z || c.label.split('_')[1] || c.label }}</strong>
-              <em>{{ c.label }}</em>
-            </div>
-
-            <!-- 只能确定到属 -->
-            <p v-if="c.entry?.t === 4" class="note">
-              {{ t('birdId.genusOnly', { genus: c.entry.g }) }}
-            </p>
-
-            <!-- 已对上但项目暂无素材 -->
-            <p v-else-if="c.entry && !c.speciesId" class="note">
-              {{ t('birdId.noMedia') }}
-            </p>
-
-            <!-- 本项目已有素材 -->
-            <template v-else-if="c.speciesId">
-              <div v-if="mediaLoading.has(c.speciesId)" class="media">
-                <Loader2 :size="16" class="spin" />
+          <div v-else class="laneBody">
+            <div v-for="(c, i) in runs[m]!.shown" :key="c.label" class="cand" :class="{ top: i === 0 }">
+              <div class="cHead">
+                <span class="rank">{{ i + 1 }}</span>
+                <span class="cBar"><i :style="{ width: pct(c.score) }" :class="c.score >= CONF_OK ? 'good' : 'weak'" /></span>
+                <span class="cPct">{{ pct(c.score) }}</span>
               </div>
-              <div v-else class="media">
-                <div v-if="mediaById[c.speciesId]?.images?.length" class="thumbs">
+              <div class="cName">{{ c.entry?.z || c.label.split('_')[1] || c.label }}</div>
+              <div class="cSci">{{ c.label }}</div>
+              <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
+              <p v-else-if="c.entry && !c.speciesId" class="cNote">{{ t('birdId.noMedia') }}</p>
+            </div>
+
+            <!-- 素材 -->
+            <div v-for="c in runs[m]!.shown.filter((x) => x.speciesId)" :key="'m' + c.label" class="media">
+              <div v-if="mediaLoading.has(c.speciesId!)" class="spinWrap"><Loader2 :size="16" class="spin" /></div>
+              <template v-else>
+                <div v-if="mediaById[c.speciesId!]?.images?.length && m === 'audio'" class="thumbs">
                   <img
-                    v-for="m in mediaById[c.speciesId]!.images!.slice(0, 4)"
-                    :key="m.url"
-                    :src="m.thumbUrl || m.url"
+                    v-for="im in mediaById[c.speciesId!]!.images!.slice(0, 4)"
+                    :key="im.url"
+                    :src="im.thumbUrl || im.url"
                     :alt="c.label"
                     loading="lazy"
                   />
                 </div>
-                <div v-if="mediaById[c.speciesId]?.audios?.length" class="audio">
+                <div v-if="mediaById[c.speciesId!]?.audios?.length" class="audio">
                   <button
-                    v-for="m in mediaById[c.speciesId]!.audios!.slice(0, 3)"
-                    :key="m.url"
+                    v-for="au in mediaById[c.speciesId!]!.audios!.slice(0, 3)"
+                    :key="au.url"
                     class="play"
                     :aria-label="t('birdId.playOne')"
-                    @click="toggle(m)"
+                    @click="toggle(au)"
                   >
                     <Play :size="14" />
                     <!-- 跨域媒体必须 crossorigin 先于 src（AGENTS.md 铁律 5 / docs/033） -->
-                    <audio crossorigin="anonymous" :src="m.url" preload="none" />
+                    <audio crossorigin="anonymous" :src="au.url" preload="none" />
                   </button>
                 </div>
                 <button class="link" @click="router.push(`/species/${c.speciesId}`)">
                   {{ t('birdId.viewSpecies') }}
                 </button>
-              </div>
-            </template>
-          </li>
-        </ol>
+              </template>
+            </div>
+          </div>
+        </li>
+      </ol>
 
-        <p v-if="view.hasMappedButNoMedia && view.band !== 'none'" class="note">
-          {{ t('birdId.someNoMedia') }}
-        </p>
-        <p v-if="view.band !== 'none' && !hasAnyMedia" class="note">
-          {{ t('birdId.noneHaveMedia') }}
-        </p>
-      </section>
-    </template>
+      <!-- 互证结论 + 主动引导 -->
+      <div v-if="verdict.text" class="verdict" :class="verdict.agree ? 'ok' : 'warnBox'">
+        {{ verdict.agree ? '✓ ' : '' }}{{ verdict.text }}
+      </div>
+      <button
+        v-if="suggest && suggestTask"
+        class="cta"
+        :disabled="busy"
+        @click="switchTo(suggest)"
+      >
+        <Camera v-if="suggest === 'image'" :size="16" />
+        <Mic v-else :size="16" />
+        {{ suggest === 'image' ? t('birdId.cross.goImage') : t('birdId.cross.goAudio') }}
+      </button>
+    </section>
+
+    <!-- ═══ 首次使用 ═══ -->
+    <section v-else class="panel">
+      <div class="twoUp">
+        <div class="col">
+          <h3><Mic :size="17" /> {{ t('birdId.mod.audio') }}</h3>
+          <p class="hint">{{ t('birdId.hint.audio') }}</p>
+          <div class="row">
+            <button class="btn primary" :disabled="busy" @click="startRecording">
+              <Mic :size="16" /> {{ t('birdId.record') }}
+            </button>
+            <label class="btn">{{ t('birdId.upload') }}<input type="file" accept="audio/*" hidden @change="onAudioFile" /></label>
+          </div>
+        </div>
+        <div class="col">
+          <h3><Camera :size="17" /> {{ t('birdId.mod.image') }}</h3>
+          <p class="hint">{{ t('birdId.hint.image') }}</p>
+          <label class="btn">
+            {{ t('birdId.chooseImage') }}<input type="file" accept="image/*" hidden @change="onImageFile" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 运行中 / 报错 ═══ -->
+    <section class="panel">
+      <div v-if="phase === 'capturing'" class="status">
+        <button class="btn danger" @click="stopRecording">
+          <Square :size="16" /> {{ t('birdId.stop') }} {{ elapsed.toFixed(1) }}s
+        </button>
+      </div>
+      <div v-if="phase === 'loading-model'" class="status">
+        <Loader2 :size="16" class="spin" />
+        <span>{{ t('birdId.model.downloading', { pct: dlPct }) }}</span>
+        <div class="bar"><i :style="{ width: dlPct + '%' }" /></div>
+      </div>
+      <div v-if="phase === 'thinking'" class="status">
+        <Loader2 :size="16" class="spin" /> {{ t('birdId.thinking') }}
+      </div>
+      <p v-if="phase === 'error'" class="err">✗ {{ errMsg }}</p>
+
+      <div class="modelRow">
+        <template v-for="m in (['audio', 'image'] as Modality[])" :key="m">
+          <span v-if="modelState[m].ready" class="ok">✓</span>
+          <TriangleAlert v-else :size="14" />
+          <span class="modelTxt">{{
+            modelState[m].ready
+              ? t('birdId.model.ready', { mb: fmtMB(modelState[m].bytes) })
+              : t('birdId.model.need', { mb: fmtMB(modelState[m].bytes || MODELS[m].sizeMB * 1024 * 1024) })
+          }}</span>
+          <button v-if="modelState[m].ready" class="link sm" @click="dropModel(m)">{{ t('birdId.model.drop') }}</button>
+        </template>
+      </div>
+      <p class="hint">{{ t('birdId.cross.why') }}</p>
+    </section>
   </div>
 </template>
 
-
 <style scoped>
 .wrap {
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
   padding: 20px 16px 48px;
 }
@@ -373,6 +440,13 @@ h1 {
 h2 {
   font-size: 16px;
   margin: 0;
+}
+h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  margin: 0 0 6px;
 }
 .disclaimer {
   display: flex;
@@ -391,6 +465,14 @@ h2 {
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 14px;
+}
+.panel.agree {
+  border-color: #16a34a;
+}
+.twoUp {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 .row {
   display: flex;
@@ -412,6 +494,10 @@ h2 {
   font-size: 14px;
   cursor: pointer;
 }
+.btn.sm {
+  padding: 5px 10px;
+  font-size: 13px;
+}
 .btn.primary {
   background: var(--accent, #2563eb);
   color: #fff;
@@ -432,21 +518,181 @@ h2 {
 .hint {
   font-size: 12px;
   color: var(--text-3, #6b7280);
-  margin: 10px 0;
+  margin: 6px 0 10px;
+  line-height: 1.6;
 }
-.model {
+.lanes {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.lane {
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 8px;
+  padding: 10px;
+}
+.lane.empty {
+  border-style: dashed;
+  background: var(--surface-2, #f9fafb);
+}
+.laneHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.laneHead .link {
+  margin-left: auto;
+}
+.laneEmpty p {
+  font-size: 12px;
+  color: var(--text-3, #6b7280);
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+.laneNone {
+  font-size: 12px;
+  color: var(--text-3, #6b7280);
+  line-height: 1.7;
+}
+.cand {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line, #f0f1f3);
+}
+.cand:last-child {
+  border-bottom: none;
+}
+.cHead {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.rank {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   background: var(--surface-2, #f3f4f6);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+.cBar {
+  flex: 1;
+  height: 4px;
+  background: var(--line, #e5e7eb);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cBar i {
+  display: block;
+  height: 100%;
+}
+.cBar i.good {
+  background: #16a34a;
+}
+.cBar i.weak {
+  background: #f59e0b;
+}
+.cPct {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: right;
+}
+.cName {
+  font-size: 14px;
+  font-weight: 600;
+}
+.cSci {
+  font-size: 11px;
+  color: var(--text-3, #6b7280);
+  margin-top: 1px;
+}
+.cNote {
+  font-size: 12px;
+  color: var(--text-3, #6b7280);
+  margin: 4px 0 0;
+}
+.media {
+  margin-top: 8px;
+}
+.thumbs {
+  display: flex;
+  gap: 6px;
   flex-wrap: wrap;
 }
-.model .ok {
-  color: #16a34a;
-  font-weight: 700;
+.thumbs img {
+  width: 68px;
+  height: 51px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.audio {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.play {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.play audio {
+  display: none;
+}
+.verdict {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.verdict.ok {
+  background: #f0fdf4;
+  color: #166534;
+}
+.verdict.warnBox {
+  background: #fffbeb;
+  color: #92400e;
+}
+.cta {
+  margin-top: 10px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent, #2563eb);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cta:disabled {
+  opacity: 0.5;
+}
+.status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 .bar {
   flex: 1;
@@ -461,134 +707,27 @@ h2 {
   height: 100%;
   background: var(--accent, #2563eb);
 }
-.thinking {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 14px;
-  margin: 10px 0 0;
-}
 .err {
   color: #dc2626;
   font-size: 14px;
-  margin: 10px 0 0;
+  margin: 0 0 10px;
 }
-.warn {
+.modelRow {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
-  color: #b45309;
-  font-size: 13px;
-  margin: 10px 0;
-}
-.none p {
-  font-size: 14px;
-  line-height: 1.7;
-  margin: 8px 0;
-}
-.raw {
   font-size: 12px;
   color: var(--text-3, #6b7280);
-  padding-left: 18px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line, #e5e7eb);
 }
-.cards {
-  list-style: none;
-  padding: 0;
-  margin: 12px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.modelTxt {
+  margin-right: 4px;
 }
-.card {
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 10px;
-  padding: 12px;
-}
-.card.top {
-  border-color: var(--accent, #2563eb);
-}
-.head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.rank {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--surface-2, #f3f4f6);
-  display: grid;
-  place-items: center;
-  font-size: 12px;
+.ok {
+  color: #16a34a;
   font-weight: 700;
-}
-.conf {
-  position: relative;
-  flex: 1;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.conf i {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  margin-bottom: 3px;
-}
-.conf i.good {
-  background: #16a34a;
-}
-.conf i.weak {
-  background: #f59e0b;
-}
-.name strong {
-  display: block;
-  font-size: 15px;
-}
-.name em {
-  display: block;
-  font-size: 12px;
-  color: var(--text-3, #6b7280);
-  font-style: normal;
-  margin-top: 2px;
-}
-.note {
-  font-size: 13px;
-  color: var(--text-3, #6b7280);
-  margin: 8px 0 0;
-}
-.media {
-  margin-top: 10px;
-}
-.thumbs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.thumbs img {
-  width: 72px;
-  height: 54px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-.audio {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-.play {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--line, #e5e7eb);
-  background: var(--surface-2, #f3f4f6);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-.play audio {
-  display: none;
 }
 .link {
   background: none;
@@ -596,12 +735,13 @@ h2 {
   color: var(--accent, #2563eb);
   cursor: pointer;
   font-size: 13px;
-  padding: 4px 0;
-  text-align: left;
+  padding: 2px 0;
 }
-.meta {
-  font-size: 12px;
-  color: var(--text-3, #6b7280);
+.link.sm {
+  font-size: 11px;
+}
+.spinWrap {
+  padding: 6px 0;
 }
 .spin {
   animation: spin 1s linear infinite;

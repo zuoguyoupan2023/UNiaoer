@@ -1,7 +1,9 @@
 /**
  * 端上识鸟对外入口：解码 → Worker 推理 → 对表 → 置信度分流
  *
- * 全程端上，音频不离开设备（055 §5.3）。
+ * 全程端上，音频与图片都不离开设备（docs/055 §5.3）。
+ * 音频与图像**共用**同一个 Worker 与同一套对表/置信度逻辑，
+ * 这样「先用声音认出鸟 → 再用照片确认」只需换一个 task，不需重写流程。
  */
 import { loadLabelMap, toResult } from './labels'
 import { ensureModel } from './modelCache'
@@ -9,9 +11,12 @@ import { present } from './confidence'
 import type { Presented } from './confidence'
 import type { BirdIdResult } from './types'
 import type { InferResponse, InferError } from './worker'
+import { MODELS, type TaskName } from './weights'
 
 export { loadLabelMap } from './labels'
 export { ensureModel, cachedModel, modelSize, clearModelCache } from './modelCache'
+export { MODELS, weightsUrl, labelsUrl } from './weights'
+export type { TaskName } from './weights'
 export { present, bandOf, CONF_OK, CONF_LOW } from './confidence'
 export type { Presented } from './confidence'
 export type { ConfidenceBand, BirdIdResult, Candidate } from './types'
@@ -19,7 +24,15 @@ export type { ConfidenceBand, BirdIdResult, Candidate } from './types'
 const SR = 48000
 const WIN = 144000
 
-/** 把任意可解码的音频（Blob/File）解成 48kHz 单声道 Float32 */
+/**
+ * 图像模型的输入边长。
+ * SpeciesNet v4.0.3b full_image 实测契约是 NHWC `['batch', 480, 480, 3]`
+ * —— 注意**不是**常见的 NCHW，也不是 224。弄错会直接报
+ * 「Got invalid dimensions for input」。
+ */
+export const IMAGE_SIZE = 480
+
+/** 任意音频 → 48kHz 单声道 Float32 */
 export async function decodeAudio(blob: Blob): Promise<Float32Array> {
   const Ctx: typeof AudioContext =
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext || window.AudioContext
@@ -29,7 +42,7 @@ export async function decodeAudio(blob: Blob): Promise<Float32Array> {
     if (decoded.sampleRate === SR && decoded.numberOfChannels === 1) {
       return decoded.getChannelData(0).slice()
     }
-    const off = new OfflineAudioContext(1, Math.ceil((decoded.duration * SR)), SR)
+    const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * SR), SR)
     const src = off.createBufferSource()
     src.buffer = decoded
     src.connect(off.destination)
@@ -41,69 +54,109 @@ export async function decodeAudio(blob: Blob): Promise<Float32Array> {
   }
 }
 
+/**
+ * 任意图片 → 模型输入张量。
+ * 做法：等比缩放到不超过 IMAGE_SIZE 的最长边，再中心裁成正方形，
+ * 最后按 ImageNet 口径归一化（均值/方差减均值除标准差）。
+ * 中心裁剪会切掉长焦照片的边缘，故先留边（letterbox）到正方形更稳 —— 这里取留边。
+ */
+export async function prepareImage(blob: Blob, size = IMAGE_SIZE): Promise<Float32Array> {
+  const bmp = await createImageBitmap(blob)
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('无法创建画布上下文')
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, size, size)
+    // 等比缩放后居中留边，避免裁掉主体
+    const scale = Math.min(size / bmp.width, size / bmp.height)
+    const w = bmp.width * scale
+    const h = bmp.height * scale
+    ctx.drawImage(bmp, (size - w) / 2, (size - h) / 2, w, h)
+    const { data } = ctx.getImageData(0, 0, size, size)
+    // SpeciesNet 的预处理是 **/255 归一化到 0~1 + NHWC**（不是 ImageNet 的
+    // mean/std 标准化，也不是 NCHW）。本地 image_eval.py 已按此口径验证过。
+    // 逐像素把 RGB 三个通道写进 NHWC 布局的相邻位置
+    const out = new Float32Array(size * size * 3)
+    for (let px = 0; px < size * size; px++) {
+      out[px * 3] = (data[px * 4] ?? 0) / 255
+      out[px * 3 + 1] = (data[px * 4 + 1] ?? 0) / 255
+      out[px * 3 + 2] = (data[px * 4 + 2] ?? 0) / 255
+    }
+    return out
+  } finally {
+    bmp.close()
+  }
+}
+
 let worker: Worker | null = null
-let workerBuf: ArrayBuffer | null = null
-/** 模型是否已随首条消息 transfer 给 Worker。transfer 会让本地 buffer 失效，
- *  且 Worker 侧首次 loadTFLiteModel 后就持有了模型，后续无需再传。 */
-let modelSent = false
+/** 已随消息 transfer 给 Worker 的模型，避免每轮拷几十 MB */
+const sentModels = new Set<TaskName>()
 
 function ensureWorker(): Worker {
   if (!worker) {
-    // module worker。注：曾试过 classic worker（tfjs-tflite 靠 importScripts 注入
-    // wasm，而 ES module worker 不支持 importScripts），但 iife 产物里残留 CommonJS 的
-    // `exports` 引用，在 classic worker 下同样抛错 —— 见 docs/055 §8「运行时阻塞」。
+    // module worker：onnxruntime-web 是标准 ESM，不依赖 importScripts
     worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
   }
   return worker
 }
 
-/** 跑一次识别。onProgress 用于回传模型下载进度。 */
-export async function identify(
-  blob: Blob,
+async function runInfer(
+  task: TaskName,
+  payload: Record<string, unknown>,
   onProgress?: (received: number, total: number) => void,
-): Promise<{ result: BirdIdResult; view: Presented }> {
-  const map = await loadLabelMap('audio')
-  const samples = await decodeAudio(blob)
-  if (samples.length < WIN * 0.25) throw new Error('录音太短，至少需要 1 秒')
-
-  const buffer = workerBuf ?? (workerBuf = await ensureModel(onProgress))
+) {
+  const ref = MODELS[task]
+  const buffer = await ensureModel(ref, onProgress)
   const w = ensureWorker()
-  // Worker 重启后 modelSent 要跟着复位，否则它会以为还持有模型
-  modelSent = false
-
-  const res = (await new Promise<InferResponse>((resolve, reject) => {
+  sentModels.delete(task)
+  const msg: Record<string, unknown> = { kind: task, ...payload, topN: 5 }
+  msg.buffer = buffer
+  sentModels.add(task)
+  return (await new Promise<InferResponse>((resolve, reject) => {
     const onMsg = (ev: MessageEvent<InferResponse | InferError>) => {
       if (ev.data.type === 'error') reject(new Error(ev.data.message))
       else resolve(ev.data)
       w.removeEventListener('message', onMsg)
     }
     w.addEventListener('message', onMsg)
-    const payload: Record<string, unknown> = {
-      type: 'infer',
-      samples,
-      windowSize: WIN,
-      hop: WIN >> 1,
-      topN: 5,
-    }
-    if (!modelSent) {
-      // 模型必须**放进消息体**，只放进 transfer 列表等于什么都没传（Transferable
-      // 必须在 structured clone 的消息里）。transfer 零拷贝；transfer 后本地 buffer
-      // 失效，故只发这一次，Worker 侧 loadTFLiteModel 后自己持有。
-      payload.buffer = buffer
-      modelSent = true
-      w.postMessage(payload, [buffer])
-    } else {
-      w.postMessage(payload)
-    }
+    w.postMessage(msg, [buffer])
   })) as InferResponse
+}
 
+/** 识别一段音频 */
+export async function identifyAudio(
+  blob: Blob,
+  onProgress?: (received: number, total: number) => void,
+): Promise<{ result: BirdIdResult; view: Presented }> {
+  const map = await loadLabelMap('audio')
+  const samples = await decodeAudio(blob)
+  if (samples.length < WIN * 0.25) throw new Error('too-short')
+  const res = await runInfer(
+    'audio',
+    { samples, windowSize: WIN, hop: WIN >> 1, maxWindows: 12 },
+    onProgress,
+  )
   const result = toResult(res.indices, res.scores, map, samples.length / SR, res.windows)
+  return { result, view: present(result, 3) }
+}
+
+/** 识别一张图片 */
+export async function identifyImage(
+  blob: Blob,
+  onProgress?: (received: number, total: number) => void,
+): Promise<{ result: BirdIdResult; view: Presented }> {
+  const map = await loadLabelMap('image')
+  const samples = await prepareImage(blob)
+  const res = await runInfer('image', { samples, imageSize: [IMAGE_SIZE, IMAGE_SIZE] }, onProgress)
+  const result = toResult(res.indices, res.scores, map, 0, 1)
   return { result, view: present(result, 3) }
 }
 
 export function disposeBirdId(): void {
   worker?.terminate()
   worker = null
-  workerBuf = null
-  modelSent = false
+  sentModels.clear()
 }

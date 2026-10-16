@@ -79,8 +79,8 @@
     "build:model-labels": "node scripts/build-model-label-map.mjs"
   },
   "dependencies": {
-    "@tensorflow/tfjs-tflite": "^0.0.1-alpha.10",
     "lucide-vue-next": "^0.577.0",
+    "onnxruntime-web": "^1.30.0",
     "pinia": "^4.0.3",
     "qrcode-generator": "^2.0.4",
     "thumbhash": "^0.1.1",
