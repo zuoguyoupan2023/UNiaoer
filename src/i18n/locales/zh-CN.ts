@@ -367,7 +367,7 @@ export const messages = {
   },
   birdId: {
     title: '识别',
-    privacyShort: '端上识别，录音不上传。',
+    privacyShort: '本机识别，录音不上传。',
     maybe: {
       one: '可能是 {name}',
     },

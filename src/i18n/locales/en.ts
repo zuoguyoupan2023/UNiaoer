@@ -631,7 +631,7 @@ const en: typeof zhMessages = {
   },
   birdId: {
     title: 'Identify',
-    privacyShort: 'Runs on your device; recordings are not uploaded.',
+    privacyShort: 'Identified on this device; your recording is never uploaded.',
     disclaimer:
       'AI is a guide, not an answer. Everything runs on your device — the recording and photo are never uploaded. The model can only suggest candidates; compare them with the media below and judge for yourself.',
     maybe: {
