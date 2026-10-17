@@ -6,7 +6,8 @@
  * 用法：
  *   node scripts/build-bank.mjs [--limit 8] [--policy relaxed] [--media remote|download]
  *                               [--concurrency 3] [--force] [--xc] [--xc-key <KEY>]
- *                               [--media-timeout 40000] [--inat-gap 1050] [--xc-gap 1200]
+ *                               [--media-timeout 600000] [--media-idle-timeout 30000]
+ *                               [--inat-gap 1050] [--xc-gap 1200]
  *
  * 环境变量：XC_API_KEY（也可写在 .env 中）
  */
@@ -72,9 +73,12 @@ const OPT = {
   xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 1200, // XC 检索冷却下限 ms
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
-  // 2026-10-17：媒体下载超时（120s→40s；配合 download() 里「超时只重试 1 次」，
-  // 单个坏文件最坏 80s 而不是 600s）。**别调大**，XC 侧死链会拖垮整轮。
-  mediaTimeout: args['media-timeout'] ? Number(args['media-timeout']) : 40000,
+  // 媒体下载的两级超时（2026-10-17，见 download() 头注与 docs/054 §1.4）
+  // · mediaIdleTimeout：多少秒没收到任何字节就判定死链，**放弃且不重试**（默认 30s）
+  // · mediaTimeout：单文件硬上限兜底（默认 600s）。**别调小** —— XC 单连接只有 ~10 KB/s，
+  //   1–3 MB 的录音正常就要 100–300 s，调小会把「慢但没死」误杀（第一版修正踩过这个坑）。
+  mediaIdleTimeout: args['media-idle-timeout'] ? Number(args['media-idle-timeout']) : 30000,
+  mediaTimeout: args['media-timeout'] ? Number(args['media-timeout']) : 600000,
   out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
   retryFailed: !!args['retry-failed'] || !!args['only-failed'], // 只重跑有问题的物种
   from: args.from || '', // --retry-failed 时读取的旧 manifest（默认 out 或 data-cache/manifest-m3.json）
@@ -1325,25 +1329,31 @@ function guessContentType(url, kind, ext) {
 }
 
 /**
- * 媒体下载。
+ * 媒体下载（**流式 + 空闲超时**，2026-10-17 两轮修正，见 docs/054 §1.4）。
  *
- * 2026-10-17 修正（全球种采集速度塌陷的**主因**，不是 429 限速）：
- *   旧实现 timeout=120s × tries=5，且 **AbortError 没有 retryable 标记**——
- *   `if (e.retryable === false …)` 判的是严格等于 false，`undefined` 不等于 false，
- *   于是**超时会重试满 5 次**：单个坏文件最多烧 **10 分钟**，
- *   而媒体下载跑在 worker 并发里（`--concurrency`），这些 10 分钟串行堆在整条流水线上。
- *   实测日志里成片的 `下载失败…This operation was aborted` 就是 `ctrl.abort()` 到点，
- *   每个 2 分钟，共 4 个文件 → 约 8 分钟只推进 11 个物种。
- * 现在：超时 40s，且超时**只重试 1 次**（合计 ≤80s，最坏比原来快 7 倍以上）。
- * 真的可重试的错误（429/5xx/网络瞬断）保留 5 次指数退避。
+ * 背景：全球种采集速度塌陷，**不是 429 限速**（限速只有 iNat 1.05s/请求 + XC 检索 1.2s，都在正常档）。
+ * 实测定位（2026-10-17）：
+ *   XC 的 `/download` 端点对单连接限速到 **约 10 KB/s**，且**限速是「每连接」的**——
+ *   4 路并发各跑 30 s，聚合带宽 ≈40 KB/s（线性叠加）。
+ *   单个 1–3 MB 录音按 10 KB/s 需要 100–300 s。
+ * 所以两种超时要分开：
+ *   · **空闲超时**（`--media-idle-timeout`，默认 30 s 没收到任何字节）→ 判定为**死链**，立即放弃且不重试；
+ *   · **硬上限**（`--media-timeout`，默认 600 s）→ 只是兜底，防止「每秒吐 1 字节」那种假活。
+ * ⚠️ 第一版修正只把「总时长 120 s」调小，结果把**慢而未死**的正常下载也误杀（成片 aborted）；
+ *    本版才是正确做法：**慢但有进度的连接必须放行，死锁的连接必须快速放弃**。
  */
 async function download(url, dest, tries = 5) {
   let lastErr
   for (let i = 0; i < tries; i++) {
     const ctrl = new AbortController()
-    // 超时覆盖「响应头 + body」全程：不能在收到响应头后就清掉，
-    // 否则服务器发头后卡住 body 会导致请求无限挂起（假死）。
-    const timer = setTimeout(() => ctrl.abort(), OPT.mediaTimeout)
+    const startedAt = Date.now()
+    let lastByteAt = startedAt
+    let idleTimeout = false
+    // 看门狗：空闲（无字节到达）或硬上限 → abort
+    const wd = setInterval(() => {
+      if (Date.now() - lastByteAt > OPT.mediaIdleTimeout) idleTimeout = true
+      if (idleTimeout || Date.now() - startedAt > OPT.mediaTimeout) ctrl.abort()
+    }, 1000)
     try {
       const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'UNiaoer-build/0.1' } })
       if (!res.ok) {
@@ -1352,7 +1362,18 @@ async function download(url, dest, tries = 5) {
         err.retryable = res.status === 429 || res.status >= 500
         throw err
       }
-      const buf = Buffer.from(await res.arrayBuffer())
+      // 流式读：每收到一块就刷新「最后有字节时刻」—— 这是判断慢 vs 死的关键
+      const chunks = []
+      const reader = res.body.getReader()
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (value && value.length) {
+          chunks.push(Buffer.from(value))
+          lastByteAt = Date.now()
+        }
+      }
+      const buf = Buffer.concat(chunks)
       // 防御:写盘前重建父目录(2026-10-04 实测偶发 ENOENT——并发/环境层瞬态删除了
       // 刚 ensureDir 的目录;mkdir 幂等且廉价,整类 ENOENT 免疫)
       await fs.mkdir(path.dirname(dest), { recursive: true })
@@ -1360,15 +1381,17 @@ async function download(url, dest, tries = 5) {
       return dest
     } catch (e) {
       lastErr = e
-      // 超时/中止：只再试 1 次（见函数头注），其余情况仍按 retryable 判定
-      if (e?.name === 'AbortError' || e?.name === 'TimeoutError') {
+      // 空闲超时 = 判定死链：**不重试**（重试只是再烧一次 30 s）
+      if (idleTimeout) e.retryable = false
+      // 非空闲的超时/中止：只再试 1 次
+      else if (e?.name === 'AbortError' || e?.name === 'TimeoutError') {
         if (i >= 1) break
       } else if (e.retryable === false || i >= tries - 1) {
         break
       }
       await sleep(1000 * (i + 1) + Math.random() * 800)
     } finally {
-      clearTimeout(timer)
+      clearInterval(wd)
     }
   }
   throw lastErr

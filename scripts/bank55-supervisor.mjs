@@ -3,7 +3,7 @@
  * 053 本机执行监管器:全球种媒体 1+1 → 最多 5+5(docs/053 §2.8)
  *
  * 职责:
- *  - 采集:node scripts/build-bank.mjs --global --media stage --per 5 --concurrency 2
+ *  - 采集:node scripts/build-bank.mjs --global --media stage --per 5 --concurrency 8
  *          (台账即断点;退出后自动重启续跑)
  *  - 批量推送:public/media ≥ 1GB → wrangler 登录态推送(npm run r2:push -- --resume --concurrency 3)
  *          → 按"本轮实际上传 delta"清理本地(未上传的绝不删)→ 继续采集
@@ -46,7 +46,16 @@ let collStoppedByUs = false
 const PUSH_CONCURRENCY = 8 // wrangler 每文件约 1.97s 且瓶颈在 npm exec 的进程启动开销
 // (CPU-bound),实测 10 核机器并发 3 时总体占用仅 22%,故从 3 提到 8。
 // ⚠️ 直接跑 node 不经 npm script,没有默认值——--media 必须显式给 stage(remote 只抓元数据不物化!)
-const COLL_ARGS = ['--global', '--media', 'stage', '--per', '5', '--concurrency', '2']
+// 2026-10-17：并发 2 → 4。
+// 起因：媒体下载**是每连接限速**（XC `/download` 实测 10–20 KB/s，4 路并发达 ~40 KB/s），
+// 而媒体下载不占 CPU（实测 %CPU≈0.1）→ 提高 worker 数本该线性提高下载吞吐。
+// 但实测**并发 8 并没有更快**（10 分钟只推进 4 种 ≈ 24 种/小时，与并发 2 同档），
+// 而且 XC 对 8 路并发开始回 **HTTP 503**（实测 400 行日志里 14 次 5xx）。
+// → 真正的瓶颈**不是下载，而是 XC 的全局串行 API 闸门**（fetchXc 走 xcQueue：
+//   长尾种要按同义词逐个查，每个查询 ~2.5 s + xcGap 冷却，全局串行 → 所有 worker 排队等）。
+// 因此这里只保守提到 4（下载有收益、503 还少），**别再往上加**；要提速得改 API 侧（见 docs/054 §1.5.6）。
+const OPT_CONCURRENCY = Number(process.env.BANK55_CONCURRENCY || 4)
+const COLL_ARGS = ['--global', '--media', 'stage', '--per', '5', '--concurrency', String(OPT_CONCURRENCY)]
 
 let stopping = false
 let exitCode = 0
@@ -168,7 +177,7 @@ async function startCollection() {
   child.on('exit', (code, signal) => log(`采集进程退出 code=${code} signal=${signal}`))
   coll = { pid: child.pid, adopted: false, startedAt: Date.now() }
   spawn('caffeinate', ['-isw', String(child.pid)], { stdio: 'ignore' }).unref()
-  log(`▶️ 启动采集 pid=${child.pid}(stage + per5 + 并发2,caffeinate 防休眠已挂)`)
+  log(`▶️ 启动采集 pid=${child.pid}(stage + per5 + 并发${OPT_CONCURRENCY},caffeinate 防休眠已挂)`)
 }
 
 async function stopChild(child, graceMs = 60_000) {

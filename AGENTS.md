@@ -70,6 +70,7 @@
 | 抓题库 + 转码暂存 | `npm run bank:stage` |
 | 抓题库 + 直传 R2（S3 凭证，带远端） | `npm run bank:r2` |
 | 全球增量采集（023 P2：骨架取种 → 台账 `data/manifest-global.json`，断点续跑，不碰主 manifest） | `npm run bank:global -- --media stage --limit N` |
+| **全球 5+5 采集（推荐：一键托管，含批量推送与内存/磁盘看门狗）** | `nohup npm run bank55 &`（并发用 `BANK55_CONCURRENCY=N`，默认 8；观测 `/tmp/bank55-supervisor.log` + `/tmp/bank55.log`）。⚠️ **别再手动起 `build-bank`** —— 监管器会「收养」已跑进程，两套并行会抢同一台账 |
 | 把 `public/media` 传到 R2（wrangler，已内置 `--remote`） | `npm run r2:push` |
 | 把 `manifest.json` 传到 R2（`/api/manifest` 优先读它；重建 manifest 后需重跑） | `npm run r2:manifest` |
 | 题库一致性校验（CI 已接入；`--no-net` 跳过抽查） | `npm run check:bank` |
@@ -91,6 +92,11 @@
 | GBIF backbone 批量键位匹配（v2 match → 断点缓存；023 P1-b） | `npm run taxonomy:gbif-match`（`--limit N` 冒烟 / `--refresh` 重抓） |
 | 构建全球物种骨架（`species-index.json` 11,131 种 + manifest 只增 `taxonKey`/`playable`；023 P0） | `npm run species-index`（`-- --mock --out …` 全离线） |
 | 物种骨架校验（结构/署名/1299 映射/无几何；CI 已接入） | `npm run check:index` |
+| **结构化生境**（IUCN v4；断点缓存；产物 `data/iucn-habitats.json`） | `npm run taxonomy:iucn-habitat -- --scope core\|all --concurrency 2 --delay 1200`（`--build-only` 只读缓存重算 / `--limit N` 冒烟）。⚠️ **必须带浏览器 UA**，否则 Cloudflare 1010 会伪装成凭证失效的 403 |
+| **形态测量 + 生态变量**（AVONET；CC BY 4.0；`taxonKey` 直连 + 学名兜底，覆盖 95.1%） | `npm run taxonomy:avonet`（镜像先用 `--verify` 校验行数 11,009 与列名） |
+| **食性 / 取食层次 / 夜行性**（EltonTraits 1.0；覆盖 84.0%） | `npm run taxonomy:elton`（原始表**非 UTF-8**，须 latin-1 解码） |
+| **羽色 12 类色相 × 雄/雌 + 雌雄异色**（Dunning 2025；**CC0**；**稀疏层，源表仅 1,287 种**） | `npm run taxonomy:plumage`（先 `--verify` 校验官方 sha256；Datadryad 有反爬，需浏览器手动下载到 `data-cache/taxonomy/plumage/`） |
+| 结构化性状产物门禁（许可/引用留痕、taxonKey 键合法、食性和、插值可追溯、habitat code 中文对照齐备） | `npm run check:traits` |
 | 生成 D1 seed | `npm run d1:seed` |
 | D1 建表 / 灌数据（务必 `--remote`） | `wrangler d1 execute uniaoer --file=worker/schema.sql --remote` |
 | D1 用量取证（按天/按小时读写，Cloudflare GraphQL；需已 `wrangler login`） | `npm run d1:usage -- --days 3`（`--db uniaoer` / `--hourly-only`） |
