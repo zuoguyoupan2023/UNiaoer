@@ -21,6 +21,7 @@ import {
   Square,
   Trash2,
   TriangleAlert,
+  X,
 } from 'lucide-vue-next'
 import {
   identifyAudio,
@@ -34,9 +35,10 @@ import {
   ensureModel,
 } from '@/core/birdId'
 import type { Presented } from '@/core/birdId/confidence'
+import AttributionLine from '@/components/AttributionLine.vue'
 import { compare, topResult, type CrossResult, type Modality } from '@/core/birdId/crossModal'
 import type { Candidate } from '@/core/birdId/types'
-import { loadSpeciesAssets } from '@/core/bank'
+import { loadSpeciesAssets, loadBank, speciesById, speciesProfileText } from '@/core/bank'
 import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
 import { regionLabel } from '@/core/region'
@@ -71,6 +73,27 @@ const metas = reactive<Record<Modality, { durationSec: number; windows: number }
   image: null,
 })
 const mediaById = ref<Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }>>({})
+
+/* ── 素材展示（用户要求） ─────────────────────────────────────────────
+ *  · 每个候选：**第一个素材大号显示**，其余小号；点小号 → 它变大、原来的变回常规大小
+ *  · 图像点大号可看原图（灯箱用 xlUrl，另给「查看原图」指向 originalUrl）
+ *  · 音频同理：第一个用播放器大号显示，点其余小号切换播放器
+ */
+const heroImg = reactive<Record<string, number>>({})
+const heroAudio = reactive<Record<string, number>>({})
+const origin = ref<MediaAsset | null>(null)
+const heroIdx = (c: { speciesId: string | null }, kind: 'img' | 'audio') =>
+  (kind === 'img' ? heroImg[c.speciesId!] : heroAudio[c.speciesId!]) ?? 0
+const setHero = (c: { speciesId: string | null }, kind: 'img' | 'audio', i: number) => {
+  if (!c.speciesId) return
+  if (kind === 'img') heroImg[c.speciesId] = i
+  else heroAudio[c.speciesId] = i
+}
+/** 该候选的物种档案文本（生境/习性）；**只有人工写过的那 7 个种有**，其余为空 */
+const profileOf = (speciesId: string | null) => {
+  const sp = speciesId ? speciesById(speciesId) : undefined
+  return sp ? speciesProfileText(sp.profile, String(locale.value)) : {}
+}
 const mediaLoading = ref(new Set<string>())
 
 const modelState = reactive<Record<Modality, { ready: boolean; bytes: number }>>({
@@ -236,15 +259,6 @@ function switchTo(kind: Modality) {
   else startRecording()
 }
 
-function toggle(m: MediaAsset) {
-  const el = document.querySelector<HTMLAudioElement>(`audio[src="${CSS.escape(m.url)}"]`)
-  if (!el) return
-  if (el.paused) {
-    document.querySelectorAll<HTMLAudioElement>('audio').forEach((a) => a !== el && a.pause())
-    void el.play()
-  } else el.pause()
-}
-
 function reset(kind?: Modality) {
   if (kind) runs[kind] = null
   else {
@@ -264,6 +278,8 @@ async function dropModel(kind: Modality) {
 }
 
 onMounted(async () => {
+  // 物种档案（生境/习性）与素材分片都依赖题库已加载
+  await loadBank().catch(() => null)
   try {
     await loadLabelMap('audio')
     await loadLabelMap('image')
@@ -383,30 +399,66 @@ function onCountryChange() {
               <p v-else-if="c.entry && c.entry.p === false" class="cNote">{{ t('birdId.noMedia') }}</p>
 
               <template v-if="c.speciesId">
+                <!-- 生境 / 习性：有就显示（当前仅 7 个核心种有人工文本） -->
+                <div v-if="profileOf(c.speciesId).habitat || profileOf(c.speciesId).habit" class="facts">
+                  <p v-if="profileOf(c.speciesId).habitat">
+                    <span class="fKey">{{ t('birdId.factHabitat') }}</span>{{ profileOf(c.speciesId).habitat }}
+                  </p>
+                  <p v-if="profileOf(c.speciesId).habit">
+                    <span class="fKey">{{ t('birdId.factHabit') }}</span>{{ profileOf(c.speciesId).habit }}
+                  </p>
+                </div>
+
                 <div v-if="mediaLoading.has(c.speciesId)" class="spinWrap"><Loader2 :size="16" class="spin" /></div>
                 <template v-else>
-                  <div v-if="mediaById[c.speciesId]?.images?.length" class="thumbs">
+                  <!-- 大号素材：图片优先，没有图就大号播放器 -->
+                  <div v-if="mediaById[c.speciesId]?.images?.length" class="hero">
                     <img
-                      v-for="im in mediaById[c.speciesId]!.images!.slice(0, 4)"
-                      :key="im.url"
-                      :src="im.thumbUrl || im.url"
-                      :alt="c.label"
+                      :src="mediaById[c.speciesId]!.images![heroIdx(c, 'img')]!.url"
+                      :alt="c.entry?.z || c.label"
                       loading="lazy"
+                      @click="origin = mediaById[c.speciesId]!.images![heroIdx(c, 'img')]!"
                     />
+                    <AttributionLine :media="mediaById[c.speciesId]!.images![heroIdx(c, 'img')]!" />
                   </div>
-                  <div v-if="mediaById[c.speciesId]?.audios?.length" class="audio">
+                  <div v-else-if="mediaById[c.speciesId]?.audios?.length" class="heroAudio">
+                    <audio
+                      crossorigin="anonymous"
+                      :src="mediaById[c.speciesId]!.audios![heroIdx(c, 'audio')]!.url"
+                      controls
+                      preload="none"
+                    />
+                    <AttributionLine :media="mediaById[c.speciesId]!.audios![heroIdx(c, 'audio')]!" />
+                  </div>
+
+                  <!-- 小号：点一下它变大，原来的变回常规大小 -->
+                  <div v-if="(mediaById[c.speciesId]?.images?.length ?? 0) > 1" class="thumbs">
                     <button
-                      v-for="au in mediaById[c.speciesId]!.audios!.slice(0, 3)"
-                      :key="au.url"
-                      class="play"
-                      :aria-label="t('birdId.playOne')"
-                      @click="toggle(au)"
+                      v-for="(im, k) in mediaById[c.speciesId]!.images!"
+                      :key="im.url"
+                      type="button"
+                      class="thumb"
+                      :class="{ on: k === heroIdx(c, 'img') }"
+                      :aria-pressed="k === heroIdx(c, 'img')"
+                      @click="setHero(c, 'img', k)"
                     >
-                      <Play :size="14" />
-                      <!-- 跨域媒体必须 crossorigin 先于 src（AGENTS.md 铁律 5 / docs/033） -->
-                      <audio crossorigin="anonymous" :src="au.url" preload="none" />
+                      <img :src="im.thumbUrl || im.url" alt="" loading="lazy" />
                     </button>
                   </div>
+                  <div v-if="(mediaById[c.speciesId]?.audios?.length ?? 0) > 1" class="audio">
+                    <button
+                      v-for="(au, k) in mediaById[c.speciesId]!.audios!"
+                      :key="au.url"
+                      type="button"
+                      class="play"
+                      :class="{ on: k === heroIdx(c, 'audio') }"
+                      :aria-label="t('birdId.playOne')"
+                      @click="setHero(c, 'audio', k)"
+                    >
+                      <Play :size="14" /> {{ k + 1 }}
+                    </button>
+                  </div>
+
                   <button class="link" @click="router.push(`/species/${c.speciesId}`)">
                     {{ t('birdId.viewSpecies') }}
                   </button>
@@ -487,6 +539,25 @@ function onCountryChange() {
       </div>
     </section>
   </div>
+
+  <!-- 看原图：大号图点开。xlUrl = 母版原分辨率；originalUrl = 源站原始文件 -->
+  <Teleport to="body">
+    <div v-if="origin" class="lb" role="dialog" aria-modal="true" @click="origin = null">
+      <img :src="origin.xlUrl || origin.url" :alt="t('birdId.title')" @click.stop />
+      <a
+        v-if="origin.originalUrl"
+        class="lbSrc"
+        :href="origin.originalUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        @click.stop
+        >{{ t('birdId.viewOriginal') }}</a
+      >
+      <button class="lbClose" type="button" :aria-label="t('gallery.close')" @click="origin = null">
+        <X :size="20" />
+      </button>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -535,6 +606,38 @@ h3 {
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 14px;
+}
+.hero img {
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: zoom-in;
+  display: block;
+}
+.heroAudio audio {
+  width: 100%;
+}
+.facts {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.facts .fKey {
+  color: var(--muted, #6b7280);
+  margin-right: 6px;
+}
+.thumb {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+.thumb.on {
+  border-color: var(--primary, #2563eb);
 }
 .panel.agree {
   border-color: #16a34a;

@@ -367,6 +367,9 @@ export const messages = {
   },
   birdId: {
     title: '识别',
+    factHabitat: '生境',
+    factHabit: '习性',
+    viewOriginal: '查看原图',
     privacyShort: '本机识别，录音不上传。',
     maybe: {
       one: '可能是 {name}',
