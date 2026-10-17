@@ -65,6 +65,7 @@
     "taxonomy:gbif-match": "node scripts/taxonomy/fetch-gbif-match.mjs",
     "taxonomy:iucn-habitat": "node scripts/taxonomy/fetch-iucn-habitat.mjs",
     "taxonomy:elton": "node scripts/taxonomy/match-elton-traits.mjs",
+    "taxonomy:plumage": "node scripts/taxonomy/match-plumage-colours.mjs",
     "taxonomy:avonet": "node scripts/taxonomy/match-avonet-traits.mjs",
     "species-index": "node scripts/taxonomy/build-species-index.mjs",
     "check:index": "node scripts/check-species-index.mjs",

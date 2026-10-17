@@ -97,6 +97,24 @@ if (existsSync(av)) {
   warn(`AVONET 覆盖 ${pct}%（未匹配 ${d.counts.unmatched} 条已落 unmatched，留人工，不自动猜异名）`)
 }
 
+// IUCN 码表：产物里出现的每个 habitat code 都必须有中文对照（前端按 code 查表，产物不放译名）
+const codeFile = path.join(ROOT, 'data/iucn-habitat-codes.json')
+const habFile = path.join(ROOT, 'data/iucn-habitats.json')
+if (existsSync(codeFile) && existsSync(habFile)) {
+  const t = JSON.parse(readFileSync(codeFile, 'utf8'))
+  const h = JSON.parse(readFileSync(habFile, 'utf8'))
+  const used = new Set((h.habitatCodes || []).map((c) => c.code))
+  const missing = [...used].filter((c) => !t.codes?.[c])
+  if (missing.length) {
+    err(`habitat code 缺中文对照 ${missing.length} 条：${missing.slice(0, 8).join(', ')}`)
+  } else {
+    const total = Object.keys(t.codes || {}).length
+    const unreviewed = Object.values(t.codes).filter((v) => v.review === false).length
+    console.log(`✅ IUCN 码表：${used.size} 个 code 全部有中文对照`)
+    if (unreviewed) warn(`码表 ${unreviewed}/${total} 条仍是初稿（review:false），建议人工过一遍再改 true`)
+  }
+}
+
 if (failed) {
   console.error(`\n❌ check:traits 失败（${failed} 项）`)
   process.exit(1)

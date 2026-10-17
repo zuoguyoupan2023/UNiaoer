@@ -6,6 +6,7 @@
  * 用法：
  *   node scripts/build-bank.mjs [--limit 8] [--policy relaxed] [--media remote|download]
  *                               [--concurrency 3] [--force] [--xc] [--xc-key <KEY>]
+ *                               [--media-timeout 40000] [--inat-gap 1050] [--xc-gap 1200]
  *
  * 环境变量：XC_API_KEY（也可写在 .env 中）
  */
@@ -71,6 +72,9 @@ const OPT = {
   xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 1200, // XC 检索冷却下限 ms
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
+  // 2026-10-17：媒体下载超时（120s→40s；配合 download() 里「超时只重试 1 次」，
+  // 单个坏文件最坏 80s 而不是 600s）。**别调大**，XC 侧死链会拖垮整轮。
+  mediaTimeout: args['media-timeout'] ? Number(args['media-timeout']) : 40000,
   out: args.out || '', // manifest 输出路径（默认 public/data/manifest.json；测试用可另指）
   retryFailed: !!args['retry-failed'] || !!args['only-failed'], // 只重跑有问题的物种
   from: args.from || '', // --retry-failed 时读取的旧 manifest（默认 out 或 data-cache/manifest-m3.json）
@@ -1320,13 +1324,26 @@ function guessContentType(url, kind, ext) {
   return kind.startsWith('image') ? 'image/jpeg' : 'audio/mpeg'
 }
 
+/**
+ * 媒体下载。
+ *
+ * 2026-10-17 修正（全球种采集速度塌陷的**主因**，不是 429 限速）：
+ *   旧实现 timeout=120s × tries=5，且 **AbortError 没有 retryable 标记**——
+ *   `if (e.retryable === false …)` 判的是严格等于 false，`undefined` 不等于 false，
+ *   于是**超时会重试满 5 次**：单个坏文件最多烧 **10 分钟**，
+ *   而媒体下载跑在 worker 并发里（`--concurrency`），这些 10 分钟串行堆在整条流水线上。
+ *   实测日志里成片的 `下载失败…This operation was aborted` 就是 `ctrl.abort()` 到点，
+ *   每个 2 分钟，共 4 个文件 → 约 8 分钟只推进 11 个物种。
+ * 现在：超时 40s，且超时**只重试 1 次**（合计 ≤80s，最坏比原来快 7 倍以上）。
+ * 真的可重试的错误（429/5xx/网络瞬断）保留 5 次指数退避。
+ */
 async function download(url, dest, tries = 5) {
   let lastErr
   for (let i = 0; i < tries; i++) {
     const ctrl = new AbortController()
     // 超时覆盖「响应头 + body」全程：不能在收到响应头后就清掉，
     // 否则服务器发头后卡住 body 会导致请求无限挂起（假死）。
-    const timer = setTimeout(() => ctrl.abort(), 120000)
+    const timer = setTimeout(() => ctrl.abort(), OPT.mediaTimeout)
     try {
       const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'UNiaoer-build/0.1' } })
       if (!res.ok) {
@@ -1343,7 +1360,12 @@ async function download(url, dest, tries = 5) {
       return dest
     } catch (e) {
       lastErr = e
-      if (e.retryable === false || i >= tries - 1) break
+      // 超时/中止：只再试 1 次（见函数头注），其余情况仍按 retryable 判定
+      if (e?.name === 'AbortError' || e?.name === 'TimeoutError') {
+        if (i >= 1) break
+      } else if (e.retryable === false || i >= tries - 1) {
+        break
+      }
       await sleep(1000 * (i + 1) + Math.random() * 800)
     } finally {
       clearTimeout(timer)
