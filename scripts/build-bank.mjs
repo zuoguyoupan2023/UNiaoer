@@ -70,7 +70,10 @@ const OPT = {
   global: !!args.global, // 023 P2:全球增量采集(物种来自 species-index.json,台账 data-cache/manifest-global.json,不碰主 manifest)
   slow: !!args.slow, // 假期模式:大幅放宽对外限速(429 高发期用)
   inatGap: args['inat-gap'] ? Number(args['inat-gap']) : args.slow ? 5000 : 1050, // iNat 全局最小间隔 ms(--slow=5s:假期/429 高发期)
-  xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 1200, // XC 检索冷却下限 ms
+  // XC 检索冷却下限 ms。2026-10-17 实测：XC API 单次查询自身就要 5–6 s，
+  // 冷却只占其中 ~0.8 s，所以 1200→400 只省 ~10%（但实测 24 次 400ms 间隔**零 429**）。
+  // 要再快就得动查询本身（并发化/减少同义词回退），不是动这个间隔 —— 见 docs/054 §1.5.5。
+  xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 400,
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
   // 媒体下载的两级超时（2026-10-17，见 download() 头注与 docs/054 §1.4）

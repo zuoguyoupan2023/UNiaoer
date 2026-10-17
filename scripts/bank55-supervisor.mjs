@@ -54,7 +54,11 @@ const PUSH_CONCURRENCY = 8 // wrangler 每文件约 1.97s 且瓶颈在 npm exec 
 // → 真正的瓶颈**不是下载，而是 XC 的全局串行 API 闸门**（fetchXc 走 xcQueue：
 //   长尾种要按同义词逐个查，每个查询 ~2.5 s + xcGap 冷却，全局串行 → 所有 worker 排队等）。
 // 因此这里只保守提到 4（下载有收益、503 还少），**别再往上加**；要提速得改 API 侧（见 docs/054 §1.5.6）。
-const OPT_CONCURRENCY = Number(process.env.BANK55_CONCURRENCY || 4)
+// 2026-10-17 二测：XC 下载聚合带宽**随并发线性叠加**（各 30s 实测）
+//   1→12.7 KB/s · 2→25.0 · 4→43.4 · 8→97.5  ⇒ 每连接限速 ~12 KB/s，无总量上限。
+// 而 materialize() 在**物种内是串行下载**（for + await），所以每物种墙钟 = 各素材下载之和，
+// 并发数直接乘吞吐 ⇒ 默认取 8（4→8 之间实测未见 503 恶化，偶发 5xx 有重试兜底）。
+const OPT_CONCURRENCY = Number(process.env.BANK55_CONCURRENCY || 8)
 const COLL_ARGS = ['--global', '--media', 'stage', '--per', '5', '--concurrency', String(OPT_CONCURRENCY)]
 
 let stopping = false
