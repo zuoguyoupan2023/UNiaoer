@@ -4,7 +4,7 @@
  *
  * 产物：`public/data/duyin.json`
  *   { schemaVersion, generatedAt, sources[], counts, buckets{ a: [entry…] } }
- *   entry = { zh, py, tone, light, sci, en, key, nameZhSource, rankCN?, inCN }
+ *   entry = { id, linked, zh, py, pyNum, light, pending, sci, en, family, key, taxonKey, rankCN, inCN }
  *
  * 为什么在构建期算：`pinyin-pro` 是仓库**已有的** devDependency（`scripts/lib/pinyin-key.mjs`
  * 早就在用），但把它打进前端会白撑首屏 bundle —— 与 2026-10-17 onnxruntime 27 MiB 事故同一类错误。
@@ -25,6 +25,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pinyin } from 'pinyin-pro'
+import { slug } from './lib/util.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(ROOT, 'public/data/duyin.json')
@@ -119,6 +120,9 @@ async function main() {
   const index = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
   const meta = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/manifest-meta.json'), 'utf8'))
   const metaBySci = new Map((meta.species || []).map((s) => [s.nameSci, s]))
+  // 物种详情页的键是 **species.id**（学名 slug，实测 id === slug(nameSci)），**不是 taxonKey**。
+  // 链接必须用它，否则 /species/avibase-… 会「找不到该物种」。
+  const manifestIds = new Set((meta.species || []).map((s) => s.id))
   const nameOv = await loadNameOverrides()
   const ovCount = Object.keys(nameOv).length
 
@@ -137,7 +141,10 @@ async function main() {
     const { py, pyNum, light, pending, unknown } = pronounce(sp.nameZh)
     for (const ch of unknown) unknownChars.set(ch, (unknownChars.get(ch) || 0) + 1)
     const m = metaBySci.get(sp.nameSci) || {}
+    const id = slug(sp.nameSci)
     entries.push({
+      id,
+      linked: manifestIds.has(id),
       zh: sp.nameZh,
       py,
       pyNum,
@@ -187,6 +194,7 @@ async function main() {
       unknownChars: unknownChars.size,
       pendingReadings: PENDING_READINGS.size,
       nameOverrides: { table: ovCount, applied: ovApplied },
+      linked: entries.filter((e) => e.linked).length,
     },
     buckets,
   }

@@ -6,9 +6,11 @@ import { loadBank, speciesById, speciesName } from '@/core/bank'
 import {
   AdminAuthError,
   listAdminReports,
+  type QuarantineItem,
   listQuarantine,
   patchReportStatus,
   quarantineReportMedia,
+  unquarantine,
   type AdminReport,
   type ReportStatus,
 } from '@/core/reportsApi'
@@ -67,12 +69,14 @@ function logout() {
 
 /** 029 M3：隔离台账键（与 Worker 端一致：`<species_id>|<type>|<url>`） */
 const quarantinedKeys = ref<Set<string>>(new Set())
+const quarantineItems = ref<QuarantineItem[]>([])
 const mediaKeyOf = (r: AdminReport) =>
   `${r.species_id ?? ''}|${r.question_type === 'audio' ? 'audio' : 'image'}|${r.media_url ?? ''}`
 
 async function refreshQuarantine() {
   try {
     const items = await listQuarantine(key.value)
+    quarantineItems.value = items
     quarantinedKeys.value = new Set(items.filter((x) => !x.resolved_at).map((x) => x.media_key))
   } catch {
     /* 管理端拉取失败不阻塞主流程 */
@@ -96,6 +100,46 @@ async function quarantine(r: AdminReport) {
     busy.value = { ...busy.value, [r.id]: false }
   }
 }
+
+/**
+ * M1：解除隔离。
+ * ⚠️ 这个 API（Worker `{action:'unquarantine'}` + 前端 `unquarantine()`）**早就实现了，
+ * 只是一直没有 UI 入口** —— 误封的素材只能手敲 curl 恢复。媒体名可能有前后空格，
+ * 我们对 speciesId/url 做 trim，避免因为尾部空白拼出不同的 media_key。
+ */
+async function release(mediaKey: string) {
+  busy.value = { ...busy.value, [mediaKey]: true }
+  savedMsg.value = ''
+  const adminKey = key.value
+  try {
+    // media_key = `<species_id>|<type>|<url>` → 反解出原报错 id（沿用报错记录的 report_id）
+    const item = quarantineItems.value.find((x) => x.media_key === mediaKey)
+    const sid = mediaKey.split('|')[0]?.trim() || ''
+    const type = mediaKey.split('|')[1]?.trim() === 'audio' ? 'audio' : 'image'
+    const url = mediaKey.split('|').slice(2).join('|').trim()
+    await unquarantine(adminKey, mediaKey, item?.report_id || 'manual')
+    quarantineItems.value = quarantineItems.value.map((x) =>
+      x.media_key === mediaKey ? { ...x, resolved_at: Date.now() } : x,
+    )
+    quarantinedKeys.value = new Set(
+      quarantineItems.value.filter((x) => !x.resolved_at).map((x) => x.media_key),
+    )
+    // 让列表里对应的报错也显示为「已解除」
+    reports.value = reports.value.map((r) =>
+      r.species_id === sid && r.media_url === url && (r.question_type || 'image') === type
+        ? { ...r, media_url: r.media_url }
+        : r,
+    )
+    savedMsg.value = t('admin.releasedMsg')
+  } catch (e) {
+    if (e instanceof AdminAuthError) authError.value = true
+    else savedMsg.value = t('admin.saveFailed')
+  } finally {
+    busy.value = { ...busy.value, [mediaKey]: false }
+  }
+}
+
+const activeQuarantine = computed(() => quarantineItems.value.filter((x) => !x.resolved_at))
 
 async function setStatus(r: AdminReport, status: ReportStatus) {
   busy.value = { ...busy.value, [r.id]: true }
@@ -191,6 +235,27 @@ const count = computed(() => reports.value.length)
         <span v-if="savedMsg" class="saved" role="status">{{ savedMsg }}</span>
       </div>
 
+      <details v-if="activeQuarantine.length || quarantineItems.length" class="ledger">
+        <summary>{{ t('admin.quarantineList') }} · {{ activeQuarantine.length }}</summary>
+        <p v-if="!activeQuarantine.length" class="muted empty">{{ t('admin.noQuarantine') }}</p>
+        <ul v-else class="qlist">
+          <li v-for="q in activeQuarantine" :key="q.media_key" class="qitem">
+            <span class="qspecies">{{ q.species_id }} · {{ q.media_type }}</span>
+            <a class="qurl" :href="q.media_url" target="_blank" rel="noopener">{{
+              q.media_url.length > 72 ? q.media_url.slice(0, 72) + '…' : q.media_url
+            }}</a>
+            <button
+              class="btn btn-secondary btn-sm"
+              type="button"
+              :disabled="busy[q.media_key]"
+              @click="release(q.media_key)"
+            >
+              <Undo2 class="ic" :size="13" /> {{ t('admin.release') }}
+            </button>
+          </li>
+        </ul>
+      </details>
+
       <p v-if="loading" class="muted empty" role="status">{{ t('common.loading') }}</p>
       <p v-else-if="!reports.length" class="muted empty">{{ t('admin.empty') }}</p>
 
@@ -247,7 +312,17 @@ const count = computed(() => reports.value.length)
             >
               <ShieldOff class="ic" :size="13" /> {{ t('admin.quarantine') }}
             </button>
-            <span v-else-if="r.media_url" class="quar">✓ {{ t('admin.quarantined') }}</span>
+            <template v-else-if="r.media_url">
+              <span class="quar">✓ {{ t('admin.quarantined') }}</span>
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                :disabled="busy[mediaKeyOf(r)]"
+                @click="release(mediaKeyOf(r))"
+              >
+                <Undo2 class="ic" :size="13" /> {{ t('admin.release') }}
+              </button>
+            </template>
             <button
               v-if="r.status !== 'rejected'"
               class="btn btn-secondary btn-sm"
@@ -387,13 +462,47 @@ const count = computed(() => reports.value.length)
   align-self: center;
   padding: 0 4px;
 }
-/* 029 M3：隔离态标记 */
-.quar {
-  font-size: 0.74rem;
-  font-weight: 600;
+/* M1：隔离台账面板 */
+.ledger {
+  margin: 0 0 14px;
+  text-align: left;
+  font-size: 0.8rem;
+}
+.ledger summary {
+  cursor: pointer;
   color: var(--primary);
-  align-self: center;
-  padding: 0 4px;
+  font-weight: 600;
+}
+.qlist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: #fff;
+}
+.qspecies {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.qurl {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: var(--text-light);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .status {
   font-size: 0.7rem;

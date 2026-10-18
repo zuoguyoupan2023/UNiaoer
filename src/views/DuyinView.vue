@@ -19,6 +19,10 @@ import { useI18n } from 'vue-i18n'
 import { Info, Search, X } from 'lucide-vue-next'
 
 interface DuyinEntry {
+  /** 物种详情页的键 = slug(nameSci)（实测 id === slug(nameSci)，**不是 taxonKey**） */
+  id: string
+  /** 该种是否在权威层 manifest-meta 里（决定能不能链到物种页） */
+  linked: boolean
   zh: string
   py: string
   pyNum: string
@@ -112,7 +116,7 @@ interface DuyinLine {
 function linesOf(e: DuyinEntry): DuyinLine[] {
   const py: DuyinLine = { cls: 'py', text: pyOf(e) }
   const zh: DuyinLine = { cls: 'zh', text: e.zh, rankCN: e.rankCN, inCN: e.inCN }
-  const sci: DuyinLine = { cls: 'sci', text: e.sci, to: e.taxonKey ? `/species/${e.taxonKey}` : undefined }
+  const sci: DuyinLine = { cls: 'sci', text: e.sci, to: e.linked ? `/species/${e.id}` : undefined }
   const en: DuyinLine = { cls: 'en', text: e.en || t('duyin.noEn') }
   const full: DuyinLine[] = isEn.value ? [en, sci, py, zh] : [py, zh, sci, en]
   return detail.value ? full : full.slice(0, 2)
