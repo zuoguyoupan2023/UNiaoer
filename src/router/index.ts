@@ -85,6 +85,12 @@ const router = createRouter({
       component: () => import('../views/BirdIdView.vue'),
     },
     {
+      // 中文鸟名与读音（构建期预计算拼音；不进主导航，用路径直达）
+      path: '/duyin',
+      name: 'duyin',
+      component: () => import('../views/DuyinView.vue'),
+    },
+    {
       // B6 大众评审：公开报错列表 + 投票
       path: '/reports',
       name: 'reports',
@@ -180,6 +186,7 @@ function pageCategory(path: string): string {
   if (path.startsWith('/profile')) return 'profile'
   if (path.startsWith('/faq')) return 'faq'
   if (path.startsWith('/reports')) return 'reports'
+  if (path.startsWith('/duyin')) return 'duyin'
   return 'other'
 }
 

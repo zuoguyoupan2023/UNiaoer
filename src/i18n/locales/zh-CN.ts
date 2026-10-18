@@ -472,6 +472,23 @@ export const messages = {
     downvoteCount: '不属实（{n} 票）',
     status: { fixed: '已修正' },
   },
+  duyin: {
+    title: '中文鸟名与读音',
+    lead: '全部有名中文的鸟种，按拼音排序；拼音带声调符号，可切换成数字声调（轻声记作 5）。',
+    search: '搜索中文名、拼音或学名',
+    searchPlaceholder: '例如：喜鹊 / xique / Pica',
+    toneSymbol: '声调符号',
+    toneNum: '数字声调',
+    onlyCN: '只看中国可见',
+    count: '共 {n} 种',
+    empty: '没有匹配的鸟种。',
+    lightMark: '轻声',
+    unavailable: '读音表暂时不可用（需要联网或未构建）。',
+    noName: '（无中文名）',
+    cnBadge: '中',
+
+    other: '其他',
+  },
   admin: {
     title: '报错管理',
     lead: '输入管理密钥以查看与处理用户反馈。密钥仅保存在本标签页，关闭即失效。',

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedAt": "2026-10-17T00:00:00.000Z",
   "status": "reviewed",
-  "note": "IUCN 栖息地分类体系（IUCN Habitats Classification Scheme）三级编码 → 中文对照表。产物（iucn-habitats.json / manifest profile）只放 code，中文一律前端查本表——换译法不必重建产物。初稿由 AI 生成，2026-10-17 已由项目方人工过目并确认为可接受（全部 review:true）。code 集合取自 data/iucn-habitats.json 的 habitatCodes（1291 个核心种实测出现 89 条）；全球种跑完后需重跑 scripts/taxonomy/build-iucn-code-table.mjs --sync 补全。",
+  "note": "IUCN 栖息地分类体系（IUCN Habitats Classification Scheme）三级编码 → 中文对照表。产物（iucn-habitats.json / manifest profile）只放 code，中文一律前端查本表——换译法不必重建产物。初稿由 AI 生成，2026-10-17 已由项目方人工过目并确认为可接受（全部 review:true）。code 集合取自 data/iucn-habitats.json 的 habitatCodes（1291 个核心种实测出现 89 条）；全球种跑完后需重跑 scripts/taxonomy/build-iucn-code-table.mjs --sync 补全。 2026-10-18 补：全球种跑完后新增 10 条（3_2/5_12/7_2/10_3/10_4/12_7/13_2/15_11/16/18），均为低频 code（1–14 种），待人工过目。",
   "source": {
     "key": "iucn-habitats-classification",
     "name": "IUCN Habitats Classification Scheme",
@@ -133,6 +133,11 @@
       "zhShort": "亚寒带灌丛",
       "review": true
     },
+    "3_2": {
+      "zh": "亚南极灌丛",
+      "zhShort": "亚南极灌丛",
+      "review": false
+    },
     "3_3": {
       "zh": "北方针叶灌丛",
       "zhShort": "针叶灌丛",
@@ -203,6 +208,46 @@
       "zhShort": "河流",
       "review": true
     },
+    "5_10": {
+      "zh": "苔原湿地（含融雪形成的季节性水体）",
+      "zhShort": "苔原湿地",
+      "review": true
+    },
+    "5_11": {
+      "zh": "高山湿地（含融雪季节性水体）",
+      "zhShort": "高山湿地",
+      "review": true
+    },
+    "5_12": {
+      "zh": "地热湿地",
+      "zhShort": "地热湿地",
+      "review": false
+    },
+    "5_13": {
+      "zh": "永久性内陆三角洲",
+      "zhShort": "内陆三角洲",
+      "review": true
+    },
+    "5_14": {
+      "zh": "永久性咸水/半咸水/碱性湖泊",
+      "zhShort": "咸水湖",
+      "review": true
+    },
+    "5_15": {
+      "zh": "季节性/间歇性咸水/半咸水/碱性湖泊与滩地",
+      "zhShort": "季节性盐湖",
+      "review": true
+    },
+    "5_16": {
+      "zh": "永久性咸水/半咸水/碱性沼泽与池塘",
+      "zhShort": "咸水沼泽",
+      "review": true
+    },
+    "5_17": {
+      "zh": "季节性/间歇性咸水/半咸水/碱性沼泽与池塘",
+      "zhShort": "季节性咸水沼泽",
+      "review": true
+    },
     "5_2": {
       "zh": "季节性/间歇性河流溪流",
       "zhShort": "季节性河流",
@@ -243,41 +288,6 @@
       "zhShort": "泉与绿洲",
       "review": true
     },
-    "5_10": {
-      "zh": "苔原湿地（含融雪形成的季节性水体）",
-      "zhShort": "苔原湿地",
-      "review": true
-    },
-    "5_11": {
-      "zh": "高山湿地（含融雪季节性水体）",
-      "zhShort": "高山湿地",
-      "review": true
-    },
-    "5_13": {
-      "zh": "永久性内陆三角洲",
-      "zhShort": "内陆三角洲",
-      "review": true
-    },
-    "5_14": {
-      "zh": "永久性咸水/半咸水/碱性湖泊",
-      "zhShort": "咸水湖",
-      "review": true
-    },
-    "5_15": {
-      "zh": "季节性/间歇性咸水/半咸水/碱性湖泊与滩地",
-      "zhShort": "季节性盐湖",
-      "review": true
-    },
-    "5_16": {
-      "zh": "永久性咸水/半咸水/碱性沼泽与池塘",
-      "zhShort": "咸水沼泽",
-      "review": true
-    },
-    "5_17": {
-      "zh": "季节性/间歇性咸水/半咸水/碱性沼泽与池塘",
-      "zhShort": "季节性咸水沼泽",
-      "review": true
-    },
     "6": {
       "zh": "裸岩地（内陆悬崖、山峰等）",
       "zhShort": "裸岩地",
@@ -287,6 +297,11 @@
       "zh": "洞穴（非水生）",
       "zhShort": "洞穴",
       "review": true
+    },
+    "7_2": {
+      "zh": "其他地下环境",
+      "zhShort": "地下环境",
+      "review": false
     },
     "8_1": {
       "zh": "炎热沙漠",
@@ -306,6 +321,11 @@
     "9_1": {
       "zh": "浅海远洋（水体）",
       "zhShort": "远洋",
+      "review": true
+    },
+    "9_10": {
+      "zh": "河口",
+      "zhShort": "河口",
       "review": true
     },
     "9_2": {
@@ -373,11 +393,6 @@
       "zhShort": "海草床",
       "review": true
     },
-    "9_10": {
-      "zh": "河口",
-      "zhShort": "河口",
-      "review": true
-    },
     "10_1": {
       "zh": "大洋表层带（0–200 m）",
       "zhShort": "大洋表层",
@@ -387,6 +402,16 @@
       "zh": "大洋中层带（200–1000 m）",
       "zhShort": "大洋中层",
       "review": true
+    },
+    "10_3": {
+      "zh": "大洋半深海带（1000–4000 m）",
+      "zhShort": "半深海",
+      "review": false
+    },
+    "10_4": {
+      "zh": "大洋深渊带（4000–6000 m）",
+      "zhShort": "深渊带",
+      "review": false
     },
     "12_1": {
       "zh": "岩质潮间带",
@@ -418,10 +443,20 @@
       "zhShort": "潮池",
       "review": true
     },
+    "12_7": {
+      "zh": "红树淹没的根系",
+      "zhShort": "红树根区",
+      "review": false
+    },
     "13_1": {
       "zh": "海崖与近海岩岛",
       "zhShort": "海崖",
       "review": true
+    },
+    "13_2": {
+      "zh": "海岸洞穴 / 喀斯特",
+      "zhShort": "海岸洞穴",
+      "review": false
     },
     "13_3": {
       "zh": "海岸沙丘",
@@ -473,6 +508,11 @@
       "zhShort": "水库",
       "review": true
     },
+    "15_11": {
+      "zh": "海洋人造结构（人工岛、人工礁等）",
+      "zhShort": "海洋人造物",
+      "review": false
+    },
     "15_2": {
       "zh": "池塘（<8 公顷）",
       "zhShort": "池塘",
@@ -513,10 +553,20 @@
       "zhShort": "沟渠",
       "review": true
     },
+    "16": {
+      "zh": "引入植被（外来种形成的植被）",
+      "zhShort": "引入植被",
+      "review": false
+    },
     "17": {
       "zh": "其他",
       "zhShort": "其他",
       "review": true
+    },
+    "18": {
+      "zh": "未知",
+      "zhShort": "未知",
+      "review": false
     }
   },
   "reviewedAt": "2026-10-17"

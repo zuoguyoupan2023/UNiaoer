@@ -70,6 +70,8 @@
     "species-index": "node scripts/taxonomy/build-species-index.mjs",
     "check:index": "node scripts/check-species-index.mjs",
     "check:traits": "node scripts/check-traits.mjs",
+    "build:duyin": "node scripts/build-duyin-index.mjs",
+    "check:duyin": "node scripts/build-duyin-index.mjs --check",
     "check:model-labels": "node scripts/check-model-labels.mjs",
     "worker:dev": "wrangler dev -c worker/wrangler.toml --remote",
     "worker:deploy": "wrangler deploy -c worker/wrangler.toml",

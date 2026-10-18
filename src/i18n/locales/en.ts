@@ -403,6 +403,23 @@ const en: typeof zhMessages = {
     downvoteCount: 'Not valid ({n} votes)',
     status: { fixed: 'Fixed' },
   },
+  duyin: {
+    title: 'Chinese bird names & pronunciation',
+    lead: 'Every bird with a Chinese name, sorted by pinyin. Tone marks are shown; you can switch to numbered tones (neutral tone = 5).',
+    search: 'Search Chinese name, pinyin or scientific name',
+    searchPlaceholder: 'e.g. 喜鹊 / xique / Pica',
+    toneSymbol: 'Tone marks',
+    toneNum: 'Numbered tones',
+    onlyCN: 'Visible in China only',
+    count: '{n} species',
+    empty: 'No matching species.',
+    lightMark: 'neutral',
+    unavailable: 'The pronunciation list is unavailable (network required or not built yet).',
+    noName: '(no Chinese name)',
+    cnBadge: 'CN',
+
+    other: 'Other',
+  },
   admin: {
     title: 'Report admin',
     lead: 'Enter the admin key to review and handle user reports. The key is kept only in this tab.',

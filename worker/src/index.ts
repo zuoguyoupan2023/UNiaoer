@@ -921,7 +921,20 @@ const TITLE_TRACKS = ['volume', 'collection', 'streak', 'perfect', 'audio', 'hel
 const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   session_start: {},
   page_view: {
-    category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'stats', 'other'],
+    // 2026-10-18 新增 `duyin`（/duyin 中文鸟名读音页）。枚举保持短小是隐私设计的一部分
+    // （028：少量枚举属性），不加的话该页会上报成 props='' 把 page_view 的类目分布搅浑。
+    category: [
+      'quiz',
+      'region',
+      'catalog',
+      'species',
+      'profile',
+      'faq',
+      'reports',
+      'duyin',
+      'stats',
+      'other',
+    ],
   },
   quiz_complete: {
     mode: ['image', 'audio'],

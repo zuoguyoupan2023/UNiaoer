@@ -48,6 +48,10 @@ jobs:
       - name: Check catalog
         run: npm run check:catalog
 
+      # /duyin 中文鸟名读音产物：拼音完整性 + 生僻字未收录上报（纯本地）
+      - name: Check duyin index
+        run: npm run check:duyin
+
       # Pages 单文件 25 MiB 上限：超限会导致部署静默失败（2026-10-17 事故）
       - name: Check dist size (Pages 25 MiB limit)
         run: npm run check:dist-size
