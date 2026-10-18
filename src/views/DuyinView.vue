@@ -6,11 +6,17 @@
  * 拼音由 `pinyin-pro` 在构建期算好，前端**不引拼音库** —— 否则会白撑首屏 bundle
  * （与 2026-10-17 onnxruntime 27 MiB 事故同类错误）。
  *
- * 每条：中文名 + 带声调符号拼音 + 数字声调 + 轻声位置（哪个字）+ 学名/英文名 + 中国可见标记。
+ * 版式（2026-10-18 定稿）：
+ *  · **默认两行**：拼音在上（醒目引导行），中文名在下。
+ *    拼音与名字**分两行而非并成一行**——一行时长拼音会把中文名挤到省略号。
+ *  · **详情最多四行**：拼音 / 中文名 / 学名 / 英文名；英文界面下顺序为 英文名 / 学名 / 拼音 / 中文名。
+ *  · **一行 8 个**（宽屏）→ 3 个（窄屏）→ 内容过长时自动降到 2 / 1 个：
+ *    列数 = min(视口档位, 内容档位)，内容档位由当前结果里**最长的拼音+名字**决定，
+ *    保证「名字很长时不折行、不塌版」，只是每行变少。
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search, X } from 'lucide-vue-next'
+import { Info, Search, X } from 'lucide-vue-next'
 
 interface DuyinEntry {
   zh: string
@@ -27,16 +33,19 @@ interface DuyinEntry {
 }
 interface DuyinFile {
   buckets: Record<string, DuyinEntry[]>
-  counts?: { total?: number }
 }
 
-const { t } = useI18n()
+const { t, locale: appLocale } = useI18n()
 const loading = ref(true)
 const failed = ref(false)
 const all = ref<DuyinEntry[]>([])
 const q = ref('')
 const toneNum = ref(false)
 const onlyCN = ref(false)
+const detail = ref(false)
+
+/** 英文界面下详情顺序为 英文名 / 学名 / 拼音 / 中文名；中文界面为 拼音 / 中文名 / 学名 / 英文名 */
+const isEn = computed(() => appLocale.value !== 'zh-CN')
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('')
 
@@ -69,7 +78,7 @@ const filtered = computed(() => {
   })
 })
 
-/** 按拼音首字母分组；空结果时给一段引导 */
+/** 按拼音首字母分组 */
 const groups = computed(() => {
   const map = new Map<string, DuyinEntry[]>()
   for (const e of filtered.value) {
@@ -80,22 +89,69 @@ const groups = computed(() => {
   return [...map.entries()].sort((a, b) => (a[0] === '#' ? 1 : b[0] === '#' ? -1 : a[0].localeCompare(b[0])))
 })
 
-/** 字母索引条（只显示实际存在的字母） */
 const letters = computed(() => LETTERS.filter((l) => groups.value.some(([k]) => k === l)))
 function jumpTo(letter: string) {
   q.value = letter
   document.getElementById(`duyin-${letter}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-/** 轻声标记：把轻声音节包起来（数字声调模式下用 5 已能看出，这里只做视觉强调） */
-function isLight(e: DuyinEntry, index: number): boolean {
-  return e.light.includes(index)
+/**
+ * 一条卡片要渲染的行（默认取前两行 = 「名称 + 拼音」；详情模式取全部）。
+ * 中文界面：拼音 / 中文名 / 学名 / 英文名
+ * 英文界面：英文名 / 学名 / 拼音 / 中文名
+ */
+interface DuyinLine {
+  cls: 'py' | 'zh' | 'sci' | 'en'
+  text: string
+  to?: string
+  rankCN?: number | null
+  inCN?: boolean
 }
-function lightHtml(e: DuyinEntry): string {
+function linesOf(e: DuyinEntry): DuyinLine[] {
+  const py: DuyinLine = { cls: 'py', text: pyOf(e) }
+  const zh: DuyinLine = { cls: 'zh', text: e.zh, rankCN: e.rankCN, inCN: e.inCN }
+  const sci: DuyinLine = { cls: 'sci', text: e.sci, to: e.taxonKey ? `/species/${e.taxonKey}` : undefined }
+  const en: DuyinLine = { cls: 'en', text: e.en || t('duyin.noEn') }
+  const full: DuyinLine[] = isEn.value ? [en, sci, py, zh] : [py, zh, sci, en]
+  return detail.value ? full : full.slice(0, 2)
+}
+
+/** 拼音（声调符号 ⇄ 数字，轻声加 ′ 标记） */
+function pyOf(e: DuyinEntry): string {
   const parts = (toneNum.value ? e.pyNum || e.py : e.py).split(' ')
-  const marks = parts.map((s, i) => (isLight(e, i) ? `${s}′` : s))
-  return marks.join(' ')
+  return parts.map((s, i) => (e.light.includes(i) ? `${s}′` : s)).join(' ')
 }
+
+/**
+ * 列数：视口档位（8 → 6 → 4 → 3 → 2 → 1）与**内容档位**取小。
+ * 内容档位按当前结果里最长的一条算（拼音 + 中文名字数）：
+ *   ≤ 14 字 → 不限；≤ 20 → 4 列；≤ 26 → 3 列；更长 → 2 列。
+ * 这样「名字特别长」时不会折行塌版，只是每行放的条数变少。
+ */
+const cols = computed(() => {
+  const vp = colsByViewport()
+  const list = filtered.value
+  if (!list.length) return vp
+  let widest = 0
+  for (const e of list) {
+    const len = (pyOf(e).length + e.zh.length + 1) | 0
+    if (len > widest) widest = len
+  }
+  const byContent = widest <= 14 ? 8 : widest <= 20 ? 4 : widest <= 26 ? 3 : 2
+  return Math.max(1, Math.min(vp, byContent))
+})
+function colsByViewport(): number {
+  if (typeof window === 'undefined') return 4
+  const w = window.innerWidth
+  if (w >= 1400) return 8
+  if (w >= 1100) return 6
+  if (w >= 800) return 4
+  if (w >= 520) return 3
+  if (w >= 300) return 2
+  return 1
+}
+const gridStyle = computed(() => ({ gridTemplateColumns: `repeat(${cols.value}, minmax(0, 1fr))` }))
+
 const lightTotal = computed(() => all.value.filter((e) => e.light.length).length)
 </script>
 
@@ -122,6 +178,11 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
         <span>{{ toneNum ? t('duyin.toneNum') : t('duyin.toneSymbol') }}</span>
       </label>
       <label class="chk">
+        <input v-model="detail" type="checkbox" />
+        <Info class="ic" :size="13" />
+        <span>{{ t('duyin.detail') }}</span>
+      </label>
+      <label class="chk">
         <input v-model="onlyCN" type="checkbox" />
         <span>{{ t('duyin.onlyCN') }}</span>
       </label>
@@ -129,13 +190,7 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
     </div>
 
     <nav v-if="letters.length" class="letters" :aria-label="t('duyin.search')">
-      <button
-        v-for="l in letters"
-        :key="l"
-        class="letter"
-        type="button"
-        @click="jumpTo(l)"
-      >
+      <button v-for="l in letters" :key="l" class="letter" type="button" @click="jumpTo(l)">
         {{ l.toUpperCase() }}
       </button>
     </nav>
@@ -147,16 +202,20 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
     <div v-else class="groups">
       <section v-for="[letter, list] in groups" :id="`duyin-${letter}`" :key="letter" class="group">
         <h3 class="letter-h">{{ letter === '#' ? t('duyin.other') : letter.toUpperCase() }}</h3>
-        <ul class="list">
+        <ul class="list" :style="gridStyle">
           <li v-for="e in list" :key="e.taxonKey || e.sci + e.zh" class="item">
-            <span class="zh">{{ e.zh }}</span>
-            <span class="py" :title="lightTotal ? t('duyin.lightMark') : ''">{{ lightHtml(e) }}</span>
-            <RouterLink v-if="e.taxonKey" class="sci" :to="`/species/${e.taxonKey}`">
-              {{ e.sci }}
-            </RouterLink>
-            <span v-else class="sci plain">{{ e.sci }}</span>
-            <span v-if="e.rankCN" class="rank">#{{ e.rankCN }}</span>
-            <span v-if="e.inCN" class="cn" :aria-label="t('duyin.onlyCN')">{{ t('duyin.cnBadge') }}</span>
+            <template v-for="(ln, i) in linesOf(e)" :key="i">
+              <RouterLink v-if="ln.to" class="ln" :class="ln.cls" :to="ln.to">
+                {{ ln.text }}
+              </RouterLink>
+              <span v-else class="ln" :class="ln.cls" :title="ln.cls === 'py' && lightTotal ? t('duyin.lightMark') : ''">
+                {{ ln.text }}
+                <template v-if="ln.cls === 'zh'">
+                  <span v-if="ln.rankCN" class="rank">#{{ ln.rankCN }}</span>
+                  <span v-if="ln.inCN" class="cn">{{ t('duyin.cnBadge') }}</span>
+                </template>
+              </span>
+            </template>
           </li>
         </ul>
       </section>
@@ -219,6 +278,7 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
   font-size: 0.8rem;
   color: var(--text-light);
   cursor: pointer;
+  white-space: nowrap;
 }
 .count {
   font-size: 0.78rem;
@@ -243,7 +303,7 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
   cursor: pointer;
 }
 .letter:hover {
-  background: var(--primary-light, #eaf4ef);
+  background: #eaf4ef;
 }
 .empty {
   margin: 16px 0;
@@ -272,48 +332,70 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 4px 14px;
+  /* 列数由 JS 给（视口档位 × 内容档位取小）；minmax(0,1fr) 让长名字不撑破栅格 */
+  gap: 6px 12px;
 }
 .item {
+  min-width: 0; /* 关键：允许格内收缩，长名字才不会把布局挤变形 */
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 0.86rem;
-  padding: 2px 0;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  overflow-wrap: anywhere;
 }
-.zh {
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
+.item:hover {
+  background: #f6f8f7;
 }
-.py {
-  color: var(--primary-dark);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.sci {
-  font-size: 0.74rem;
-  font-style: italic;
-  color: var(--text-light);
-  text-decoration: none;
+/* 行基类 */
+.ln {
+  min-width: 0;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sci:hover {
-  text-decoration: underline;
+/* 第 1 行（中文界面）：拼音，醒目引导行 */
+.py {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  font-variant-numeric: tabular-nums;
+}
+/* 第 2 行（中文界面）：中文名 */
+.zh {
+  font-size: 0.88rem;
+  color: var(--text);
 }
 .rank {
   font-size: 0.68rem;
   color: var(--text-light);
+  margin-left: 3px;
 }
 .cn {
   font-size: 0.62rem;
-  padding: 0 4px;
+  padding: 0 3px;
   border-radius: var(--radius-xs);
   background: #eef1f0;
   color: var(--text-light);
-  flex: none;
+  margin-left: 3px;
+}
+/* 详情第 3–4 行 */
+.sci {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  font-style: italic;
+  color: var(--text-light);
+  text-decoration: none;
+}
+.sci:hover {
+  text-decoration: underline;
+}
+.plain {
+  color: var(--text-light);
+}
+.en {
+  font-size: 0.72rem;
+  color: var(--text-light);
 }
 </style>

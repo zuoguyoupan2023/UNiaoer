@@ -486,6 +486,8 @@ export const messages = {
     unavailable: '读音表暂时不可用（需要联网或未构建）。',
     noName: '（无中文名）',
     cnBadge: '中',
+    detail: '详细信息',
+    noEn: '（无英文名）',
 
     other: '其他',
   },

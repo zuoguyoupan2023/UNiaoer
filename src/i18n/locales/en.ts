@@ -417,6 +417,8 @@ const en: typeof zhMessages = {
     unavailable: 'The pronunciation list is unavailable (network required or not built yet).',
     noName: '(no Chinese name)',
     cnBadge: 'CN',
+    detail: 'Details',
+    noEn: '(no English name)',
 
     other: 'Other',
   },
