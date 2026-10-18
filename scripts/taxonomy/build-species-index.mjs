@@ -30,6 +30,22 @@ const GBIF_MATCH_CACHE = path.join(ROOT, 'data-cache/taxonomy/gbif-match')
 const GBIF_RECORDS_CACHE = path.join(ROOT, 'data-cache/region/gbif-records-by-species.json')
 const XC_CACHE = path.join(ROOT, 'data-cache/xc')
 const COMMONNESS_OVERRIDES = path.join(ROOT, 'data/commonness-overrides.json')
+const NAME_ZH_OVERRIDES = path.join(ROOT, 'data/name-zh-overrides.json')
+
+/**
+ * 人工审校的中文名修正表（2026-10-18 起）：{ "<学名>": { nameZh, reason, … } }。
+ * 用途：上游（Wikidata 标签 / iNat 俗名）可能给出**字体不支持的扩展区字**（如 U+31250，浏览器渲染成豆腐块）
+ * 或读音有争议的字，用人工值覆盖。**优先级最高**：> curated(data/taxa.json) > Wikidata。
+ * 同一张表也被 scripts/build-duyin-index.mjs 读取，两处保持单一来源。
+ */
+async function loadNameZhOverrides() {
+  try {
+    const d = JSON.parse(await fs.readFile(NAME_ZH_OVERRIDES, 'utf8'))
+    return d.bySci || {}
+  } catch {
+    return {}
+  }
+}
 
 /** 029 M0:人工常见度覆盖表(可选):{ "<taxonKey 或学名>": 1..5 } */
 async function loadCommonnessOverrides() {
@@ -193,8 +209,18 @@ try {
     let curatedCount = 0
     let wikiCount = 0
     const wikiLang = {}
+    const nameOv = await loadNameZhOverrides()
+    const ovApplied = []
     for (const e of species) {
       const k = normalizeSciName(e.nameSci)
+      // ① 人工审校修正最高优先（含「原名含字体不支持的扩展区字」这类必须改的情况）
+      const ov = nameOv[e.nameSci]
+      if (ov?.nameZh) {
+        if (e.nameZh !== ov.nameZh) ovApplied.push(`${e.nameSci}: ${e.nameZh} → ${ov.nameZh}`)
+        e.nameZh = ov.nameZh
+        curatedCount++
+        continue
+      }
       const curated = curatedByName.get(k)
       if (curated) {
         e.nameZh = curated
@@ -208,8 +234,10 @@ try {
         wikiLang[wiki.lang] = (wikiLang[wiki.lang] || 0) + 1
       }
     }
+    for (const line of ovApplied) console.log(`  ✏️ 中文名修正：${line}`)
+    if (ovApplied.length) console.log(`中文名修正表生效 ${ovApplied.length} 条（data/name-zh-overrides.json）`)
     if (curatedCount || wikiCount) {
-      nameZhStats = { curated: curatedCount, wikidata: wikiCount }
+      nameZhStats = { curated: curatedCount, wikidata: wikiCount, overrides: ovApplied.length }
       console.log(`中文名:curated ${curatedCount} + wikidata ${wikiCount} = ${curatedCount + wikiCount}/${species.length}` + (Object.keys(wikiLang).length ? `(语言分布 ${JSON.stringify(wikiLang)})` : ''))
     }
   }

@@ -1,0 +1,15 @@
+{
+  "_comment": "人工审校的中文名修正表（053-describe / 061 纠错链路的产物落点）。键 = 学名（或 taxonKey），值 = 正确中文名。上游（Wikidata 中文标签 / iNaturalist preferred_common_name）可能给出字体不支持或读音有争议的字，这里用人工审校值覆盖。",
+  "_note": "优先级：name-zh-overrides > curated（data/taxa.json 人工名）> Wikidata。两个消费者都读本表：scripts/taxonomy/build-species-index.mjs（骨架 species-index.json，影响名录/物种页/分类页）与 scripts/build-duyin-index.mjs（/duyin 读音页）。",
+  "_license": "本表为项目方人工审校内容（自有），不涉及外部许可。",
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-18",
+  "bySci": {
+    "Pityriasis gymnocephala": {
+      "nameZh": "棘头鵙",
+      "reason": "Wikidata 标签给的是「棘头𱉐」，𱉐 属 CJK 扩展 G 区（U+31250，2017 年才入 Unicode），绝大多数中文字体无字形 → 浏览器/终端渲染成豆腐块，且拼音库未收录读音。按通行中文名录改为「棘头鵙」（鵙 U+9D59，扩展 A 区，字体普遍支持，拼音库自带读音 jú 二声）。",
+      "verifiedBy": "项目方人工确认（2026-10-18）",
+      "upstreamNote": "Wikidata 标签仍为 棘头𱉐；若上游修正可移除本条。"
+    }
+  }
+}

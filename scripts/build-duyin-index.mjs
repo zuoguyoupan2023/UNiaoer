@@ -51,19 +51,25 @@ const CHAR_OVERRIDES = new Map([
  * **读音待人工确认**的字：拼音库未收录、又没有权威依据。
  * 处理方式：该音节**留空并标 pending**，UI 显示「?」而不是编一个读音；
  * `npm run check:duyin` 只**告警**不失败（避免 CI 被一个待确认字卡住），但会持续提醒。
+ *
+ * ✅ 2026-10-18：原挂起的 `𱉐` 已解决 —— 上游标签用扩展 G 区的字（字体不支持 → 显示豆腐块），
+ * 人工确认后改为 **「棘头鵙」**（见 `data/name-zh-overrides.json`），`鵙` 拼音库自带 `jú`（二声），
+ * 无需覆盖表。当前本表为空。
  */
-const PENDING_READINGS = new Map([
-  [
-    '𱉐',
-    {
-      sci: 'Pityriasis gymnocephala',
-      nameZh: '棘头𱉐',
-      note: '棘头科(Pityriasidae)单型种；该字在 CJK 扩展 G 区(U+31250)，拼音库无收录，通行中文名录读音待确认',
-    },
-  ],
-])
+const PENDING_READINGS = new Map()
 
 const HAN = /[\u3400-\u4dbf\u4e00-\u9fff\u{20000}-\u{323af}]/u
+
+/** 人工审校的中文名修正表（与 build-species-index 同源，见 data/name-zh-overrides.json） */
+const NAME_OVERRIDES = path.join(ROOT, 'data/name-zh-overrides.json')
+async function loadNameOverrides() {
+  try {
+    const d = JSON.parse(await fs.readFile(NAME_OVERRIDES, 'utf8'))
+    return d.bySci || {}
+  } catch {
+    return {}
+  }
+}
 
 /** 单字 → {py 带调, num 数字调}；未收录返回 null */
 function syllable(ch) {
@@ -113,10 +119,20 @@ async function main() {
   const index = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
   const meta = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/manifest-meta.json'), 'utf8'))
   const metaBySci = new Map((meta.species || []).map((s) => [s.nameSci, s]))
+  const nameOv = await loadNameOverrides()
+  const ovCount = Object.keys(nameOv).length
 
   const entries = []
   const unknownChars = new Map() // char → 出现次数（便于补 CHAR_OVERRIDES）
+  let ovApplied = 0
   for (const sp of index.species) {
+    // 人工修正优先（含「原名含字体不支持的扩展区字」这种必须改的情况）
+    const ov = nameOv[sp.nameSci]
+    if (ov?.nameZh && ov.nameZh !== sp.nameZh) {
+      console.log(`  ✏️ 中文名修正：${sp.nameSci} ${sp.nameZh} → ${ov.nameZh}`)
+      sp.nameZh = ov.nameZh
+      ovApplied++
+    }
     if (!sp.nameZh) continue
     const { py, pyNum, light, pending, unknown } = pronounce(sp.nameZh)
     for (const ch of unknown) unknownChars.set(ch, (unknownChars.get(ch) || 0) + 1)
@@ -170,6 +186,7 @@ async function main() {
       buckets: Object.keys(buckets).length,
       unknownChars: unknownChars.size,
       pendingReadings: PENDING_READINGS.size,
+      nameOverrides: { table: ovCount, applied: ovApplied },
     },
     buckets,
   }
