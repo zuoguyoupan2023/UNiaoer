@@ -23,6 +23,8 @@ interface DuyinEntry {
   py: string
   pyNum: string
   light: number[]
+  /** 读音待人工确认的音节下标（构建期不编读音，见 build-duyin-index 的 PENDING_READINGS） */
+  pending: number[]
   key: string
   sci: string
   en: string | null
@@ -116,10 +118,20 @@ function linesOf(e: DuyinEntry): DuyinLine[] {
   return detail.value ? full : full.slice(0, 2)
 }
 
-/** 拼音（声调符号 ⇄ 数字，轻声加 ′ 标记） */
+/**
+ * 拼音（声调符号 ⇄ 数字，轻声加 ′ 标记）。
+ * `pending`（读音待确认）的音节显示 `?` —— **宁可显示问号，也不给一个可能错的读音**
+ * （用户会照着念）。
+ */
 function pyOf(e: DuyinEntry): string {
   const parts = (toneNum.value ? e.pyNum || e.py : e.py).split(' ')
-  return parts.map((s, i) => (e.light.includes(i) ? `${s}′` : s)).join(' ')
+  return parts
+    .map((s, i) => {
+      if (e.pending?.includes(i)) return '?'
+      return e.light.includes(i) ? `${s}′` : s
+    })
+    .join(' ')
+    .trim()
 }
 
 /**

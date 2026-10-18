@@ -31,15 +31,36 @@ const OUT = path.join(ROOT, 'public/data/duyin.json')
 const args = process.argv.slice(2)
 const CHECK_ONLY = args.includes('--check')
 
-/** 生僻鸟名用字：拼音库未收录的扩展区字（读音据通行鸟类名录，带声调符号）。
- *  与 `scripts/lib/pinyin-key.mjs` 的 CHAR_OVERRIDES 是同一批字，这里多给声调符号与音节数。
- *  ⚠️ 标 `provisional` 的读音是**按偏旁/同源字推定**，需人工确认后去掉标记。 */
+/**
+ * 生僻鸟名用字的人工读音覆盖。
+ *
+ * ⚠️ **只放有权威依据的字，不要靠偏旁/同源字推定** —— 2026-10-18 踩过：
+ *   曾把 𱉐 推定为「pí（同源字鵙）」，但 pinyin-pro 实测 **鵙 读 jú**（jú，伯劳属），
+ *   推定理由根本是错的。**错的读音比空着更糟**（用户照着念）。
+ *   拿不准的字 → 进下面的 `PENDING_READINGS`（读音留空、UI 显示待定），等人工确认。
+ *
+ * 与 `scripts/lib/pinyin-key.mjs` 的 CHAR_OVERRIDES 是同一批字，这里多给数字声调。
+ */
 const CHAR_OVERRIDES = new Map([
-  ['䳍', { sym: 'gōng', num: 'gong1' }], // 䳍形目 / 穴䳍(tinamou)
-  ['䳭', { sym: 'jī', num: 'ji1' }], // 石䳭(chat)
-  ['䴉', { sym: 'huán', num: 'huan2' }], // 朱䴉(ibis，「鹮」的异体)
-  // 棘头𱉐 Pityriasis gymnocephala —— 与「鵙」(pí，伯劳属) 同源字。**provisional**：推定读音，待人工确认。
-  ['𱉐', { sym: 'pí', num: 'pi2' }],
+  ['䳍', { sym: 'gōng', num: 'gong1' }], // 䳍形目 / 穴䳍(tinamou, Crypturellus)
+  ['䳭', { sym: 'jī', num: 'ji1' }], // 石䳭(chat, Saxicola)
+  ['䴉', { sym: 'huán', num: 'huan2' }], // 朱䴉/彩䴉(ibis，Plegadis/Geronticus)
+])
+
+/**
+ * **读音待人工确认**的字：拼音库未收录、又没有权威依据。
+ * 处理方式：该音节**留空并标 pending**，UI 显示「?」而不是编一个读音；
+ * `npm run check:duyin` 只**告警**不失败（避免 CI 被一个待确认字卡住），但会持续提醒。
+ */
+const PENDING_READINGS = new Map([
+  [
+    '𱉐',
+    {
+      sci: 'Pityriasis gymnocephala',
+      nameZh: '棘头𱉐',
+      note: '棘头科(Pityriasidae)单型种；该字在 CJK 扩展 G 区(U+31250)，拼音库无收录，通行中文名录读音待确认',
+    },
+  ],
 ])
 
 const HAN = /[\u3400-\u4dbf\u4e00-\u9fff\u{20000}-\u{323af}]/u
@@ -49,12 +70,13 @@ function syllable(ch) {
   const sym = pinyin(ch, { toneType: 'symbol' })
   const num = pinyin(ch, { toneType: 'num' })
   const override = CHAR_OVERRIDES.get(ch)
-  if (override) return { py: override.sym, num: override.num, tone: null }
+  if (override) return { py: override.sym, num: override.num, tone: null, pending: false }
+  if (PENDING_READINGS.has(ch)) return { py: '', num: '', tone: null, pending: true }
   // pinyin-pro 对未收录的字**原样返回该字**（实测：䳍 → "䳍"）。这比正则判定可靠，
   // 早期版本用音节字符集正则反而把「鸠 鹉 隼 乌 朱」这些常用字误判成未收录。
   if (sym === ch) return null
   const tone = /^([a-zü]+)(\d)$/i.exec(num)?.[2] ?? null
-  return { py: sym, num, tone }
+  return { py: sym, num, tone, pending: false }
 }
 
 /** 中文名 → { py 带调整串, pyNum 数字调, light 轻声字下标, unknown 未收录字 } */
@@ -63,6 +85,7 @@ function pronounce(name) {
   const parts = []
   const nums = []
   const light = []
+  const pending = []
   const unknown = []
   chars.forEach((ch, i) => {
     const s = syllable(ch)
@@ -72,12 +95,18 @@ function pronounce(name) {
       nums.push(ch)
       return
     }
+    if (s.pending) {
+      pending.push(i)
+      parts.push('')
+      nums.push('')
+      return
+    }
     parts.push(s.py)
     nums.push(s.num)
     // num 模式返回 `zi0` → 0 即轻声（实测 pinyin-pro 约定）
     if (s.tone === '0') light.push(i)
   })
-  return { py: parts.join(' '), pyNum: nums.join(' '), light, unknown, chars: chars.length }
+  return { py: parts.join(' '), pyNum: nums.join(' '), light, pending, unknown, chars: chars.length }
 }
 
 async function main() {
@@ -89,7 +118,7 @@ async function main() {
   const unknownChars = new Map() // char → 出现次数（便于补 CHAR_OVERRIDES）
   for (const sp of index.species) {
     if (!sp.nameZh) continue
-    const { py, pyNum, light, unknown } = pronounce(sp.nameZh)
+    const { py, pyNum, light, pending, unknown } = pronounce(sp.nameZh)
     for (const ch of unknown) unknownChars.set(ch, (unknownChars.get(ch) || 0) + 1)
     const m = metaBySci.get(sp.nameSci) || {}
     entries.push({
@@ -97,6 +126,7 @@ async function main() {
       py,
       pyNum,
       light,
+      pending,
       key: (py || sp.nameZh).toLowerCase().replace(/[^a-z]/g, ''),
       sci: sp.nameSci,
       en: sp.nameEn ?? null,
@@ -139,6 +169,7 @@ async function main() {
       inCN: entries.filter((e) => e.inCN).length,
       buckets: Object.keys(buckets).length,
       unknownChars: unknownChars.size,
+      pendingReadings: PENDING_READINGS.size,
     },
     buckets,
   }
@@ -161,6 +192,12 @@ async function main() {
       process.exit(1)
     }
     console.log(`✅ duyin.json 校验通过：${payload.counts.total} 条，其中中国可见 ${payload.counts.inCN}`)
+    if (PENDING_READINGS.size) {
+      console.warn(`  ⚠️ ${PENDING_READINGS.size} 个字**读音待人工确认**（该音节留空、UI 显示 ?，不编读音）：`)
+      for (const [ch, info] of PENDING_READINGS) {
+        console.warn(`     ${ch}(U+${ch.codePointAt(0).toString(16).toUpperCase()}) ${info.nameZh} / ${info.sci} —— ${info.note}`)
+      }
+    }
     return
   }
 
