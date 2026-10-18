@@ -53,6 +53,9 @@ __screenshots__/
 !.env.example
 # 构建期抓取的数据缓存与产物（体积大 / 含署名，按需重建）
 /data-cache/
+
+# 详情层分片：结构化性状派生产物，构建期由 npm run traits:layers 生成（不入库，见 docs/053-describe §11.2）
+/public/data/traits/
 /public/media/
 /worker/seed.sql
 /worker/.wrangler/

@@ -120,3 +120,33 @@ if (failed) {
   process.exit(1)
 }
 console.log('\n✅ check:traits 通过')
+
+// 合并产物（构建期生成）：核心层注入表的覆盖率必须与各源产物一致，防止合并时悄悄丢数据
+const coreFile = path.join(ROOT, 'data-cache/trait-core.json')
+if (existsSync(coreFile)) {
+  const core = JSON.parse(readFileSync(coreFile, 'utf8'))
+  const hab = existsSync(habFile) ? JSON.parse(readFileSync(habFile, 'utf8')) : null
+  const avo = existsSync(av) ? JSON.parse(readFileSync(av, 'utf8')) : null
+  const eln = path.join(ROOT, 'data/elton-traits.json')
+  const el = existsSync(eln) ? JSON.parse(readFileSync(eln, 'utf8')) : null
+  const pln = path.join(ROOT, 'data/plumage-colours.json')
+  const pl = existsSync(pln) ? JSON.parse(readFileSync(pln, 'utf8')) : null
+  const pairs = [
+    ['生境', hab?.counts?.matched, core.counts?.habitat],
+    ['食性', el?.counts?.matched, core.counts?.diet],
+    ['形态', avo?.counts?.matched, core.counts?.morph],
+    ['羽色', pl?.counts?.matched, core.counts?.plumage],
+  ]
+  for (const [label, src, merged] of pairs) {
+    if (src === undefined || merged === undefined) continue
+    if (src !== merged) err(`${label}：源产物命中 ${src} 条，合并表只有 ${merged} 条 —— 合并丢了数据`)
+  }
+  if (core.counts?.droppedTagUnknownCode) {
+    err(`有 ${core.counts.droppedTagUnknownCode} 个生境 code 查不到中文而跳过（码表缺条目）`)
+  }
+  if (!pairs.some(([, s]) => s === undefined)) console.log('✅ 合并表：各维度覆盖率与源产物一致')
+  const tagOver = Object.values(core.byTaxonKey).filter((v) => (v.habitatCodes || []).length > (core.tagCap || 6)).length
+  if (tagOver) err(`${tagOver} 条超过 tagCap=${core.tagCap}`)
+  else console.log(`✅ 核心层：${Object.keys(core.byTaxonKey).length} 条 · 生境 code 上限 ${core.tagCap} 未被突破`)
+}
+
