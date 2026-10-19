@@ -3,14 +3,14 @@ import { computed } from 'vue'
 import { Leaf } from 'lucide-vue-next'
 import type { MediaAsset } from '@/types'
 
-const props = defineProps<{ media: MediaAsset }>()
+const props = defineProps<{ media?: MediaAsset }>()
 
 /** 许可证超链接：优先许可证页，退原始页面（R42，替代单独「原始页面」链接） */
-const licenseHref = computed(() => props.media.licenseUrl || props.media.sourceUrl || '')
+const licenseHref = computed(() => props.media?.licenseUrl || props.media?.sourceUrl || '')
 </script>
 
 <template>
-  <p class="attribution">
+  <p v-if="media" class="attribution">
     <Leaf class="dot ic" :size="13" />
     <a
       v-if="media.sourceUrl"

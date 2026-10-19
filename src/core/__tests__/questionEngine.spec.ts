@@ -440,6 +440,7 @@ describe('S6 · meta 名单 + assets 懒加载', () => {
   afterEach(() => {
     _resetBankCache()
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('无内联媒体、仅有 playable 标记的物种 → 按需从分片取媒体出题', async () => {
@@ -500,5 +501,75 @@ describe('S6 · meta 名单 + assets 懒加载', () => {
     expect(qs).toHaveLength(1)
     expect(qs[0]!.media.url).toBe(img.url)
     expect(qs[0]!.crossAssets?.[0]?.url).toBe(aud.url)
+  })
+
+  it('P0（2026-10-19 白屏事故）：meta 说可玩、分片却缺该种 → 该种不出题，绝不发空媒体', async () => {
+    // ba 桶被声明可玩但分片里没有 bad-01（模拟 meta/assets 不一致）；go 桶正常。
+    const good = asset('good-01', 'image')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        if (u.includes('manifest-meta')) {
+          return new Response(
+            JSON.stringify({
+              layer: 'meta',
+              schemaVersion: 1,
+              generatedAt: '',
+              total: 2,
+              buckets: ['ba', 'go'],
+              species: [
+                { id: 'bad-01', nameZh: '坏鸟', nameSci: 'Malus avis', family: 'F', commonness: 2, playableImage: true },
+                { id: 'good-01', nameZh: '好鸟', nameSci: 'Bonus avis', family: 'F', commonness: 2, playableImage: true },
+              ],
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        // ba 桶：声明了可玩，但分片里没有该种
+        if (u.includes('data/assets/ba.json')) {
+          return new Response(
+            JSON.stringify({ layer: 'assets', bucket: 'ba', species: {} }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        if (u.includes('data/assets/go.json')) {
+          return new Response(
+            JSON.stringify({
+              layer: 'assets',
+              bucket: 'go',
+              species: { 'good-01': { images: [good], audios: [] } },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        return new Response('nope', { status: 404 })
+      }),
+    )
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await loadBank() // 建立 buckets 索引
+    const marked = (id: string, nameZh: string): BankSpecies => ({
+      id,
+      nameZh,
+      nameSci: `${id} scientific`,
+      family: 'F',
+      commonness: 2,
+      desc: '',
+      location: '',
+      habit: '',
+      image: null,
+      audio: null,
+      playableImage: true,
+      playableAudio: false,
+    })
+    const qs = await buildQuestions([marked('bad-01', '坏鸟'), marked('good-01', '好鸟')], {
+      type: 'image',
+      count: 2,
+    })
+    // 坏种被剔除（宁可少一题），好种正常出题；每题 media 都真实存在
+    expect(qs).toHaveLength(1)
+    expect(qs[0]!.media.speciesId).toBe('good-01')
+    expect(qs.every((q) => !!q.media && !!q.media.url)).toBe(true)
+    expect(warn).toHaveBeenCalledTimes(1) // 只有一条 warn，便于统计
   })
 })

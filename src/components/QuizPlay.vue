@@ -147,11 +147,11 @@ async function submitReport() {
   if (!q) return
   try {
     const row = await addReport({
-      speciesId: q.media.speciesId,
+      speciesId: q.media?.speciesId,
       speciesName: q.answer,
       sci: q.sci,
       questionType: q.type,
-      mediaUrl: (displayMedia.value ?? q.media).url,
+      mediaUrl: (displayMedia.value ?? q.media)?.url,
       reason: reportReason.value,
       suggestedAnswer: reportAnswer.value.trim() || undefined,
       note: reportNote.value.trim() || undefined,
@@ -381,12 +381,12 @@ const crossPool = computed<MediaAsset[]>(() => quiz.current?.crossAssets ?? [])
  * 加载中先用 core 的首图首音，不阻塞答题。
  */
 const lazyPool = computed<{ images: MediaAsset[]; audios: MediaAsset[] }>(() => {
-  const id = quiz.current?.media.speciesId
+  const id = quiz.current?.media?.speciesId
   const hit = cachedSpeciesAssets(id)
   return { images: hit?.images ?? [], audios: hit?.audios ?? [] }
 })
 watch(
-  () => quiz.current?.media.speciesId,
+  () => quiz.current?.media?.speciesId,
   (id) => {
     if (id) void loadSpeciesAssets(id)
   },
@@ -421,7 +421,7 @@ const galleryAudios = computed<MediaAsset[]>(() =>
 const bankReady = ref(false)
 const faqId = computed<string | null>(() => {
   if (!bankReady.value) return null
-  const id = quiz.current?.media.speciesId
+  const id = quiz.current?.media?.speciesId
   return id && speciesNoteById(id) ? id : null
 })
 /** 「下一题」；最后一题改为「查看结果」（没有第 11 题） */

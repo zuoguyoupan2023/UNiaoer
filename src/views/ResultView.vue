@@ -68,8 +68,8 @@ const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
 /** 科名「拉丁名+本地名」组合（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 /** 题目答案名按当前语言解析（015 #1）：speciesId 回查题库，回退作答时存储名 */
-const nameOf = (q: { media: { speciesId?: string }; answer: string }) =>
-  speciesNameById(q.media.speciesId, currentLocale()) ?? q.answer
+const nameOf = (q: { media?: { speciesId?: string }; answer: string }) =>
+  speciesNameById(q.media?.speciesId, currentLocale()) ?? q.answer
 /** 错选名按当前语言解析：optionIds → 存储名反查（旧数据兜底）→ 原字符串 */
 const choiceOf = (q: Question, chosen: string | null) => {
   if (chosen === TIMEOUT || chosen === null) {
@@ -248,12 +248,12 @@ const archiveNickname = ref('')
 const bankReady = ref(false)
 function faqIdOf(q: Question): string | null {
   if (!bankReady.value) return null
-  const id = q.media.speciesId
+  const id = q.media?.speciesId
   return id && speciesNoteById(id) ? id : null
 }
 /** 该题物种档案（C1；bank 就绪后可用） */
 function profileOf(q: Question) {
-  return bankReady.value ? speciesProfileById(q.media.speciesId) : undefined
+  return bankReady.value ? speciesProfileById(q.media?.speciesId) : undefined
 }
 
 const message = computed<{ icon: Component; text: string }>(() => {
@@ -299,11 +299,12 @@ const posterImages = computed<PosterImage[]>(() => {
   const seen = new Set<string>()
   const out: PosterImage[] = []
   quiz.questions.forEach((q, i) => {
-    if (q.type !== 'image' || !q.media.url || seen.has(q.media.url)) return
-    seen.add(q.media.url)
+    const url = q.media?.url
+    if (q.type !== 'image' || !url || seen.has(url)) return
+    seen.add(url)
     // F6：答错题所用的图打标记，引导用户优先选它做背景；xl 供海报背景用原图（C2）
     out.push({
-      url: q.media.url,
+      url,
       thumbUrl: q.media.thumbUrl,
       xlUrl: q.media.xlUrl,
       answer: nameOf(q),
@@ -319,7 +320,7 @@ const mediaReady = ref(0)
 /** 每题画廊素材:题目自带(core 首图首音) + 分片补齐的完整素材,按 url 去重 */
 function galleryPoolOf(q: Question): { images: MediaAsset[]; audios: MediaAsset[] } {
   void mediaReady.value // 建立响应依赖:分片到位后重算
-  const hit = cachedSpeciesAssets(q.media.speciesId)
+  const hit = cachedSpeciesAssets(q.media?.speciesId)
   const img = q.type === 'image' ? q.assets : q.crossAssets
   const aud = q.type === 'audio' ? q.assets : q.crossAssets
   const merge = (base: MediaAsset[] | undefined, extra: MediaAsset[] | undefined) => {
@@ -341,7 +342,10 @@ onMounted(async () => {
     .catch(() => {})
   // 029 M1:core 只带首图首音;回顾画廊的完整素材按需加载(按桶合并,一轮题通常落在少数几个桶)
   void Promise.all(
-    quiz.questions.map((q) => loadSpeciesAssets(q.media.speciesId).catch(() => null)),
+    quiz.questions.map((q) => {
+      const id = q.media?.speciesId
+      return id ? loadSpeciesAssets(id).catch(() => null) : null
+    }),
   ).then(() => (mediaReady.value = Date.now()))
   try {
     archiveNickname.value = (await getActiveArchive()).nickname || ''
@@ -492,7 +496,7 @@ async function again() {
           v-if="profileOf(q)"
           class="species-facts"
           :profile="profileOf(q)"
-          :species-id="q.media.speciesId"
+          :species-id="q.media?.speciesId"
           compact
         />
       </li>

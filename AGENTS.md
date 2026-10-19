@@ -18,6 +18,10 @@
    - `0xx-*.md`（规划文档）、`docs/`（开发过程文档，另有私有 repo `uniaoer-private` 存档）、`legacy/`（旧单文件 demo）已在 `.gitignore`，不要提交。
 
 4. **改完必须自检。** 交付前跑：`npm run lint` && `npm test` && `npm run build`。
+   - **CI 不阻塞 Cloudflare Pages 部署**（2026-10-19「做题白屏」事故，见 `docs/063`）：`git push` 一落地
+     Pages 就自己构建发布，GitHub Actions 是**并行**跑的 → **CI 红了也照样上线**。所以产物类改动
+     **推送前必须在本机跑门禁**：`npm run verify:push`（= `check:layers` + `check:traits`，秒级）。
+     已挂 `.git/hooks/pre-push`（换机后 `npm run hooks:install` 重建；`git push` 时自动跑，`--no-verify` 可跳过但不推荐）。
    - **`npm run build` 现在自带部署体积门禁**（`check:dist-size`，已挂进 build）：Cloudflare Pages 对
      **单个文件有 25 MiB 上限**，超了整次部署会在上传阶段失败，而本地/CI 全绿 → 线上静默停在旧版本。
      2026-10-17 事故：`import 'onnxruntime-web'` 带进 27 MiB 的 WebGPU wasm，导致连续两次部署 Failure

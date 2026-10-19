@@ -70,6 +70,8 @@
     "species-index": "node scripts/taxonomy/build-species-index.mjs",
     "check:index": "node scripts/check-species-index.mjs",
     "check:traits": "node scripts/check-traits.mjs",
+    "verify:push": "run-s check:layers check:traits",
+    "hooks:install": "node scripts/install-git-hooks.mjs",
     "traits:layers": "node scripts/apply-trait-layers.mjs",
     "build:duyin": "node scripts/build-duyin-index.mjs",
     "check:duyin": "node scripts/build-duyin-index.mjs --check",

@@ -34,7 +34,6 @@ import {
   SPECIES_COLS,
   buildD1Rows,
   buildMetaRows,
-  insertSql,
   rowToSql,
 } from './lib/d1-rows.mjs'
 
@@ -153,7 +152,7 @@ for (const [k, v] of metaRows) {
 
 // 6) 生成前自检：只允许两类语句
 const bad = statements.filter(
-  (s) => !/^INSERT INTO species \(/.test(s) && !/^INSERT OR REPLACE INTO meta \(/.test(s),
+  (s) => !s.startsWith('INSERT INTO species (') && !s.startsWith('INSERT OR REPLACE INTO meta ('),
 )
 check(!bad.length, `生成语句只含 species/meta upsert（异常 ${bad.length} 条）`)
 const fullSql = header + statements.join('\n') + '\n'

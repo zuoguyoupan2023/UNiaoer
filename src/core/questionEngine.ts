@@ -270,12 +270,35 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
   // 同一轮里每只鸟最多出现一次；不同轮次之间允许重复（"再来一轮"复用候选池是预期行为）。
   const seen = new Set<string>()
   const unique = pool.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)))
-  const picked = shuffle(unique).slice(0, Math.min(count, unique.length))
+  const want = Math.min(count, unique.length)
+  const ordered = shuffle(unique)
 
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
-  // S6：名单（meta）不含媒体 → 只对**入选的**物种按需拉取 assets 分片（在线路径已带媒体则跳过）
-  const enriched = await Promise.all(picked.map((sp) => ensureMedia(sp, type)))
+  // S6：名单（meta）不含媒体 → 只对入选物种按需拉取 assets 分片（在线路径已带媒体则跳过）。
+  // P0（2026-10-19 白屏事故）：meta 的 playable 标记可能与 assets 分片不一致，或分片请求失败
+  // （loadSpeciesAssets 的 catch 是静默的）。此时绝不能把 undefined 当"有素材"发进题目 →
+  // 只保留真正取到素材的种，不足继续往后取；池里实在不够就少出几题（宁可少一题，绝不发空题）。
+  const enriched: BankSpecies[] = []
+  for (let cursor = 0; cursor < ordered.length && enriched.length < want; ) {
+    // 一次多取几个，补偿"标记可玩但实际无素材"的种
+    const batchSize = Math.min(want - enriched.length + 3, ordered.length - cursor)
+    const batch = ordered.slice(cursor, cursor + batchSize)
+    cursor += batchSize
+    const resolved = await Promise.all(batch.map((sp) => ensureMedia(sp, type)))
+    for (const sp of resolved) {
+      if (assetsOf(sp, type).length) enriched.push(sp)
+      if (enriched.length >= want) break
+    }
+  }
+  if (enriched.length < want) {
+    console.warn(
+      `[questionEngine] 素材不足：需 ${want} 题，实出 ${enriched.length} 题` +
+        `（meta 可玩标记与 assets 分片不一致，或分片加载失败）`,
+    )
+  }
+
   return enriched.map((sp, i) => {
+    // 上面已按 assetsOf(sp, type).length 过滤，此处的 media 必定存在
     const media = pickMedia(sp, type, cfg.mediaPoolSize)!
     const distractors = pickDistractorPairs(
       sp,
