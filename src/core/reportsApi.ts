@@ -94,10 +94,20 @@ export class AdminAuthError extends Error {
 /** 管理：全部报错（含未公开） */
 export async function listAdminReports(
   key: string,
-  opts: { status?: ReportStatus | 'all'; limit?: number; offset?: number } = {},
+  opts: {
+    status?: ReportStatus | 'all'
+    limit?: number
+    offset?: number
+    /** M2：`votes`=反对最多 / `controversial`=争议最大（仅对已发布条目有意义） */
+    sort?: 'recent' | 'votes' | 'controversial'
+    /** M2：只看填了「建议答案」的条目 */
+    hasAnswer?: boolean
+  } = {},
 ): Promise<AdminReport[]> {
   const q = new URLSearchParams()
   if (opts.status && opts.status !== 'all') q.set('status', opts.status)
+  if (opts.sort && opts.sort !== 'recent') q.set('sort', opts.sort)
+  if (opts.hasAnswer) q.set('hasAnswer', '1')
   q.set('limit', String(opts.limit ?? 100))
   q.set('offset', String(opts.offset ?? 0))
   const res = await fetch(`/api/reports/admin?${q.toString()}`, {

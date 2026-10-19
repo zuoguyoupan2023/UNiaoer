@@ -24,6 +24,18 @@ const loading = ref(false)
 const failed = ref(false)
 const authError = ref(false)
 const filter = ref<ReportStatus | 'all'>('open')
+/** M2：排序（仅「已发布」下才可选按票） */
+const sort = ref<'recent' | 'votes' | 'controversial'>('recent')
+/** M2：只看填了「建议答案」的条目 */
+const onlyWithAnswer = ref(false)
+
+/**
+ * M2（063 §2.1）：**票数只对「已发布」条目有意义**。
+ * 提交后是 `open`（不公开，`/reports` 公开页只展示 `published`）→ 没人能投票 → `up/down` 恒为 0。
+ * 所以非 `published` 时**禁用**按票排序（用户 2026-10-19 拍板），并在旁边说明原因。
+ */
+const votesSortable = computed(() => filter.value === 'published')
+
 const reports = ref<AdminReport[]>([])
 const busy = ref<Record<string, boolean>>({})
 const savedMsg = ref('')
@@ -44,7 +56,12 @@ async function load() {
   failed.value = false
   try {
     await loadBank().catch(() => null)
-    reports.value = await listAdminReports(key.value, { status: filter.value, limit: 100 })
+    reports.value = await listAdminReports(key.value, {
+      status: filter.value,
+      limit: 100,
+      sort: votesSortable.value ? sort.value : 'recent',
+      hasAnswer: onlyWithAnswer.value,
+    })
     void refreshQuarantine()
     authed.value = true
     rememberKey(key.value)
@@ -167,6 +184,12 @@ const filterOptions: { value: ReportStatus | 'all'; key: string }[] = [
   { value: 'all', key: 'admin.status.all' },
 ]
 
+/** 切换状态筛选：若新筛选下「按票排序」无意义，把排序复位到「最近」 */
+function onFilterChange() {
+  if (!votesSortable.value && sort.value !== 'recent') sort.value = 'recent'
+  void load()
+}
+
 function displayName(r: AdminReport): string {
   const sp = r.species_id ? speciesById(r.species_id) : undefined
   return sp ? speciesName(sp, currentLocale()) : r.species_name || r.species_id || ''
@@ -219,12 +242,27 @@ const count = computed(() => reports.value.length)
       <div class="toolbar">
         <label class="filter">
           <span>{{ t('admin.filterStatus') }}</span>
-          <select v-model="filter" @change="load">
+          <select v-model="filter" @change="onFilterChange">
             <option v-for="o in filterOptions" :key="o.value" :value="o.value">
               {{ t(o.key) }}
             </option>
           </select>
         </label>
+
+        <!-- M2：排序。按票排序只在「已发布」下有意义（open 不公开 → 没人投票 → 票恒为 0） -->
+        <label class="filter">
+          <span>{{ t('admin.sort') }}</span>
+          <select v-model="sort" :disabled="!votesSortable" @change="load">
+            <option value="recent">{{ t('admin.sortRecent') }}</option>
+            <option value="votes">{{ t('admin.sortVotes') }}</option>
+            <option value="controversial">{{ t('admin.sortControversial') }}</option>
+          </select>
+        </label>
+        <label class="check">
+          <input v-model="onlyWithAnswer" type="checkbox" @change="load" />
+          <span>{{ t('admin.onlyWithAnswer') }}</span>
+        </label>
+        <span v-if="!votesSortable" class="hint">{{ t('admin.votesHint') }}</span>
         <button class="btn btn-secondary btn-sm" type="button" :disabled="loading" @click="load">
           <RefreshCw class="ic" :size="13" /> {{ t('admin.refresh') }}
         </button>
@@ -271,10 +309,11 @@ const count = computed(() => reports.value.length)
               <span class="status" :class="r.status">{{ t(`admin.status.${r.status}`) }}</span>
               <span class="votes">👍 {{ r.up }} · 👎 {{ r.down }}</span>
             </div>
-            <p v-if="r.note" class="note">{{ r.note }}</p>
+            <!-- M2：把「建议答案」提到第 2 行并加重——这是最该先看的信号 -->
             <p v-if="r.suggested_answer" class="suggest">
-              {{ t('reports.suggested', { name: r.suggested_answer }) }}
+              {{ t('admin.suggestedAnswer', { name: r.suggested_answer }) }}
             </p>
+            <p v-if="r.note" class="note">{{ r.note }}</p>
             <p class="meta">
               {{ dateOf(r.created_at) }}
               <a v-if="r.media_url" class="media" :href="r.media_url" target="_blank" rel="noopener">
@@ -411,6 +450,20 @@ const count = computed(() => reports.value.length)
   font-size: 0.78rem;
   color: var(--text-light);
 }
+/* M2：勾选框与「票数只对已发布有意义」提示 */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.hint {
+  flex-basis: 100%;
+  font-size: 0.74rem;
+  color: var(--text-light);
+}
 .saved {
   font-size: 0.78rem;
   color: var(--primary);
@@ -536,10 +589,12 @@ const count = computed(() => reports.value.length)
   font-size: 0.82rem;
   color: var(--text);
 }
+/* M2：建议答案是第 2 行、最该先看 → 加粗 + 主色 */
 .suggest {
-  margin-top: 2px;
-  font-size: 0.78rem;
-  color: var(--primary-dark);
+  margin-top: 3px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 .meta {
   margin-top: 4px;

@@ -85,10 +85,11 @@ async function vote(r: PublicReport, value: 1 | -1) {
             <span class="reason">{{ t(`report.reasons.${r.reason}`) }}</span>
             <span v-if="r.status === 'fixed'" class="status fixed">{{ t('reports.status.fixed') }}</span>
           </div>
-          <p v-if="r.note" class="note">{{ r.note }}</p>
+          <!-- 061 M2：公开页也把「建议答案」提到前面并加重（与 admin 一致） -->
           <p v-if="r.suggested_answer" class="suggest">
             {{ t('reports.suggested', { name: r.suggested_answer }) }}
           </p>
+          <p v-if="r.note" class="note">{{ r.note }}</p>
           <p class="meta">{{ dateOf(r.created_at) }}</p>
         </div>
         <div class="votes">
@@ -205,9 +206,10 @@ async function vote(r: PublicReport, value: 1 | -1) {
   color: var(--text);
 }
 .suggest {
-  margin-top: 2px;
-  font-size: 0.78rem;
-  color: var(--primary-dark);
+  margin-top: 3px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 .meta {
   margin-top: 4px;

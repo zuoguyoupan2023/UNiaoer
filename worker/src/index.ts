@@ -1347,15 +1347,39 @@ function isAdmin(request: Request, env: Env): boolean {
   return Boolean(env.ADMIN_KEY) && key.length > 0 && key === env.ADMIN_KEY
 }
 
+/**
+ * M2（063 §2）：管理列表排序白名单。
+ * **绝不把用户输入拼进 SQL** —— 非白名单一律回落 `recent`。
+ * - `votes`：`up - down` 升序 → **反对最多**的排最前（要处理的正是"被质疑的"）；
+ * - `controversial`：`up + down` 降序 → **争议最大**（参与投票的人最多）。
+ * 注意：`up/down` 只在**已发布**条目上会累积（提交=open 不公开、无人能投票），
+ * 所以按票排序对 open 条目无意义（前端在非 published 下已禁用该选项）。
+ */
+const ADMIN_SORTS: Record<string, string> = {
+  recent: 'created_at DESC',
+  votes: 'up - down ASC, created_at DESC',
+  controversial: 'up + down DESC, created_at DESC',
+}
+
 /** 管理：全部报错（含未公开），供纠正 */
 async function handleAdminList(env: Env, url: URL): Promise<Response> {
   const limit = clampInt(url.searchParams.get('limit'), 1, 200, 50)
   const offset = clampInt(url.searchParams.get('offset'), 0, 100000, 0)
   const status = str(url.searchParams.get('status'), 16)
-  const where = status ? 'status = ?' : '1=1'
-  const binds = status ? [status] : []
+  const sort = str(url.searchParams.get('sort'), 16)
+  const orderBy = ADMIN_SORTS[sort] ?? ADMIN_SORTS.recent!
+  const clauses: string[] = []
+  const binds: unknown[] = []
+  if (status) {
+    clauses.push('status = ?')
+    binds.push(status)
+  }
+  if (url.searchParams.get('hasAnswer') === '1') {
+    clauses.push("suggested_answer IS NOT NULL AND TRIM(suggested_answer) <> ''")
+  }
+  const where = clauses.length ? clauses.join(' AND ') : '1=1'
   const rows = await env.DB.prepare(
-    `SELECT * FROM reports WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    `SELECT * FROM reports WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
   )
     .bind(...binds, limit, offset)
     .all<Record<string, unknown>>()
