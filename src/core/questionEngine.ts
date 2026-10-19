@@ -291,9 +291,10 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
     }
   }
   if (enriched.length < want) {
+    // dev-only 日志：用英文，避免触发 015 §8 的「src/** 不得有未包裹 CJK 字面量」门禁
     console.warn(
-      `[questionEngine] 素材不足：需 ${want} 题，实出 ${enriched.length} 题` +
-        `（meta 可玩标记与 assets 分片不一致，或分片加载失败）`,
+      `[questionEngine] not enough media-backed species: wanted ${want}, built ${enriched.length}` +
+        ` (meta "playable" flag disagrees with assets shards, or a shard failed to load)`,
     )
   }
 
