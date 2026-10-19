@@ -81,6 +81,7 @@
     "i18n:check": "node scripts/i18n-check.mjs",
     "gen:icons": "node scripts/gen-icon-paths.mjs",
     "d1:seed": "node scripts/gen-d1-seed.mjs",
+    "d1:targeted": "node scripts/d1-targeted-sync.mjs",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
