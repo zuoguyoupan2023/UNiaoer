@@ -115,12 +115,6 @@ if (existsSync(codeFile) && existsSync(habFile)) {
   }
 }
 
-if (failed) {
-  console.error(`\n❌ check:traits 失败（${failed} 项）`)
-  process.exit(1)
-}
-console.log('\n✅ check:traits 通过')
-
 // 合并产物（构建期生成）：核心层注入表的覆盖率必须与各源产物一致，防止合并时悄悄丢数据
 const coreFile = path.join(ROOT, 'data-cache/trait-core.json')
 if (existsSync(coreFile)) {
@@ -251,23 +245,35 @@ if (existsSync(coreFile)) {
     let bad = 0
     let checked = 0
     for (const [k, v] of Object.entries(byKey)) {
-      if (!v?.zh) continue
-      if (!Array.isArray(v.textSources) || !v.textSources.length) {
-        if (bad < 8) err(`叙述缺 textSources：${k}`)
-        bad++
-      }
       const nums = allowed.get(k) || new Set()
-      for (const s of v.zh.match(/\d+(?:\.\d+)?/g) || []) {
-        const n = Number(s)
-        const ok = [...nums].some((x) => Math.abs(x - n) < 0.06)
-        if (!ok) {
-          if (bad < 8) err(`叙述数字 ${s} 在结构化事实里找不到：${k}「${v.zh}」`)
+      // 中英双语同规则校验（英文叙述同样不许改写数字）
+      for (const field of ['zh', 'en']) {
+        const text = v?.[field]
+        if (!text) continue
+        if (!Array.isArray(v.textSources) || !v.textSources.some((s) => s?.field === field)) {
+          if (bad < 8) err(`叙述缺 textSources.${field}：${k}`)
           bad++
         }
-        checked++
+        for (const s of String(text).match(/\d+(?:\.\d+)?(?=\s*%|\s*g\b)/g) || []) {
+          const n = Number(s)
+          const ok = [...nums].some((x) => Math.abs(x - n) < 0.06)
+          if (!ok) {
+            if (bad < 8) err(`叙述数字 ${s} 在结构化事实里找不到：${k}[${field}]「${text}」`)
+            bad++
+          }
+          checked++
+        }
       }
     }
     if (bad) err(`叙述文本：${bad} 处不一致`)
     else console.log(`✅ 叙述文本：${Object.keys(byKey).length} 条 · ${checked} 个数字全部可追溯到结构化事实`)
   }
 }
+
+// ⚠️ 失败判定必须放在**文件最末**：此前它写在中部，导致其后新增的检查（064 叙述文本）
+//    即使报错也不影响退出码 —— 门禁形同虚设（2026-10-19 修）。
+if (failed) {
+  console.error(`\n❌ check:traits 失败（${failed} 项）`)
+  process.exit(1)
+}
+console.log('\n✅ check:traits 通过')

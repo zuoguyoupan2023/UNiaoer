@@ -73,6 +73,7 @@
     "verify:push": "run-s check:layers check:traits",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "traits:layers": "node scripts/apply-trait-layers.mjs",
+    "taxonomy:habitat-en": "node scripts/taxonomy/fill-habitat-code-en.mjs",
     "field-marks": "node scripts/build-field-marks.mjs",
     "build:duyin": "node scripts/build-duyin-index.mjs",
     "check:duyin": "node scripts/build-duyin-index.mjs --check",

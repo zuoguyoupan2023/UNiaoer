@@ -61,8 +61,12 @@ const tags = computed(() =>
   })),
 )
 
-/** 064：叙述文本（自动合成，非权威）—— 默认视图的第一层 */
-const narrative = computed(() => traits.value?.text?.zh || null)
+/** 064：叙述文本（自动合成，非权威）—— 默认视图的第一层；按语言取 zh/en（不跨语言回退） */
+const narrative = computed(() => {
+  const txt = traits.value?.text
+  if (!txt) return null
+  return (locale.value.startsWith('en') ? txt.en : txt.zh) || null
+})
 
 const dietTop = computed(() => topEntries(traits.value?.diet, 1)[0])
 const mass = computed(() => {

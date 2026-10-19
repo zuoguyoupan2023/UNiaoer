@@ -199,10 +199,15 @@ async function main() {
       }
     }
     if (Object.keys(detail).length === 0) continue
-    // 064：叙述文本（「结构化事实 → 只做措辞」；来源与引擎见 textSources）
+    // 064：叙述文本（「结构化事实 → 只做措辞」；中英同源，来源与引擎见 textSources）
     const fm = fieldMarks?.byTaxonKey?.[key]
-    if (fm?.zh) {
-      detail.text = { zh: fm.zh, basedOn: fm.basedOn || [], textSources: fm.textSources || [] }
+    if (fm?.zh || fm?.en) {
+      detail.text = {
+        ...(fm.zh ? { zh: fm.zh } : {}),
+        ...(fm.en ? { en: fm.en } : {}),
+        basedOn: fm.basedOn || [],
+        textSources: fm.textSources || [],
+      }
     }
     detail.nameSci = nameSci
     details[key] = detail

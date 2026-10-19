@@ -11,6 +11,10 @@
 export interface HabitatCodeInfo {
   zh?: string
   zhShort?: string
+  /** 英文全称（IUCN 原文，如 "Forest - Subtropical/Tropical Moist Lowland"） */
+  en?: string
+  /** 英文短标签（英文界面/英文叙述用；由 scripts/taxonomy/fill-habitat-code-en.mjs 派生） */
+  enShort?: string
   review?: boolean
 }
 export interface HabitatCodeTable {
@@ -138,7 +142,9 @@ export function habitatLabel(
 ): string {
   const info = table?.codes?.[code]
   if (!info) return code
-  return locale === 'en' ? info.zhShort || info.zh || code : info.zhShort || info.zh || code
+  // 英文界面优先英文短标签（此前没有英文，会回退成中文 —— 064 补齐）
+  if (locale.startsWith('en')) return info.enShort || info.en || info.zhShort || info.zh || code
+  return info.zhShort || info.zh || code
 }
 
 /** 非零项按数值降序（食性/取食层次用）。 */

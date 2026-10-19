@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedAt": "2026-10-17T00:00:00.000Z",
   "status": "reviewed",
-  "note": "IUCN 栖息地分类体系（IUCN Habitats Classification Scheme）三级编码 → 中文对照表。产物（iucn-habitats.json / manifest profile）只放 code，中文一律前端查本表——换译法不必重建产物。初稿由 AI 生成，2026-10-17 已由项目方人工过目并确认为可接受（全部 review:true）。code 集合取自 data/iucn-habitats.json 的 habitatCodes（1291 个核心种实测出现 89 条）；全球种跑完后需重跑 scripts/taxonomy/build-iucn-code-table.mjs --sync 补全。 2026-10-18 补：全球种跑完后新增 10 条（3_2/5_12/7_2/10_3/10_4/12_7/13_2/15_11/16/18），均为低频 code（1–14 种），待人工过目。",
+  "note": "IUCN 栖息地分类体系（IUCN Habitats Classification Scheme）三级编码 → 中文对照表。产物（iucn-habitats.json / manifest profile）只放 code，中文一律前端查本表——换译法不必重建产物。初稿由 AI 生成，2026-10-17 已由项目方人工过目并确认为可接受（全部 review:true）。code 集合取自 data/iucn-habitats.json 的 habitatCodes（1291 个核心种实测出现 89 条）；全球种跑完后需重跑 scripts/taxonomy/build-iucn-code-table.mjs --sync 补全。 2026-10-18 补：全球种跑完后新增 10 条（3_2/5_12/7_2/10_3/10_4/12_7/13_2/15_11/16/18），均为低频 code（1–14 种），待人工过目。\n英文（en 全称 / enShort 短标签）由 scripts/taxonomy/fill-habitat-code-en.mjs 从 data/iucn-habitats.json 派生，勿手改。",
   "source": {
     "key": "iucn-habitats-classification",
     "name": "IUCN Habitats Classification Scheme",
@@ -73,501 +73,700 @@
     }
   },
   "codes": {
-    "1_1": {
-      "zh": "北方针叶林（泰加林）",
-      "zhShort": "针叶林",
-      "review": true
-    },
-    "1_2": {
-      "zh": "亚寒带森林",
-      "zhShort": "亚寒带森林",
-      "review": true
-    },
-    "1_3": {
-      "zh": "亚南极森林",
-      "zhShort": "亚南极森林",
-      "review": true
-    },
-    "1_4": {
-      "zh": "温带森林",
-      "zhShort": "温带森林",
-      "review": true
-    },
-    "1_5": {
-      "zh": "亚热带/热带干燥森林",
-      "zhShort": "干燥森林",
-      "review": true
-    },
-    "1_6": {
-      "zh": "亚热带/热带湿润低地森林",
-      "zhShort": "湿润低地林",
-      "review": true
-    },
-    "1_7": {
-      "zh": "亚热带/热带红树林（高潮位以上）",
-      "zhShort": "红树林",
-      "review": true
-    },
-    "1_8": {
-      "zh": "亚热带/热带沼泽林",
-      "zhShort": "沼泽林",
-      "review": true
-    },
-    "1_9": {
-      "zh": "亚热带/热带湿润山地林",
-      "zhShort": "山地雨林",
-      "review": true
-    },
-    "2_1": {
-      "zh": "干燥稀树草原",
-      "zhShort": "干燥草原",
-      "review": true
-    },
-    "2_2": {
-      "zh": "湿润稀树草原",
-      "zhShort": "湿润草原",
-      "review": true
-    },
-    "3_1": {
-      "zh": "亚寒带灌丛",
-      "zhShort": "亚寒带灌丛",
-      "review": true
-    },
-    "3_2": {
-      "zh": "亚南极灌丛",
-      "zhShort": "亚南极灌丛",
-      "review": false
-    },
-    "3_3": {
-      "zh": "北方针叶灌丛",
-      "zhShort": "针叶灌丛",
-      "review": true
-    },
-    "3_4": {
-      "zh": "温带灌丛",
-      "zhShort": "温带灌丛",
-      "review": true
-    },
-    "3_5": {
-      "zh": "亚热带/热带干燥灌丛",
-      "zhShort": "干燥灌丛",
-      "review": true
-    },
-    "3_6": {
-      "zh": "亚热带/热带湿润灌丛",
-      "zhShort": "湿润灌丛",
-      "review": true
-    },
-    "3_7": {
-      "zh": "亚热带/热带高海拔灌丛",
-      "zhShort": "高山灌丛",
-      "review": true
-    },
-    "3_8": {
-      "zh": "地中海型硬叶灌丛",
-      "zhShort": "地中海灌丛",
-      "review": true
-    },
-    "4_1": {
-      "zh": "苔原",
-      "zhShort": "苔原",
-      "review": true
-    },
-    "4_2": {
-      "zh": "亚寒带草地",
-      "zhShort": "亚寒带草地",
-      "review": true
-    },
-    "4_3": {
-      "zh": "亚南极草地",
-      "zhShort": "亚南极草地",
-      "review": true
-    },
-    "4_4": {
-      "zh": "温带草地",
-      "zhShort": "温带草地",
-      "review": true
-    },
-    "4_5": {
-      "zh": "亚热带/热带干燥草地",
-      "zhShort": "干燥草地",
-      "review": true
-    },
-    "4_6": {
-      "zh": "亚热带/热带季节性湿润/淹水草地",
-      "zhShort": "季节性湿地",
-      "review": true
-    },
-    "4_7": {
-      "zh": "亚热带/热带高海拔草地",
-      "zhShort": "高山草地",
-      "review": true
-    },
-    "5_1": {
-      "zh": "永久性河流/溪流（含瀑布）",
-      "zhShort": "河流",
-      "review": true
-    },
-    "5_10": {
-      "zh": "苔原湿地（含融雪形成的季节性水体）",
-      "zhShort": "苔原湿地",
-      "review": true
-    },
-    "5_11": {
-      "zh": "高山湿地（含融雪季节性水体）",
-      "zhShort": "高山湿地",
-      "review": true
-    },
-    "5_12": {
-      "zh": "地热湿地",
-      "zhShort": "地热湿地",
-      "review": false
-    },
-    "5_13": {
-      "zh": "永久性内陆三角洲",
-      "zhShort": "内陆三角洲",
-      "review": true
-    },
-    "5_14": {
-      "zh": "永久性咸水/半咸水/碱性湖泊",
-      "zhShort": "咸水湖",
-      "review": true
-    },
-    "5_15": {
-      "zh": "季节性/间歇性咸水/半咸水/碱性湖泊与滩地",
-      "zhShort": "季节性盐湖",
-      "review": true
-    },
-    "5_16": {
-      "zh": "永久性咸水/半咸水/碱性沼泽与池塘",
-      "zhShort": "咸水沼泽",
-      "review": true
-    },
-    "5_17": {
-      "zh": "季节性/间歇性咸水/半咸水/碱性沼泽与池塘",
-      "zhShort": "季节性咸水沼泽",
-      "review": true
-    },
-    "5_2": {
-      "zh": "季节性/间歇性河流溪流",
-      "zhShort": "季节性河流",
-      "review": true
-    },
-    "5_3": {
-      "zh": "灌木占优势的湿地",
-      "zhShort": "灌丛湿地",
-      "review": true
-    },
-    "5_4": {
-      "zh": "沼泽/湿草沼泽/泥炭藓沼泽",
-      "zhShort": "沼泽",
-      "review": true
-    },
-    "5_5": {
-      "zh": "永久性淡水湖泊（>8 公顷）",
-      "zhShort": "大淡水湖",
-      "review": true
-    },
-    "5_6": {
-      "zh": "季节性/间歇性淡水湖泊（>8 公顷）",
-      "zhShort": "季节性大湖",
-      "review": true
-    },
-    "5_7": {
-      "zh": "永久性淡水沼泽/池塘（<8 公顷）",
-      "zhShort": "小沼泽塘",
-      "review": true
-    },
-    "5_8": {
-      "zh": "季节性/间歇性淡水沼泽/池塘（<8 公顷）",
-      "zhShort": "季节性小塘",
-      "review": true
-    },
-    "5_9": {
-      "zh": "淡水泉与绿洲",
-      "zhShort": "泉与绿洲",
-      "review": true
-    },
     "6": {
       "zh": "裸岩地（内陆悬崖、山峰等）",
       "zhShort": "裸岩地",
-      "review": true
-    },
-    "7_1": {
-      "zh": "洞穴（非水生）",
-      "zhShort": "洞穴",
-      "review": true
-    },
-    "7_2": {
-      "zh": "其他地下环境",
-      "zhShort": "地下环境",
-      "review": false
-    },
-    "8_1": {
-      "zh": "炎热沙漠",
-      "zhShort": "热沙漠",
-      "review": true
-    },
-    "8_2": {
-      "zh": "温带沙漠",
-      "zhShort": "温带沙漠",
-      "review": true
-    },
-    "8_3": {
-      "zh": "寒冷沙漠",
-      "zhShort": "寒漠",
-      "review": true
-    },
-    "9_1": {
-      "zh": "浅海远洋（水体）",
-      "zhShort": "远洋",
-      "review": true
-    },
-    "9_10": {
-      "zh": "河口",
-      "zhShort": "河口",
-      "review": true
-    },
-    "9_2": {
-      "zh": "浅海潮下带岩礁",
-      "zhShort": "岩礁",
-      "review": true
-    },
-    "9_3": {
-      "zh": "浅海潮下带砾石/卵石",
-      "zhShort": "砾石底",
-      "review": true
-    },
-    "9_4": {
-      "zh": "浅海潮下带沙质",
-      "zhShort": "沙质海床",
-      "review": true
-    },
-    "9_5": {
-      "zh": "浅海潮下带沙泥质",
-      "zhShort": "沙泥海床",
-      "review": true
-    },
-    "9_7": {
-      "zh": "浅海大型藻类/海带",
-      "zhShort": "海藻床",
-      "review": true
-    },
-    "9_8": {
-      "zh": "珊瑚礁",
-      "zhShort": "珊瑚礁",
-      "review": true
-    },
-    "9_8_1": {
-      "zh": "珊瑚礁外缘水道",
-      "zhShort": "礁外水道",
-      "review": true
-    },
-    "9_8_2": {
-      "zh": "礁后坡",
-      "zhShort": "礁后坡",
-      "review": true
-    },
-    "9_8_3": {
-      "zh": "前坡（外礁坡）",
-      "zhShort": "礁前坡",
-      "review": true
-    },
-    "9_8_4": {
-      "zh": "礁湖",
-      "zhShort": "礁湖",
-      "review": true
-    },
-    "9_8_5": {
-      "zh": "礁间软质底质",
-      "zhShort": "礁间软底",
-      "review": true
-    },
-    "9_8_6": {
-      "zh": "礁间碎石底质",
-      "zhShort": "礁间碎石",
-      "review": true
-    },
-    "9_9": {
-      "zh": "浅海水下海草床",
-      "zhShort": "海草床",
-      "review": true
-    },
-    "10_1": {
-      "zh": "大洋表层带（0–200 m）",
-      "zhShort": "大洋表层",
-      "review": true
-    },
-    "10_2": {
-      "zh": "大洋中层带（200–1000 m）",
-      "zhShort": "大洋中层",
-      "review": true
-    },
-    "10_3": {
-      "zh": "大洋半深海带（1000–4000 m）",
-      "zhShort": "半深海",
-      "review": false
-    },
-    "10_4": {
-      "zh": "大洋深渊带（4000–6000 m）",
-      "zhShort": "深渊带",
-      "review": false
-    },
-    "12_1": {
-      "zh": "岩质潮间带",
-      "zhShort": "岩岸",
-      "review": true
-    },
-    "12_2": {
-      "zh": "沙质潮间带与沙滩、沙洲、沙嘴",
-      "zhShort": "沙滩",
-      "review": true
-    },
-    "12_3": {
-      "zh": "砾石滩与卵石滩",
-      "zhShort": "砾石滩",
-      "review": true
-    },
-    "12_4": {
-      "zh": "泥滩与盐滩",
-      "zhShort": "泥滩",
-      "review": true
-    },
-    "12_5": {
-      "zh": "盐沼（挺水禾草）",
-      "zhShort": "盐沼",
-      "review": true
-    },
-    "12_6": {
-      "zh": "潮池",
-      "zhShort": "潮池",
-      "review": true
-    },
-    "12_7": {
-      "zh": "红树淹没的根系",
-      "zhShort": "红树根区",
-      "review": false
-    },
-    "13_1": {
-      "zh": "海崖与近海岩岛",
-      "zhShort": "海崖",
-      "review": true
-    },
-    "13_2": {
-      "zh": "海岸洞穴 / 喀斯特",
-      "zhShort": "海岸洞穴",
-      "review": false
-    },
-    "13_3": {
-      "zh": "海岸沙丘",
-      "zhShort": "沙丘",
-      "review": true
-    },
-    "13_4": {
-      "zh": "海岸半咸水/咸水潟湖与海水湖",
-      "zhShort": "潟湖",
-      "review": true
-    },
-    "13_5": {
-      "zh": "海岸淡水湖",
-      "zhShort": "滨海湖",
-      "review": true
-    },
-    "14_1": {
-      "zh": "耕地",
-      "zhShort": "耕地",
-      "review": true
-    },
-    "14_2": {
-      "zh": "牧场",
-      "zhShort": "牧场",
-      "review": true
-    },
-    "14_3": {
-      "zh": "人工林与种植园",
-      "zhShort": "种植园",
-      "review": true
-    },
-    "14_4": {
-      "zh": "乡村庭院",
-      "zhShort": "庭院",
-      "review": true
-    },
-    "14_5": {
-      "zh": "城镇建成区",
-      "zhShort": "城镇",
-      "review": true
-    },
-    "14_6": {
-      "zh": "亚热带/热带重度退化次生林",
-      "zhShort": "退化林地",
-      "review": true
-    },
-    "15_1": {
-      "zh": "蓄水区（>8 公顷）",
-      "zhShort": "水库",
-      "review": true
-    },
-    "15_11": {
-      "zh": "海洋人造结构（人工岛、人工礁等）",
-      "zhShort": "海洋人造物",
-      "review": false
-    },
-    "15_2": {
-      "zh": "池塘（<8 公顷）",
-      "zhShort": "池塘",
-      "review": true
-    },
-    "15_3": {
-      "zh": "水产养殖塘",
-      "zhShort": "养殖塘",
-      "review": true
-    },
-    "15_4": {
-      "zh": "采盐场",
-      "zhShort": "盐田",
-      "review": true
-    },
-    "15_5": {
-      "zh": "露天采掘场",
-      "zhShort": "采掘场",
-      "review": true
-    },
-    "15_6": {
-      "zh": "污水处理区",
-      "zhShort": "污水塘",
-      "review": true
-    },
-    "15_7": {
-      "zh": "灌溉地（含灌溉渠）",
-      "zhShort": "灌溉地",
-      "review": true
-    },
-    "15_8": {
-      "zh": "季节性淹水的农业用地",
-      "zhShort": "季节农田",
-      "review": true
-    },
-    "15_9": {
-      "zh": "运河、排水沟与沟渠",
-      "zhShort": "沟渠",
-      "review": true
+      "review": true,
+      "en": "Rocky areas (eg. inland cliffs, mountain peaks)",
+      "enShort": "Rocky areas (eg. inland cliffs, mountain peaks)"
     },
     "16": {
       "zh": "引入植被（外来种形成的植被）",
       "zhShort": "引入植被",
-      "review": false
+      "review": false,
+      "en": "Introduced vegetation",
+      "enShort": "Introduced vegetation"
     },
     "17": {
       "zh": "其他",
       "zhShort": "其他",
-      "review": true
+      "review": true,
+      "en": "Other",
+      "enShort": "Other"
     },
     "18": {
       "zh": "未知",
       "zhShort": "未知",
-      "review": false
+      "review": false,
+      "en": "Unknown",
+      "enShort": "Unknown"
+    },
+    "1_1": {
+      "zh": "北方针叶林（泰加林）",
+      "zhShort": "针叶林",
+      "review": true,
+      "en": "Forest - Boreal",
+      "enShort": "Boreal"
+    },
+    "1_2": {
+      "zh": "亚寒带森林",
+      "zhShort": "亚寒带森林",
+      "review": true,
+      "en": "Forest - Subarctic",
+      "enShort": "Subarctic"
+    },
+    "1_3": {
+      "zh": "亚南极森林",
+      "zhShort": "亚南极森林",
+      "review": true,
+      "en": "Forest - Subantarctic",
+      "enShort": "Subantarctic"
+    },
+    "1_4": {
+      "zh": "温带森林",
+      "zhShort": "温带森林",
+      "review": true,
+      "en": "Forest - Temperate",
+      "enShort": "Temperate"
+    },
+    "1_5": {
+      "zh": "亚热带/热带干燥森林",
+      "zhShort": "干燥森林",
+      "review": true,
+      "en": "Forest - Subtropical/Tropical Dry",
+      "enShort": "Subtropical/Tropical Dry"
+    },
+    "1_6": {
+      "zh": "亚热带/热带湿润低地森林",
+      "zhShort": "湿润低地林",
+      "review": true,
+      "en": "Forest - Subtropical/Tropical Moist Lowland",
+      "enShort": "Subtropical/Tropical Moist Lowland"
+    },
+    "1_7": {
+      "zh": "亚热带/热带红树林（高潮位以上）",
+      "zhShort": "红树林",
+      "review": true,
+      "en": "Forest - Subtropical/Tropical Mangrove Vegetation Above High Tide Level",
+      "enShort": "Forest"
+    },
+    "1_8": {
+      "zh": "亚热带/热带沼泽林",
+      "zhShort": "沼泽林",
+      "review": true,
+      "en": "Forest - Subtropical/Tropical Swamp",
+      "enShort": "Subtropical/Tropical Swamp"
+    },
+    "1_9": {
+      "zh": "亚热带/热带湿润山地林",
+      "zhShort": "山地雨林",
+      "review": true,
+      "en": "Forest - Subtropical/Tropical Moist Montane",
+      "enShort": "Subtropical/Tropical Moist Montane"
+    },
+    "2_1": {
+      "zh": "干燥稀树草原",
+      "zhShort": "干燥草原",
+      "review": true,
+      "en": "Savanna - Dry",
+      "enShort": "Dry"
+    },
+    "2_2": {
+      "zh": "湿润稀树草原",
+      "zhShort": "湿润草原",
+      "review": true,
+      "en": "Savanna - Moist",
+      "enShort": "Moist"
+    },
+    "3_1": {
+      "zh": "亚寒带灌丛",
+      "zhShort": "亚寒带灌丛",
+      "review": true,
+      "en": "Shrubland - Subarctic",
+      "enShort": "Subarctic"
+    },
+    "3_2": {
+      "zh": "亚南极灌丛",
+      "zhShort": "亚南极灌丛",
+      "review": false,
+      "en": "Shrubland - Subantarctic",
+      "enShort": "Subantarctic"
+    },
+    "3_3": {
+      "zh": "北方针叶灌丛",
+      "zhShort": "针叶灌丛",
+      "review": true,
+      "en": "Shrubland - Boreal",
+      "enShort": "Boreal"
+    },
+    "3_4": {
+      "zh": "温带灌丛",
+      "zhShort": "温带灌丛",
+      "review": true,
+      "en": "Shrubland - Temperate",
+      "enShort": "Temperate"
+    },
+    "3_5": {
+      "zh": "亚热带/热带干燥灌丛",
+      "zhShort": "干燥灌丛",
+      "review": true,
+      "en": "Shrubland - Subtropical/Tropical Dry",
+      "enShort": "Subtropical/Tropical Dry"
+    },
+    "3_6": {
+      "zh": "亚热带/热带湿润灌丛",
+      "zhShort": "湿润灌丛",
+      "review": true,
+      "en": "Shrubland - Subtropical/Tropical Moist",
+      "enShort": "Subtropical/Tropical Moist"
+    },
+    "3_7": {
+      "zh": "亚热带/热带高海拔灌丛",
+      "zhShort": "高山灌丛",
+      "review": true,
+      "en": "Shrubland - Subtropical/Tropical High Altitude",
+      "enShort": "Subtropical/Tropical High Altitude"
+    },
+    "3_8": {
+      "zh": "地中海型硬叶灌丛",
+      "zhShort": "地中海灌丛",
+      "review": true,
+      "en": "Shrubland - Mediterranean-type Shrubby Vegetation",
+      "enShort": "Mediterranean-type Shrubby Vegetation"
+    },
+    "4_1": {
+      "zh": "苔原",
+      "zhShort": "苔原",
+      "review": true,
+      "en": "Grassland - Tundra",
+      "enShort": "Tundra"
+    },
+    "4_2": {
+      "zh": "亚寒带草地",
+      "zhShort": "亚寒带草地",
+      "review": true,
+      "en": "Grassland - Subarctic",
+      "enShort": "Subarctic"
+    },
+    "4_3": {
+      "zh": "亚南极草地",
+      "zhShort": "亚南极草地",
+      "review": true,
+      "en": "Grassland - Subantarctic",
+      "enShort": "Subantarctic"
+    },
+    "4_4": {
+      "zh": "温带草地",
+      "zhShort": "温带草地",
+      "review": true,
+      "en": "Grassland - Temperate",
+      "enShort": "Temperate"
+    },
+    "4_5": {
+      "zh": "亚热带/热带干燥草地",
+      "zhShort": "干燥草地",
+      "review": true,
+      "en": "Grassland - Subtropical/Tropical Dry",
+      "enShort": "Subtropical/Tropical Dry"
+    },
+    "4_6": {
+      "zh": "亚热带/热带季节性湿润/淹水草地",
+      "zhShort": "季节性湿地",
+      "review": true,
+      "en": "Grassland - Subtropical/Tropical Seasonally Wet/Flooded",
+      "enShort": "Grassland"
+    },
+    "4_7": {
+      "zh": "亚热带/热带高海拔草地",
+      "zhShort": "高山草地",
+      "review": true,
+      "en": "Grassland - Subtropical/Tropical High Altitude",
+      "enShort": "Subtropical/Tropical High Altitude"
+    },
+    "5_1": {
+      "zh": "永久性河流/溪流（含瀑布）",
+      "zhShort": "河流",
+      "review": true,
+      "en": "Wetlands (inland) - Permanent Rivers/Streams/Creeks (includes waterfalls)",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_10": {
+      "zh": "苔原湿地（含融雪形成的季节性水体）",
+      "zhShort": "苔原湿地",
+      "review": true,
+      "en": "Wetlands (inland) - Tundra Wetlands (incl. pools and temporary waters from snowmelt)",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_11": {
+      "zh": "高山湿地（含融雪季节性水体）",
+      "zhShort": "高山湿地",
+      "review": true,
+      "en": "Wetlands (inland) - Alpine Wetlands (includes temporary waters from snowmelt)",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_12": {
+      "zh": "地热湿地",
+      "zhShort": "地热湿地",
+      "review": false,
+      "en": "Wetlands (inland) - Geothermal Wetlands",
+      "enShort": "Geothermal Wetlands"
+    },
+    "5_13": {
+      "zh": "永久性内陆三角洲",
+      "zhShort": "内陆三角洲",
+      "review": true,
+      "en": "Wetlands (inland) - Permanent Inland Deltas",
+      "enShort": "Permanent Inland Deltas"
+    },
+    "5_14": {
+      "zh": "永久性咸水/半咸水/碱性湖泊",
+      "zhShort": "咸水湖",
+      "review": true,
+      "en": "Wetlands (inland) - Permanent Saline, Brackish or Alkaline Lakes",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_15": {
+      "zh": "季节性/间歇性咸水/半咸水/碱性湖泊与滩地",
+      "zhShort": "季节性盐湖",
+      "review": true,
+      "en": "Wetlands (inland) - Seasonal/Intermittent Saline, Brackish or Alkaline Lakes and Flats",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_16": {
+      "zh": "永久性咸水/半咸水/碱性沼泽与池塘",
+      "zhShort": "咸水沼泽",
+      "review": true,
+      "en": "Wetlands (inland) - Permanent Saline, Brackish or Alkaline Marshes/Pools",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_17": {
+      "zh": "季节性/间歇性咸水/半咸水/碱性沼泽与池塘",
+      "zhShort": "季节性咸水沼泽",
+      "review": true,
+      "en": "Wetlands (inland) - Seasonal/Intermittent Saline, Brackish or Alkaline Marshes/Pools",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_2": {
+      "zh": "季节性/间歇性河流溪流",
+      "zhShort": "季节性河流",
+      "review": true,
+      "en": "Wetlands (inland) - Seasonal/Intermittent/Irregular Rivers/Streams/Creeks",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_3": {
+      "zh": "灌木占优势的湿地",
+      "zhShort": "灌丛湿地",
+      "review": true,
+      "en": "Wetlands (inland) - Shrub Dominated Wetlands",
+      "enShort": "Shrub Dominated Wetlands"
+    },
+    "5_4": {
+      "zh": "沼泽/湿草沼泽/泥炭藓沼泽",
+      "zhShort": "沼泽",
+      "review": true,
+      "en": "Wetlands (inland) - Bogs, Marshes, Swamps, Fens, Peatlands",
+      "enShort": "Bogs, Marshes, Swamps, Fens, Peatlands"
+    },
+    "5_5": {
+      "zh": "永久性淡水湖泊（>8 公顷）",
+      "zhShort": "大淡水湖",
+      "review": true,
+      "en": "Wetlands (inland) - Permanent Freshwater Lakes (over 8ha)",
+      "enShort": "Permanent Freshwater Lakes (over 8ha)"
+    },
+    "5_6": {
+      "zh": "季节性/间歇性淡水湖泊（>8 公顷）",
+      "zhShort": "季节性大湖",
+      "review": true,
+      "en": "Wetlands (inland) - Seasonal/Intermittent Freshwater Lakes (over 8ha)",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_7": {
+      "zh": "永久性淡水沼泽/池塘（<8 公顷）",
+      "zhShort": "小沼泽塘",
+      "review": true,
+      "en": "Wetlands (inland) - Permanent Freshwater Marshes/Pools (under 8ha)",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_8": {
+      "zh": "季节性/间歇性淡水沼泽/池塘（<8 公顷）",
+      "zhShort": "季节性小塘",
+      "review": true,
+      "en": "Wetlands (inland) - Seasonal/Intermittent Freshwater Marshes/Pools (under 8ha)",
+      "enShort": "Wetlands (inland)"
+    },
+    "5_9": {
+      "zh": "淡水泉与绿洲",
+      "zhShort": "泉与绿洲",
+      "review": true,
+      "en": "Wetlands (inland) - Freshwater Springs and Oases",
+      "enShort": "Freshwater Springs and Oases"
+    },
+    "7_1": {
+      "zh": "洞穴（非水生）",
+      "zhShort": "洞穴",
+      "review": true,
+      "en": "Caves and Subterranean Habitats (non-aquatic) - Caves",
+      "enShort": "Caves"
+    },
+    "7_2": {
+      "zh": "其他地下环境",
+      "zhShort": "地下环境",
+      "review": false,
+      "en": "Caves and Subterranean Habitats (non-aquatic) - Other Subterranean Habitats",
+      "enShort": "Other Subterranean Habitats"
+    },
+    "8_1": {
+      "zh": "炎热沙漠",
+      "zhShort": "热沙漠",
+      "review": true,
+      "en": "Desert - Hot",
+      "enShort": "Hot"
+    },
+    "8_2": {
+      "zh": "温带沙漠",
+      "zhShort": "温带沙漠",
+      "review": true,
+      "en": "Desert - Temperate",
+      "enShort": "Temperate"
+    },
+    "8_3": {
+      "zh": "寒冷沙漠",
+      "zhShort": "寒漠",
+      "review": true,
+      "en": "Desert - Cold",
+      "enShort": "Cold"
+    },
+    "9_1": {
+      "zh": "浅海远洋（水体）",
+      "zhShort": "远洋",
+      "review": true,
+      "en": "Marine Neritic - Pelagic",
+      "enShort": "Pelagic"
+    },
+    "9_10": {
+      "zh": "河口",
+      "zhShort": "河口",
+      "review": true,
+      "en": "Marine Neritic - Estuaries",
+      "enShort": "Estuaries"
+    },
+    "9_2": {
+      "zh": "浅海潮下带岩礁",
+      "zhShort": "岩礁",
+      "review": true,
+      "en": "Marine Neritic - Subtidal Rock and Rocky Reefs",
+      "enShort": "Subtidal Rock and Rocky Reefs"
+    },
+    "9_3": {
+      "zh": "浅海潮下带砾石/卵石",
+      "zhShort": "砾石底",
+      "review": true,
+      "en": "Marine Neritic - Subtidal Loose Rock/pebble/gravel",
+      "enShort": "Subtidal Loose Rock/pebble/gravel"
+    },
+    "9_4": {
+      "zh": "浅海潮下带沙质",
+      "zhShort": "沙质海床",
+      "review": true,
+      "en": "Marine Neritic - Subtidal Sandy",
+      "enShort": "Subtidal Sandy"
+    },
+    "9_5": {
+      "zh": "浅海潮下带沙泥质",
+      "zhShort": "沙泥海床",
+      "review": true,
+      "en": "Marine Neritic - Subtidal Sandy-Mud",
+      "enShort": "Subtidal Sandy-Mud"
+    },
+    "9_7": {
+      "zh": "浅海大型藻类/海带",
+      "zhShort": "海藻床",
+      "review": true,
+      "en": "Marine Neritic - Macroalgal/Kelp",
+      "enShort": "Macroalgal/Kelp"
+    },
+    "9_8": {
+      "zh": "珊瑚礁",
+      "zhShort": "珊瑚礁",
+      "review": true,
+      "en": "Marine Neritic - Coral Reef",
+      "enShort": "Coral Reef"
+    },
+    "9_8_1": {
+      "zh": "珊瑚礁外缘水道",
+      "zhShort": "礁外水道",
+      "review": true,
+      "en": "Outer Reef Channel",
+      "enShort": "Outer Reef Channel"
+    },
+    "9_8_2": {
+      "zh": "礁后坡",
+      "zhShort": "礁后坡",
+      "review": true,
+      "en": "Back Slope",
+      "enShort": "Back Slope"
+    },
+    "9_8_3": {
+      "zh": "前坡（外礁坡）",
+      "zhShort": "礁前坡",
+      "review": true,
+      "en": "Foreslope (Outer Reef Slope)",
+      "enShort": "Foreslope (Outer Reef Slope)"
+    },
+    "9_8_4": {
+      "zh": "礁湖",
+      "zhShort": "礁湖",
+      "review": true,
+      "en": "Lagoon",
+      "enShort": "Lagoon"
+    },
+    "9_8_5": {
+      "zh": "礁间软质底质",
+      "zhShort": "礁间软底",
+      "review": true,
+      "en": "Inter-Reef Soft Substrate",
+      "enShort": "Inter-Reef Soft Substrate"
+    },
+    "9_8_6": {
+      "zh": "礁间碎石底质",
+      "zhShort": "礁间碎石",
+      "review": true,
+      "en": "Inter-Reef Rubble Substrate",
+      "enShort": "Inter-Reef Rubble Substrate"
+    },
+    "9_9": {
+      "zh": "浅海水下海草床",
+      "zhShort": "海草床",
+      "review": true,
+      "en": "Marine Neritic - Seagrass (Submerged)",
+      "enShort": "Seagrass (Submerged)"
+    },
+    "10_1": {
+      "zh": "大洋表层带（0–200 m）",
+      "zhShort": "大洋表层",
+      "review": true,
+      "en": "Marine Oceanic - Epipelagic (0-200m)",
+      "enShort": "Epipelagic (0-200m)"
+    },
+    "10_2": {
+      "zh": "大洋中层带（200–1000 m）",
+      "zhShort": "大洋中层",
+      "review": true,
+      "en": "Marine Oceanic - Mesopelagic (200-1000m)",
+      "enShort": "Mesopelagic (200-1000m)"
+    },
+    "10_3": {
+      "zh": "大洋半深海带（1000–4000 m）",
+      "zhShort": "半深海",
+      "review": false,
+      "en": "Marine Oceanic - Bathypelagic (1000-4000m)",
+      "enShort": "Bathypelagic (1000-4000m)"
+    },
+    "10_4": {
+      "zh": "大洋深渊带（4000–6000 m）",
+      "zhShort": "深渊带",
+      "review": false,
+      "en": "Marine Oceanic - Abyssopelagic (4000-6000m)",
+      "enShort": "Abyssopelagic (4000-6000m)"
+    },
+    "12_1": {
+      "zh": "岩质潮间带",
+      "zhShort": "岩岸",
+      "review": true,
+      "en": "Marine Intertidal - Rocky Shoreline",
+      "enShort": "Rocky Shoreline"
+    },
+    "12_2": {
+      "zh": "沙质潮间带与沙滩、沙洲、沙嘴",
+      "zhShort": "沙滩",
+      "review": true,
+      "en": "Marine Intertidal - Sandy Shoreline and/or Beaches, Sand Bars, Spits, Etc",
+      "enShort": "Marine Intertidal"
+    },
+    "12_3": {
+      "zh": "砾石滩与卵石滩",
+      "zhShort": "砾石滩",
+      "review": true,
+      "en": "Marine Intertidal - Shingle and/or Pebble Shoreline and/or Beaches",
+      "enShort": "Marine Intertidal"
+    },
+    "12_4": {
+      "zh": "泥滩与盐滩",
+      "zhShort": "泥滩",
+      "review": true,
+      "en": "Marine Intertidal - Mud Flats and Salt Flats",
+      "enShort": "Mud Flats and Salt Flats"
+    },
+    "12_5": {
+      "zh": "盐沼（挺水禾草）",
+      "zhShort": "盐沼",
+      "review": true,
+      "en": "Marine Intertidal - Salt Marshes (Emergent Grasses)",
+      "enShort": "Salt Marshes (Emergent Grasses)"
+    },
+    "12_6": {
+      "zh": "潮池",
+      "zhShort": "潮池",
+      "review": true,
+      "en": "Marine Intertidal - Tidepools",
+      "enShort": "Tidepools"
+    },
+    "12_7": {
+      "zh": "红树淹没的根系",
+      "zhShort": "红树根区",
+      "review": false,
+      "en": "Marine Intertidal - Mangrove Submerged Roots",
+      "enShort": "Mangrove Submerged Roots"
+    },
+    "13_1": {
+      "zh": "海崖与近海岩岛",
+      "zhShort": "海崖",
+      "review": true,
+      "en": "Marine Coastal/Supratidal - Sea Cliffs and Rocky Offshore Islands",
+      "enShort": "Sea Cliffs and Rocky Offshore Islands"
+    },
+    "13_2": {
+      "zh": "海岸洞穴 / 喀斯特",
+      "zhShort": "海岸洞穴",
+      "review": false,
+      "en": "Marine Coastal/supratidal - Coastal Caves/Karst",
+      "enShort": "Coastal Caves/Karst"
+    },
+    "13_3": {
+      "zh": "海岸沙丘",
+      "zhShort": "沙丘",
+      "review": true,
+      "en": "Marine Coastal/Supratidal - Coastal Sand Dunes",
+      "enShort": "Coastal Sand Dunes"
+    },
+    "13_4": {
+      "zh": "海岸半咸水/咸水潟湖与海水湖",
+      "zhShort": "潟湖",
+      "review": true,
+      "en": "Marine Coastal/Supratidal - Coastal Brackish/Saline Lagoons/Marine Lakes",
+      "enShort": "Marine Coastal/Supratidal"
+    },
+    "13_5": {
+      "zh": "海岸淡水湖",
+      "zhShort": "滨海湖",
+      "review": true,
+      "en": "Marine Coastal/Supratidal - Coastal Freshwater Lakes",
+      "enShort": "Coastal Freshwater Lakes"
+    },
+    "14_1": {
+      "zh": "耕地",
+      "zhShort": "耕地",
+      "review": true,
+      "en": "Artificial/Terrestrial - Arable Land",
+      "enShort": "Arable Land"
+    },
+    "14_2": {
+      "zh": "牧场",
+      "zhShort": "牧场",
+      "review": true,
+      "en": "Artificial/Terrestrial - Pastureland",
+      "enShort": "Pastureland"
+    },
+    "14_3": {
+      "zh": "人工林与种植园",
+      "zhShort": "种植园",
+      "review": true,
+      "en": "Artificial/Terrestrial - Plantations",
+      "enShort": "Plantations"
+    },
+    "14_4": {
+      "zh": "乡村庭院",
+      "zhShort": "庭院",
+      "review": true,
+      "en": "Artificial/Terrestrial - Rural Gardens",
+      "enShort": "Rural Gardens"
+    },
+    "14_5": {
+      "zh": "城镇建成区",
+      "zhShort": "城镇",
+      "review": true,
+      "en": "Artificial/Terrestrial - Urban Areas",
+      "enShort": "Urban Areas"
+    },
+    "14_6": {
+      "zh": "亚热带/热带重度退化次生林",
+      "zhShort": "退化林地",
+      "review": true,
+      "en": "Artificial/Terrestrial - Subtropical/Tropical Heavily Degraded Former Forest",
+      "enShort": "Artificial/Terrestrial"
+    },
+    "15_1": {
+      "zh": "蓄水区（>8 公顷）",
+      "zhShort": "水库",
+      "review": true,
+      "en": "Artificial/Aquatic - Water Storage Areas (over 8ha)",
+      "enShort": "Water Storage Areas (over 8ha)"
+    },
+    "15_11": {
+      "zh": "海洋人造结构（人工岛、人工礁等）",
+      "zhShort": "海洋人造物",
+      "review": false,
+      "en": "Artificial/Marine - Marine Anthropogenic Structures",
+      "enShort": "Marine Anthropogenic Structures"
+    },
+    "15_2": {
+      "zh": "池塘（<8 公顷）",
+      "zhShort": "池塘",
+      "review": true,
+      "en": "Artificial/Aquatic - Ponds (below 8ha)",
+      "enShort": "Ponds (below 8ha)"
+    },
+    "15_3": {
+      "zh": "水产养殖塘",
+      "zhShort": "养殖塘",
+      "review": true,
+      "en": "Artificial/Aquatic - Aquaculture Ponds",
+      "enShort": "Aquaculture Ponds"
+    },
+    "15_4": {
+      "zh": "采盐场",
+      "zhShort": "盐田",
+      "review": true,
+      "en": "Artificial/Aquatic - Salt Exploitation Sites",
+      "enShort": "Salt Exploitation Sites"
+    },
+    "15_5": {
+      "zh": "露天采掘场",
+      "zhShort": "采掘场",
+      "review": true,
+      "en": "Artificial/Aquatic - Excavations (open)",
+      "enShort": "Excavations (open)"
+    },
+    "15_6": {
+      "zh": "污水处理区",
+      "zhShort": "污水塘",
+      "review": true,
+      "en": "Artificial/Aquatic - Wastewater Treatment Areas",
+      "enShort": "Wastewater Treatment Areas"
+    },
+    "15_7": {
+      "zh": "灌溉地（含灌溉渠）",
+      "zhShort": "灌溉地",
+      "review": true,
+      "en": "Artificial/Aquatic - Irrigated Land (includes irrigation channels)",
+      "enShort": "Artificial/Aquatic"
+    },
+    "15_8": {
+      "zh": "季节性淹水的农业用地",
+      "zhShort": "季节农田",
+      "review": true,
+      "en": "Artificial/Aquatic - Seasonally Flooded Agricultural Land",
+      "enShort": "Seasonally Flooded Agricultural Land"
+    },
+    "15_9": {
+      "zh": "运河、排水沟与沟渠",
+      "zhShort": "沟渠",
+      "review": true,
+      "en": "Artificial/Aquatic - Canals and Drainage Channels, Ditches",
+      "enShort": "Canals and Drainage Channels, Ditches"
     }
   },
-  "reviewedAt": "2026-10-17"
+  "reviewedAt": "2026-10-17",
+  "enrichedAt": "2026-10-19T12:14:11.604Z"
 }

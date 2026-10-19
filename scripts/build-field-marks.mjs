@@ -75,6 +75,39 @@ const MIGRATION_ZH = {
   vagrant: '迷鸟',
 }
 
+/* ── 英文标签（措辞与 `src/i18n/locales/en.ts` 的 species.traits.* 对齐） ── */
+const DIET_EN = {
+  invert: 'invertebrates',
+  vert: 'vertebrates',
+  ectVert: 'ectothermic vertebrates',
+  fish: 'fish',
+  unkVert: 'unknown vertebrates',
+  scav: 'carrion',
+  fruit: 'fruit',
+  nect: 'nectar',
+  seed: 'seeds',
+  plantOther: 'other plant material',
+}
+const FORAGE_EN = {
+  waterBelowSurface: 'below the water surface',
+  waterAroundSurface: 'at the water surface',
+  ground: 'on the ground',
+  understory: 'in the understorey',
+  midHigh: 'in the mid-storey',
+  canopy: 'in the canopy',
+  aerial: 'in the air',
+}
+const MIGRATION_EN = {
+  resident: 'Resident',
+  breeding: 'Breeding visitor',
+  nonbreeding: 'Winter visitor',
+  nonBreeding: 'Winter visitor',
+  winter: 'Winter visitor',
+  passage: 'Passage migrant',
+  vagrant: 'Vagrant',
+}
+const SYSTEM_EN = { Terrestrial: 'terrestrial', Freshwater: 'freshwater', Marine: 'marine' }
+
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v)
 
 /** 取前 n 项（值降序）；阈值以下的不提（避免「无脊椎动物 2%」这种噪声） */
@@ -166,8 +199,72 @@ function compose({ codes, traits, profile }) {
   }
 }
 
+/** 「A, B and C」式英文并列 */
+function joinEn(items) {
+  if (items.length <= 1) return items[0] || ''
+  if (items.length === 2) return `${items[0]} and ${items[1]}`
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+/**
+ * 英文叙述：与中文**同源同规则**（只用传入字段、数字取自输入、缺就不提）。
+ * 英文原版一直都在源数据里（IUCN `habitats[].en`、EltonTraits/AVONET 的英文类别键），
+ * 中文只是翻译层 —— 见 `scripts/taxonomy/fill-habitat-code-en.mjs`。
+ */
+function composeEn({ codes, traits, profile }) {
+  const basedOn = []
+  const s = []
+
+  const migr = MIGRATION_EN[String(profile?.migration || '')]
+  const habs = (profile?.habitatCodes || []).map((c) => codes?.codes?.[c]?.enShort).filter(Boolean)
+  const uniq = [...new Set(habs)].slice(0, 4)
+  if (uniq.length) {
+    basedOn.push('iucn')
+    s.push(`Found in ${joinEn(uniq)}.`)
+  } else if (traits?.systems?.length) {
+    const names = traits.systems.map((x) => SYSTEM_EN[x.en]).filter(Boolean)
+    if (names.length) {
+      basedOn.push('iucn')
+      s.push(`Found in ${joinEn(names)} habitats.`)
+    }
+  }
+  if (migr) s.unshift(`${migr}.`)
+
+  const diet = top(traits?.diet, 4, 10)
+  if (diet.length) {
+    basedOn.push('elton')
+    const vals = diet.map(([, v]) => Math.round(v))
+    const names = diet.map(([k]) => DIET_EN[k]).filter(Boolean)
+    if (diet.length >= 3 && vals.every((v) => v === vals[0])) {
+      s.push(`Diet is mixed: ${joinEn(names)} (about ${vals[0]}% each).`)
+    } else if (diet.length === 1) {
+      s.push(`Diet is almost entirely ${names[0]} (${vals[0]}%).`)
+    } else {
+      s.push(`Diet is mainly ${names[0]} (${vals[0]}%), also ${joinEn(names.slice(1))}.`)
+    }
+  }
+  const forage = top(traits?.foraging, 2, 20)
+  if (forage.length) {
+    basedOn.push('elton')
+    s.push(`Forages ${joinEn(forage.map(([k]) => FORAGE_EN[k]).filter(Boolean))}.`)
+  }
+  if (traits?.nocturnal === true) {
+    basedOn.push('elton')
+    s.push('Nocturnal.')
+  }
+  const massG = traits?.morph?.massG
+  if (isNum(massG)) {
+    basedOn.push('avonet')
+    s.push(`Weighs about ${Math.round(massG * 10) / 10} g.`)
+  }
+
+  if (!s.length) return null
+  return { en: s.join(' '), basedOn: [...new Set(basedOn)] }
+}
+
 async function main() {
-  const codes = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/iucn-habitat-codes.json'), 'utf8'))
+  // 读**源表**（data/）而非公开副本：公开副本由 traits:layers 拷贝，构建期可能尚未更新
+  const codes = JSON.parse(await fs.readFile(path.join(ROOT, 'data/iucn-habitat-codes.json'), 'utf8'))
   const meta = JSON.parse(await fs.readFile(path.join(ROOT, 'public/data/manifest-meta.json'), 'utf8'))
   const species = meta.species || []
 
@@ -202,7 +299,7 @@ async function main() {
   ]
 
   const out = {}
-  const engine = 'composed-zh-v1'
+  const engine = 'composed-zh-en-v2'
   let made = 0
   let skippedNoSource = 0
   const samples = []
@@ -219,25 +316,53 @@ async function main() {
       continue
     }
     const r = compose({ codes, traits, profile })
-    if (!r) {
+    const ren = composeEn({ codes, traits, profile })
+    if (!r && !ren) {
       skippedNoSource++
       continue
     }
+    const basedOn = [...new Set([...(r?.basedOn || []), ...(ren?.basedOn || [])])]
+    const textSources = []
+    if (r) {
+      textSources.push({
+        field: 'zh',
+        source: 'ai-generated',
+        engine,
+        basedOn: r.basedOn,
+        license: 'project',
+        note: '由公开结构化数据合成，非权威，仅供参考',
+      })
+    }
+    if (ren) {
+      textSources.push({
+        field: 'en',
+        source: 'ai-generated',
+        engine,
+        basedOn: ren.basedOn,
+        license: 'project',
+        note: 'Synthesized from public structured data; not authoritative, corrections welcome.',
+      })
+    }
     out[tk] = {
-      zh: r.zh,
-      basedOn: r.basedOn,
-      textSources: [
-        { field: 'zh', source: 'ai-generated', engine, basedOn: r.basedOn, license: 'project', note: '由公开结构化数据合成，非权威，仅供参考' },
-      ],
+      ...(r ? { zh: r.zh } : {}),
+      ...(ren ? { en: ren.en } : {}),
+      basedOn,
+      textSources,
     }
     made++
-    if (samples.length < 12) samples.push({ name: sp.nameZh || sp.nameSci, id: sp.id, zh: r.zh })
+    if (samples.length < 12) {
+      samples.push({ name: sp.nameZh || sp.nameSci, id: sp.id, zh: r?.zh || '', en: ren?.en || '' })
+    }
     if (LIMIT && made >= LIMIT) break
   }
 
   if (PRINT_ONLY || LIMIT || IDS.length) {
     console.log(`\n样例（engine=${engine}）：`)
-    for (const s of samples) console.log(`\n· ${s.name}  (${s.id})\n  ${s.zh}`)
+    for (const s of samples) {
+      console.log(`\n· ${s.name}  (${s.id})`)
+      if (s.zh) console.log(`  zh: ${s.zh}`)
+      if (s.en) console.log(`  en: ${s.en}`)
+    }
   }
 
   if (!PRINT_ONLY) {
