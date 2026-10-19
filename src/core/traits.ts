@@ -42,6 +42,16 @@ export interface SpeciesTraits {
     colours?: Record<string, TraitPlumageColour>
     dichromatism?: { isDichromatic?: boolean | null }
   } | null
+  /**
+   * 064：自动合成的叙述文本（「结构化事实 → 只做措辞」，非权威）。
+   * 来源与引擎写在 `textSources`；门禁保证句中数字都能在结构化数据里追溯。
+   */
+  text?: {
+    zh?: string
+    en?: string
+    basedOn?: string[]
+    textSources?: { field?: string; source?: string; engine?: string; license?: string; note?: string }[]
+  } | null
 }
 
 interface TraitShard {

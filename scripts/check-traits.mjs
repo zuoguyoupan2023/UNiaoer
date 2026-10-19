@@ -11,7 +11,7 @@
  *
  * CLI：npm run check:traits
  */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -222,5 +222,52 @@ if (existsSync(coreFile)) {
         console.log(`✅ traitsBuckets：${metaBuckets.length} 个分片，与 traits/*.json 一致`)
       }
     }
+  }
+}
+
+// 064：叙述文本门禁 ——「数字必须与输入一致」+「非权威标注不可丢」
+// 口径（`053-describe §11.5b` 硬规则 1）：叙述里出现的每个数字，都必须能在该种的结构化事实
+// （食性百分比 / 体重）里找到；找不到就说明措辞改写了事实 → 阻断。
+{
+  const marksFile = path.join(ROOT, 'data/field-marks.json')
+  const traitsDir = path.join(ROOT, 'public/data/traits')
+  if (existsSync(marksFile)) {
+    const marks = JSON.parse(readFileSync(marksFile, 'utf8'))
+    const byKey = marks.byTaxonKey || {}
+    const shards = existsSync(traitsDir)
+      ? readdirSync(traitsDir).filter((f) => f.endsWith('.json') && f !== 'index.json')
+      : []
+    const allowed = new Map()
+    for (const f of shards) {
+      const d = JSON.parse(readFileSync(path.join(traitsDir, f), 'utf8'))
+      for (const [k, e] of Object.entries(d.byTaxonKey || {})) {
+        const nums = new Set()
+        for (const v of Object.values(e.diet || {})) if (typeof v === 'number') nums.add(v)
+        const m = e.morph?.massG
+        if (typeof m === 'number') nums.add(m)
+        allowed.set(k, nums)
+      }
+    }
+    let bad = 0
+    let checked = 0
+    for (const [k, v] of Object.entries(byKey)) {
+      if (!v?.zh) continue
+      if (!Array.isArray(v.textSources) || !v.textSources.length) {
+        if (bad < 8) err(`叙述缺 textSources：${k}`)
+        bad++
+      }
+      const nums = allowed.get(k) || new Set()
+      for (const s of v.zh.match(/\d+(?:\.\d+)?/g) || []) {
+        const n = Number(s)
+        const ok = [...nums].some((x) => Math.abs(x - n) < 0.06)
+        if (!ok) {
+          if (bad < 8) err(`叙述数字 ${s} 在结构化事实里找不到：${k}「${v.zh}」`)
+          bad++
+        }
+        checked++
+      }
+    }
+    if (bad) err(`叙述文本：${bad} 处不一致`)
+    else console.log(`✅ 叙述文本：${Object.keys(byKey).length} 条 · ${checked} 个数字全部可追溯到结构化事实`)
   }
 }

@@ -61,6 +61,9 @@ const tags = computed(() =>
   })),
 )
 
+/** 064：叙述文本（自动合成，非权威）—— 默认视图的第一层 */
+const narrative = computed(() => traits.value?.text?.zh || null)
+
 const dietTop = computed(() => topEntries(traits.value?.diet, 1)[0])
 const mass = computed(() => {
   const v = traits.value?.morph?.massG
@@ -181,6 +184,15 @@ function colourText(c: TraitPlumageColour): string {
 
 <template>
   <section v-if="hasAny" class="traits" :class="{ compact }">
+    <!-- ① 人话（默认显示）：064 自动合成的 1–2 句；非权威，紧跟纠错入口 -->
+    <p v-if="narrative" class="trait-text">
+      {{ narrative }}
+      <span class="trait-text-note">
+        · {{ t('species.traits.textNote') }}
+        <RouterLink to="/reports">{{ t('species.traits.textFix') }}</RouterLink>
+      </span>
+    </p>
+
     <div v-if="tags.length" class="trait-tags">
       <span v-for="tag in tags" :key="tag.code" class="trait-tag">{{ tag.label }}</span>
     </div>
@@ -252,6 +264,20 @@ function colourText(c: TraitPlumageColour): string {
 .traits {
   margin-top: 10px;
   text-align: left;
+}
+/* ① 叙述（默认视图第一层） */
+.trait-text {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  line-height: 1.75;
+  color: var(--text);
+}
+.trait-text-note {
+  font-size: 0.72rem;
+  color: var(--text-light);
+}
+.trait-text-note a {
+  color: var(--primary);
 }
 .trait-tags,
 .trait-caps {

@@ -99,6 +99,15 @@ async function main() {
   const codeFreq = new Map()
   for (const c of iucn?.habitatCodes || []) codeFreq.set(c.code, c.species || 0)
 
+  // 064：叙述文本（确定性合成，`data/field-marks.json`）。可选 —— 缺失时只输出结构化数据。
+  let fieldMarks = null
+  try {
+    fieldMarks = JSON.parse(await fs.readFile(path.join(ROOT, 'data/field-marks.json'), 'utf8'))
+  } catch {
+    fieldMarks = null
+  }
+  const textEngine = fieldMarks?.engine || null
+
   /** 同一 taxonKey 的四源合并 */
   const allKeys = new Set([
     ...Object.keys(iucn?.byTaxonKey || {}),
@@ -190,6 +199,11 @@ async function main() {
       }
     }
     if (Object.keys(detail).length === 0) continue
+    // 064：叙述文本（「结构化事实 → 只做措辞」；来源与引擎见 textSources）
+    const fm = fieldMarks?.byTaxonKey?.[key]
+    if (fm?.zh) {
+      detail.text = { zh: fm.zh, basedOn: fm.basedOn || [], textSources: fm.textSources || [] }
+    }
     detail.nameSci = nameSci
     details[key] = detail
   }
@@ -231,10 +245,12 @@ async function main() {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
       sources,
+      textEngine,
       note:
         '详情层分片：diet/foraging/nocturnal（EltonTraits）· morph/eco（AVONET，inferred 标记插值）· ' +
         'plumage（Dunning CC0）· habitats（IUCN，仅 code+季节+major，**中文请查 iucn-habitat-codes.json**）。' +
-        'morph.massG 单位克，diet 单位百分比。缺字段即无数据，不要猜。',
+        'morph.massG 单位克，diet 单位百分比。缺字段即无数据，不要猜。' +
+        'text.zh 为 064 自动合成的叙述（非权威，仅供参考，欢迎纠错）。',
       counts: { entries: Object.keys(entries).length },
       byTaxonKey: entries,
     }
