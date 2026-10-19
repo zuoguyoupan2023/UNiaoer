@@ -28,14 +28,28 @@ const args = parseArgs(process.argv.slice(2))
 const FORCE = !!args.force
 const CODES = path.join(ROOT, 'data/iucn-habitat-codes.json')
 const HABITATS = path.join(ROOT, 'data/iucn-habitats.json')
-const SHORT_MAX = 40
+const SHORT_MAX = 48
+
+/** 生境名词：用于判断后半段是否已是完整名词短语（否则需要补上类群名） */
+const HABITAT_NOUN =
+  /(forest|shrubland|grassland|savanna|wetland|desert|marine|intertidal|artificial|rocky|cave|river|stream|creek|lake|marsh|bog|swamp|fen|mangrove|plantation|arable|urban|pasture|tundra|snow|ice|vegetation|scrub|dune|ocean|reef|estuary|lagoon|delta|cliff|peak|spring|pool|waterfall|flat|area|habitat)/i
+
+/** 去掉尾部括号说明："Permanent Rivers/Streams/Creeks (includes waterfalls)" → "Permanent Rivers/Streams/Creeks" */
+function stripParen(s) {
+  return String(s).replace(/\s*\([^)]*\)\s*$/, '').trim()
+}
 
 function shortOf(en) {
   const parts = String(en).split(' - ')
-  if (parts.length < 2) return String(en)
+  if (parts.length < 2) return stripParen(en)
   const before = parts[0]
-  const after = parts.slice(1).join(' - ')
-  return after.length <= SHORT_MAX ? after : before
+  const after = stripParen(parts.slice(1).join(' - '))
+  // 后半段已是完整名词短语 → 直接用（更精确，如 "Mud Flats and Salt Flats"）
+  if (HABITAT_NOUN.test(after) && after.length <= SHORT_MAX) return after
+  // 后半段只是修饰语（"Temperate" / "Dry" / "Boreal"）→ 与类群名组合：temperate forest
+  if (after.length <= SHORT_MAX) return `${after} ${before.toLowerCase()}`
+  // 后半段过长 → 类群名（兜底；尽量少发生）
+  return before
 }
 
 async function main() {

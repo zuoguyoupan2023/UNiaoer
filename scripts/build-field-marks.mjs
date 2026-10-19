@@ -110,6 +110,23 @@ const SYSTEM_EN = { Terrestrial: 'terrestrial', Freshwater: 'freshwater', Marine
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v)
 
+const GROUP_ZH = { landbird: '林鸟', waterbird: '水鸟', raptor: '猛禽' }
+const GROUP_EN = { landbird: 'Landbird', waterbird: 'Waterbird', raptor: 'Raptor' }
+
+/**
+ * EltonTraits 食性类目：过滤阈值 + 占比降序 + 取前 4。
+ *
+ * ⚠️ 不做"子类折叠"：`ectVert`/`unkVert` 与 `vert` 在**数据里是并列项**（不是层级求和），
+ * 丢掉子类会把最大项降级（实测 Tachyspiza：ectVert 50 被丢后变成"无脊椎 30% 为主"，属**误报**）。
+ * 冗余感改由「也吃」列表**最多 2 项**来收敛（主项永远是真·最大项）。
+ */
+function dietItems(traits, floor = 10) {
+  return Object.entries(traits?.diet || {})
+    .filter(([, v]) => isNum(v) && v >= floor)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+}
+
 /** 取前 n 项（值降序）；阈值以下的不提（避免「无脊椎动物 2%」这种噪声） */
 function top(list, n, floor) {
   return Object.entries(list || {})
@@ -155,7 +172,7 @@ function compose({ codes, traits, profile }) {
   }
 
   // ── 句 2：食性 + 取食层次 + 体重 ──
-  const diet = top(traits?.diet, 4, 10)
+  const diet = dietItems(traits)
   if (diet.length) {
     basedOn.push('elton')
     const vals = diet.map(([, v]) => Math.round(v))
@@ -166,7 +183,8 @@ function compose({ codes, traits, profile }) {
     } else if (diet.length === 1) {
       s2.push(`主食${names[0]}（${vals[0]}%）`)
     } else {
-      s2.push(`食性以${names[0]}为主（${vals[0]}%），也吃${joinZh(names.slice(1))}`)
+      // 「也吃」最多列 2 项，避免句子过长
+      s2.push(`食性以${names[0]}为主（${vals[0]}%），也吃${joinZh(names.slice(1, 3))}`)
     }
   }
   const forage = top(traits?.foraging, 2, 20)
@@ -190,6 +208,14 @@ function compose({ codes, traits, profile }) {
   if (s1.length) parts.push(`${head}${s1.join('，')}。`)
   else if (migr) parts.push(`${migr}。`)
   if (s2.length) parts.push(`${s2.join('，')}。`)
+
+  // 兜底：既无生境也无食性信息时，用「类群」开个头（否则只有一句干瘪的"体重约 X g"）
+  const hasHab = s1.length > 0
+  const hasFood = diet.length > 0 || forage.length > 0 || traits?.nocturnal === true
+  if (!hasHab && !hasFood && parts.length) {
+    const g = GROUP_ZH[profile?.group]
+    if (g) parts.unshift(`${g}。`)
+  }
 
   const zh = parts.join('')
   if (!zh) return null
@@ -230,7 +256,7 @@ function composeEn({ codes, traits, profile }) {
   }
   if (migr) s.unshift(`${migr}.`)
 
-  const diet = top(traits?.diet, 4, 10)
+  const diet = dietItems(traits)
   if (diet.length) {
     basedOn.push('elton')
     const vals = diet.map(([, v]) => Math.round(v))
@@ -240,7 +266,7 @@ function composeEn({ codes, traits, profile }) {
     } else if (diet.length === 1) {
       s.push(`Diet is almost entirely ${names[0]} (${vals[0]}%).`)
     } else {
-      s.push(`Diet is mainly ${names[0]} (${vals[0]}%), also ${joinEn(names.slice(1))}.`)
+      s.push(`Diet is mainly ${names[0]} (${vals[0]}%), also ${joinEn(names.slice(1, 3))}.`)
     }
   }
   const forage = top(traits?.foraging, 2, 20)
@@ -259,6 +285,13 @@ function composeEn({ codes, traits, profile }) {
   }
 
   if (!s.length) return null
+  // 兜底：既无生境也无食性信息时，用「类群」开个头（与中文同策略）
+  const hasHab = (profile?.habitatCodes || []).some((c) => codes?.codes?.[c]?.enShort) || traits?.systems?.length
+  const hasFood = diet.length > 0 || forage.length > 0 || traits?.nocturnal === true
+  if (!hasHab && !hasFood) {
+    const g = GROUP_EN[profile?.group]
+    if (g) s.unshift(`${g}.`)
+  }
   return { en: s.join(' '), basedOn: [...new Set(basedOn)] }
 }
 
