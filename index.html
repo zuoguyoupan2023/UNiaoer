@@ -5,10 +5,13 @@
     <!-- 品牌鸟图标（lucide Bird），与顶栏一致；R29 -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- 环境鸟鸣首发音（体积最小 0.1MB，R30）：HTML 解析即开始预取，进入应用后可最快出声。
+         as="fetch"：Chromium 的 preload 只认 image/script/style/track/font/fetch ——
+         `as="audio"` 会被判「unsupported as value」（规范允许但 Chromium 未实现），且预取被整条忽略；
+         这里要的只是「提前把文件拉进缓存」，fetch 语义即可命中（sw.js 按 URL 判定媒体、缓存键去 Range）。
          crossorigin：与播放路径同模式（CORS），否则浏览器会重复下载一份（见 docs/033） -->
     <link
       rel="preload"
-      as="audio"
+      as="fetch"
       type="audio/mpeg"
       href="https://whitenoise.earthtrip.online/sounds/animals/owl.mp3"
       crossorigin="anonymous"
