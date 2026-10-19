@@ -34,6 +34,8 @@ export interface MetaManifest {
   stats?: Record<string, unknown>
   /** S6：assets 最终分片清单（前端解析媒体分片用） */
   buckets?: string[]
+  /** 053-describe：性状详情层实际存在的桶（空/缺省 = 没有性状分片） */
+  traitsBuckets?: string[]
   /** S6：全量可玩口径（构建期烘焙） */
   universe?: {
     coreTotal?: number

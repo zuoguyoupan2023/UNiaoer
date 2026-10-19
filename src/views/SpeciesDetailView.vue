@@ -203,6 +203,8 @@ const liteLinks = computed(() => {
         class="facts-block"
         :profile="metaEntry?.profile ?? species.profile"
         :species-id="species.id"
+        :taxon-key="metaEntry?.taxonKey ?? species.taxonKey"
+        :name-sci="metaEntry?.nameSci ?? species.nameSci"
       />
 
       <!-- 季节性（021 M1）：出现月份直方图；无数据不显示 -->

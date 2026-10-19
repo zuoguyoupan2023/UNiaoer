@@ -5,9 +5,16 @@ import { Globe2 } from 'lucide-vue-next'
 import { speciesProfileText, type SpeciesProfile } from '@/core/bank'
 import { regionLabel } from '@/core/region'
 import { currentLocale } from '@/i18n'
+import SpeciesTraits from './SpeciesTraits.vue'
 
 const props = withDefaults(
-  defineProps<{ profile?: SpeciesProfile; speciesId?: string; compact?: boolean }>(),
+  defineProps<{
+    profile?: SpeciesProfile
+    speciesId?: string
+    taxonKey?: string
+    nameSci?: string
+    compact?: boolean
+  }>(),
   { compact: false },
 )
 const { t } = useI18n()
@@ -49,7 +56,11 @@ const hasAny = computed(
       migrationLabel.value ||
       text.value.habitat ||
       text.value.habit ||
-      dist.value?.count
+      dist.value?.count ||
+      props.profile?.habitatCodes?.length ||
+      props.profile?.hasTraits?.diet ||
+      props.profile?.hasTraits?.morph ||
+      props.profile?.hasTraits?.plumage
     ),
 )
 
@@ -125,6 +136,13 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
         </dd>
       </template>
     </dl>
+    <SpeciesTraits
+      :species-id="speciesId"
+      :taxon-key="taxonKey"
+      :name-sci="nameSci"
+      :profile="profile"
+      :compact="compact"
+    />
   </section>
 </template>
 

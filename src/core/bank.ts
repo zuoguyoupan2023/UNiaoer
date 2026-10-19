@@ -39,6 +39,14 @@ export interface SpeciesProfile {
   habitZh?: string
   habitEn?: string
   distribution?: SpeciesDistribution
+  /** 053-describe：IUCN 生境 code（最多 6 个，major 优先）；中文由前端查码表 */
+  habitatCodes?: string[]
+  /** 053-describe：详情层各维度是否有数据（只表示“可懒加载”，不表示已加载） */
+  hasTraits?: {
+    diet: boolean
+    morph: boolean
+    plumage: boolean
+  }
 }
 
 /** 生活型六分法取值（051 S2） */
@@ -131,7 +139,7 @@ function bucketNameFor(id: string): string {
   if (!buckets || !buckets.length) return ''
   const set = new Set(buckets)
   const s = String(id || '').toLowerCase()
-  for (let len = 8; len >= 1; len--) {
+  for (let len = 16; len >= 1; len--) {
     const p = len === 1 ? (/^[a-z]$/.test(s.charAt(0)) ? s.charAt(0) : '0-9') : s.slice(0, len) || '0-9'
     if (set.has(p)) return p
   }

@@ -114,7 +114,7 @@ export function splitLargeBuckets(buckets, maxBytes = BUCKET_SPLIT_THRESHOLD) {
   /** @param {Record<string,object>} entries @param {string} fallbackName @param {number} len */
   const recurse = (entries, fallbackName, len) => {
     const ids = Object.keys(entries)
-    if (JSON.stringify(entries).length <= maxBytes || ids.length <= 1 || len > 8) {
+    if (Buffer.byteLength(JSON.stringify(entries)) <= maxBytes || ids.length <= 1 || len > 16) {
       place(fallbackName, entries)
       return
     }
@@ -123,15 +123,16 @@ export function splitLargeBuckets(buckets, maxBytes = BUCKET_SPLIT_THRESHOLD) {
       const key = prefixBucketOf(id, len)
       ;(byPrefix[key] ??= {})[id] = entries[id]
     }
-    // 拆不动(前缀没变化)→ 落盘,避免死循环
+    // 当前前缀级没拆开(如 pte 下全是 pter…)→ 继续加长前缀，而不是直接落盘
     if (Object.keys(byPrefix).length <= 1) {
-      place(fallbackName, entries)
+      if (len < 16) recurse(entries, fallbackName, len + 1)
+      else place(fallbackName, entries)
       return
     }
     for (const [key, sub] of Object.entries(byPrefix)) recurse(sub, key, len + 1)
   }
   for (const [name, entries] of Object.entries(buckets)) {
-    if (name === '0-9' || JSON.stringify(entries).length <= maxBytes) {
+    if (name === '0-9' || Buffer.byteLength(JSON.stringify(entries)) <= maxBytes) {
       place(name, entries)
       continue
     }
@@ -147,7 +148,7 @@ export function splitLargeBuckets(buckets, maxBytes = BUCKET_SPLIT_THRESHOLD) {
 export function resolveBucket(id, knownBuckets) {
   const set = knownBuckets instanceof Set ? knownBuckets : new Set(knownBuckets || [])
   const s = String(id || '').toLowerCase()
-  for (let len = 8; len >= 1; len--) {
+  for (let len = 16; len >= 1; len--) {
     const p = prefixBucketOf(s, len)
     if (set.has(p)) return p
   }

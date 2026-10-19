@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -40,6 +40,7 @@ function copyPublicExceptMedia(): Plugin {
  */
 function emitBuildId(): Plugin {
   let dest = ''
+  let buildId = ''
   return {
     name: 'emit-build-id',
     apply: 'build',
@@ -48,8 +49,29 @@ function emitBuildId(): Plugin {
     },
     writeBundle() {
       mkdirSync(path.join(dest, 'data'), { recursive: true })
-      const payload = { buildId: new Date().toISOString(), version: process.env.npm_package_version ?? '' }
+      buildId = new Date().toISOString()
+      const payload = { buildId, version: process.env.npm_package_version ?? '' }
       writeFileSync(path.join(dest, 'data/build.json'), JSON.stringify(payload) + '\n')
+    },
+    /**
+     * 062 D0：给 dist/sw.js 末尾注入 buildId。
+     *
+     * 原因：sw.js 是 public 静态文件，不在 Vite 的 hash 产物里；如果每次部署内容不变，
+     * 浏览器不会安装新 SW → 不触发 activate → refreshBuildTag() 不跑 → cache-first 的
+     * data/assets/* 永远不刷新。注入 buildId 让 sw.js 字节每次都变，但**不改 VERSION**，
+     * 所以只清 runtime 缓存，不动媒体缓存。
+     */
+    closeBundle() {
+      if (!buildId) return
+      const sw = path.join(dest, 'sw.js')
+      try {
+        const text = readFileSync(sw, 'utf8')
+        if (!text.includes('// build:')) {
+          writeFileSync(sw, `${text.replace(/\s*$/, '')}\n// build:${buildId}\n`)
+        }
+      } catch {
+        /* 没有 sw.js（非标准构建）时忽略；check:dist-size 仍会跑 */
+      }
     },
   }
 }

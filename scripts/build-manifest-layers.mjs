@@ -184,6 +184,49 @@ function buildCatalog(poolEntries, idx) {
  * 写三层产物。返回统计(供 build-bank / CLI 打印)。
  * @param {{dataDir?:string, globalLedger?:string, quiet?:boolean}} opts
  */
+/** 读取可选的 build 期中间产物（缺失返回 null，不阻断旧链路）。 */
+async function readOptionalJson(file) {
+  try {
+    return JSON.parse(await fs.readFile(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 053-describe §11.2：把核心层性状注入表合并进 meta 的 `species[].profile`。
+ *
+ * 只放 code（habitatCodes）+ 有无标记（hasTraits），**不放中文串/数值**：
+ * 中文由前端查 `public/data/iucn-habitat-codes.json`，详情数值走 `public/data/traits/<桶>.json`。
+ * 以 taxonKey 为键；没有 taxonKey 的种跳过（不猜、不兜底）。
+ */
+function applyTraitCore(meta, traitCore) {
+  const map = traitCore?.byTaxonKey || {}
+  let merged = 0
+  let withTags = 0
+  let withDiet = 0
+  let withMorph = 0
+  let withPlumage = 0
+  for (const sp of meta.species || []) {
+    const entry = sp.taxonKey ? map[sp.taxonKey] : null
+    if (!entry) continue
+    const profile = { ...sp.profile }
+    if (Array.isArray(entry.habitatCodes) && entry.habitatCodes.length) {
+      profile.habitatCodes = entry.habitatCodes
+      withTags++
+    }
+    if (entry.hasTraits) {
+      profile.hasTraits = entry.hasTraits
+      if (entry.hasTraits.diet) withDiet++
+      if (entry.hasTraits.morph) withMorph++
+      if (entry.hasTraits.plumage) withPlumage++
+    }
+    sp.profile = profile
+    merged++
+  }
+  return { merged, withTags, withDiet, withMorph, withPlumage, total: Object.keys(map).length }
+}
+
 export async function writeManifestLayers(manifest, opts = {}) {
   const dataDir = opts.dataDir || path.join(ROOT, 'public/data')
   // 050 R1：台账已移入 data-cache/（不入库）；缺失时全球池保持现状不报错
@@ -200,6 +243,8 @@ export async function writeManifestLayers(manifest, opts = {}) {
     rawLedger = null // 无台账：分片仅覆盖 core（旧行为，不报错）
   }
   const idx = JSON.parse(await fs.readFile(path.join(dataDir, 'species-index.json'), 'utf8'))
+  const traitCore = opts.traitCore ?? (await readOptionalJson(path.join(ROOT, 'data-cache/trait-core.json')))
+  const traitIndex = await readOptionalJson(path.join(dataDir, 'traits/index.json'))
 
   // S6：assets 覆盖 core（5+5）+ 全球台账（1+1）的并集 →
   // 前端只需 meta（名单）+ assets（媒体）即可出题，不再 core+global 拼接。
@@ -263,6 +308,18 @@ export async function writeManifestLayers(manifest, opts = {}) {
     // S6：把 assets 最终分片清单挂到 meta —— 前端只用 meta（名单 + 分片索引）
     // + assets（媒体）即可解析全量物种的媒体。
     meta.buckets = bucketNames
+    if (traitIndex?.buckets) meta.traitsBuckets = Object.keys(traitIndex.buckets).sort()
+    if (traitCore) {
+      stats_note.traits = applyTraitCore(meta, traitCore)
+      if (!quiet) {
+        const tr = stats_note.traits
+        console.log(
+          `  性状核心层：合并 ${tr.merged}/${tr.total} 条（生境标签 ${tr.withTags} · 食性 ${tr.withDiet} · 形态 ${tr.withMorph} · 羽色 ${tr.withPlumage}）`,
+        )
+      }
+    } else if (!quiet) {
+      console.warn('⚠ 未找到 data-cache/trait-core.json —— 性状核心层跳过（先跑 npm run traits:layers）')
+    }
     // S6：全量可玩口径（不再区分 core/global；FAQ / 首页统计用）
     const withImg = meta.species.filter((s) => s.playableImage === true).length
     const withAud = meta.species.filter((s) => s.playableAudio === true).length
@@ -298,6 +355,7 @@ export async function writeManifestLayers(manifest, opts = {}) {
     bucketBytes,
     maxBucket,
     commonnessMerged: stats_note.commonness || 0,
+    traits: stats_note.traits || null,
     catalogBytes,
     catalogTotal,
     metaBytes,

@@ -137,9 +137,15 @@ if (!Array.isArray(meta.species) || !meta.species.length) {
         }
         if (!a.originalUrl) missOriginal++
         if (!a.sourceId) missSourceId++
+        // ND 素材（transcode:false）按许可不能转码/派生，url 允许直连源站；
+        // 只对“应该派生到 R2”的字段做检查，避免把合规直连误判成 remote 覆盖。
+        const nd = a.transcode === false
+        const ndHostOk = /^https:\/\/([a-z0-9-]+\.)*(inaturalist\.org|inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org|xeno-canto\.org|upload\.wikimedia\.org)\//i
         for (const field of ['url', 'thumbUrl', 'xlUrl', 'avifUrl']) {
           const u = a[field]
-          if (u && !isR2Url(u)) nonR2.push(`${id}.${kind}.${field}: ${u}`)
+          if (!u || isR2Url(u)) continue
+          if (nd && field === 'url' && ndHostOk.test(u)) continue
+          nonR2.push(`${id}.${kind}.${field}: ${u}`)
         }
         if (a.url && isR2Url(a.url)) sampleUrls.push(a.url)
       }

@@ -48,6 +48,8 @@ const args = parseArgs(process.argv.slice(2))
 const TAG_CAP = args['tag-cap'] ? Number(args['tag-cap']) : 6
 const OUT_CORE = path.resolve(ROOT, String(args['out-core'] || 'data-cache/trait-core.json'))
 const OUT_DIR = path.resolve(ROOT, String(args['out-dir'] || 'public/data/traits'))
+/** 前端查表用：把 data/ 下的码表复制到 public/data（构建期产物，提交物） */
+const PUBLIC_CODES = path.join(ROOT, 'public/data/iucn-habitat-codes.json')
 
 const readJson = async (p) => JSON.parse(await fs.readFile(p, 'utf8'))
 
@@ -70,6 +72,8 @@ async function main() {
   }
 
   const codeTable = await read('data/iucn-habitat-codes.json', true)
+  await fs.mkdir(path.dirname(PUBLIC_CODES), { recursive: true })
+  await fs.writeFile(PUBLIC_CODES, JSON.stringify(codeTable) + '\n')
   const iucn = await read('data/iucn-habitats.json', false)
   const avonet = await read('data/avonet-traits.json', false)
   const elton = await read('data/elton-traits.json', false)
@@ -192,6 +196,10 @@ async function main() {
 
   // ── 详情层分片
   await fs.mkdir(OUT_DIR, { recursive: true })
+  // 先清掉旧分片：避免桶方案变化后旧 xxx.json 仍被 Vite 拷进 dist（新旧并存）
+  for (const f of await fs.readdir(OUT_DIR).catch(() => [])) {
+    if (f.endsWith('.json')) await fs.rm(path.join(OUT_DIR, f), { force: true })
+  }
   // 桶 → 条目；单桶超过 SHARD_MAX_BYTES 就按「前两个字母」再切一层（p→pa/pb…）
   const SHARD_MAX_BYTES = 400_000 // 留足余量：目标 < 600 KB 实际文件
   const oneChar = {}

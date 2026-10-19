@@ -150,3 +150,77 @@ if (existsSync(coreFile)) {
   else console.log(`✅ 核心层：${Object.keys(core.byTaxonKey).length} 条 · 生境 code 上限 ${core.tagCap} 未被突破`)
 }
 
+
+// 062 C1/C3：核心层注入 + 前端码表 + 详情层分片的联动校验
+// - public/data/iucn-habitat-codes.json 必须存在，且与 data/ 源表 code 数一致
+// - manifest-meta 若已合并性状：每条的 habitatCodes 必须能在码表查到；覆盖数必须等于 trait-core.counts
+// - traitsBuckets 必须等于 public/data/traits/*.json（index 除外）
+{
+  const pubCodesFile = path.join(ROOT, 'public/data/iucn-habitat-codes.json')
+  const srcCodesFile = path.join(ROOT, 'data/iucn-habitat-codes.json')
+  if (!existsSync(pubCodesFile)) {
+    err('public/data/iucn-habitat-codes.json 不存在（先跑 npm run traits:layers）')
+  } else if (existsSync(srcCodesFile)) {
+    const pub = JSON.parse(readFileSync(pubCodesFile, 'utf8'))
+    const src = JSON.parse(readFileSync(srcCodesFile, 'utf8'))
+    const a = Object.keys(pub.codes || {}).length
+    const b = Object.keys(src.codes || {}).length
+    if (a !== b) err(`前端码表 ${a} 条 ≠ 源表 ${b} 条（重跑 npm run traits:layers）`)
+    else console.log(`✅ 前端码表：${a} 条，与 data/ 源表一致`)
+  }
+
+  const metaFile = path.join(ROOT, 'public/data/manifest-meta.json')
+  if (existsSync(metaFile) && existsSync(coreFile)) {
+    const meta = JSON.parse(readFileSync(metaFile, 'utf8'))
+    const core = JSON.parse(readFileSync(coreFile, 'utf8'))
+    const pub = existsSync(pubCodesFile)
+      ? JSON.parse(readFileSync(pubCodesFile, 'utf8')).codes || {}
+      : {}
+    let withTags = 0
+    let withHas = 0
+    const badCode = new Set()
+    for (const sp of meta.species || []) {
+      const p = sp.profile || {}
+      if (Array.isArray(p.habitatCodes) && p.habitatCodes.length) {
+        withTags++
+        for (const code of p.habitatCodes) if (!pub[code]) badCode.add(code)
+      }
+      if (p.hasTraits) withHas++
+    }
+    if (badCode.size) err(`核心层 ${badCode.size} 个 habitatCode 在码表查不到：${[...badCode].slice(0, 8).join(', ')}`)
+    if (!withTags) {
+      warn('manifest-meta 还没有 habitatCodes（C1 合并尚未在产物上生效；D1 重建后复核）')
+    } else {
+      // 正确口径：与 meta 的 taxonKey 求交集后再比，不能用全池 counts.habitat
+      // （meta 排除了 112 个无素材种；trait-core 里还有些种不在 meta）。
+      // 按 meta 物种逐条算期望（同一 taxonKey 可能对应多个别名种，不能只算唯一键）
+      const wantTags = (meta.species || []).filter((s) => {
+        const e = s.taxonKey ? core.byTaxonKey?.[s.taxonKey] : null
+        return !!e?.habitatCodes?.length
+      }).length
+      const wantHas = (meta.species || []).filter((s) => {
+        const e = s.taxonKey ? core.byTaxonKey?.[s.taxonKey] : null
+        return !!e?.hasTraits
+      }).length
+      if (withTags !== wantTags) {
+        err(`核心层 habitatCodes 覆盖 ${withTags} 种 ≠ 交集期望 ${wantTags} 种（合并丢数据）`)
+      }
+      if (withHas !== wantHas) {
+        err(`核心层 hasTraits 覆盖 ${withHas} 种 ≠ 交集期望 ${wantHas} 种（合并丢数据）`)
+      }
+      console.log(`✅ 核心层：${withTags} 种带 habitatCodes · ${withHas} 种带 hasTraits`)
+      const metaBuckets = [...(meta.traitsBuckets || [])].sort()
+      const actual = existsSync(path.join(ROOT, 'public/data/traits'))
+        ? (await import('node:fs')).readdirSync(path.join(ROOT, 'public/data/traits'))
+            .filter((f) => f.endsWith('.json') && f !== 'index.json')
+            .map((f) => f.slice(0, -5))
+            .sort()
+        : []
+      if (JSON.stringify(metaBuckets) !== JSON.stringify(actual)) {
+        err(`meta.traitsBuckets(${metaBuckets.length}) ≠ traits/*.json(${actual.length})——重跑 traits:layers/layers`)
+      } else {
+        console.log(`✅ traitsBuckets：${metaBuckets.length} 个分片，与 traits/*.json 一致`)
+      }
+    }
+  }
+}

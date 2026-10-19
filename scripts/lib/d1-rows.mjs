@@ -114,9 +114,10 @@ export function globalRow(s) {
  * 把核心 + 全球合并成目标行集合（core 优先）。
  * 返回：rows / coreCount / globalCount / withImg / withAud / duplicates。
  */
-export function buildD1Rows(coreDoc, globalDoc) {
+export function buildD1Rows(coreDoc, globalDoc, allowedIds = null) {
   const core = Array.isArray(coreDoc?.species) ? coreDoc.species : []
   const global = Array.isArray(globalDoc?.species) ? globalDoc.species : []
+  const allow = allowedIds instanceof Set ? allowedIds : null
   const seen = new Set()
   const rows = []
   let coreCount = 0
@@ -124,9 +125,11 @@ export function buildD1Rows(coreDoc, globalDoc) {
   let withImg = 0
   let withAud = 0
   const duplicates = []
+  let filteredOut = 0
 
   for (const s of core) {
     if (!s?.id) continue
+    if (allow && !allow.has(s.id)) { filteredOut++; continue }
     if (seen.has(s.id)) {
       duplicates.push(s.id)
       continue
@@ -140,6 +143,7 @@ export function buildD1Rows(coreDoc, globalDoc) {
   }
   for (const s of global) {
     if (!s?.id) continue
+    if (allow && !allow.has(s.id)) { filteredOut++; continue }
     if (seen.has(s.id)) {
       duplicates.push(s.id)
       continue
@@ -159,6 +163,7 @@ export function buildD1Rows(coreDoc, globalDoc) {
     withImg,
     withAud,
     duplicates,
+    filteredOut,
     coreGeneratedAt: coreDoc?.generatedAt || '',
     globalGeneratedAt: globalDoc?.generatedAt || '',
   }
