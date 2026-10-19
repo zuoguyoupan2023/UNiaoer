@@ -521,6 +521,8 @@ const en: typeof zhMessages = {
     },
     traits: {
       more: 'More / raw data',
+      textNote: 'auto-generated from public data, for reference only',
+      textFix: 'suggest a correction',
       habitat: 'Habitat detail',
       dietLabel: 'Diet',
       foragingLabel: 'Foraging stratum',
@@ -613,6 +615,8 @@ const en: typeof zhMessages = {
     generateDownload: 'Generate & download poster',
     includeResults: 'Poster includes this round’s results',
     includeResultsOn: 'The poster will show your score, accuracy and missed items; the QR code opens this round.',
+    includeQr: 'Poster includes a QR code',
+    includeQrOff: 'QR code off: for platforms that disallow them. The brand name is enlarged and the site domain is shown so people can find us.',
     includeResultsOff: 'The poster omits your score and missed items — only branding and a homepage QR code.',
     noticeTitle: 'The poster and share include this round’s details',
     noticeBody: 'It will show your score, each correct answer and the wrong options you picked. Uncheck “Poster includes this round’s results” if you would rather not publish them.',

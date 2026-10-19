@@ -100,6 +100,12 @@ export interface PosterOptions {
    * 只留品牌头/日期/称号徽章/页脚与二维码，**不出现任何本轮成绩信息**（2026-10-09 用户要求）。
    */
   includeResults?: boolean
+  /**
+   * 是否画二维码，默认 true。
+   * 用户可取消勾选「海报包含二维码」→ 生成**完全不含二维码**的图（部分平台会因二维码判定为
+   * 广告/导流而限流）；此时品牌名放大，并在二维码位置改画站点域名，方便他人自行搜索。
+   */
+  includeQr?: boolean
 }
 
 /** 官网地址（二维码默认指向；正式域名确定后替换） */
@@ -278,6 +284,17 @@ function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptio
   const x = W - QR_MARGIN - size
   const y = H - QR_MARGIN - size
 
+  // 用户取消勾选「包含二维码」→ 不画二维码、不画扫码提示；
+  // 改为在二维码位置画站点域名（非二维码），配合放大的品牌名，方便平台分享时被人搜到。
+  if (opts.includeQr === false) {
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillStyle = P.muted
+    ctx.font = `700 36px ${FONT}`
+    ctx.fillText('uniaoer.com', x + size / 2, y + size / 2 + 12)
+    return
+  }
+
   if (opts.qrImage) {
     ctx.drawImage(opts.qrImage, x, y, size, size)
   } else {
@@ -413,8 +430,10 @@ export function drawPoster(
   ctx.textBaseline = 'alphabetic'
 
   // 顶部标题（无 emoji、无“鸟语识别”）；昵称前缀 + 佩戴称号/徽章胶囊（R30–R33）
+  // 不含二维码的版本（平台分享）把品牌名放大，便于他人搜索。
   const dateLine = [data.nickname ? `@${data.nickname}` : '', data.date].filter(Boolean).join(' · ')
-  drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: 56 }], W / 2, 118, 'center', box)
+  const brandSize = opts.includeQr === false ? 88 : 56
+  drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: brandSize }], W / 2, 118, 'center', box)
   drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
   // 佩戴称号/徽章胶囊（R37 放大 + 图标）：无则不占位

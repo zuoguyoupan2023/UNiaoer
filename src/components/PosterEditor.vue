@@ -50,6 +50,8 @@ const isMobile = ref(false)
 // ---- 测试内容勾选（2026-10-09）----
 /** 「海报包含本组测试内容」默认勾选；取消勾选 → 海报不含成绩/错题，二维码也不指向成绩页 */
 const includeResults = ref(true)
+/** 「海报包含二维码」默认勾选；取消 → 生成**不含二维码**的图（部分平台会因二维码判定为导流而限流） */
+const includeQr = ref(true)
 /** 本次弹层会话内已确认过"分享含测试内容"提醒（避免反复生成时反复打扰） */
 const noticeAcked = ref(false)
 /** 提醒弹层可见 */
@@ -86,6 +88,7 @@ function options(): PosterOptions {
     // 含测试内容 → 指向本轮成绩页（生成时确保链接）；不含 → 回退官网，不漏任何本轮信息
     qrUrl: includeResults.value ? qrForRender.value : undefined,
     includeResults: includeResults.value,
+    includeQr: includeQr.value,
   }
 }
 
@@ -134,7 +137,7 @@ watch(
 )
 watch(
   // 这些变化都要重绘：二维码/测试内容勾选变化后，画布必须与实际导出一致
-  [themeId, bgImage, offset, () => props.qrUrl, includeResults, () => qrForRender.value],
+  [themeId, bgImage, offset, () => props.qrUrl, includeResults, includeQr, () => qrForRender.value],
   () => redraw(),
   { deep: true },
 )
@@ -395,6 +398,13 @@ function dropResults() {
                   : t('poster.includeResultsOff')
               }}
             </p>
+
+            <!-- 二维码可选（默认勾选）：取消 → 生成不含二维码的图，品牌名放大 + 显示域名 -->
+            <label class="inc-opt qr-opt">
+              <input v-model="includeQr" type="checkbox" />
+              <span>{{ t('poster.includeQr') }}</span>
+            </label>
+            <p v-if="!includeQr" class="inc-note">{{ t('poster.includeQrOff') }}</p>
 
             <button
               class="btn btn-primary"

@@ -246,3 +246,24 @@ describe('海报 · 是否包含测试内容（2026-10-09）', () => {
     expect(withoutR.texts.join('\n')).not.toContain(i18n.global.t('poster.canvas.allCorrect'))
   })
 })
+
+/**
+ * 064：二维码可选（默认勾选）。
+ * 取消勾选 → 生成完全不含二维码的图（部分平台会因二维码判定为导流而限流），
+ * 此时改为画站点域名，方便他人搜索。
+ */
+describe('海报 · 二维码可选（includeQr）', () => {
+  it('默认（includeQr 未传）→ 画扫码提示', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(canvas, posterData([]), { themeId: 'white' }, posterStrings())
+    expect(texts.join('\n')).toContain(posterStrings().scanCta)
+  })
+
+  it('includeQr:false → 不画扫码提示，改画站点域名', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(canvas, posterData([]), { themeId: 'white', includeQr: false }, posterStrings())
+    const joined = texts.join('\n')
+    expect(joined).not.toContain(posterStrings().scanCta)
+    expect(joined).toContain('uniaoer.com')
+  })
+})

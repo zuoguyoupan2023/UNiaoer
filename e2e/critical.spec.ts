@@ -51,8 +51,10 @@ test.describe('核心答题链路', () => {
     await page.getByRole('button', { name: '生成海报' }).click()
     const posterDialog = page.locator('.overlay .panel[role="dialog"]')
     await expect(posterDialog).toBeVisible()
-    const inc = posterDialog.locator('.inc-opt input')
+    const inc = posterDialog.locator('.inc-opt:not(.qr-opt) input')
     await expect(inc).toBeChecked() // 「海报包含本组测试内容」默认勾选
+    // 「海报包含二维码」同样默认勾选（064 后新增；取消 → 无二维码版，品牌名放大）
+    await expect(posterDialog.locator('.qr-opt input')).toBeChecked()
     await expect(posterDialog.locator('.inc-note')).toContainText('含本轮成绩')
     await page.keyboard.press('Escape')
     await expect(posterDialog).toBeHidden()
@@ -143,8 +145,8 @@ test.describe('核心答题链路', () => {
     await expect(viewer.locator('.share .items > li')).toHaveCount(ROUND_ITEMS)
     await expect(viewer.locator('.share .items > li img, .share .items > li audio').first()).toBeVisible()
     await expect(viewer.locator('.share .credits').first()).toContainText(/iNaturalist|Xeno-canto/)
-    // 分享页不该被收录
-    await expect(viewer.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+    // 分享页不该被收录（全局 index 规则之外的 noindex 条目；多条 robots 以最严格为准）
+    await expect(viewer.locator('#uniaoer-robots-noindex')).toHaveAttribute('content', 'noindex')
     await anon.close()
 
     // 撤回 → 同一链接 404

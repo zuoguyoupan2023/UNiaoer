@@ -589,6 +589,8 @@ export const messages = {
     },
     traits: {
       more: '更多 / 原始数据',
+      textNote: '描述由公开数据自动生成，仅供参考',
+      textFix: '欢迎纠错',
       habitat: '生境明细',
       dietLabel: '食性比例',
       foragingLabel: '取食层次',
@@ -681,6 +683,8 @@ export const messages = {
     generateDownload: '生成并下载海报',
     includeResults: '海报包含本组测试内容',
     includeResultsOn: '海报将包含本轮成绩、正确率与错题；二维码指向本轮成绩页。',
+    includeQr: '海报包含二维码',
+    includeQrOff: '已关闭二维码：适合部分不允许二维码的平台；品牌名会放大并显示站点域名，方便他人搜索。',
     includeResultsOff: '海报不含本轮成绩与错题，只保留品牌与二维码（指向官网）。',
     noticeTitle: '海报与分享会带上本轮具体信息',
     noticeBody: '将包含本轮的成绩、每道题的正确答以及你选错的那一项（错题）。若不想公开这些内容，可取消勾选「海报包含本组测试内容」。',

@@ -28,18 +28,94 @@
       name="keywords"
       content="UNiaoer,有鸟儿,幼鸟儿,友鸟儿,你个鸟人,鸟语识别,观鸟,鸟类识别,认鸟,看图认鸟,听音认鸟"
     />
+    <!-- 索引策略：公开页可索引（私有路由在 robots.txt 里 Disallow） -->
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
     <title>UNiaoer</title>
     <!-- R35：正式域名 uniaoer.com（已绑定 Pages） -->
     <link rel="canonical" href="https://uniaoer.com/" />
+
+    <!-- Open Graph（社交/IM 预览） -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="UNiaoer" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:url" content="https://uniaoer.com/" />
     <meta property="og:title" content="UNiaoer · 鸟语识别" />
     <meta
       property="og:description"
       content="用真实鸟类照片与鸟鸣，做看图认鸟 / 听音认鸟练习"
     />
+    <meta property="og:image" content="https://uniaoer.com/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="UNiaoer — 用真实鸟类照片与鸟鸣做识别练习" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="UNiaoer · 鸟语识别" />
+    <meta
+      name="twitter:description"
+      content="用真实鸟类照片与鸟鸣，做看图认鸟 / 听音认鸟练习"
+    />
+    <meta name="twitter:image" content="https://uniaoer.com/og-cover.png" />
+
+    <!-- GEO（面向生成式引擎）：结构化数据，便于搜索/LLM 直接引用事实 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://uniaoer.com/#website",
+            "url": "https://uniaoer.com/",
+            "name": "UNiaoer",
+            "alternateName": ["有鸟儿", "幼鸟儿", "友鸟儿", "鸟语识别"],
+            "description": "用真实鸟类照片与鸟鸣做看图认鸟 / 听音认鸟练习，并提供全球鸟类名录、分布与观鸟点浏览。",
+            "inLanguage": ["zh-CN", "en"],
+            "publisher": { "@id": "https://uniaoer.com/#org" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://uniaoer.com/#org",
+            "name": "UNiaoer",
+            "url": "https://uniaoer.com/",
+            "logo": "https://uniaoer.com/favicon.svg"
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://uniaoer.com/#app",
+            "name": "UNiaoer",
+            "url": "https://uniaoer.com/",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Any",
+            "browserRequirements": "需要 JavaScript；推荐现代浏览器",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
+            "description": "免费、开源的鸟类识别练习：看图认鸟 / 听音认鸟，5 个难度档位，11,026 种可玩物种，媒体逐条 CC 署名。",
+            "featureList": [
+              "看图认鸟（真实鸟类照片）",
+              "听音认鸟（真实鸟鸣）",
+              "全球鸟类名录（11,026 种）",
+              "省级常见度与附近观鸟点",
+              "成绩与错题仅存本地，无需注册"
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
+    <!-- 无 JS / 爬虫兜底：给搜索与 LLM 一段可引用的事实摘要 -->
+    <noscript>
+      <h1>UNiaoer · 鸟语识别</h1>
+      <p>
+        UNiaoer（uniaoer.com）是一个免费、开源的鸟类识别练习网站：用真实的鸟类照片与鸟鸣，做「看图认鸟 /
+        听音认鸟」，并提供全球鸟类名录、分布与观鸟点浏览。
+      </p>
+      <p>共 11,026 种可玩物种；媒体来自 iNaturalist 与 Xeno-canto，逐条 CC 署名；无需注册，成绩只存本地。</p>
+      <p>本站需要启用 JavaScript 才能做题。</p>
+    </noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

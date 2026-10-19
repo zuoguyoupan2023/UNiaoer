@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# 私有/无内容页（不进索引）
+Disallow: /admin
+Disallow: /result
+Disallow: /settings
+Disallow: /s/
+
+# 生成式引擎（GEO）：以下爬虫同样适用上面的 Allow 规则
+# GPTBot / OAI-SearchBot / ClaudeBot / PerplexityBot / Google-Extended
+
+Sitemap: https://uniaoer.com/sitemap.xml
