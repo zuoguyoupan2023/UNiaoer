@@ -4,18 +4,14 @@
     <meta charset="UTF-8" />
     <!-- 品牌鸟图标（lucide Bird），与顶栏一致；R29 -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- 环境鸟鸣首发音（体积最小 0.1MB，R30）：HTML 解析即开始预取，进入应用后可最快出声。
-         as="fetch"：Chromium 的 preload 只认 image/script/style/track/font/fetch ——
-         `as="audio"` 会被判「unsupported as value」（规范允许但 Chromium 未实现），且预取被整条忽略；
-         这里要的只是「提前把文件拉进缓存」，fetch 语义即可命中（sw.js 按 URL 判定媒体、缓存键去 Range）。
-         crossorigin：与播放路径同模式（CORS），否则浏览器会重复下载一份（见 docs/033） -->
-    <link
-      rel="preload"
-      as="fetch"
-      type="audio/mpeg"
-      href="https://whitenoise.earthtrip.online/sounds/animals/owl.mp3"
-      crossorigin="anonymous"
-    />
+    <!-- 环境鸟鸣首发音（R30）：**这里不放 <link preload>** ——
+         · `as="audio"`：Chromium 不支持该 as 值（只认 image/script/style/track/font/fetch），整条预取被忽略；
+         · `as="fetch"`：能预取，但该文件要等用户开启环境音才「用」，Chromium 会报
+           「preloaded but not used within a few seconds」；
+         · `rel="prefetch"`：不报 unused，但实测会多一次请求（prefetch 一份 + JS 预热一份）。
+         → 真正的预热由应用启动时完成：`src/App.vue` 会 `ambiencePlayer.start({ muted: true })`（R38 静音待命），
+           其中 `prewarmBirdTracks()` 用 `fetch(url, { priority: 'low' })` 预取全部音轨（含首发音）。
+           实测去掉本条 link 后：owl.mp3 仍被预取 1 次、控制台 0 警告。详见 docs/033（CORS 模式）。 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- 050 O1：权威名录层（manifest-meta.json，10,844 种 × 全字段、不含媒体，约 3.8MB）
          提前发起请求，省掉「HTML 下载 → JS 解析 → fetch」的一个完整 RTT（移动端 100–400ms）。
