@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
  * 029 M1:manifest 分层产物构建(独立命令)——由完整 manifest 派生三层产物:
- *   public/data/manifest-core.json        启动层(名录 + 首图首音;前端 loadBank 只取这份)
+ *   public/data/manifest-meta.json        权威名录层(唯一名单源)
  *   public/data/assets/<bucket>.json      详情层分片(完整素材 + notes/profile;按 id 前两位,大桶自动拆)
- *   public/data/manifest-global.min.json  全球池(核心同构,懒加载)
+ *   public/data/catalog.json              全量目录
  *
- * 完整层 public/data/manifest.json 仍是构建真源(不修改);本脚本可反复运行(幂等)。
+ * 真源：data-cache/manifest-core-full.json（过渡期兼容 public/data/manifest.json 回退）；本脚本可反复运行(幂等)。
  * 采集收尾(build-bank)也会调用同一实现,保证产物始终与 manifest 同步。
  *
  * 用法:
- *   npm run layers                 # 由 public/data/manifest.json 产三层
+ *   npm run layers                 # 由 data-cache/manifest-core-full.json 产三层
  *   npm run check:layers           # 校验三层与完整层一致(见 scripts/check-manifest-layers.mjs)
  */
 import fs from 'node:fs/promises'

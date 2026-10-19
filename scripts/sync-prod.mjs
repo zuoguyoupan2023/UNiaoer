@@ -7,8 +7,8 @@
  *     └─ D1 species/media/meta     派生读模型 —— B5 动态出题读它
  *
  * 流程（失败即停，不吞错）：
- *   1) 刷新分层产物（core / assets 分片 / global.min，由 manifest + 采集台账派生）
- *   2) 上传 R2：manifest.json / manifest-core.json / manifest-global.min.json（带 --remote）
+ *   1) 刷新分层产物（manifest-meta / assets 分片 / catalog，由核心完整层 + 全球台账派生）
+ *   2) 上传 R2：manifest-meta.json / species-distribution.json / province-commonness*（带 --remote）
  *   3) 生成 D1 seed（scripts/gen-d1-seed.mjs）
  *   4) D1 远端：先 schema.sql（重建派生读模型）再分块执行 seed（进度打印）
  *   5) check:sync 三源一致性校验（漂移即非零退出）
@@ -110,7 +110,7 @@ if (!SKIP_R2) {
 }
 
 // ─────────────────────────────────────────────
-step('3/5 生成 D1 seed（核心 5+5 + 全球 1+1）')
+step('3/5 生成 D1 seed（核心 1,299 + 全球 9,839，首图首音内联）')
 // ─────────────────────────────────────────────
 if (!DRY) {
   await execFileP('node', ['scripts/gen-d1-seed.mjs'], { cwd: ROOT, stdio: 'inherit' }).catch((e) => {
