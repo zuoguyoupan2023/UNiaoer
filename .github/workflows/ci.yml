@@ -44,6 +44,10 @@ jobs:
       - name: Check manifest layers
         run: npm run check:layers
 
+      # 064：结构化性状 + 叙述文本（数字必须能回溯到结构化事实）。分片由 build 生成，故排在其后。
+      - name: Check traits (structured + narrative)
+        run: npm run check:traits
+
       # 041 A1：/catalog 名录产物结构/计数/manifest/骨架/拼音键校验（纯本地）
       - name: Check catalog
         run: npm run check:catalog
