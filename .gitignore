@@ -76,6 +76,9 @@ blob-report/
 # 文档备份(本地思考记录,不入库;AGENTS.md 曾误以为已被忽略)
 /store/
 
+# 本地实验区（模型脚本 / 中间产物 / 对照图；只在本地，不入开源仓库）
+/experiments/
+
 # BirdNET 端上识鸟实验区:权重/venv/中间产物不入库,只留代码与结论报告
 /experiments/birdid/cache/
 /experiments/birdid/venv/

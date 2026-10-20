@@ -15,11 +15,18 @@ const props = defineProps<{
   /** select=点击发射 select 交由父级展示；browse=自带预览（缩略图放大 / 内联试听） */
   mode?: 'select' | 'browse'
   label?: string
+  /**
+   * 默认展开“更多素材”。
+   * 物种详情页设为 true：此前默认折叠，用户看到页面只有 1 张主图、没有任何音频播放器，
+   * 会误以为“这个物种没有素材”（2026-10-20 牛头伯劳/红尾伯劳实测）。
+   * 题库/结果页仍保持折叠，避免挤压答题界面。
+   */
+  defaultOpen?: boolean
 }>()
 
 const emit = defineEmits<{ select: [MediaAsset] }>()
 
-const open = ref(false)
+const open = ref(props.defaultOpen === true)
 const zoom = ref<MediaAsset | null>(null)
 
 /**

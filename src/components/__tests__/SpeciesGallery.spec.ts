@@ -80,6 +80,20 @@ describe('SpeciesGallery', () => {
     expect(w.findAll('.sg-audio')).toHaveLength(1)
   })
 
+  it('defaultOpen：物种详情页默认展开，避免误以为没有音频', () => {
+    const w = mount(SpeciesGallery, {
+      props: {
+        images: [asset('i0', 'image'), asset('i1', 'image')],
+        audios: [asset('a0', 'audio')],
+        mode: 'browse',
+        defaultOpen: true,
+      },
+    })
+    expect(w.find('.sg-toggle').attributes('aria-expanded')).toBe('true')
+    expect(w.findAll('.sg-thumb')).toHaveLength(2)
+    expect(w.findAll('.sg-audio-row')).toHaveLength(1)
+  })
+
   it('browse 模式（无 activeUrl）不过滤：结果页仍照旧全列', async () => {
     const w = mount(SpeciesGallery, {
       props: { images: [asset('i0', 'image')], audios: [asset('a0', 'audio')], mode: 'browse' },

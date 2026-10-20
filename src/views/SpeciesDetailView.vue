@@ -222,6 +222,7 @@ const liteLinks = computed(() => {
         :images="images"
         :audios="audios"
         mode="browse"
+        default-open
         :label="t('gallery.title')"
       />
 
