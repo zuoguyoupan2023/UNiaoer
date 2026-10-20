@@ -1231,8 +1231,8 @@ async function handleSharePage(request: Request, env: Env, id: string): Promise<
 
 // ---------- 028 公开统计看板（/api/stats/public）----------
 
-/** 公开看板缓存 TTL：1 小时（用户 2026-10-09 要求"压力不大就一小时一次"） */
-const PUBLIC_STATS_TTL = 3600
+/** 公开看板聚合缓存 TTL：5 分钟（用户 2026-10-20 反馈"两小时还是旧数据"后收紧；见 docs/066 §7） */
+const PUBLIC_STATS_TTL = 300
 /** 看板使用的 Cache API key（与 /api/questions 的缓存桶分开，避免规则互相干扰） */
 const PUBLIC_STATS_CACHE = 'uniaoer-api-stats'
 
@@ -1244,19 +1244,26 @@ const PUBLIC_STATS_CACHE = 'uniaoer-api-stats'
  *   · 不公开：精确 IP、单次会话明细、分享者的个人数据、任何可关联个人的键。
  *   · 独立访客是"按日哈希去重"的数字（跨日不可关联），非精确人数（口径见 schema.sql）。
  *
- * 新鲜度：边缘缓存 1 小时（命中打 `x-stats-cache: HIT`），回源时按需聚合。
+ * 新鲜度：Worker 侧 Cache API 聚合缓存 5 分钟；响应 `cache-control: no-store`，
+ * 不让浏览器或边缘缓存留存旧快照（2026-10-20 事故：CF 边缘按 4 小时缓存了该端点，
+ * 页面两小时还是 20:41 的数据）。
+ * 前端请求 `/api/stats/public/<5分钟分桶>`，桶号只用于绕过可能存在的边缘缓存，
+ * **不进 Worker 缓存键**（键固定为 `?days=N`），因此 D1 聚合仍最多 5 分钟一次。
  * 回源成本：≤3 次小查询（聚合扫描 metrics_daily 近窗口 + 两个 DISTRIBUTION 分组），
  * 全部走主键/小表；日写入仅几十行，压力可忽略。
  */
 async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
   const days = clampInt(url.searchParams.get('days'), 7, 90, 30)
   const cache = await caches.open(PUBLIC_STATS_CACHE)
+  // 键固定：忽略前端的分桶尾巴（`/api/stats/public/<bucket>`）
   const cacheKey = new Request(`${url.origin}/api/stats/public?days=${days}`, { method: 'GET' })
   const hit = await cache.match(cacheKey)
   if (hit) {
     const cachedAt = Number(hit.headers.get('x-stats-cached-at') || 0)
     if (cachedAt > 0 && (Date.now() - cachedAt) / 1000 < PUBLIC_STATS_TTL) {
       const res = new Response(hit.body, hit)
+      // 命中时也必须 no-store：否则边缘/浏览器又会把这份快照存上几小时
+      res.headers.set('cache-control', 'no-store')
       res.headers.set('x-stats-cache', 'HIT')
       return res
     }
@@ -1317,12 +1324,16 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
     }
     const res = json(out, {
       headers: {
-        'cache-control': `public, max-age=${PUBLIC_STATS_TTL}`,
+        // 不缓存：边缘/浏览器都不留旧快照；聚合结果由 Worker Cache API 兜 5 分钟
+        'cache-control': 'no-store',
         'x-stats-cache': 'MISS',
         'x-stats-cached-at': String(Date.now()),
       },
     })
-    ctx.waitUntil(cache.put(cacheKey, res.clone()))
+    // Cache API 会按响应头决定是否可存：副本改成可缓存，对外仍然是 no-store
+    const cacheable = res.clone()
+    cacheable.headers.set('cache-control', `public, max-age=${PUBLIC_STATS_TTL}`)
+    ctx.waitUntil(cache.put(cacheKey, cacheable))
     return res
   } catch {
     // 只读聚合失败（如首次部署表尚未生效）：返回可用形状的空结构，不 5xx
@@ -1486,7 +1497,9 @@ export default {
         // 028 匿名计量：按日聚合读取（管理）
         if (path === '/api/metrics/summary') return await handleMetricsSummary(request, env, url)
         // 028 公开统计看板（无需密钥；边缘缓存 1 小时）
-        if (path === '/api/stats/public') return await handlePublicStats(env, ctx, url)
+        // 接受 `/api/stats/public` 与 `/api/stats/public/<分桶>`：分桶只用于绕开边缘缓存
+        if (path === '/api/stats/public' || path.startsWith('/api/stats/public/'))
+          return await handlePublicStats(env, ctx, url)
         // 029 M3:质量隔离台账（管理端读取,供 /admin 展示与导出脚本拉取）
         if (path === '/api/quarantine') {
           if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })

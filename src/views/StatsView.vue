@@ -19,14 +19,25 @@ const { t } = useI18n()
 
 const stats = ref<PublicStats | null>(null)
 const loading = ref(true)
+const refreshing = ref(false)
 const unavailable = ref(false)
 
-onMounted(async () => {
+async function load() {
   const s = await fetchPublicStats(30)
   stats.value = s
   unavailable.value = !s
   loading.value = false
-})
+  refreshing.value = false
+}
+
+/** 手动刷新：数据最多 5 分钟旧（Worker 聚合缓存），不必等页面重进 */
+async function reload() {
+  if (refreshing.value) return
+  refreshing.value = true
+  await load()
+}
+
+onMounted(load)
 
 type CardKey = 'uniqueVisitors' | 'sessions' | 'rounds' | 'pageViews' | 'posters' | 'reports'
 const cards = computed<{ key: CardKey; event: string; note?: boolean }[]>(() => [
@@ -91,6 +102,9 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
     <template v-else>
       <p class="muted small meta">
         {{ t('stats.generatedAt', { at: dateText }) }} · {{ t('stats.cachedHint') }}
+        <button class="link refresh" type="button" :disabled="refreshing" @click="reload">
+          {{ refreshing ? t('stats.refreshing') : t('stats.refresh') }}
+        </button>
       </p>
 
       <!-- 数字卡：访客 / 会话 / 轮次 / 答题数 / 浏览 / 海报 / 反馈 -->
@@ -153,6 +167,21 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
 }
 .meta {
   margin-top: 10px;
+}
+.meta .refresh {
+  margin-left: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--primary, #2563eb);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.meta .refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .sec {
   display: flex;
