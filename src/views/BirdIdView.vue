@@ -79,8 +79,6 @@ const inputs = reactive<{ audio: AudioInput | null; image: ImageInput | null }>(
 
 /** 两路结果各自独立并存，互不影响 */
 const runs = reactive<Record<Modality, Presented | null>>({ audio: null, image: null })
-/** 候选中被选中对比的那一个（默认 top-1） */
-const picked = reactive<Record<Modality, number>>({ audio: 0, image: 0 })
 const mediaById = ref<Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }>>({})
 
 /** 素材切换：每个候选默认用第一张图 / 第一段音，点小图/小按钮可换 */
@@ -111,34 +109,54 @@ const busy = computed(
   () => phase.value === 'decoding' || phase.value === 'loading-model' || phase.value === 'thinking',
 )
 const dlPct = computed(() => (dl.total ? Math.round((dl.received / dl.total) * 100) : 0))
+/** 下载提示按模态说清楚是哪个模型 */
+const dlKey = computed(() => `birdId.model.downloading.${activeMod.value ?? 'audio'}`)
 const modelKinds = computed<Modality[]>(() => (ENABLE_IMAGE ? ['audio', 'image'] : ['audio']))
 
-/** 当前选中用于对比的候选 */
-function sel(m: Modality): Candidate | null {
-  const r = runs[m]
-  if (!r?.shown.length) return null
-  return r.shown[Math.min(picked[m], r.shown.length - 1)] ?? null
-}
-const selAudio = computed(() => sel('audio'))
-const selImage = computed(() => sel('image'))
-const selAudioId = computed(() => selAudio.value?.speciesId ?? '')
-const selImageId = computed(() => selImage.value?.speciesId ?? '')
+/** 参与并排对比的候选下标（最多两个：A / B），按候选排序稳定展示 */
+const picks = reactive<Record<Modality, number[]>>({ audio: [0, 1], image: [0, 1] })
+/** 只用来画 A/B 角标 */
+const SLOTS = ['A', 'B'] as const
 
-/** 选中候选的全部素材（可能还没加载完） */
-const audioClips = computed<MediaAsset[]>(() =>
-  selAudioId.value ? mediaById.value[selAudioId.value]?.audios ?? [] : [],
-)
-const imageShots = computed<MediaAsset[]>(() =>
-  selImageId.value ? mediaById.value[selImageId.value]?.images ?? [] : [],
-)
-const audioMatch = computed<MediaAsset | null>(
-  () => audioClips.value[heroIdx(selAudioId.value, 'audio')] ?? null,
-)
-const imageMatch = computed<MediaAsset | null>(
-  () => imageShots.value[heroIdx(selImageId.value, 'img')] ?? null,
-)
-const audioLoading = computed(() => !!selAudioId.value && mediaLoading.value.has(selAudioId.value))
-const imageLoading = computed(() => !!selImageId.value && mediaLoading.value.has(selImageId.value))
+function compareCands(m: Modality): Candidate[] {
+  const r = runs[m]
+  if (!r?.shown.length) return []
+  const idx = picks[m]
+    .filter((i) => i >= 0 && i < r.shown.length)
+    .sort((a, b) => a - b)
+  return (idx.length ? idx : [0]).map((i) => r.shown[i]!).filter(Boolean)
+}
+const cmpAudio = computed(() => compareCands('audio'))
+const cmpImage = computed(() => compareCands('image'))
+
+/** 点候选：加入/移出对比。已满两个时挤掉最早的那个 */
+function togglePick(m: Modality, i: number) {
+  const list = picks[m]
+  const at = list.indexOf(i)
+  if (at >= 0) {
+    if (list.length > 1) list.splice(at, 1)
+    return
+  }
+  if (list.length >= 2) list.shift()
+  list.push(i)
+}
+const slotOf = (m: Modality, i: number) => {
+  const at = picks[m].indexOf(i)
+  return at >= 0 && picks[m].length > 1 ? SLOTS[at] : ''
+}
+
+/** 某个候选的全部素材（可能还没加载完） */
+function candAudios(c: Candidate): MediaAsset[] {
+  return c.speciesId ? mediaById.value[c.speciesId]?.audios ?? [] : []
+}
+function candImages(c: Candidate): MediaAsset[] {
+  return c.speciesId ? mediaById.value[c.speciesId]?.images ?? [] : []
+}
+const candAudio = (c: Candidate) =>
+  c.speciesId ? candAudios(c)[heroIdx(c.speciesId, 'audio')] ?? null : null
+const candImage = (c: Candidate) =>
+  c.speciesId ? candImages(c)[heroIdx(c.speciesId, 'img')] ?? null : null
+const candLoading = (c: Candidate) => !!c.speciesId && mediaLoading.value.has(c.speciesId)
 
 /** 展示名：优先项目里的本地化名（中/英），回退标签里的中文名 → 标签英文名 */
 function nameOf(c: Candidate | null): string {
@@ -243,7 +261,7 @@ async function handleAudio(blob: Blob) {
   errMsg.value = ''
   errMod.value = null
   runs.audio = null
-  picked.audio = 0
+  picks.audio = [0, 1]
   clearInput('audio')
   inputs.audio = { url: URL.createObjectURL(blob), samples: null }
   try {
@@ -280,7 +298,7 @@ async function handleImage(blob: Blob) {
   errMsg.value = ''
   errMod.value = null
   runs.image = null
-  picked.image = 0
+  picks.image = [0, 1]
   clearInput('image')
   inputs.image = { url: URL.createObjectURL(blob) }
   try {
@@ -312,7 +330,7 @@ function reset(kind?: Modality) {
   for (const k of kinds) {
     clearInput(k)
     runs[k] = null
-    picked[k] = 0
+    picks[k] = [0, 1]
     if (errMod.value === k) {
       errMsg.value = ''
       errMod.value = null
@@ -443,8 +461,8 @@ function onCountryChange() {
           </template>
         </p>
 
-        <!-- 原始录音 + 该种叫声：波形并排对比 -->
-        <div class="pair">
+        <!-- 原始录音 + 最多两个候选：波形并排对比 -->
+        <div class="pair" :class="{ two: cmpAudio.length < 2 }">
           <div class="side">
             <h3>{{ t('birdId.yourAudio') }}</h3>
             <AudioWave
@@ -453,31 +471,58 @@ function onCountryChange() {
               :label="t('birdId.waveYours')"
             />
           </div>
-          <div v-if="runs.audio" class="side">
-            <h3>{{ t('birdId.matchAudio', { name: nameOf(selAudio) }) }}</h3>
-            <template v-if="audioMatch">
-              <AudioWave :src="audioMatch.url" :label="t('birdId.waveMatch')" />
-              <div v-if="audioClips.length > 1" class="clips">
+          <div v-for="(c, k) in cmpAudio" :key="c.label" class="side">
+            <h3>
+              <span v-if="cmpAudio.length > 1" class="slot">{{ SLOTS[k] }}</span>
+              {{ t('birdId.matchAudio', { name: nameOf(c) }) }}
+            </h3>
+            <template v-if="candAudio(c)">
+              <AudioWave :src="candAudio(c)!.url" :label="t('birdId.waveMatch')" />
+              <div v-if="candAudios(c).length > 1" class="clips">
                 <button
-                  v-for="(clip, k) in audioClips"
+                  v-for="(clip, j) in candAudios(c)"
                   :key="clip.url"
                   type="button"
                   class="clip"
-                  :class="{ on: k === heroIdx(selAudioId, 'audio') }"
-                  :aria-pressed="k === heroIdx(selAudioId, 'audio')"
-                  @click="setHero(selAudioId, 'audio', k)"
+                  :class="{ on: j === heroIdx(c.speciesId!, 'audio') }"
+                  :aria-pressed="j === heroIdx(c.speciesId!, 'audio')"
+                  @click="setHero(c.speciesId!, 'audio', j)"
                 >
-                  {{ k + 1 }}
+                  {{ j + 1 }}
                 </button>
               </div>
-              <AttributionLine :media="audioMatch" />
+              <AttributionLine :media="candAudio(c)!" />
             </template>
-            <p v-else-if="audioLoading" class="spinWrap"><Loader2 :size="16" class="spin" /></p>
+            <p v-else-if="candLoading(c)" class="spinWrap"><Loader2 :size="16" class="spin" /></p>
             <p v-else class="noAsset">{{ t('birdId.noSpeciesAudio') }}</p>
+            <p v-if="c.entry?.t === 4" class="cNote">
+              {{ t('birdId.genusOnly', { genus: c.entry.g }) }}
+            </p>
+            <!-- 只有名录明确说「没有素材」时才这么讲（p===false）；speciesId 缺失不再作为判据——
+                 产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
+            <p v-else-if="c.entry && c.entry.p === false" class="cNote">
+              {{ t('birdId.noMedia') }}
+            </p>
+            <div
+              v-if="profileOf(c.speciesId).habitat || profileOf(c.speciesId).habit"
+              class="facts"
+            >
+              <p v-if="profileOf(c.speciesId).habitat">
+                <span class="fKey">{{ t('birdId.factHabitat') }}</span
+                >{{ profileOf(c.speciesId).habitat }}
+              </p>
+              <p v-if="profileOf(c.speciesId).habit">
+                <span class="fKey">{{ t('birdId.factHabit') }}</span
+                >{{ profileOf(c.speciesId).habit }}
+              </p>
+            </div>
+            <button v-if="c.speciesId" class="link" @click="router.push(`/species/${c.speciesId}`)">
+              {{ t('birdId.viewSpecies') }}
+            </button>
           </div>
         </div>
 
-        <!-- 候选：点一下换对比对象 -->
+        <!-- 候选：点一下加入/移出对比（最多两个） -->
         <template v-if="runs.audio">
           <h3 class="candHead">{{ t('birdId.candidates') }}</h3>
           <div class="cands">
@@ -486,50 +531,21 @@ function onCountryChange() {
               :key="c.label"
               type="button"
               class="cand"
-              :class="{ on: i === picked.audio }"
-              :aria-pressed="i === picked.audio"
-              @click="picked.audio = i"
+              :class="{ on: picks.audio.includes(i) }"
+              :aria-pressed="picks.audio.includes(i)"
+              @click="togglePick('audio', i)"
             >
-              <span class="cName">{{ nameOf(c) }}</span>
+              <span class="candTop">
+                <span v-if="slotOf('audio', i)" class="slot sm">{{ slotOf('audio', i) }}</span>
+                <span class="cName">{{ nameOf(c) }}</span>
+                <span v-if="c.regionTier" class="cTier">{{
+                  t(`birdId.region.tier.${c.regionTier}`)
+                }}</span>
+              </span>
               <span class="cSci">{{ c.label }}</span>
-              <span v-if="c.regionTier" class="cTier">{{
-                t(`birdId.region.tier.${c.regionTier}`)
-              }}</span>
             </button>
           </div>
-
-          <div v-if="selAudio" class="candFoot">
-            <p v-if="selAudio.entry?.t === 4" class="cNote">
-              {{ t('birdId.genusOnly', { genus: selAudio.entry.g }) }}
-            </p>
-            <!-- 只有名录明确说「没有素材」时才这么讲（p===false）；speciesId 缺失不再作为判据——
-                 产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
-            <p v-else-if="selAudio.entry && selAudio.entry.p === false" class="cNote">
-              {{ t('birdId.noMedia') }}
-            </p>
-            <div
-              v-if="
-                profileOf(selAudio.speciesId).habitat || profileOf(selAudio.speciesId).habit
-              "
-              class="facts"
-            >
-              <p v-if="profileOf(selAudio.speciesId).habitat">
-                <span class="fKey">{{ t('birdId.factHabitat') }}</span
-                >{{ profileOf(selAudio.speciesId).habitat }}
-              </p>
-              <p v-if="profileOf(selAudio.speciesId).habit">
-                <span class="fKey">{{ t('birdId.factHabit') }}</span
-                >{{ profileOf(selAudio.speciesId).habit }}
-              </p>
-            </div>
-            <button
-              v-if="selAudio.speciesId"
-              class="link"
-              @click="router.push(`/species/${selAudio.speciesId}`)"
-            >
-              {{ t('birdId.viewSpecies') }}
-            </button>
-          </div>
+          <p class="candHint">{{ t('birdId.compareHint') }}</p>
         </template>
       </template>
 
@@ -540,7 +556,7 @@ function onCountryChange() {
       </div>
       <div v-if="activeMod === 'audio' && phase === 'loading-model'" class="status">
         <Loader2 :size="16" class="spin" />
-        <span>{{ t('birdId.model.downloading', { pct: dlPct }) }}</span>
+        <span>{{ t(dlKey, { pct: dlPct }) }}</span>
         <div class="bar"><i :style="{ width: dlPct + '%' }" /></div>
       </div>
       <div v-if="activeMod === 'audio' && (phase === 'decoding' || phase === 'thinking')" class="status">
@@ -574,38 +590,50 @@ function onCountryChange() {
           </template>
         </p>
 
-        <!-- 原始照片 + 该种照片：并排对比 -->
-        <div class="pair">
+        <!-- 原始照片 + 最多两个候选：并排对比 -->
+        <div class="pair" :class="{ two: cmpImage.length < 2 }">
           <div class="side">
             <h3>{{ t('birdId.yourImage') }}</h3>
             <img class="shot" :src="inputs.image.url" :alt="t('birdId.yourImage')" />
           </div>
-          <div v-if="runs.image" class="side">
-            <h3>{{ t('birdId.matchImage', { name: nameOf(selImage) }) }}</h3>
-            <template v-if="imageMatch">
+          <div v-for="(c, k) in cmpImage" :key="c.label" class="side">
+            <h3>
+              <span v-if="cmpImage.length > 1" class="slot">{{ SLOTS[k] }}</span>
+              {{ t('birdId.matchImage', { name: nameOf(c) }) }}
+            </h3>
+            <template v-if="candImage(c)">
               <img
                 class="shot"
-                :src="imageMatch.url"
-                :alt="nameOf(selImage)"
-                @click="origin = imageMatch"
+                :src="candImage(c)!.url"
+                :alt="nameOf(c)"
+                @click="origin = candImage(c)"
               />
-              <div v-if="imageShots.length > 1" class="thumbs">
+              <div v-if="candImages(c).length > 1" class="thumbs">
                 <button
-                  v-for="(shot, k) in imageShots"
+                  v-for="(shot, j) in candImages(c)"
                   :key="shot.url"
                   type="button"
                   class="thumb"
-                  :class="{ on: k === heroIdx(selImageId, 'img') }"
-                  :aria-pressed="k === heroIdx(selImageId, 'img')"
-                  @click="setHero(selImageId, 'img', k)"
+                  :class="{ on: j === heroIdx(c.speciesId!, 'img') }"
+                  :aria-pressed="j === heroIdx(c.speciesId!, 'img')"
+                  @click="setHero(c.speciesId!, 'img', j)"
                 >
                   <img :src="shot.thumbUrl || shot.url" alt="" loading="lazy" />
                 </button>
               </div>
-              <AttributionLine :media="imageMatch" />
+              <AttributionLine :media="candImage(c)!" />
             </template>
-            <p v-else-if="imageLoading" class="spinWrap"><Loader2 :size="16" class="spin" /></p>
+            <p v-else-if="candLoading(c)" class="spinWrap"><Loader2 :size="16" class="spin" /></p>
             <p v-else class="noAsset">{{ t('birdId.noSpeciesImage') }}</p>
+            <p v-if="c.entry?.t === 4" class="cNote">
+              {{ t('birdId.genusOnly', { genus: c.entry.g }) }}
+            </p>
+            <p v-else-if="c.entry && c.entry.p === false" class="cNote">
+              {{ t('birdId.noMedia') }}
+            </p>
+            <button v-if="c.speciesId" class="link" @click="router.push(`/species/${c.speciesId}`)">
+              {{ t('birdId.viewSpecies') }}
+            </button>
           </div>
         </div>
 
@@ -617,39 +645,27 @@ function onCountryChange() {
               :key="c.label"
               type="button"
               class="cand"
-              :class="{ on: i === picked.image }"
-              :aria-pressed="i === picked.image"
-              @click="picked.image = i"
+              :class="{ on: picks.image.includes(i) }"
+              :aria-pressed="picks.image.includes(i)"
+              @click="togglePick('image', i)"
             >
-              <span class="cName">{{ nameOf(c) }}</span>
+              <span class="candTop">
+                <span v-if="slotOf('image', i)" class="slot sm">{{ slotOf('image', i) }}</span>
+                <span class="cName">{{ nameOf(c) }}</span>
+                <span v-if="c.regionTier" class="cTier">{{
+                  t(`birdId.region.tier.${c.regionTier}`)
+                }}</span>
+              </span>
               <span class="cSci">{{ c.label }}</span>
-              <span v-if="c.regionTier" class="cTier">{{
-                t(`birdId.region.tier.${c.regionTier}`)
-              }}</span>
             </button>
           </div>
-
-          <div v-if="selImage" class="candFoot">
-            <p v-if="selImage.entry?.t === 4" class="cNote">
-              {{ t('birdId.genusOnly', { genus: selImage.entry.g }) }}
-            </p>
-            <p v-else-if="selImage.entry && selImage.entry.p === false" class="cNote">
-              {{ t('birdId.noMedia') }}
-            </p>
-            <button
-              v-if="selImage.speciesId"
-              class="link"
-              @click="router.push(`/species/${selImage.speciesId}`)"
-            >
-              {{ t('birdId.viewSpecies') }}
-            </button>
-          </div>
+          <p class="candHint">{{ t('birdId.compareHint') }}</p>
         </template>
       </template>
 
       <div v-if="activeMod === 'image' && phase === 'loading-model'" class="status">
         <Loader2 :size="16" class="spin" />
-        <span>{{ t('birdId.model.downloading', { pct: dlPct }) }}</span>
+        <span>{{ t(dlKey, { pct: dlPct }) }}</span>
         <div class="bar"><i :style="{ width: dlPct + '%' }" /></div>
       </div>
       <div
@@ -669,8 +685,8 @@ function onCountryChange() {
           <TriangleAlert v-else :size="14" />
           <span class="modelTxt">{{
             modelState[m].ready
-              ? t('birdId.model.ready', { mb: fmtMB(modelState[m].bytes) })
-              : t('birdId.model.need', {
+              ? t(`birdId.model.ready.${m}`, { mb: fmtMB(modelState[m].bytes) })
+              : t(`birdId.model.need.${m}`, {
                   mb: fmtMB(modelState[m].bytes || MODELS[m].sizeMB * 1024 * 1024),
                 })
           }}</span>
@@ -750,17 +766,21 @@ h3 {
 .panel .row.between {
   margin-bottom: 8px;
 }
-/* 并排对比：窄屏上下排，宽屏左右排 */
+/* 并排对比：宽屏「原图 + A + B」三列；窄屏上下堆叠（手机上并排太小，看不清） */
 .pair {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
   margin-top: 4px;
+  align-items: start;
 }
 @media (min-width: 620px) {
   .pair {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  /* 只有一个候选时不要空着第三列 */
+  .pair.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .side {
@@ -768,7 +788,7 @@ h3 {
 }
 .shot {
   width: 100%;
-  max-height: 280px;
+  max-height: 240px;
   object-fit: contain;
   background: var(--surface-2, #f9fafb);
   border-radius: 8px;
@@ -803,9 +823,10 @@ h3 {
   border-color: var(--primary, #2563eb);
 }
 .thumb img {
-  width: 56px;
-  height: 42px;
+  width: 52px;
+  height: 39px;
   object-fit: cover;
+  display: block;
 }
 .clips {
   display: flex;
@@ -936,6 +957,37 @@ h3 {
   cursor: pointer;
   font: inherit;
 }
+.candTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+/** 并排对比里的 A / B 角标 */
+.slot {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--primary, #2563eb);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.slot.sm {
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+}
+.candHint {
+  font-size: 11px;
+  color: var(--text-3, #6b7280);
+  margin: 6px 0 0;
+  line-height: 1.6;
+}
 .cand.on {
   border-color: var(--primary, #2563eb);
   background: var(--surface-2, #f9fafb);
@@ -948,9 +1000,7 @@ h3 {
   font-size: 11px;
   color: var(--text-3, #6b7280);
 }
-.candFoot {
-  margin-top: 10px;
-}
+
 .cNote {
   font-size: 12px;
   color: var(--text-3, #6b7280);

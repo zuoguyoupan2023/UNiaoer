@@ -778,13 +778,21 @@ const en: typeof zhMessages = {
       notOurBirds: 'These sounds are not in this project.',
       noResult: "Didn't catch it.",
     },
+    compareHint: 'Tap a candidate to add or remove it from the comparison (up to two).',
     model: {
-      audioLabel: 'Bird sound model (BirdNET v2.4)',
-      imageLabel: 'Bird photo model (OSEA)',
-      need: 'First run downloads the recognition model (~{mb} MB). It never downloads on its own — only after you click.',
-      downloading: 'Downloading recognition model {pct}%',
-      ready: 'Model cached ({mb} MB) — no further download needed',
-      drop: 'Clear model cache',
+      need: {
+        audio: 'The sound model (BirdNET) downloads on first use — about {mb} MB.',
+        image: 'The photo model (OSEA) downloads on first use — about {mb} MB.',
+      },
+      downloading: {
+        audio: 'Downloading the sound model {pct}%',
+        image: 'Downloading the photo model {pct}%',
+      },
+      ready: {
+        audio: 'Sound model cached ({mb} MB)',
+        image: 'Photo model cached ({mb} MB)',
+      },
+      drop: 'Clear cache',
     },
     err: {
       mic: 'Cannot access the microphone. Check the browser permission, or use “Upload audio”.',

@@ -413,13 +413,21 @@ export const messages = {
       notOurBirds: '这些声音本项目没有收录。',
       noResult: '没认出来。',
     },
+    compareHint: '点候选可以加入或移出对比（最多两个）。',
     model: {
-      audioLabel: '鸟声识别模型（BirdNET v2.4）',
-      imageLabel: '鸟图识别模型（OSEA）',
-      need: '首次识别需要下载识别模型（约 {mb} MB）。不会自动下载，只在你点击后才开始。',
-      downloading: '正在下载识别模型 {pct}%',
-      ready: '模型已缓存（{mb} MB），之后无需重复下载',
-      drop: '清除模型缓存',
+      need: {
+        audio: '音频识别模型（BirdNET）首次使用需下载，约 {mb} MB。',
+        image: '图像识别模型（OSEA）首次使用需下载，约 {mb} MB。',
+      },
+      downloading: {
+        audio: '正在下载音频识别模型 {pct}%',
+        image: '正在下载图像识别模型 {pct}%',
+      },
+      ready: {
+        audio: '音频识别模型已缓存（{mb} MB）',
+        image: '图像识别模型已缓存（{mb} MB）',
+      },
+      drop: '清除缓存',
     },
     err: {
       mic: '无法访问麦克风。请检查浏览器权限，或改用「上传音频」。',
