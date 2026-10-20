@@ -46,9 +46,11 @@ export const MODELS: Record<TaskName, ModelRef> = {
   },
   image: {
     key: 'image',
-    file: 'speciesnet-whole.onnx',
-    labels: 'speciesnet-labels.txt',
-    sizeMB: 0, // 待实测后回填
+    // 2026-10-20：图像侧从 SpeciesNet 换成 OSEA ResNet34（11,000 类）。
+    // QDQ int8，26MB；标签表是对表产物，不需要单独的 labels.txt。
+    file: 'osea-int8-v1.onnx',
+    labels: 'osea-bird-info.json',
+    sizeMB: 26,
     labelKey: 'birdId.model.imageLabel',
   },
 }

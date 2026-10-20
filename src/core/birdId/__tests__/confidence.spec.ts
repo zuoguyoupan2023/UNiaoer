@@ -58,14 +58,20 @@ describe('present 三档行为', () => {
     expect(v.messageKey).not.toContain('confidence')
   })
 
-  it('极低置信度：不展示任何候选（避免误导）', () => {
+  it('极低置信度：仍展示候选，但给「不太确定」提示（2026-10-20 修正）', () => {
     const v = present(res([cand('a', 0.09, exact, 'x'), cand('b', 0.05, exact, 'y')]))
     expect(v.band).toBe('none')
-    expect(v.shown).toHaveLength(0)
-    expect(v.all).toHaveLength(2) // 仍保留完整结果供调试
-    // 文案 key 指向「没太听出来」那句
-    expect(v.messageKey).toBe('birdId.band.none')
+    expect(v.shown).toHaveLength(2)
+    expect(v.all).toHaveLength(2) // 完整结果保留
+    expect(v.messageKey).toBe('birdId.band.low')
     expect(v.messageKey).not.toContain('%')
+  })
+
+  it('2.7% 的正确 top-1 不再被硬门槛吞掉（docs/065 P0-1 的实测场景）', () => {
+    const v = present(res([cand('a', 0.027, exact, 'x'), cand('b', 0.015, exact, 'y')]))
+    expect(v.band).toBe('none')
+    expect(v.shown.map((c) => c.speciesId)).toEqual(['x', 'y'])
+    expect(v.messageKey).toBe('birdId.band.low')
   })
 
   it('空结果也有话可说', () => {

@@ -28,11 +28,12 @@ const WIN = 144000
 
 /**
  * 图像模型的输入边长。
- * SpeciesNet v4.0.3b full_image 实测契约是 NHWC `['batch', 480, 480, 3]`
- * —— 注意**不是**常见的 NCHW，也不是 224。弄错会直接报
- * 「Got invalid dimensions for input」。
+ *
+ * 2026-10-20 起图像模型换成 **OSEA ResNet34**：
+ *   输入 `[1, 3, 224, 224]`（NCHW），ImageNet mean/std 标准化，squash 到 224。
+ * 旧的 SpeciesNet 是 NHWC 480 + /255，两者契约完全不同；不要再复用旧常量。
  */
-export const IMAGE_SIZE = 480
+export const IMAGE_SIZE = 224
 
 /**
  * 调试用：描述「真正喂给模型的张量」。
@@ -97,10 +98,17 @@ export async function decodeAudio(blob: Blob): Promise<Float32Array> {
 }
 
 /**
- * 任意图片 → 模型输入张量。
- * 做法：等比缩放到不超过 IMAGE_SIZE 的最长边，再中心裁成正方形，
- * 最后按 ImageNet 口径归一化（均值/方差减均值除标准差）。
- * 中心裁剪会切掉长焦照片的边缘，故先留边（letterbox）到正方形更稳 —— 这里取留边。
+ * 任意图片 → OSEA 输入张量。
+ *
+ * 做法（2026-10-20 实测）：
+ *   1. 取**中心正方形**（短边的 90%，留 5% 边），而不是 letterbox；
+ *   2. squash 到 224×224（不做等比留边，OSEA 官方 CLI 就是直接 resize）；
+ *   3. ImageNet mean/std 标准化；
+ *   4. 写成 **NCHW** `[1,3,224,224]`。
+ *
+ * 为什么不用 letterbox：同一批 79 张真实素材上，中心裁剪 top-1 81.0% / top-3 91.1%，
+ * letterbox 只有 74.7% / 84.8%（squash 全程 78.5% / 88.6%）。
+ * 中心裁剪的代价是鸟不在画面中央时可能切掉主体；后续若接检测器，应改成“检测框裁剪”。
  */
 export async function prepareImage(blob: Blob, size = IMAGE_SIZE): Promise<Float32Array> {
   const bmp = await createImageBitmap(blob)
@@ -110,22 +118,22 @@ export async function prepareImage(blob: Blob, size = IMAGE_SIZE): Promise<Float
     canvas.height = size
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('canvas 2d context unavailable')
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, size, size)
-    // 等比缩放后居中留边，避免裁掉主体
-    const scale = Math.min(size / bmp.width, size / bmp.height)
-    const w = bmp.width * scale
-    const h = bmp.height * scale
-    ctx.drawImage(bmp, (size - w) / 2, (size - h) / 2, w, h)
+
+    // 短边的 90% 作为正方形；0.8 / 0.9 实测同为 81.0% / 91.1%，取 0.9 保留更多上下文。
+    const side = Math.min(bmp.width, bmp.height) * 0.9
+    const sx = (bmp.width - side) / 2
+    const sy = (bmp.height - side) / 2
+    ctx.drawImage(bmp, sx, sy, side, side, 0, 0, size, size)
+
     const { data } = ctx.getImageData(0, 0, size, size)
-    // SpeciesNet 的预处理是 **/255 归一化到 0~1 + NHWC**（不是 ImageNet 的
-    // mean/std 标准化，也不是 NCHW）。本地 image_eval.py 已按此口径验证过。
-    // 逐像素把 RGB 三个通道写进 NHWC 布局的相邻位置
-    const out = new Float32Array(size * size * 3)
-    for (let px = 0; px < size * size; px++) {
-      out[px * 3] = (data[px * 4] ?? 0) / 255
-      out[px * 3 + 1] = (data[px * 4 + 1] ?? 0) / 255
-      out[px * 3 + 2] = (data[px * 4 + 2] ?? 0) / 255
+    const mean = [0.485, 0.456, 0.406] as const
+    const std = [0.229, 0.224, 0.225] as const
+    const out = new Float32Array(3 * size * size)
+    const plane = size * size
+    for (let px = 0; px < plane; px++) {
+      out[px] = ((data[px * 4] ?? 0) / 255 - mean[0]) / std[0]
+      out[plane + px] = ((data[px * 4 + 1] ?? 0) / 255 - mean[1]) / std[1]
+      out[2 * plane + px] = ((data[px * 4 + 2] ?? 0) / 255 - mean[2]) / std[2]
     }
     if (import.meta.env.DEV) console.info(`[birdId] image tensor ${describeTensor(out, size, data, bmp)}`)
     return out

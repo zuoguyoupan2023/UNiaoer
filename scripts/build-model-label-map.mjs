@@ -4,15 +4,20 @@
  *
  *   npm run build:model-labels                    # 默认音频任务
  *   npm run build:model-labels -- --task audio
- *   npm run build:model-labels -- --task image     # SpeciesNet 图像侧
+ *   npm run build:model-labels -- --task image --format speciesnet   # 旧 SpeciesNet
+ *   npm run build:model-labels -- --task image --format osea \
+ *     --model-labels experiments/birdid/cache/model/osea/bird_info.json --classes 11000
  *   npm run build:model-labels -- --report         # 额外打印 Tier4/5 清单
  *
  * 输入：
  *   --model-labels <path>   模型标签表，顺序即模型输出索引
  *                           audio：每行 `学名_英文名`（默认 data-cache/birdid/labels/en_us.txt）
- *                           image：`uuid;class;order;family;genus;species;俗名`（SpeciesNet）
+ *                           image/speciesnet：`uuid;class;order;family;genus;species;俗名`
+ *                           image/osea：`bird_info.json` = [[中文名, 英文名, 学名], ...]
+ *   --format <fmt>            audio | speciesnet | osea（默认 audio；task=image 时默认 speciesnet）
  *   --out <path>            产物路径，默认 public/data/model-labels-<task>.json
- *   --overrides <path>      人工兜底表（默认 data/model-label-overrides.json）
+ *   --overrides <path>      人工兜底表（默认 data/model-label-overrides.json；
+ *                           OSEA 默认 data/model-label-overrides-osea.json）
  *                           键 = 模型标签原文，值 = 本项目 speciesId；**优先级高于五级匹配**
  *
  * 产物（运行时唯一需要的东西）：
@@ -40,18 +45,31 @@ const argOf = (n, d) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : d
 }
 const TASK = argOf('--task', 'audio')
-/** image = SpeciesNet（结构化分号标签，docs/057 §1.1）；audio = BirdNET（`学名_英文名`） */
-const IS_IMAGE = TASK === 'image'
+const IMAGE_TASK = TASK === 'image'
+/**
+ * 图像标签有两种格式：
+ *   speciesnet = 结构化分号标签（docs/057 §1.1）
+ *   osea       = HF `bird_info.json`（[[中文名, 英文名, 学名], ...]）
+ * 音频 = BirdNET（`学名_英文名`）。
+ */
+const FORMAT = argOf('--format', IMAGE_TASK ? 'speciesnet' : 'birdnet')
+const IS_OSEA = IMAGE_TASK && FORMAT === 'osea'
+const IS_IMAGE = IMAGE_TASK
 const LABELS = argOf(
   '--model-labels',
-  IS_IMAGE
-    ? path.join(ROOT, 'experiments/birdid/cache/model/speciesnet-labels.txt')
-    : path.join(ROOT, 'data-cache/birdid/labels/en_us.txt'),
+  IS_OSEA
+    ? path.join(ROOT, 'experiments/birdid/cache/model/osea/bird_info.json')
+    : IS_IMAGE
+      ? path.join(ROOT, 'experiments/birdid/cache/model/speciesnet-labels.txt')
+      : path.join(ROOT, 'data-cache/birdid/labels/en_us.txt'),
 )
 const OUT = argOf('--out', path.join(ROOT, `public/data/model-labels-${TASK}.json`))
 const MIN_TIER12 = Number(argOf('--min-exact', '0.85'))
 const SHOW = args.includes('--report')
-const OVERRIDES_PATH = argOf('--overrides', path.join(ROOT, 'data/model-label-overrides.json'))
+const OVERRIDES_PATH = argOf(
+  '--overrides',
+  path.join(ROOT, IS_OSEA ? 'data/model-label-overrides-osea.json' : 'data/model-label-overrides.json'),
+)
 
 /** 小写 + 去标点 + 统一连字符/撇号/&，两侧命名差异的常见来源 */
 const norm = (s) =>
@@ -70,18 +88,41 @@ if (!fs.existsSync(LABELS)) {
   process.exit(2)
 }
 
-const rawLines = fs
-  .readFileSync(LABELS, 'utf8')
-  .split('\n')
-  .map((l) => l.trim())
-  .filter(Boolean)
+/**
+ * 读取标签表。OSEA 是 JSON 数组（[中文名, 英文名, 学名]），其余是逐行文本。
+ */
+let rawLineCount = 0
+let rawEntries = []
+if (IS_OSEA) {
+  const info = JSON.parse(fs.readFileSync(LABELS, 'utf8'))
+  if (!Array.isArray(info)) {
+    console.error(`✗ OSEA 标签表必须是数组：${LABELS}`)
+    process.exit(2)
+  }
+  rawLineCount = info.length
+  rawEntries = info.map((row, i) => ({
+    zh: String(row?.[0] ?? '').trim(),
+    en: String(row?.[1] ?? '').trim(),
+    sci: String(row?.[2] ?? '').trim(),
+    i,
+  }))
+} else {
+  const rawLines = fs
+    .readFileSync(LABELS, 'utf8')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  rawLineCount = rawLines.length
+  rawEntries = rawLines.map((line) => ({ line }))
+}
 
 /**
- * 解析成统一形状 { label, sci, en }。
+ * 解析成统一形状 { label, sci, en, zh }。
  *  - audio：BirdNET 的 `学名_英文名`；无 `_` 时整行当英文名。
- *  - image：SpeciesNet 的 `uuid;class;order;family;genus;species;俗名`
+ *  - image/speciesnet：`uuid;class;order;family;genus;species;俗名`
  *    只留 `class === 'aves'` 的**种级**标签（species 字段是 order/family/genus/species
  *    这类上位分类占位符的直接丢掉 —— 它们根本不是种，展示没有意义，见 docs/057 §0）。
+ *  - image/osea：`[中文名, 英文名, 学名]`，全部都是鸟种，不做非鸟过滤。
  *
  * ⚠️ `orderedLabels` 必须**保留每一行**（含被过滤掉的），顺序即模型输出下标：
  * 运行时按 `labels[i]` 取标签（src/core/birdId/labels.ts），一旦这里少一行，
@@ -93,8 +134,17 @@ const orderedLabels = []
 let skippedNonAves = 0
 let skippedUpper = 0
 
-for (const line of rawLines) {
+for (const entry of rawEntries) {
+  if (IS_OSEA) {
+    const { zh, en, sci, i } = entry
+    // 标签键保持 `学名_英文名`，与 BirdNET/对表习惯一致；极端情况下回退到非空字段。
+    const label = sci && en ? `${sci}_${en}` : sci || en || `unlabeled-${i}`
+    orderedLabels.push(label)
+    parsed.push({ label, sci, en, zh })
+    continue
+  }
   if (IS_IMAGE) {
+    const line = entry.line
     if (/^uuid\b/i.test(line)) continue // 元数据表头，不是类别
     const p = line.split(';')
     const genus = (p[4] || '').trim()
@@ -110,25 +160,34 @@ for (const line of rawLines) {
       continue
     }
     const sci = `${genus} ${species}`
-    parsed.push({ label: en ? `${sci}_${en}` : sci, sci, en })
+    parsed.push({ label: en ? `${sci}_${en}` : sci, sci, en, zh: '' })
   } else {
+    const line = entry.line
     const u = line.indexOf('_')
     const sci = u > 0 ? line.slice(0, u).trim() : ''
     const en = u > 0 ? line.slice(u + 1).trim() : line
     orderedLabels.push(line)
-    parsed.push({ label: line, sci, en })
+    parsed.push({ label: line, sci, en, zh: '' })
   }
 }
 const rawLabels = parsed.map((x) => x.label)
 
-// 模型输出类别数对不上就别写产物：宁可什么都不产出，也不要一个下标错位的产物
+// 模型输出类别数对不上就别写产物：宁可什么都不产出，也不要一个下标错位的产物。
+// OSEA 的 bird_info.json 只有 10,964 条，而 fc 是 11,000 类 → 末尾 36 个输出没有标签，
+// 用无下划线的 `unlabeled-<i>` 占位（运行时 entries 查不到，会自动被过滤）。
 const EXPECT_CLASSES = Number(argOf('--classes', '0'))
 if (EXPECT_CLASSES > 0 && orderedLabels.length !== EXPECT_CLASSES) {
-  console.error(
-    `✗ 标签表 ${orderedLabels.length} 行 ≠ 模型输出 ${EXPECT_CLASSES} 类；` +
-      `产物下标会错位，拒绝写入。核对模型版本或用 --classes 显式声明类别数。`,
-  )
-  process.exit(2)
+  if (IS_OSEA && orderedLabels.length < EXPECT_CLASSES) {
+    const missing = EXPECT_CLASSES - orderedLabels.length
+    for (let i = 0; i < missing; i++) orderedLabels.push(`unlabeled-${orderedLabels.length}`)
+    console.warn(`⚠ OSEA 标签 ${rawLabels.length} 条 < 模型输出 ${EXPECT_CLASSES} 类，末尾 ${missing} 类按无标签占位`)
+  } else {
+    console.error(
+      `✗ 标签表 ${orderedLabels.length} 行 ≠ 模型输出 ${EXPECT_CLASSES} 类；` +
+        `产物下标会错位，拒绝写入。核对模型版本或用 --classes 显式声明类别数。`,
+    )
+    process.exit(2)
+  }
 }
 
 const indexRaw = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/species-index.json'), 'utf8'))
@@ -215,7 +274,7 @@ const unmatched = []
 const overridden = []
 const staleOverrides = []
 
-for (const { label, sci, en } of parsed) {
+for (const { label, sci, en, zh } of parsed) {
   let tier = 5
   let hit = null
   let forcedId = null
@@ -235,6 +294,14 @@ for (const { label, sci, en } of parsed) {
     if (!hit && en) {
       hit = byEn.get(norm(en))
       if (hit) tier = 2
+    }
+    // OSEA 的 bird_info 第 1 列是中文名，但**不拿它做匹配**：
+    // DIB-10K 的中文名与 AviList 拆分/合并后的种不是一一对应（同名不同种），
+    // 按中文名硬匹配会把 251 条分类拆分标签静默指到错误物种。
+    // 中文名只用于展示（entries[].z），匹配只认学名/英文名。
+    if (!hit && zh && !IS_OSEA) {
+      hit = byZh.get(norm(zh))
+      if (hit) tier = 3
     }
     if (!hit && en && !/_/.test(en)) {
       hit = byZh.get(norm(en))
@@ -257,7 +324,7 @@ for (const { label, sci, en } of parsed) {
   entries[label] = {
     s: forcedId ?? (hit ? (idByTaxon.get(hit.taxonKey) ?? null) : null),
     t: tier,
-    z: forcedId ? (nameById.get(forcedId) ?? null) : hit ? (hit.nameZh || hit.nameEn || null) : null,
+    z: forcedId ? (nameById.get(forcedId) ?? null) : hit ? (hit.nameZh || hit.nameEn || null) : zh || null,
     g: genus,
     // 有无素材（名录权威层口径）：false 时 UI 才能诚实说「本项目收录了，但暂无素材」；
     // 未参与 overrides 的种按 taxonKey 查，overrides 的种按 id 判（无台账信息时给 null）
@@ -299,8 +366,10 @@ fs.writeFileSync(OUT, JSON.stringify(out))
 
 const kb = (fs.statSync(OUT).size / 1024).toFixed(0)
 console.log(`\n模型标签 → 项目物种 对表（${TASK}）`)
-if (IS_IMAGE) {
-  console.log(`  原始行数      ${rawLines.length}（非鸟 ${skippedNonAves} · 上位分类标签 ${skippedUpper} 已丢弃）`)
+if (IS_IMAGE && !IS_OSEA) {
+  console.log(`  原始行数      ${rawLineCount}（非鸟 ${skippedNonAves} · 上位分类标签 ${skippedUpper} 已丢弃）`)
+} else if (IS_OSEA) {
+  console.log(`  OSEA 标签     ${rawLineCount} 条（模型输出 ${orderedLabels.length} 类，末尾无标签已占位）`)
 }
 console.log(`  标签总数      ${rawLabels.length}（模型类别 ${orderedLabels.length}）`)
 console.log(`  T1 学名精确   ${tiers[1]}`)
@@ -327,7 +396,9 @@ if (staleOverrides.length) {
 if (SHOW) {
   console.log(`\n  ── T4 仅属名（共 ${genusOnly.length}，人工判断是否分类拆分）:`)
   for (const g of genusOnly) console.log(`    ${g.label} → ${g.genus}（项目内 ${g.inProject} 种）`)
-  console.log(`\n  ── T5 未命中（共 ${unmatched.length}，填进 data/model-label-overrides.json 的是真漏配）:`)
+  console.log(
+    `\n  ── T5 未命中（共 ${unmatched.length}，填进 ${path.relative(ROOT, OVERRIDES_PATH)} 的是真漏配）:`,
+  )
   for (const l of unmatched) console.log(`    ${l}`)
 }
 

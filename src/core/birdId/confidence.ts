@@ -1,12 +1,11 @@
 /**
  * 候选筛选 —— P1 UI 的核心规则
  *
- * ## 为什么**不显示置信度**（用户决策，2026-10-16）
+ * ## 为什么**不显示置信度数字**（用户决策，2026-10-16）
  *
- * 原本按 ACCURACY.md 的实测设了三档（≥30% / 10~30% / <10%），现在**取消置信度展示**，
- * 理由是置信度对用户没有行动价值：
+ * 置信度对用户没有行动价值：
  *
- * - 图像侧实测 top-3 是 99.9% / 99.7% / 99.1%，**即使认错了也饱和**，完全零区分度；
+ * - 图像侧旧的 SpeciesNet 实测 top-3 是 99.9% / 99.7% / 99.1%，**即使认错了也饱和**；
  * - 有些鸟本就极像（近似种、雌雄差异、幼鸟羽色），图像质量差时也会「既像 A 又像 B」，
  *   这时模型给出多个相近高置信度是**正确行为**，不是 bug；
  * - 给了数字反而制造「>50% 就该对」的错觉。
@@ -15,15 +14,28 @@
  * 摆出来（带署名），由用户自己判断 —— 这也正是本项目的价值所在：
  * 我们提供的是**可核对的证据**，不是一个断言。
  *
- * 置信度仍保留在内部数据结构里：用于①过滤噪声尾巴（<10% 的尾巴基本是噪声）
- * ②单测断言 ③将来若要埋点统计准确率。**只是不呈现给用户。**
+ * ## 2026-10-20 修正：低分不再直接隐藏
+ *
+ * 旧规则是「top-1 < 10% → 一个候选都不显示，只说没听出来」。实测这条会误伤：
+ * BirdNET 对一段 20~30s 录音里只叫了一两声的鸟，聚合后 top-1 可能只有 2~8%，
+ * 但排序仍然是对的（`docs/065` P0-1 记的 2.7% 就是这种情况）。
+ * 同时 worker 的多窗聚合已从中位数改成 75 分位（见 `worker.ts`），先把分数抬回来一截。
+ *
+ * 现在的规则：
+ *   - **始终保留 top-1**，并按相对分数保留紧跟其后的候选（≥ top1 的 15%，且 ≥0.5%）；
+ *   - `band` 仍按绝对分数记录（ok/low/none），但 `band=none` 也会展示候选，
+ *     并给一句「模型不太确定」的提示，而不是让用户以为模型什么都没听到；
+ *   - 不再用「<10% 即空」这种会隐藏正确结果的硬门槛。
  */
 import type { BirdIdResult, Candidate, ConfidenceBand } from './types'
 
-/** ≥30%：正常展示并标注置信度 */
+/** ≥30%：正常展示 */
 export const CONF_OK = 0.3
-/** <10%：不展示候选（模型自己都没把握） */
+/** <10%：模型不太确定；仍展示候选，但加提示 */
 export const CONF_LOW = 0.1
+/** 相对 top-1 的尾巴阈值：低于 top1 的 15% 且低于 0.5% 的候选不展示 */
+const TAIL_RATIO = 0.15
+const TAIL_FLOOR = 0.005
 
 export function bandOf(score: number): ConfidenceBand {
   if (score >= CONF_OK) return 'ok'
@@ -33,7 +45,7 @@ export function bandOf(score: number): ConfidenceBand {
 
 export interface Presented {
   band: ConfidenceBand
-  /** 该展示的候选（band=none 时为空数组） */
+  /** 该展示的候选；**band=none 时也可能非空**（低分但排序有信息量） */
   shown: Candidate[]
   /** 完整 top-N，保留用于调试与「为什么没显示」的解释 */
   all: Candidate[]
@@ -51,9 +63,10 @@ export function present(result: BirdIdResult, topN = 3): Presented {
   const top = all[0]
   const band: ConfidenceBand = top ? bandOf(top.score) : 'none'
 
-  // 只滤掉 <10% 的噪声尾巴（实测未命中时置信度中位数仅 3.3%~10.2%，那基本是噪声）。
-  // 注意这里**不是**置信度分流：只要有任何候选过线就展示，不给用户看数字。
-  const shown = all.filter((c) => bandOf(c.score) !== 'none')
+  // 相对尾巴过滤：top-1 永远保留；后面的候选必须不是噪声。
+  // 不用绝对 10% 硬门槛，否则 2.7% 的正确 top-1 会被整段吞掉。
+  const floor = top ? Math.max(TAIL_FLOOR, top.score * TAIL_RATIO) : TAIL_FLOOR
+  const shown = all.filter((c, i) => i === 0 || c.score >= floor)
 
   // 判据是「名录明确说没有素材」(entry.p === false)，**不是** speciesId 缺失 ——
   // 后者只是因为产物过去只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎）。
@@ -63,9 +76,9 @@ export function present(result: BirdIdResult, topN = 3): Presented {
   // 文案一律返回 i18n key，由视图 t(messageKey) 渲染(015 §8: no CJK literals in core layer)
   let messageKey: string
   if (!top) messageKey = 'birdId.band.noResult'
-  else if (shown.length === 0) messageKey = 'birdId.band.none'
   else if (!shown.some((c) => c.entry && c.entry.t <= 3 && c.speciesId))
     messageKey = 'birdId.band.notOurBirds'
+  else if (band === 'none') messageKey = 'birdId.band.low'
   else messageKey = ''
 
   return { band, shown, all, messageKey, hasMappedButNoMedia, hasGenusOnly }

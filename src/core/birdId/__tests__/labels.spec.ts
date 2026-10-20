@@ -8,7 +8,8 @@
  * 现在产物带 `labels`（全量、有序、含被过滤标签），运行时按下标取；
  * 缺 `labels` 必须直接报错，不许退回 `Object.keys(entries)`。
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { loadLabelMap } from '../labels'
 import type { LabelMapFile } from '../types'
 
 /** 造一个「前 3 个是非鸟/上位分类标签」的产物，模拟真实 SpeciesNet 布局 */
@@ -56,5 +57,41 @@ describe('模型标签下标对齐（image）', () => {
 
   it('classCount 与 labels.length 必须一致', () => {
     expect(MAP.classCount).toBe(LABELS.length)
+  })
+})
+
+describe('loadLabelMap 按任务分别缓存（音频/图像下标不能串）', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('audio 与 image 各请求一次，返回不同的产物', async () => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL) => Promise<{ ok: boolean; json: () => Promise<unknown> }>
+    >(async (url) => {
+      const href = String(url)
+      const task = href.includes('audio') ? 'audio' : 'image'
+      return {
+        ok: true,
+        json: async () =>
+          ({
+            task,
+            model: `model/${task}`,
+            classCount: 1,
+            labels: task === 'audio' ? ['audio-label'] : ['image-label'],
+            labelCount: 1,
+            exactRate: 1,
+            tiers: { 1: 1, 2: 0, 3: 0, 4: 0, 5: 0 },
+            entries: { [`${task}-label`]: { s: task, t: 1, z: task } },
+          }) as unknown as LabelMapFile,
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const audio = await loadLabelMap('audio')
+    const image = await loadLabelMap('image')
+    expect(audio.labels).toEqual(['audio-label'])
+    expect(image.labels).toEqual(['image-label'])
+    // 第二次同任务命中缓存，不再请求
+    await loadLabelMap('audio')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

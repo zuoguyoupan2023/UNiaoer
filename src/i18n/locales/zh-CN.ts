@@ -370,7 +370,8 @@ export const messages = {
     factHabitat: '生境',
     factHabit: '习性',
     viewOriginal: '查看原图',
-    privacyShort: '本机识别，录音不上传。',
+    privacyShort: '本机识别，录音与照片不上传。',
+    credit: '图像识别：OSEA（Sun Jiao）/ DongNiao DIB-10K；声音识别：BirdNET（Cornell Lab）。',
     maybe: {
       one: '可能是 {name}',
     },
@@ -408,12 +409,13 @@ export const messages = {
     noMedia: '本项目收录了这个物种，但目前还没有它的图片和音频素材。',
     band: {
       none: '没听出来，换一段试试。',
+      low: '模型不太确定，以下是可能性较高的几种。换一段更清晰、更长的录音会更准。',
       notOurBirds: '这些声音本项目没有收录。',
       noResult: '没听出来。',
     },
     model: {
       audioLabel: '鸟声识别模型（BirdNET v2.4）',
-      imageLabel: '鸟图识别模型',
+      imageLabel: '鸟图识别模型（OSEA）',
       need: '首次识别需要下载识别模型（约 {mb} MB）。不会自动下载，只在你点击后才开始。',
       downloading: '正在下载识别模型 {pct}%',
       ready: '模型已缓存（{mb} MB），之后无需重复下载',

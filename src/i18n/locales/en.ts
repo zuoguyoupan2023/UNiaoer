@@ -735,7 +735,8 @@ const en: typeof zhMessages = {
     factHabitat: 'Habitat',
     factHabit: 'Habits',
     viewOriginal: 'View original',
-    privacyShort: 'Identified on this device; your recording is never uploaded.',
+    privacyShort: 'Identified on this device; your recording and photo are never uploaded.',
+    credit: 'Photo ID: OSEA (Sun Jiao) / DongNiao DIB-10K; sound ID: BirdNET (Cornell Lab).',
     disclaimer:
       'AI is a guide, not an answer. Everything runs on your device — the recording and photo are never uploaded. The model can only suggest candidates; compare them with the media below and judge for yourself.',
     maybe: {
@@ -773,12 +774,13 @@ const en: typeof zhMessages = {
     noMedia: 'This species is in our catalogue, but we have no photos or audio for it yet.',
     band: {
       none: "Didn't catch it — try another clip.",
+      low: 'The model is not very sure. These are the most likely candidates; a clearer, longer clip will help.',
       notOurBirds: 'These sounds are not in this project.',
       noResult: "Didn't catch it.",
     },
     model: {
       audioLabel: 'Bird sound model (BirdNET v2.4)',
-      imageLabel: 'Bird photo model',
+      imageLabel: 'Bird photo model (OSEA)',
       need: 'First run downloads the recognition model (~{mb} MB). It never downloads on its own — only after you click.',
       downloading: 'Downloading recognition model {pct}%',
       ready: 'Model cached ({mb} MB) — no further download needed',

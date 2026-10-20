@@ -6,12 +6,18 @@
  */
 import { TIER_EXACT, TIER_EN, TIER_ZH, type BirdIdResult, type Candidate, type LabelMapFile } from './types'
 
-let cache: LabelMapFile | null = null
-/** 标签按模型输出下标排列的数组 —— 推理只回传索引，映射时按下标取，避免每次重建几千个字符串 */
-let labelArray: string[] = []
+/**
+ * 按任务分别缓存。
+ *
+ * 旧实现只有一个全局 cache：页面启动时先 load('audio') 再 load('image')，
+ * 第二次会直接拿到音频产物，图像推理就会按音频标签解释下标（反之亦然）。
+ * 图像侧下线时没暴露，但恢复图像后这是**静默错种**级 bug，必须先修。
+ */
+const mapCache = new Map<string, LabelMapFile>()
 
 export async function loadLabelMap(task = 'audio'): Promise<LabelMapFile> {
-  if (cache) return cache
+  const hit = mapCache.get(task)
+  if (hit) return hit
   const url = `${import.meta.env.BASE_URL}data/model-labels-${task}.json`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`failed to load label map: ${res.status} ${url}`)
@@ -22,13 +28,12 @@ export async function loadLabelMap(task = 'audio'): Promise<LabelMapFile> {
   if (!Array.isArray(map.labels) || !map.labels.length) {
     throw new Error(`label map has no "labels" index array: ${url} (rebuild via build:model-labels)`)
   }
-  cache = map
-  labelArray = map.labels
-  return cache
+  mapCache.set(task, map)
+  return map
 }
 
-export function labelMapReady(): LabelMapFile | null {
-  return cache
+export function labelMapReady(task = 'audio'): LabelMapFile | null {
+  return mapCache.get(task) ?? null
 }
 
 export function mapCandidates(
@@ -47,17 +52,15 @@ export function mapCandidates(
   })
 }
 
-/** 按模型输出索引取标签（越界返回空串，宁可显示无命中也不崩） */
-export function labelAt(i: number): string {
-  return labelArray[i] ?? ''
-}
-
 /**
  * 把原始推理输出整理成 BirdIdResult（分数已归一化到 0~1）
  *
  * 剔除 `entry === null` 的候选：图像侧 top-1 几乎恒是 `bird` 这类上位分类标签
  * （概率饱和到 99.9%，实测没有区分度），留在候选里只会挤掉真正的种。
  * 故图像侧要多取一些原始 topK 再过滤（见 index.ts 的 topN）。
+ *
+ * 注意：标签必须从**本次传入的 map** 取，不能用全局变量 —— 音频与图像
+ * 两套标签的下标含义完全不同，混用会静默返回错种。
  */
 export function toResult(
   indices: number[],
@@ -66,7 +69,8 @@ export function toResult(
   durationSec: number,
   windows: number,
 ): BirdIdResult {
-  const all = indices.map((i) => labelAt(i)).map((label, k) => {
+  const labels = map.labels ?? []
+  const all = indices.map((i) => labels[i] ?? '').map((label, k) => {
     const entry = map.entries[label] ?? null
     return {
       label,

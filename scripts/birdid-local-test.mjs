@@ -26,8 +26,9 @@ const MODEL_BASE = process.env.BIRDID_R2_BASE || 'https://pub-c92329d5b47e445c9e
 const MODELS = [
   ['birdnet-v2.4-int8-arm.onnx', 'cache/model/birdnet24_int8_arm.onnx'],
   ['birdnet-v2.4-labels.txt', 'cache/model/labels_birdnet24.txt'],
-  ['speciesnet-whole.onnx', 'cache/model/speciesnet-fp16.onnx'],
-  ['speciesnet-labels.txt', 'cache/model/speciesnet-labels.txt'],
+  // 2026-10-20：图像侧 SpeciesNet → OSEA（26MB QDQ）
+  ['osea-int8-v1.onnx', 'cache/model/osea/osea-qdq-int8.onnx'],
+  ['osea-bird-info.json', 'cache/model/osea/bird_info.json'],
 ]
 
 function run(cmd, argv, env) {

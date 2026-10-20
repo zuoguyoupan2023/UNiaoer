@@ -49,18 +49,13 @@ const { t, locale } = useI18n()
 const router = useRouter()
 
 /**
- * 图像识别（SpeciesNet）暂时下线（2026-10-17）
+ * 图像识别：2026-10-20 从 SpeciesNet 换成 OSEA（ResNet34 / 11,000 类）。
  *
- * 实测结论：这个 fp16 ONNX 导出的输出饱和在 99%+、排序基本不可信
- * （同一张渡鸦照片 → 灰噪钟鹊；角叫鸭 → 鸡鵟；拍什么都能排到啄木鸟）。
- * 已验证与以下因素无关：缩放算法、12 种预处理口径、5 种裁切比例、
- * 浏览器/Node 运行时（权重指纹一致）、权重文件本身。故判定为模型侧问题。
- *
- * 代码与产物全部保留（`identifyImage`、model-labels-image.json、overrides、门禁都在），
- * 换模型后把这里改回 true 即可恢复 —— 候选池 `IMAGE_TOP_K` 不宜超过 12（见 regionPrior 注释）。
- * 后续路线见 docs/059。
+ * SpeciesNet 的 fp16 ONNX 输出饱和、排序不可信（docs/059），已弃用；
+ * OSEA 在本地 79 张真实素材上 top-1 78.5% / top-3 88.6%（中心裁剪 81.0% / 91.1%），
+ * 且 26MB QDQ 已在 ORT-web WASM 跑通。模型与标签对表见 docs/000-recoginize-bird.md。
  */
-const ENABLE_IMAGE = false
+const ENABLE_IMAGE = true
 
 type Phase = 'idle' | 'capturing' | 'decoding' | 'loading-model' | 'thinking' | 'error'
 const phase = ref<Phase>('idle')
@@ -330,6 +325,7 @@ function onCountryChange() {
 
     <!-- 隐私说明保留一行：识别在本机、录音不上传（055 §5.3 的红线）。要更干净可直接删。 -->
     <p class="privacy">{{ t('birdId.privacyShort') }}</p>
+    <p class="credit">{{ t('birdId.credit') }}</p>
 
     <!-- 地域先验：模型概率饱和到 99%+ 分不出高下，用「你拍到的鸟就在当地」来排 -->
     <section class="panel regionPick">
@@ -387,6 +383,8 @@ function onCountryChange() {
           </div>
 
           <div v-else class="laneBody">
+            <!-- 低分但排序仍有信息量：给一句提示，而不是假装没听到（docs/065 P0-1）。 -->
+            <p v-if="runs[m]!.messageKey" class="bandNote">{{ t(runs[m]!.messageKey) }}</p>
             <!-- 每个候选一块：一句「可能是 X」+ 该种现有的图/音 + 详情链接。
                  不写「模型不是 100% 准」这类反复解释——用户知道，说了反而像免责声明。 -->
             <div v-for="(c, i) in runs[m]!.shown" :key="c.label" class="cand" :class="{ top: i === 0 }">
@@ -600,6 +598,12 @@ h3 {
   color: var(--muted, #6b7280);
   margin: 0 0 12px;
 }
+.credit {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  margin: -8px 0 12px;
+  line-height: 1.5;
+}
 .panel {
   background: var(--surface-1, #fff);
   border: 1px solid var(--line, #e5e7eb);
@@ -776,6 +780,15 @@ h3 {
   font-size: 12px;
   color: var(--text-3, #6b7280);
   line-height: 1.7;
+}
+.bandNote {
+  font-size: 12px;
+  color: var(--text-2, #4b5563);
+  background: var(--surface-2, #f3f4f6);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 0 0 8px;
+  line-height: 1.6;
 }
 .cand {
   padding: 6px 0;

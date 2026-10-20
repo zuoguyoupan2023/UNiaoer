@@ -27,7 +27,6 @@ const TASK = args.task || 'audio'
 const MIN_EXACT = Number(args['min-exact'] ?? 0.85)
 const QUIET = Boolean(args.quiet)
 const OUT = path.join(ROOT, `public/data/model-labels-${TASK}.json`)
-const OVERRIDES = path.join(ROOT, 'data/model-label-overrides.json')
 
 const problems = []
 const fail = (msg) => problems.push(msg)
@@ -64,7 +63,20 @@ async function loadKnownIds() {
 }
 
 const { ids: knownIds, hasLedger } = await loadKnownIds()
-// overrides 表里的键全是 SpeciesNet 标签原文，只对 image 任务有意义（与 build 脚本口径一致）
+
+// 产物先读：overrides 的默认路径要看模型（SpeciesNet vs OSEA），不能写死。
+const doc = await read(OUT)
+if (!doc) {
+  console.error(`✗ 找不到产物 ${path.relative(ROOT, OUT)};先跑 npm run build:model-labels -- --task ${TASK}`)
+  process.exit(2)
+}
+const IS_OSEA = /osea/i.test(String(doc.model || ''))
+const OVERRIDES = path.resolve(
+  ROOT,
+  args.overrides ||
+    (IS_OSEA ? 'data/model-label-overrides-osea.json' : 'data/model-label-overrides.json'),
+)
+// overrides 表里的键是具体模型的标签原文，只对 image 任务有意义（与 build 脚本口径一致）
 const appliesOverrides = TASK === 'image'
 const overrides = appliesOverrides ? (await read(OVERRIDES, {})) || {} : {}
 
@@ -86,11 +98,6 @@ for (const [label, id] of Object.entries(overrides)) {
 }
 
 // ── 2. 产物结构 + 命中率 ────────────────────────────────────────────────────────
-const doc = await read(OUT)
-if (!doc) {
-  console.error(`✗ 找不到产物 ${path.relative(ROOT, OUT)};先跑 npm run build:model-labels -- --task ${TASK}`)
-  process.exit(2)
-}
 if (doc.task !== TASK) fail(`产物 task="${doc.task}" 与校验任务 "${TASK}" 不一致`)
 if (!doc.entries || typeof doc.entries !== 'object') fail('产物缺 entries')
 

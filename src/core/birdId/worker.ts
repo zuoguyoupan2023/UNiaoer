@@ -30,6 +30,7 @@
  * 我们只用 `executionProviders: ['wasm']`，`/wasm` 的 13.58 MiB 那份足够。
  */
 import * as ort from 'onnxruntime-web/wasm'
+import { percentileSorted } from './aggregate'
 
 export type TaskKind = 'audio' | 'image'
 
@@ -108,18 +109,15 @@ self.onmessage = async (ev: MessageEvent<InferRequest>) => {
     let res: InferResponse
 
     if (req.kind === 'image') {
-      // SpeciesNet v4.0.3b full_image 的契约是 **NHWC** `['batch', 480, 480, 3]`。
-      // 曾按常见的 NCHW 建成 [1,3,224,224]，ORT 直接报
-      // 「Got invalid dimensions for input: image」（index 1 期望 480 却给了 3）。
-      const [w, h] = req.imageSize ?? [480, 480]
+      // OSEA ResNet34 的契约：NCHW `[1, 3, 224, 224]`，ImageNet mean/std。
+      // （旧 SpeciesNet 是 NHWC 480 + /255，已弃用；不要混用两套契约。）
+      const [w, h] = req.imageSize ?? [224, 224]
       const n = 1
-      const tensor = new ort.Tensor('float32', req.samples!, [n, h, w, 3])
+      const tensor = new ort.Tensor('float32', req.samples!, [n, 3, h, w])
       const out = await s.run({ [inName]: tensor })
       const flat = out[outName]!.data as Float32Array
-      // 输出可能是 logits 或已归一化的概率，两种都归一到 0~1。
-      // 原实现只取**前 50 类**判量级，若恰好那 50 类都是低分(logit << 0)，
-      // 就会把 logits 当成已归一化的概率，sigmoid 整个漏掉。
-      // 改成对**全量**判断，并在真概率时归一化而非原样使用。
+      // OSEA 输出是 11,000 类互斥 logits，正确归一化是 **softmax**（不是逐类 sigmoid）。
+      // 仍然保留“已归一化概率”的兜底：如果导出/换模型后输出已在 0~1，就只做归一化。
       let mx = -Infinity
       let mn = Infinity
       for (let i = 0; i < flat.length; i++) {
@@ -130,7 +128,13 @@ self.onmessage = async (ev: MessageEvent<InferRequest>) => {
       const looksLikeLogits = mn < -0.01 || mx > 1.01
       const sc = new Float32Array(flat.length)
       if (looksLikeLogits) {
-        for (let i = 0; i < flat.length; i++) sc[i] = sigmoid(Number(flat[i] ?? 0))
+        let sum = 0
+        for (let i = 0; i < flat.length; i++) {
+          const v = Math.exp(Number(flat[i] ?? 0) - mx)
+          sc[i] = v
+          sum += v
+        }
+        if (sum > 0) for (let i = 0; i < flat.length; i++) sc[i] = (sc[i] ?? 0) / sum
       } else {
         let sum = 0
         for (let i = 0; i < flat.length; i++) sum += Math.max(0, Number(flat[i] ?? 0))
@@ -160,14 +164,15 @@ self.onmessage = async (ev: MessageEvent<InferRequest>) => {
       const out = await s.run({ [inName]: tensor })
       const raw = out[outName]!.data as Float32Array
       const nClass = raw.length / picks.length
-      const med = new Float32Array(nClass)
+      // 多窗聚合：**75 分位**（见 aggregate.ts 的实测对比；不是中位数）。
+      const agg = new Float32Array(nClass)
       for (let c = 0; c < nClass; c++) {
         const vals: number[] = []
         for (let j = 0; j < picks.length; j++) vals.push(sigmoid(Number(raw[j * nClass + c] ?? 0)))
         vals.sort((a, b) => a - b)
-        med[c] = vals[vals.length >> 1] ?? 0
+        agg[c] = percentileSorted(vals, 0.75)
       }
-      const { order, values } = topK(med, req.topN || 5)
+      const { order, values } = topK(agg, req.topN || 5)
       res = {
         type: 'result',
         indices: order,
