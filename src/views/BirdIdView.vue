@@ -1,28 +1,19 @@
 <script setup lang="ts">
 /**
- * 本机识鸟（docs/055 P1 / docs/056）
+ * 本机识鸟（docs/055 P1 / docs/056 / docs/066）
  *
- * 定位红线：这是「识鸟 → 看本项目素材」的独立探索工具，**不接答题链路**。
- * 全程在本机完成，用户的录音与照片不上传任何服务器。
+ * 定位：**两个互相独立的小工具**——听音识别 / 看图识别。各用各的模型、各出各的
+ * 候选，谁也不为另一个背书；用户想用哪个用哪个，也可以两个都用。
  *
- * 核心交互是**跨模态互证**：先任选一个模态识别 → 主动引导用另一个模态复核 →
- * 并排显示两路结果。理由见 src/core/birdId/crossModal.ts：两个模型的失效模式
- * 不相关（乌鸫会学别的鸟叫，声音会认错；照片在羽色体型上几乎不会犯这类错）。
+ * 结果旁边把「你输入的素材」和「模型认为的那个种的素材」并排摆出来（音频配波形），
+ * 让用户自己比对——我们给的是参考，不是标准答案。
+ *
+ * 全程本机：录音与照片不上传任何服务器（docs/055 §5.3 红线）。
  */
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import {
-  Bird,
-  Camera,
-  Loader2,
-  Mic,
-  Play,
-  Square,
-  Trash2,
-  TriangleAlert,
-  X,
-} from 'lucide-vue-next'
+import { Bird, Camera, Loader2, Mic, Square, Trash2, TriangleAlert, X } from 'lucide-vue-next'
 import {
   identifyAudio,
   identifyImage,
@@ -35,10 +26,16 @@ import {
   ensureModel,
 } from '@/core/birdId'
 import type { Presented } from '@/core/birdId/confidence'
-import AttributionLine from '@/components/AttributionLine.vue'
-import { compare, topResult, type CrossResult, type Modality } from '@/core/birdId/crossModal'
 import type { Candidate } from '@/core/birdId/types'
-import { loadSpeciesAssets, loadBank, speciesById, speciesProfileText } from '@/core/bank'
+import AttributionLine from '@/components/AttributionLine.vue'
+import AudioWave from '@/components/AudioWave.vue'
+import {
+  loadSpeciesAssets,
+  loadBank,
+  speciesById,
+  speciesName,
+  speciesProfileText,
+} from '@/core/bank'
 import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
 import { regionLabel } from '@/core/region'
@@ -57,32 +54,44 @@ const router = useRouter()
  */
 const ENABLE_IMAGE = true
 
+type Modality = 'audio' | 'image'
 type Phase = 'idle' | 'capturing' | 'decoding' | 'loading-model' | 'thinking' | 'error'
+
 const phase = ref<Phase>('idle')
+/** 当前正在跑的那一路：状态提示只出现在对应面板里 */
+const activeMod = ref<Modality | null>(null)
+/** 出错的是哪一路：错误提示放在对应面板里 */
+const errMod = ref<Modality | null>(null)
 const errMsg = ref('')
 
-/** 两路结果并存，便于并排显示与互证 */
-const runs = reactive<Record<Modality, Presented | null>>({ audio: null, image: null })
-const metas = reactive<Record<Modality, { durationSec: number; windows: number } | null>>({
+/** 用户输入的原始素材（录音 / 照片）。只要输入过就显示，识别失败也一样 */
+interface AudioInput {
+  url: string
+  samples: Float32Array | null
+}
+interface ImageInput {
+  url: string
+}
+const inputs = reactive<{ audio: AudioInput | null; image: ImageInput | null }>({
   audio: null,
   image: null,
 })
+
+/** 两路结果各自独立并存，互不影响 */
+const runs = reactive<Record<Modality, Presented | null>>({ audio: null, image: null })
+/** 候选中被选中对比的那一个（默认 top-1） */
+const picked = reactive<Record<Modality, number>>({ audio: 0, image: 0 })
 const mediaById = ref<Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }>>({})
 
-/* ── 素材展示（用户要求） ─────────────────────────────────────────────
- *  · 每个候选：**第一个素材大号显示**，其余小号；点小号 → 它变大、原来的变回常规大小
- *  · 图像点大号可看原图（灯箱用 xlUrl，另给「查看原图」指向 originalUrl）
- *  · 音频同理：第一个用播放器大号显示，点其余小号切换播放器
- */
+/** 素材切换：每个候选默认用第一张图 / 第一段音，点小图/小按钮可换 */
 const heroImg = reactive<Record<string, number>>({})
 const heroAudio = reactive<Record<string, number>>({})
 const origin = ref<MediaAsset | null>(null)
-const heroIdx = (c: { speciesId: string | null }, kind: 'img' | 'audio') =>
-  (kind === 'img' ? heroImg[c.speciesId!] : heroAudio[c.speciesId!]) ?? 0
-const setHero = (c: { speciesId: string | null }, kind: 'img' | 'audio', i: number) => {
-  if (!c.speciesId) return
-  if (kind === 'img') heroImg[c.speciesId] = i
-  else heroAudio[c.speciesId] = i
+const heroIdx = (id: string, kind: 'img' | 'audio') =>
+  (kind === 'img' ? heroImg[id] : heroAudio[id]) ?? 0
+const setHero = (id: string, kind: 'img' | 'audio', i: number) => {
+  if (kind === 'img') heroImg[id] = i
+  else heroAudio[id] = i
 }
 /** 该候选的物种档案文本（生境/习性）；**只有人工写过的那 7 个种有**，其余为空 */
 const profileOf = (speciesId: string | null) => {
@@ -101,34 +110,43 @@ const elapsed = ref(0)
 const busy = computed(
   () => phase.value === 'decoding' || phase.value === 'loading-model' || phase.value === 'thinking',
 )
-/** 当前启用的模态。图像侧下线期间只跑音频（见 ENABLE_IMAGE） */
-const modalities = computed<Modality[]>(() => (ENABLE_IMAGE ? ['audio', 'image'] : ['audio']))
 const dlPct = computed(() => (dl.total ? Math.round((dl.received / dl.total) * 100) : 0))
+const modelKinds = computed<Modality[]>(() => (ENABLE_IMAGE ? ['audio', 'image'] : ['audio']))
 
-const firstModality = computed<Modality | null>(() => (runs.audio ? 'audio' : runs.image ? 'image' : null))
-const firstResult = computed<CrossResult | null>(() =>
-  firstModality.value ? topResult(firstModality.value, runs[firstModality.value]!.all) : null,
+/** 当前选中用于对比的候选 */
+function sel(m: Modality): Candidate | null {
+  const r = runs[m]
+  if (!r?.shown.length) return null
+  return r.shown[Math.min(picked[m], r.shown.length - 1)] ?? null
+}
+const selAudio = computed(() => sel('audio'))
+const selImage = computed(() => sel('image'))
+const selAudioId = computed(() => selAudio.value?.speciesId ?? '')
+const selImageId = computed(() => selImage.value?.speciesId ?? '')
+
+/** 选中候选的全部素材（可能还没加载完） */
+const audioClips = computed<MediaAsset[]>(() =>
+  selAudioId.value ? mediaById.value[selAudioId.value]?.audios ?? [] : [],
 )
-const secondResult = computed<CrossResult | null>(() => {
-  const m = firstModality.value
-  if (!m) return null
-  const other: Modality = m === 'audio' ? 'image' : 'audio'
-  return runs[other] ? topResult(other, runs[other]!.all) : null
-})
-/** 第一路识别出的种，项目里是否还有另一模态的素材可看 */
-const hasOtherMedia = computed(() => {
-  const r = firstResult.value
-  if (!r?.speciesId) return false
-  const m = mediaById.value[r.speciesId]
-  if (!m) return false
-  const other: Modality = r.modality === 'audio' ? 'image' : 'audio'
-  const n = other === 'image' ? (m.images?.length ?? 0) : (m.audios?.length ?? 0)
-  return n > 0
-})
-const verdict = computed(() => compare(firstResult.value, secondResult.value, hasOtherMedia.value))
-/** 该提示用户用哪个模态复核 */
-const suggest = computed<Modality | null>(() => verdict.value.suggest)
-const suggestTask = computed(() => (suggest.value ? MODELS[suggest.value] : null))
+const imageShots = computed<MediaAsset[]>(() =>
+  selImageId.value ? mediaById.value[selImageId.value]?.images ?? [] : [],
+)
+const audioMatch = computed<MediaAsset | null>(
+  () => audioClips.value[heroIdx(selAudioId.value, 'audio')] ?? null,
+)
+const imageMatch = computed<MediaAsset | null>(
+  () => imageShots.value[heroIdx(selImageId.value, 'img')] ?? null,
+)
+const audioLoading = computed(() => !!selAudioId.value && mediaLoading.value.has(selAudioId.value))
+const imageLoading = computed(() => !!selImageId.value && mediaLoading.value.has(selImageId.value))
+
+/** 展示名：优先项目里的本地化名（中/英），回退标签里的中文名 → 标签英文名 */
+function nameOf(c: Candidate | null): string {
+  if (!c) return ''
+  const sp = c.speciesId ? speciesById(c.speciesId) : undefined
+  if (sp) return speciesName(sp, String(locale.value))
+  return c.entry?.z || c.label.split('_')[1] || c.label
+}
 
 async function loadMedia(cands: Candidate[]) {
   for (const c of cands) {
@@ -152,12 +170,19 @@ async function ensureReady(kind: Modality) {
   phase.value = 'loading-model'
   dl.total = (await modelSize(MODELS[kind])) || MODELS[kind].sizeMB * 1024 * 1024
   dl.received = 0
-  await ensureModel(MODELS[kind], (r, t) => {
-    dl.received = r
-    dl.total = t
+  await ensureModel(MODELS[kind], (received, total) => {
+    dl.received = received
+    dl.total = total
   })
   modelState[kind].ready = true
   modelState[kind].bytes = dl.total
+}
+
+/** 换输入前先释放旧的 blob URL，避免整页会话里一直占着内存 */
+function clearInput(kind: Modality) {
+  const cur = inputs[kind]
+  if (cur) URL.revokeObjectURL(cur.url)
+  inputs[kind] = null
 }
 
 // ---------- 录音 ----------
@@ -180,10 +205,13 @@ async function startRecording() {
     startedAt = Date.now()
     mediaRec.start()
     phase.value = 'capturing'
+    activeMod.value = 'audio'
     recTimer = window.setInterval(() => (elapsed.value = (Date.now() - startedAt) / 1000), 200)
     track('birdid_record_start')
   } catch {
     phase.value = 'error'
+    activeMod.value = null
+    errMod.value = 'audio'
     errMsg.value = t('birdId.err.mic')
   }
 }
@@ -205,65 +233,93 @@ async function onImageFile(e: Event) {
   ;(e.target as HTMLInputElement).value = ''
 }
 
+/** 每次新识别 +1：迟到的旧结果直接丢弃（用户中途换文件/点重做时不串结果） */
+let runSeq = 0
+
 async function handleAudio(blob: Blob) {
+  const seq = ++runSeq
   phase.value = 'decoding'
+  activeMod.value = 'audio'
   errMsg.value = ''
+  errMod.value = null
+  runs.audio = null
+  picked.audio = 0
+  clearInput('audio')
+  inputs.audio = { url: URL.createObjectURL(blob), samples: null }
   try {
     const samples = await decodeAudio(blob)
+    if (seq !== runSeq) return
+    if (inputs.audio) inputs.audio.samples = samples
     if (samples.length < 12000) throw new Error('too-short')
     await ensureReady('audio')
+    if (seq !== runSeq) return
     phase.value = 'thinking'
     track('birdid_infer', { modality: 'audio', seconds: Math.round(samples.length / 48000) })
     const r = await identifyAudio(blob, undefined, regionKey.value)
+    if (seq !== runSeq) return
     runs.audio = r.view
-    metas.audio = { durationSec: r.result.durationSec, windows: r.result.windows }
     phase.value = 'idle'
     await loadMedia(r.view.all)
   } catch (e) {
+    if (seq !== runSeq) return
     phase.value = 'error'
+    errMod.value = 'audio'
     console.error('[birdId] audio identify failed:', e)
     const m = e instanceof Error ? e.message : String(e)
     errMsg.value = m === 'too-short' ? t('birdId.err.tooShort') : t('birdId.err.generic')
     track('birdid_error', { modality: 'audio', reason: m.slice(0, 40) })
+  } finally {
+    if (seq === runSeq) activeMod.value = null
   }
 }
 
 async function handleImage(blob: Blob) {
+  const seq = ++runSeq
   phase.value = 'decoding'
+  activeMod.value = 'image'
   errMsg.value = ''
+  errMod.value = null
+  runs.image = null
+  picked.image = 0
+  clearInput('image')
+  inputs.image = { url: URL.createObjectURL(blob) }
   try {
     await ensureReady('image')
+    if (seq !== runSeq) return
     phase.value = 'thinking'
     track('birdid_infer', { modality: 'image' })
     const r = await identifyImage(blob, undefined, regionKey.value)
+    if (seq !== runSeq) return
     runs.image = r.view
-    metas.image = { durationSec: 0, windows: 1 }
     phase.value = 'idle'
     await loadMedia(r.view.all)
   } catch (e) {
+    if (seq !== runSeq) return
     phase.value = 'error'
+    errMod.value = 'image'
     console.error('[birdId] image identify failed:', e)
-    errMsg.value = t('birdId.err.generic')
+    errMsg.value = t('birdId.err.genericImage')
     track('birdid_error', { modality: 'image' })
+  } finally {
+    if (seq === runSeq) activeMod.value = null
   }
 }
 
-/** 一键切到另一模态：录音结束 → 直接开图片选择；图片识别完 → 直接开录音 */
-function switchTo(kind: Modality) {
-  if (kind === 'image') (document.getElementById('birdid-image-input') as HTMLInputElement)?.click()
-  else startRecording()
-}
-
+/** 清空一路（或全部）：输入 + 结果 + 选中项一起清 */
 function reset(kind?: Modality) {
-  if (kind) runs[kind] = null
-  else {
-    runs.audio = null
-    runs.image = null
+  runSeq++
+  const kinds: Modality[] = kind ? [kind] : ['audio', 'image']
+  for (const k of kinds) {
+    clearInput(k)
+    runs[k] = null
+    picked[k] = 0
+    if (errMod.value === k) {
+      errMsg.value = ''
+      errMod.value = null
+    }
   }
-  metas.audio = null
-  metas.image = null
-  errMsg.value = ''
   phase.value = 'idle'
+  activeMod.value = null
 }
 
 async function dropModel(kind: Modality) {
@@ -288,11 +344,16 @@ onMounted(async () => {
   }
 })
 
+onBeforeUnmount(() => {
+  clearInput('audio')
+  clearInput('image')
+})
+
 const fmtMB = (b: number) => (b / 1048576).toFixed(1)
 
 /* ═══ 地域先验 ═══
  * 模型的概率饱和在 99%+，单靠分数排序等于按噪声排。真实的强约束是
- * 「你拍到的鸟大概率就在当地」—— Merlin 认得准主要就靠这个。
+ * 「你拍到的鸟大概率就在当地」——Merlin 认得准主要就靠这个。
  * 这里让用户选地点，识别后按当地常见度档位重排候选（src/core/birdId/regionPrior.ts）。
  * 默认跟随全局设置里的地区，不额外打断用户；可临时改，不写回设置。
  */
@@ -323,7 +384,7 @@ function onCountryChange() {
   <div class="wrap">
     <h1><Bird :size="22" /> {{ t('birdId.title') }}</h1>
 
-    <!-- 隐私说明保留一行：识别在本机、录音不上传（055 §5.3 的红线）。要更干净可直接删。 -->
+    <!-- 隐私说明保留一行：识别在本机、录音与照片不上传（055 §5.3 的红线） -->
     <p class="privacy">{{ t('birdId.privacyShort') }}</p>
     <p class="credit">{{ t('birdId.credit') }}</p>
 
@@ -351,194 +412,280 @@ function onCountryChange() {
       </div>
     </section>
 
-    <!-- ═══ 跨模态互证：并排两路结果 ═══ -->
-    <section v-if="runs.audio || runs.image" class="panel" :class="{ agree: verdict.agree }">
+    <!-- ═══ 工具一：听音识别 ═══ -->
+    <section class="panel">
       <div class="row between">
-        <h2>{{ t('birdId.crossTitle') }}</h2>
-        <button class="btn ghost sm" @click="reset()"><Trash2 :size="15" /> {{ t('birdId.reset') }}</button>
+        <h2><Mic :size="16" /> {{ t('birdId.mod.audio') }}</h2>
+        <button v-if="inputs.audio" class="link sm" @click="reset('audio')">
+          <Trash2 :size="13" /> {{ t('birdId.redo') }}
+        </button>
       </div>
 
-      <ol class="lanes">
-        <li v-for="m in modalities" :key="m" class="lane" :class="{ empty: !runs[m] }">
-          <div class="laneHead">
-            <Mic v-if="m === 'audio'" :size="15" />
-            <Camera v-else :size="15" />
-            <span>{{ m === 'audio' ? t('birdId.mod.audio') : t('birdId.mod.image') }}</span>
-            <button v-if="runs[m]" class="link sm" @click="reset(m)">{{ t('birdId.redo') }}</button>
-          </div>
-
-          <div v-if="!runs[m]" class="laneEmpty">
-            <p>{{ m === 'audio' ? t('birdId.hint.audio') : t('birdId.hint.image') }}</p>
-            <label v-if="m === 'image'" class="btn sm">
-              {{ t('birdId.chooseImage') }}
-              <input id="birdid-image-input" type="file" accept="image/*" hidden @change="onImageFile" />
-            </label>
-            <button v-else class="btn sm" :disabled="busy" @click="startRecording">
-              <Mic :size="14" /> {{ t('birdId.record') }}
-            </button>
-          </div>
-
-          <div v-else-if="!runs[m]!.shown.length" class="laneNone">
-            {{ t('birdId.band.none') }}
-          </div>
-
-          <div v-else class="laneBody">
-            <!-- 低分但排序仍有信息量：给一句提示，而不是假装没听到（docs/065 P0-1）。 -->
-            <p v-if="runs[m]!.messageKey" class="bandNote">{{ t(runs[m]!.messageKey) }}</p>
-            <!-- 每个候选一块：一句「可能是 X」+ 该种现有的图/音 + 详情链接。
-                 不写「模型不是 100% 准」这类反复解释——用户知道，说了反而像免责声明。 -->
-            <div v-for="(c, i) in runs[m]!.shown" :key="c.label" class="cand" :class="{ top: i === 0 }">
-              <div class="cName">{{ t('birdId.maybe.one', { name: c.entry?.z || c.label.split('_')[1] || c.label }) }}</div>
-              <div class="cSci">{{ c.label }}</div>
-              <p v-if="c.regionTier" class="cTier">{{ t(`birdId.region.tier.${c.regionTier}`) }}</p>
-              <p v-if="c.entry?.t === 4" class="cNote">{{ t('birdId.genusOnly', { genus: c.entry.g }) }}</p>
-              <!-- 只有名录明确说「没有素材」时才这么讲（p===false）；speciesId 缺失不再作为判据——
-                   产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
-              <p v-else-if="c.entry && c.entry.p === false" class="cNote">{{ t('birdId.noMedia') }}</p>
-
-              <template v-if="c.speciesId">
-                <!-- 生境 / 习性：有就显示（当前仅 7 个核心种有人工文本） -->
-                <div v-if="profileOf(c.speciesId).habitat || profileOf(c.speciesId).habit" class="facts">
-                  <p v-if="profileOf(c.speciesId).habitat">
-                    <span class="fKey">{{ t('birdId.factHabitat') }}</span>{{ profileOf(c.speciesId).habitat }}
-                  </p>
-                  <p v-if="profileOf(c.speciesId).habit">
-                    <span class="fKey">{{ t('birdId.factHabit') }}</span>{{ profileOf(c.speciesId).habit }}
-                  </p>
-                </div>
-
-                <div v-if="mediaLoading.has(c.speciesId)" class="spinWrap"><Loader2 :size="16" class="spin" /></div>
-                <template v-else>
-                  <!-- 大号素材：图片优先，没有图就大号播放器 -->
-                  <div v-if="mediaById[c.speciesId]?.images?.length" class="hero">
-                    <img
-                      :src="mediaById[c.speciesId]!.images![heroIdx(c, 'img')]!.url"
-                      :alt="c.entry?.z || c.label"
-                      loading="lazy"
-                      @click="origin = mediaById[c.speciesId]!.images![heroIdx(c, 'img')]!"
-                    />
-                    <AttributionLine :media="mediaById[c.speciesId]!.images![heroIdx(c, 'img')]!" />
-                  </div>
-                  <div v-else-if="mediaById[c.speciesId]?.audios?.length" class="heroAudio">
-                    <audio
-                      crossorigin="anonymous"
-                      :src="mediaById[c.speciesId]!.audios![heroIdx(c, 'audio')]!.url"
-                      controls
-                      preload="none"
-                    />
-                    <AttributionLine :media="mediaById[c.speciesId]!.audios![heroIdx(c, 'audio')]!" />
-                  </div>
-
-                  <!-- 小号：点一下它变大，原来的变回常规大小 -->
-                  <div v-if="(mediaById[c.speciesId]?.images?.length ?? 0) > 1" class="thumbs">
-                    <button
-                      v-for="(im, k) in mediaById[c.speciesId]!.images!"
-                      :key="im.url"
-                      type="button"
-                      class="thumb"
-                      :class="{ on: k === heroIdx(c, 'img') }"
-                      :aria-pressed="k === heroIdx(c, 'img')"
-                      @click="setHero(c, 'img', k)"
-                    >
-                      <img :src="im.thumbUrl || im.url" alt="" loading="lazy" />
-                    </button>
-                  </div>
-                  <div v-if="(mediaById[c.speciesId]?.audios?.length ?? 0) > 1" class="audio">
-                    <button
-                      v-for="(au, k) in mediaById[c.speciesId]!.audios!"
-                      :key="au.url"
-                      type="button"
-                      class="play"
-                      :class="{ on: k === heroIdx(c, 'audio') }"
-                      :aria-label="t('birdId.playOne')"
-                      @click="setHero(c, 'audio', k)"
-                    >
-                      <Play :size="14" /> {{ k + 1 }}
-                    </button>
-                  </div>
-
-                  <button class="link" @click="router.push(`/species/${c.speciesId}`)">
-                    {{ t('birdId.viewSpecies') }}
-                  </button>
-                </template>
-              </template>
-            </div>
-          </div>
-        </li>
-      </ol>
-
-      <!-- 互证结论 + 主动引导 -->
-      <div v-if="verdict.textKey" class="verdict" :class="verdict.agree ? 'ok' : 'warnBox'">
-        {{ verdict.agree ? '✓ ' : '' }}{{ t(verdict.textKey) }}
-      </div>
-      <button
-        v-if="ENABLE_IMAGE && suggest && suggestTask"
-        class="cta"
-        :disabled="busy"
-        @click="switchTo(suggest)"
-      >
-        <Camera v-if="suggest === 'image'" :size="16" />
-        <Mic v-else :size="16" />
-        {{ suggest === 'image' ? t('birdId.cross.goImage') : t('birdId.cross.goAudio') }}
-      </button>
-    </section>
-
-    <!-- ═══ 首次使用 ═══ -->
-    <section v-else class="panel">
-      <div class="twoUp">
-        <div class="col">
-          <h3><Mic :size="17" /> {{ t('birdId.mod.audio') }}</h3>
-          <p v-if="!runs.audio" class="hint">{{ t('birdId.hint.audio') }}</p>
-          <div class="row">
-            <button class="btn primary" :disabled="busy" @click="startRecording">
-              <Mic :size="16" /> {{ t('birdId.record') }}
-            </button>
-            <label class="btn">{{ t('birdId.upload') }}<input type="file" accept="audio/*" hidden @change="onAudioFile" /></label>
-          </div>
-        </div>
-        <!-- 图像侧已下线（ENABLE_IMAGE）；恢复时无需改结构 -->
-        <div v-if="ENABLE_IMAGE" class="col">
-          <h3><Camera :size="17" /> {{ t('birdId.mod.image') }}</h3>
+      <!-- 还没输入：两个入口 -->
+      <template v-if="!inputs.audio">
+        <p class="hint">{{ t('birdId.hint.audio') }}</p>
+        <div class="row">
+          <button class="btn primary" :disabled="busy" @click="startRecording">
+            <Mic :size="16" /> {{ t('birdId.record') }}
+          </button>
           <label class="btn">
-            {{ t('birdId.chooseImage') }}<input type="file" accept="image/*" hidden @change="onImageFile" />
+            {{ t('birdId.upload') }}
+            <input type="file" accept="audio/*" hidden @change="onAudioFile" />
           </label>
         </div>
-      </div>
-    </section>
+      </template>
 
-    <!-- ═══ 运行中 / 报错 ═══ -->
-    <section class="panel">
+      <template v-else>
+        <p v-if="runs.audio?.messageKey" class="bandNote">
+          {{ t(runs.audio.messageKey) }}
+          <template v-if="runs.audio.messageKey === 'birdId.band.low'">
+            {{ t('birdId.band.lowHint.audio') }}
+          </template>
+        </p>
+
+        <!-- 原始录音 + 该种叫声：波形并排对比 -->
+        <div class="pair">
+          <div class="side">
+            <h3>{{ t('birdId.yourAudio') }}</h3>
+            <AudioWave
+              :src="inputs.audio.url"
+              :samples="inputs.audio.samples"
+              :label="t('birdId.waveYours')"
+            />
+          </div>
+          <div v-if="runs.audio" class="side">
+            <h3>{{ t('birdId.matchAudio', { name: nameOf(selAudio) }) }}</h3>
+            <template v-if="audioMatch">
+              <AudioWave :src="audioMatch.url" :label="t('birdId.waveMatch')" />
+              <div v-if="audioClips.length > 1" class="clips">
+                <button
+                  v-for="(clip, k) in audioClips"
+                  :key="clip.url"
+                  type="button"
+                  class="clip"
+                  :class="{ on: k === heroIdx(selAudioId, 'audio') }"
+                  :aria-pressed="k === heroIdx(selAudioId, 'audio')"
+                  @click="setHero(selAudioId, 'audio', k)"
+                >
+                  {{ k + 1 }}
+                </button>
+              </div>
+              <AttributionLine :media="audioMatch" />
+            </template>
+            <p v-else-if="audioLoading" class="spinWrap"><Loader2 :size="16" class="spin" /></p>
+            <p v-else class="noAsset">{{ t('birdId.noSpeciesAudio') }}</p>
+          </div>
+        </div>
+
+        <!-- 候选：点一下换对比对象 -->
+        <template v-if="runs.audio">
+          <h3 class="candHead">{{ t('birdId.candidates') }}</h3>
+          <div class="cands">
+            <button
+              v-for="(c, i) in runs.audio.shown"
+              :key="c.label"
+              type="button"
+              class="cand"
+              :class="{ on: i === picked.audio }"
+              :aria-pressed="i === picked.audio"
+              @click="picked.audio = i"
+            >
+              <span class="cName">{{ nameOf(c) }}</span>
+              <span class="cSci">{{ c.label }}</span>
+              <span v-if="c.regionTier" class="cTier">{{
+                t(`birdId.region.tier.${c.regionTier}`)
+              }}</span>
+            </button>
+          </div>
+
+          <div v-if="selAudio" class="candFoot">
+            <p v-if="selAudio.entry?.t === 4" class="cNote">
+              {{ t('birdId.genusOnly', { genus: selAudio.entry.g }) }}
+            </p>
+            <!-- 只有名录明确说「没有素材」时才这么讲（p===false）；speciesId 缺失不再作为判据——
+                 产物原来只从采集台账取 id，会把核心库的种误判成没素材（2026-10-17 白头鹎） -->
+            <p v-else-if="selAudio.entry && selAudio.entry.p === false" class="cNote">
+              {{ t('birdId.noMedia') }}
+            </p>
+            <div
+              v-if="
+                profileOf(selAudio.speciesId).habitat || profileOf(selAudio.speciesId).habit
+              "
+              class="facts"
+            >
+              <p v-if="profileOf(selAudio.speciesId).habitat">
+                <span class="fKey">{{ t('birdId.factHabitat') }}</span
+                >{{ profileOf(selAudio.speciesId).habitat }}
+              </p>
+              <p v-if="profileOf(selAudio.speciesId).habit">
+                <span class="fKey">{{ t('birdId.factHabit') }}</span
+                >{{ profileOf(selAudio.speciesId).habit }}
+              </p>
+            </div>
+            <button
+              v-if="selAudio.speciesId"
+              class="link"
+              @click="router.push(`/species/${selAudio.speciesId}`)"
+            >
+              {{ t('birdId.viewSpecies') }}
+            </button>
+          </div>
+        </template>
+      </template>
+
       <div v-if="phase === 'capturing'" class="status">
         <button class="btn danger" @click="stopRecording">
           <Square :size="16" /> {{ t('birdId.stop') }} {{ elapsed.toFixed(1) }}s
         </button>
       </div>
-      <div v-if="phase === 'loading-model'" class="status">
+      <div v-if="activeMod === 'audio' && phase === 'loading-model'" class="status">
         <Loader2 :size="16" class="spin" />
         <span>{{ t('birdId.model.downloading', { pct: dlPct }) }}</span>
         <div class="bar"><i :style="{ width: dlPct + '%' }" /></div>
       </div>
-      <div v-if="phase === 'thinking'" class="status">
+      <div v-if="activeMod === 'audio' && (phase === 'decoding' || phase === 'thinking')" class="status">
         <Loader2 :size="16" class="spin" /> {{ t('birdId.thinking') }}
       </div>
-      <p v-if="phase === 'error'" class="err">✗ {{ errMsg }}</p>
+      <p v-if="phase === 'error' && errMod === 'audio'" class="err">✗ {{ errMsg }}</p>
+    </section>
 
+    <!-- ═══ 工具二：看图识别 ═══ -->
+    <section v-if="ENABLE_IMAGE" class="panel">
+      <div class="row between">
+        <h2><Camera :size="16" /> {{ t('birdId.mod.image') }}</h2>
+        <button v-if="inputs.image" class="link sm" @click="reset('image')">
+          <Trash2 :size="13" /> {{ t('birdId.redo') }}
+        </button>
+      </div>
+
+      <template v-if="!inputs.image">
+        <p class="hint">{{ t('birdId.hint.image') }}</p>
+        <label class="btn">
+          {{ t('birdId.chooseImage') }}
+          <input id="birdid-image-input" type="file" accept="image/*" hidden @change="onImageFile" />
+        </label>
+      </template>
+
+      <template v-else>
+        <p v-if="runs.image?.messageKey" class="bandNote">
+          {{ t(runs.image.messageKey) }}
+          <template v-if="runs.image.messageKey === 'birdId.band.low'">
+            {{ t('birdId.band.lowHint.image') }}
+          </template>
+        </p>
+
+        <!-- 原始照片 + 该种照片：并排对比 -->
+        <div class="pair">
+          <div class="side">
+            <h3>{{ t('birdId.yourImage') }}</h3>
+            <img class="shot" :src="inputs.image.url" :alt="t('birdId.yourImage')" />
+          </div>
+          <div v-if="runs.image" class="side">
+            <h3>{{ t('birdId.matchImage', { name: nameOf(selImage) }) }}</h3>
+            <template v-if="imageMatch">
+              <img
+                class="shot"
+                :src="imageMatch.url"
+                :alt="nameOf(selImage)"
+                @click="origin = imageMatch"
+              />
+              <div v-if="imageShots.length > 1" class="thumbs">
+                <button
+                  v-for="(shot, k) in imageShots"
+                  :key="shot.url"
+                  type="button"
+                  class="thumb"
+                  :class="{ on: k === heroIdx(selImageId, 'img') }"
+                  :aria-pressed="k === heroIdx(selImageId, 'img')"
+                  @click="setHero(selImageId, 'img', k)"
+                >
+                  <img :src="shot.thumbUrl || shot.url" alt="" loading="lazy" />
+                </button>
+              </div>
+              <AttributionLine :media="imageMatch" />
+            </template>
+            <p v-else-if="imageLoading" class="spinWrap"><Loader2 :size="16" class="spin" /></p>
+            <p v-else class="noAsset">{{ t('birdId.noSpeciesImage') }}</p>
+          </div>
+        </div>
+
+        <template v-if="runs.image">
+          <h3 class="candHead">{{ t('birdId.candidates') }}</h3>
+          <div class="cands">
+            <button
+              v-for="(c, i) in runs.image.shown"
+              :key="c.label"
+              type="button"
+              class="cand"
+              :class="{ on: i === picked.image }"
+              :aria-pressed="i === picked.image"
+              @click="picked.image = i"
+            >
+              <span class="cName">{{ nameOf(c) }}</span>
+              <span class="cSci">{{ c.label }}</span>
+              <span v-if="c.regionTier" class="cTier">{{
+                t(`birdId.region.tier.${c.regionTier}`)
+              }}</span>
+            </button>
+          </div>
+
+          <div v-if="selImage" class="candFoot">
+            <p v-if="selImage.entry?.t === 4" class="cNote">
+              {{ t('birdId.genusOnly', { genus: selImage.entry.g }) }}
+            </p>
+            <p v-else-if="selImage.entry && selImage.entry.p === false" class="cNote">
+              {{ t('birdId.noMedia') }}
+            </p>
+            <button
+              v-if="selImage.speciesId"
+              class="link"
+              @click="router.push(`/species/${selImage.speciesId}`)"
+            >
+              {{ t('birdId.viewSpecies') }}
+            </button>
+          </div>
+        </template>
+      </template>
+
+      <div v-if="activeMod === 'image' && phase === 'loading-model'" class="status">
+        <Loader2 :size="16" class="spin" />
+        <span>{{ t('birdId.model.downloading', { pct: dlPct }) }}</span>
+        <div class="bar"><i :style="{ width: dlPct + '%' }" /></div>
+      </div>
+      <div
+        v-if="activeMod === 'image' && (phase === 'decoding' || phase === 'thinking')"
+        class="status"
+      >
+        <Loader2 :size="16" class="spin" /> {{ t('birdId.thinking') }}
+      </div>
+      <p v-if="phase === 'error' && errMod === 'image'" class="err">✗ {{ errMsg }}</p>
+    </section>
+
+    <!-- ═══ 模型缓存状态 ═══ -->
+    <section class="panel">
       <div class="modelRow">
-        <template v-for="m in modalities" :key="m">
+        <div v-for="m in modelKinds" :key="m" class="modelItem">
           <span v-if="modelState[m].ready" class="ok">✓</span>
           <TriangleAlert v-else :size="14" />
           <span class="modelTxt">{{
             modelState[m].ready
               ? t('birdId.model.ready', { mb: fmtMB(modelState[m].bytes) })
-              : t('birdId.model.need', { mb: fmtMB(modelState[m].bytes || MODELS[m].sizeMB * 1024 * 1024) })
+              : t('birdId.model.need', {
+                  mb: fmtMB(modelState[m].bytes || MODELS[m].sizeMB * 1024 * 1024),
+                })
           }}</span>
-          <button v-if="modelState[m].ready" class="link sm" @click="dropModel(m)">{{ t('birdId.model.drop') }}</button>
-        </template>
+          <button v-if="modelState[m].ready" class="link sm" @click="dropModel(m)">
+            {{ t('birdId.model.drop') }}
+          </button>
+        </div>
       </div>
     </section>
+
+    <!-- 两路都是工具，没有先后、也不互相背书：结果只作参考 -->
+    <p class="note">{{ t('birdId.resultsNote') }}</p>
   </div>
 
-  <!-- 看原图：大号图点开。xlUrl = 母版原分辨率；originalUrl = 源站原始文件 -->
+  <!-- 看原图：点开大图。xlUrl = 母版原分辨率；originalUrl = 源站原始文件 -->
   <Teleport to="body">
     <div v-if="origin" class="lb" role="dialog" aria-modal="true" @click="origin = null">
       <img :src="origin.xlUrl || origin.url" :alt="t('birdId.title')" @click.stop />
@@ -579,19 +726,8 @@ h3 {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 15px;
+  font-size: 14px;
   margin: 0 0 6px;
-}
-.disclaimer {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  background: var(--surface-2, #f3f4f6);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.6;
-  margin: 0 0 14px;
 }
 .privacy {
   font-size: 12px;
@@ -611,16 +747,33 @@ h3 {
   padding: 14px;
   margin-bottom: 14px;
 }
-.hero img {
+.panel .row.between {
+  margin-bottom: 8px;
+}
+/* 并排对比：窄屏上下排，宽屏左右排 */
+.pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 4px;
+}
+@media (min-width: 620px) {
+  .pair {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+.side {
+  min-width: 0;
+}
+.shot {
   width: 100%;
-  max-height: 340px;
-  object-fit: cover;
-  border-radius: 10px;
+  max-height: 280px;
+  object-fit: contain;
+  background: var(--surface-2, #f9fafb);
+  border-radius: 8px;
   cursor: zoom-in;
   display: block;
-}
-.heroAudio audio {
-  width: 100%;
 }
 .facts {
   margin: 8px 0 0;
@@ -631,10 +784,16 @@ h3 {
   color: var(--muted, #6b7280);
   margin-right: 6px;
 }
+.thumbs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
 .thumb {
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: none;
   cursor: pointer;
@@ -643,8 +802,28 @@ h3 {
 .thumb.on {
   border-color: var(--primary, #2563eb);
 }
-.panel.agree {
-  border-color: #16a34a;
+.thumb img {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+}
+.clips {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.clip {
+  min-width: 28px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid var(--line, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+  font-size: 12px;
+  cursor: pointer;
+}
+.clip.on {
+  border-color: var(--primary, #2563eb);
+  color: var(--primary, #2563eb);
 }
 .regionPick .applied {
   font-size: 12px;
@@ -674,26 +853,15 @@ h3 {
   color: inherit;
   min-width: 180px;
 }
-.regionPick .pHint {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--muted, #6b7280);
-  margin: 10px 0 0;
-}
 .cTier {
   display: inline-block;
-  margin: 4px 0 0;
+  margin-top: 2px;
   font-size: 11px;
   line-height: 1.5;
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--surface-2, #f3f4f6);
   color: var(--muted, #6b7280);
-}
-.twoUp {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
 }
 .row {
   display: flex;
@@ -715,10 +883,6 @@ h3 {
   font-size: 14px;
   cursor: pointer;
 }
-.btn.sm {
-  padding: 5px 10px;
-  font-size: 13px;
-}
 .btn.primary {
   background: var(--accent, #2563eb);
   color: #fff;
@@ -728,9 +892,6 @@ h3 {
   background: #dc2626;
   color: #fff;
   border-color: transparent;
-}
-.btn.ghost {
-  background: transparent;
 }
 .btn:disabled {
   opacity: 0.5;
@@ -742,86 +903,42 @@ h3 {
   margin: 6px 0 10px;
   line-height: 1.6;
 }
-.lanes {
-  list-style: none;
-  padding: 0;
-  margin: 12px 0 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-.lane {
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 8px;
-  padding: 10px;
-}
-.lane.empty {
-  border-style: dashed;
-  background: var(--surface-2, #f9fafb);
-}
-.laneHead {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.laneHead .link {
-  margin-left: auto;
-}
-.laneEmpty p {
-  font-size: 12px;
-  color: var(--text-3, #6b7280);
-  margin: 0 0 8px;
-  line-height: 1.6;
-}
-.laneNone {
-  font-size: 12px;
-  color: var(--text-3, #6b7280);
-  line-height: 1.7;
-}
 .bandNote {
   font-size: 12px;
   color: var(--text-2, #4b5563);
   background: var(--surface-2, #f3f4f6);
   border-radius: 6px;
   padding: 6px 8px;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   line-height: 1.6;
 }
-.cand {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--line, #f0f1f3);
+.candHead {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted, #6b7280);
+  font-weight: 600;
 }
-.cand:last-child {
-  border-bottom: none;
-}
-.cHead {
+.cands {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  flex-direction: column;
+  gap: 6px;
 }
-.cLabel {
-  font-size: 11px;
-  color: var(--text-3, #6b7280);
+.cand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e5e7eb);
+  background: var(--surface-1, #fff);
+  cursor: pointer;
+  font: inherit;
 }
-.maybeNote {
-  font-size: 12px;
-  color: var(--text-3, #6b7280);
-  line-height: 1.7;
-  margin: 8px 0 0;
-}
-.rank {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--surface-2, #f3f4f6);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 700;
+.cand.on {
+  border-color: var(--primary, #2563eb);
+  background: var(--surface-2, #f9fafb);
 }
 .cName {
   font-size: 14px;
@@ -830,85 +947,34 @@ h3 {
 .cSci {
   font-size: 11px;
   color: var(--text-3, #6b7280);
-  margin-top: 1px;
+}
+.candFoot {
+  margin-top: 10px;
 }
 .cNote {
   font-size: 12px;
   color: var(--text-3, #6b7280);
-  margin: 4px 0 0;
+  margin: 4px 0;
+  line-height: 1.6;
 }
-.media {
-  margin-top: 8px;
+.noAsset {
+  font-size: 12px;
+  color: var(--text-3, #6b7280);
+  line-height: 1.6;
+  margin: 6px 0 0;
 }
-.thumbs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.thumbs img {
-  width: 68px;
-  height: 51px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-.audio {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-.play {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid var(--line, #e5e7eb);
-  background: var(--surface-2, #f3f4f6);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-.play audio {
-  display: none;
-}
-.verdict {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.7;
-}
-.verdict.ok {
-  background: #f0fdf4;
-  color: #166534;
-}
-.verdict.warnBox {
-  background: #fffbeb;
-  color: #92400e;
-}
-.cta {
-  margin-top: 10px;
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  background: var(--accent, #2563eb);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.cta:disabled {
-  opacity: 0.5;
+.note {
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  text-align: center;
+  margin: 0 0 14px;
 }
 .status {
   display: flex;
   gap: 10px;
   align-items: center;
   font-size: 14px;
-  margin-bottom: 10px;
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 .bar {
@@ -927,17 +993,21 @@ h3 {
 .err {
   color: #dc2626;
   font-size: 14px;
-  margin: 0 0 10px;
+  margin: 10px 0 0;
 }
 .modelRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--text-3, #6b7280);
+}
+.modelItem {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  font-size: 12px;
-  color: var(--text-3, #6b7280);
-  padding-top: 8px;
-  border-top: 1px solid var(--line, #e5e7eb);
 }
 .modelTxt {
   margin-right: 4px;
@@ -956,6 +1026,9 @@ h3 {
 }
 .link.sm {
   font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .spinWrap {
   padding: 6px 0;
