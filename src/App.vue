@@ -8,27 +8,13 @@ import { useReportsMetaStore } from '@/stores/reportsMeta'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, getAmbienceState, subscribeAmbience } from '@/core/ambience'
 import { trackSessionStart } from '@/core/metrics'
-import { GITHUB_REPO, XHS_HANDLE, xhsProfileUrl } from '@/core/social'
+import { GITHUB_REPO } from '@/core/social'
 
 const route = useRoute()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const reportsMeta = useReportsMetaStore()
 const { t } = useI18n()
-
-/** 小红书号复制（没有直达链接时的退路；见 core/social.ts） */
-const xhsCopied = ref(false)
-let copyTimer: number | undefined
-async function copyXhs() {
-  try {
-    await navigator.clipboard.writeText(XHS_HANDLE)
-    xhsCopied.value = true
-    window.clearTimeout(copyTimer)
-    copyTimer = window.setTimeout(() => (xhsCopied.value = false), 2400)
-  } catch {
-    /* 剪贴板不可用（http/旧浏览器）：保持原样，号本身就在按钮上 */
-  }
-}
 
 // 环境鸟鸣：播放范围来自设置页勾选（默认全部）
 ambiencePlayer.configure({ getExcluded: () => settings.ambienceExcluded })
@@ -157,7 +143,6 @@ const immersive = computed(
   </main>
 
   <footer class="app-footer">
-    <p>{{ t('footer.source') }}</p>
     <!-- 标语：UNiaoer「友鸟儿」「有鸟儿」（015 #6）；保持单行、必要时才换行 -->
     <p class="tagline">
       <strong class="tag-brand">UNiaoer</strong>
@@ -168,29 +153,12 @@ const immersive = computed(
     </p>
     <!-- 非商业声明：项目免费、无广告；数据多含 NC 许可，商业使用需另行授权 -->
     <p class="noncommercial">{{ t('footer.nonCommercial') }}</p>
-    <!-- 公开链接：GitHub 仓库 + 小红书（没有「按小红书号直达」的公开链接，见 core/social.ts） -->
+    <!-- 公开链接 + 数据来源同一行（小红书账号写在 README 里） -->
     <p class="links">
       <a class="social" :href="GITHUB_REPO" target="_blank" rel="noopener noreferrer">
         <Github :size="13" /> {{ t('footer.github') }}
       </a>
-      <a
-        v-if="xhsProfileUrl"
-        class="social xhs"
-        :href="xhsProfileUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {{ t('footer.xhs', { id: XHS_HANDLE }) }}
-      </a>
-      <button
-        v-else
-        class="social xhs"
-        type="button"
-        :title="t('footer.xhsHint')"
-        @click="copyXhs"
-      >
-        {{ xhsCopied ? t('footer.xhsCopied') : t('footer.xhs', { id: XHS_HANDLE }) }}
-      </button>
+      <span class="src">{{ t('footer.source') }}</span>
     </p>
     <!-- 最下方：关于（README 镜像）+ 答疑专栏 -->
     <nav class="footer-links">

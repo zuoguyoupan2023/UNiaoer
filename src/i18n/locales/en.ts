@@ -40,9 +40,6 @@ const en: typeof zhMessages = {
       'Non-commercial open-source project · code MIT · images, audio and models under their own licences',
     about: 'About UNiaoer',
     github: 'GitHub',
-    xhs: 'Xiaohongshu · {id}',
-    xhsCopied: 'ID copied — search it in the app',
-    xhsHint: 'Click to copy the ID, then search it in the app',
   },
   about: {
     title: 'About UNiaoer',

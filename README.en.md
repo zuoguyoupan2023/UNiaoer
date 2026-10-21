@@ -148,6 +148,11 @@ This is a pure static SPA; **Cloudflare Pages** is enough.
 - **Do not run only `npm run build` without committing the bank**: `/data/manifest.json` would not exist, the SPA fallback would return HTML, and the frontend would fail with `Unexpected token '<'`.
 - After P6 the bank can live in R2/Worker and be read at build time, removing this step.
 
+## Follow / Contact
+
+- GitHub: [zuoguyoupan2023](https://github.com/zuoguyoupan2023) · repository [uniaoer](https://github.com/zuoguyoupan2023/uniaoer)
+- Xiaohongshu (RedNote): **左顾右盼** — ID `zuoguyoupan2026` (search the ID in the app)
+
 ---
 
 > **特别致谢：感恩蓝色大肥鱼DeepSeek的辛勤工作！**

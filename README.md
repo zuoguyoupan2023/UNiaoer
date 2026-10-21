@@ -146,6 +146,11 @@ npm run format       # 格式化
 - **千万别在 Pages 里只写 `npm run build` 而不提交题库**：那样 `/data/manifest.json` 不存在，会被 SPA 回退成 HTML，前端报 `Unexpected token '<'`。
 - P6 后可把题库放 R2/Worker，构建时直接读取，彻底免去这一步。
 
+## 关注 / 联系
+
+- GitHub：[zuoguyoupan2023](https://github.com/zuoguyoupan2023) · 项目仓库 [uniaoer](https://github.com/zuoguyoupan2023/uniaoer)
+- 小红书：**左顾右盼**（小红书号 `zuoguyoupan2026`，在 App 内搜索这个号即可）
+
 ---
 
 > **特别致谢：感恩蓝色大肥鱼DeepSeek的辛勤工作！**

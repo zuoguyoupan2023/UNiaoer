@@ -34,9 +34,6 @@ export const messages = {
     nonCommercial: '非商业项目 · 开源 · 代码 MIT · 图像/音频与识别模型按各自许可证',
     about: '关于 UNiaoer',
     github: 'GitHub',
-    xhs: '小红书 · {id}',
-    xhsCopied: '已复制小红书号，去 App 搜索',
-    xhsHint: '点一下复制小红书号，在 App 内搜索即可',
   },
   about: {
     title: '关于 UNiaoer',

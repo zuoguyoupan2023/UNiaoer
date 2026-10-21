@@ -197,7 +197,8 @@
 
 .app-footer {
   text-align: center;
-  padding: 10px 16px 14px;
+  /* 底部多留一点：最下方入口不被「回到顶部」浮动按钮压住 */
+  padding: 10px 16px 40px;
   font-size: 0.76rem;
   color: var(--text-light);
   line-height: 1.5;
@@ -254,14 +255,10 @@
   color: var(--primary);
   border-color: var(--primary);
 }
-/* 小红书用品牌红做底：没有官方图标可内联（第三方便捷图标会带来额外请求，违背本站在意隐私的定位） */
-.app-footer .social.xhs {
-  border-color: #ff2442;
-  color: #ff2442;
-}
-.app-footer .social.xhs:hover {
-  background: #ff2442;
-  color: #fff;
+/* 数据来源紧跟在 GitHub 链接右侧（同一行） */
+.app-footer .links .src {
+  font-size: 0.72rem;
+  color: var(--text-light);
 }
 /* 标语：UNiaoer「友鸟儿」「有鸟儿」；始终同一行、必要时才换行（015 #6；中英同序） */
 .app-footer .tagline {
