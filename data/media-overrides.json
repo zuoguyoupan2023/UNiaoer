@@ -1,9 +1,27 @@
 {
   "_comment": "人工媒体覆盖表（011 §4.1/§4.4）。键为物种 id（学名 slug）或学名。",
   "_format": {
-    "images": [{ "url": "https://…母版图", "license": "cc-by", "author": "作者", "source": "来源", "sourceUrl": "https://…" }],
-    "audios": [{ "url": "https://…音频", "license": "cc-by-nc", "author": "作者", "source": "来源", "sourceUrl": "https://…" }],
-    "excludeUrls": ["https://…要从自动结果里剔除的 url"]
+    "images": [
+      {
+        "url": "https://…母版图",
+        "license": "cc-by",
+        "author": "作者",
+        "source": "来源",
+        "sourceUrl": "https://…"
+      }
+    ],
+    "audios": [
+      {
+        "url": "https://…音频",
+        "license": "cc-by-nc",
+        "author": "作者",
+        "source": "来源",
+        "sourceUrl": "https://…"
+      }
+    ],
+    "excludeUrls": [
+      "https://…要从自动结果里剔除的 url"
+    ]
   },
   "_note": "覆盖项会排在同物种自动结果之前；许可仍需通过 licenseAllowed（ND 不转码）。",
   "overrides": {
@@ -77,7 +95,10 @@
     },
     "hypocnemis-subflava": {
       "_reason": "2026-10-08: 首选录音 14494（A/0:16/CC BY-NC-ND）XC 下载端点持续 500（三次重试均失败），改选同缓存下一条 A 级可下载记录 705478（0:27/CC BY-NC-SA）。",
-      "excludeUrls": ["https://xeno-canto.org/14494/download", "https://xeno-canto.org/14494"],
+      "excludeUrls": [
+        "https://xeno-canto.org/14494/download",
+        "https://xeno-canto.org/14494"
+      ],
       "audios": [
         {
           "url": "https://xeno-canto.org/705478/download",
@@ -86,6 +107,23 @@
           "source": "Xeno-canto",
           "sourceUrl": "https://xeno-canto.org/705478",
           "sourceId": "705478"
+        }
+      ]
+    },
+    "fulica-atra": {
+      "_reason": "2026-09-30 首图问题（雀鹰扑抓白骨顶，白骨顶在背景）已改为策展默认图；2026-10-21 复核发现该照片仍排在画廊第 2 位（只是不再是首图），已从素材列表移除。R2 旧对象保留备查、不再展示。",
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/149007507/large.jpeg",
+        "https://www.inaturalist.org/observations/90178562",
+        "https://www.inaturalist.org/photos/149007507"
+      ],
+      "rejected": [
+        {
+          "slot": "image-2",
+          "imageUrl": "https://bird.wewalk.world/media/fulica-atra/image-2.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/90178562",
+          "reason": "主体是雀鹰扑抓白骨顶（白骨顶在背景），不适合作为认鸟素材",
+          "reportIds": []
         }
       ]
     }

@@ -34,6 +34,9 @@ const IDS = String(args.ids || args.id || '')
   .filter(Boolean)
 const OUT = path.resolve(ROOT, args.out || 'data-cache/d1-upsert.sql')
 const DRY = !!args['dry-run']
+// --media-only：只更新媒体相关列（img_* / aud_* / playable_*），不碰其它字段。
+// 默认（不加该参数）生成整行 UPSERT，用于「以完整层为准」的同步。
+const MEDIA_ONLY = !!args['media-only']
 
 if (!IDS.length) {
   console.error('❌ 缺少 --ids（逗号分隔的物种 id）')
@@ -64,14 +67,23 @@ if (stats.rows.length !== allowed.size) {
 const updates = SPECIES_COLS.filter((c) => c !== 'id')
   .map((c) => `${c}=excluded.${c}`)
   .join(', ')
+// 媒体列：playable/quiz 标记 + img_* + aud_*
+const MEDIA_COLS = SPECIES_COLS.filter(
+  (c) => c === 'playable_image' || c === 'playable_audio' || c === 'quiz_excluded' || c.startsWith('img_') || c.startsWith('aud_'),
+)
 
-let sql = `-- 由 scripts/d1-upsert-species.mjs 生成（定向 UPSERT，不含 DROP/DELETE/ALTER）\n`
+let sql = `-- 由 scripts/d1-upsert-species.mjs 生成（${MEDIA_ONLY ? '媒体列 UPDATE' : '整行 UPSERT'}，不含 DROP/DELETE/ALTER）\n`
 sql += `-- ids: ${IDS.join(',')}\n`
 sql += `-- generatedAt: ${new Date().toISOString()}\n\n`
 for (const id of IDS) {
   const row = byId.get(id)
-  const values = rowToSql(row).join(',')
-  sql += `INSERT INTO species (${SPECIES_COLS.join(',')}) VALUES (${values}) ON CONFLICT(id) DO UPDATE SET ${updates};\n`
+  const values = rowToSql(row)
+  if (MEDIA_ONLY) {
+    const sets = MEDIA_COLS.map((c) => `${c}=${values[SPECIES_COLS.indexOf(c)]}`).join(', ')
+    sql += `UPDATE species SET ${sets} WHERE id=${values[0]};\n`
+  } else {
+    sql += `INSERT INTO species (${SPECIES_COLS.join(',')}) VALUES (${values.join(',')}) ON CONFLICT(id) DO UPDATE SET ${updates};\n`
+  }
 }
 
 if (DRY) {

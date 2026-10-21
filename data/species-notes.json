@@ -10,10 +10,10 @@
   },
   "notes": {
     "fulica-atra": {
-      "titleZh": "为什么首图看起来不对？",
-      "titleEn": "Why does the first photo look wrong?",
-      "bodyZh": "这张照片的主体其实是一只雀鹰在扑抓水面的白骨顶，白骨顶在背景里。iNaturalist 上这条观察的首图票数最高，旧算法按“首图”取图才会出现这种情况；现已改为优先使用物种的策展默认图（default_photo），并加入人工覆盖表兜底。\n\n同一物种的不同角度、季节、雌雄或幼鸟也可能差异较大，下面的其它素材可以对照着看。",
-      "bodyEn": "The main subject of this photo is actually a Eurasian Sparrowhawk grabbing a coot on the water, with the coot in the background. On iNaturalist this observation's first photo drew the most votes, and the old algorithm picked the \"first photo\", which is how it slipped in. We now prefer the species' curated default photo (default_photo) and keep a manual override table as a fallback.\n\nA single species can also look quite different by angle, season, sex or age — compare with the other media below."
+      "titleZh": "白骨顶的图片曾经出过什么问题？（已修复）",
+      "titleEn": "What happened to the Eurasian Coot photos? (Fixed)",
+      "bodyZh": "AI 调查结论\n\n曾经的首图（现已撤下）里，主体其实是一只雀鹰在扑抓水面的白骨顶，白骨顶在背景里。iNaturalist 上这条观察（90178562）的首图票数最高，旧算法按“首图”取图才会出现这种情况。\n\n修复分两步：① 改为优先使用物种的策展默认图（default_photo），并加入人工覆盖表兜底——现在首图是一张清晰的白骨顶（照片 123574818）；② 2026-10-21 复核时发现那张雀鹰照片仍排在画廊第 2 位，已从素材列表中移除（R2 旧文件保留备查、不再展示）。\n\n这张观察在 iNaturalist 上仍是白骨顶（Fulica atra）：雀鹰只是画面主体，观察记录的是被扑抓的白骨顶。问题出在“取观察首图”的旧逻辑，不是物种标注。\n\n同一物种的不同角度、季节、雌雄或幼鸟差异也很大。如果你仍看到旧图，多半是浏览器 / Service Worker 缓存，可用无痕窗口或清站点数据后重试。",
+      "bodyEn": "AI investigation\n\nThe old first photo (now retired) actually showed a Eurasian Sparrowhawk grabbing a coot on the water, with the coot in the background. That observation (90178562) had the most-voted first photo on iNaturalist, and the old algorithm picked the observation’s first photo.\n\nThe fix had two steps: (1) prefer the species’ curated default photo and keep a manual override fallback — the current first photo is a clear coot (photo 123574818); (2) during a 2026-10-21 review we found the sparrowhawk photo was still in slot 2 of the gallery, so it has now been removed from the media list (the old R2 object is kept for auditing but no longer displayed).\n\nThe observation is still identified as a coot (Fulica atra) on iNaturalist: the sparrowhawk was only the subject of the photo, while the record is the coot being grabbed. The problem was the old “take the observation’s first photo” logic, not the species identification.\n\nA species can also look quite different by angle, season, sex or age. If you still see the old photo, it is most likely a browser / Service Worker cache — try a private window or clear site data."
     },
     "pica-serica": {
       "titleZh": "喜鹊的图片换过吗？为什么？",
