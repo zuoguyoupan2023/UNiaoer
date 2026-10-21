@@ -111,7 +111,7 @@
       ]
     },
     "fulica-atra": {
-      "_reason": "2026-09-30 首图问题（雀鹰扑抓白骨顶，白骨顶在背景）已改为策展默认图；2026-10-21 复核发现该照片仍排在画廊第 2 位（只是不再是首图），已从素材列表移除。R2 旧对象保留备查、不再展示。",
+      "_reason": "2026-09-30 首图问题（雀鹰扑抓白骨顶，白骨顶在背景）已改为策展默认图；2026-10-21 复核发现该照片仍排在画廊第 2 位（只是不再是首图），已从素材列表移除；同日补充第 5 张（obs 17125901 / photo 25939277，Geoffrey Cox，CC BY-NC），现为 1/3/4/5/6 共 5 图。R2 旧对象保留备查。",
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/149007507/large.jpeg",
         "https://www.inaturalist.org/observations/90178562",
@@ -125,6 +125,23 @@
           "reason": "主体是雀鹰扑抓白骨顶（白骨顶在背景），不适合作为认鸟素材",
           "reportIds": []
         }
+      ],
+      "imageKeyBase": 6,
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/25939277/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Geoffrey Cox, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/17125901",
+          "sourceId": "25939277"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/fulica-atra/image-1.full.webp",
+        "https://bird.wewalk.world/media/fulica-atra/image-3.full.webp",
+        "https://bird.wewalk.world/media/fulica-atra/image-4.full.webp",
+        "https://bird.wewalk.world/media/fulica-atra/image-5.full.webp"
       ]
     }
   }

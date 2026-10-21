@@ -3,10 +3,10 @@
   "entries": [
     {
       "date": "2026-10-21",
-      "titleZh": "白骨顶旧图已从画廊移除，答疑改为「已修复」说明",
-      "titleEn": "Coot: old photo removed from the gallery; note rewritten as a fixed-issue history",
-      "bodyZh": "此前那张「雀鹰扑抓白骨顶」的照片只是不再是首图，仍排在画廊第 2 位；现已从素材列表移除。答疑不再用「为什么首图看起来不对」的疑问式标题，改为说明来龙去脉与修复结果。",
-      "bodyEn": "The sparrowhawk-grabbing-a-coot photo had only stopped being the first image; it was still in slot 2 of the gallery. It has now been removed from the media list. The note no longer asks “why does the first photo look wrong?” and instead explains what happened and what was fixed.",
+      "titleZh": "白骨顶旧图已从画廊移除，并补入第 5 张；答疑改为「已修复」说明",
+      "titleEn": "Coot: old photo removed, a fifth photo added; note rewritten as a fixed-issue history",
+      "bodyZh": "此前那张「雀鹰扑抓白骨顶」的照片只是不再是首图，仍排在画廊第 2 位；现已从素材列表移除，并补入 1 张清晰的白骨顶亲鸟带雏（obs 17125901），恢复为 5 图。答疑不再用「为什么首图看起来不对」的疑问式标题，改为说明来龙去脉与修复结果。",
+      "bodyEn": "The sparrowhawk-grabbing-a-coot photo had only stopped being the first image; it was still in slot 2 of the gallery. It has now been removed and a clear photo of an adult with chicks (obs 17125901) has been added, restoring the gallery to 5 photos. The note no longer asks “why does the first photo look wrong?” and instead explains what happened and what was fixed.",
       "speciesId": "fulica-atra"
     },
     {
