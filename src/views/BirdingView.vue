@@ -7,11 +7,14 @@
  * 地区选择器（大洲/国家/省）在页面级常驻，两个标签页共用。
  * 旧路由 `/region` / `/nearby` 由 router 重定向到本页并还原状态（见 router/index.ts）。
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, Crosshair, Globe2, MapPin, Search } from 'lucide-vue-next'
+import { ChevronDown, Crosshair, Globe2, MapPin, Search, X } from 'lucide-vue-next'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
+import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
 import {
   buildCountryIndex,
@@ -76,14 +79,52 @@ const activeTab = ref<'spots' | 'regions'>('spots')
 const nearby = ref(false)
 /** 选中国家的省级二级列表是否展开（点击已选国家切换） */
 const expanded = ref(true)
-/** 移动端「选择地区」面板是否展开（桌面端始终显示，见 style 媒体查询） */
+/** 移动端断点（与 style 里的 @media max-width: 640px 保持一致） */
+const isMobile = useMediaQuery('(max-width: 640px)')
+/** 移动端「选择地区」抽屉是否展开（桌面端常驻侧栏，不使用此状态） */
 const pickerOpen = ref(false)
+/**
+ * 抽屉无障碍：打开时焦点圈闭、ESC 关闭、锁背景滚动、关闭后焦点回到触发条
+ * （`panelRef` 绑到抽屉面板上；桌面端 pickerOpen 恒为 false，不触发）
+ */
+const { panelRef } = useDialogA11y(pickerOpen, {
+  onClose: () => {
+    pickerOpen.value = false
+  },
+})
+/** 抽屉面板 ref：useDialogA11y 的焦点圈闭/滚动锁都依赖它，模板里用函数 ref 转交给它 */
+function setPanelRef(el: Element | ComponentPublicInstance | null) {
+  panelRef.value = el instanceof HTMLElement ? el : null
+}
+/** 触发条吸附位置：顶栏（sticky top:8px）高度 + 间距；运行时测量，en/窄屏换行也准 */
+const stickyTop = ref(60)
+let topbarObserver: ResizeObserver | null = null
+function measureStickyTop() {
+  const el = document.querySelector('.app-topbar')
+  if (!el) return
+  stickyTop.value = Math.round(el.getBoundingClientRect().height) + 16
+}
+onMounted(() => {
+  measureStickyTop()
+  window.addEventListener('resize', measureStickyTop)
+  const topbar = document.querySelector('.app-topbar')
+  if (topbar && typeof ResizeObserver !== 'undefined') {
+    topbarObserver = new ResizeObserver(measureStickyTop)
+    topbarObserver.observe(topbar)
+  }
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', measureStickyTop)
+  topbarObserver?.disconnect()
+})
 /** 与 region:nearby-spots 的 --cell-deg 一致（仅用于署名文案） */
 const CELL_DEG = 0.25
 /** 目录排序：名称（zh 拼音 / en 首字母）或鸟种数；一级二级共用 */
 const sortMode = ref<'name' | 'count'>('name')
+/** 深链还原期间抑制「切国重置省份」的副作用（见 applyQuery） */
+let applyingQuery = false
 
-/** 深链还原：`/region` → tab=regions；`/nearby` → tab=spots&nearby=1 */
+/** 深链还原：`/region` → tab=regions；`/nearby` → tab=spots&nearby=1；`?cc=&sub=` → 国家/省级 */
 function applyQuery() {
   const q = route.query
   const tab = q.tab === 'regions' ? 'regions' : 'spots'
@@ -91,9 +132,15 @@ function applyQuery() {
   nearby.value = tab === 'spots' && q.nearby === '1'
   if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
   if (typeof q.sub === 'string') province.value = q.sub
+  // `watch(selected)` 会重置省份 —— 深链里 cc+sub 同时给出时必须抑制一次，
+  // 否则 `?cc=US&sub=US-CA` 的省份会被清掉（刷新/分享还原残缺）。
+  applyingQuery = true
+  void nextTick(() => {
+    applyingQuery = false
+  })
 }
 
-/** 标签/开关变化 → 写回 URL（保证刷新与分享可还原） */
+/** 标签/开关/地区变化 → 写回 URL（保证刷新与分享可还原） */
 function setTab(next: 'spots' | 'regions') {
   activeTab.value = next
   syncQuery()
@@ -107,6 +154,14 @@ function syncQuery() {
   const q: Record<string, string> = {}
   if (activeTab.value === 'regions') q.tab = 'regions'
   if (nearby.value) q.nearby = '1'
+  // 地区也进 URL：默认国（CN）不写，保持链接干净；省份总是写
+  if (selected.value && selected.value !== 'CN') q.cc = selected.value
+  if (province.value) q.sub = province.value
+  // 与当前 URL 相同则不触发导航（避免每次挂载都 replace 一次）
+  const cur = route.query
+  const same =
+    Object.keys(cur).length === Object.keys(q).length && Object.keys(q).every((k) => cur[k] === q[k])
+  if (same) return
   void router.replace({ query: q })
 }
 
@@ -305,12 +360,58 @@ function topSpeciesName(s: Hotspot['topSpecies'][number]): string {
   return sp ? nameOf(sp) : (s.sci ?? s.id ?? '')
 }
 
-/** 移动端「选择地区」按钮上的当前选择摘要 */
-const selectionLabel = computed(() =>
-  [t(`region.continents.${continent.value}`), countryName(selected.value), provinceName.value]
-    .filter(Boolean)
-    .join(' · '),
-)
+/** 移动端触发条上的当前选择摘要：只留「国家 · 省级」（大洲在抽屉里选，不重复展示） */
+const selectionLabel = computed(() => {
+  const parts = [selected.value ? countryName(selected.value) : '', provinceName.value]
+  return parts.filter(Boolean).join(' · ') || t('region.pick')
+})
+
+/** 触发条上的结果计数：让「选择已生效」可见（观鸟点 / 鸟种随当前标签页；0 不显示） */
+const barCount = computed(() => {
+  const spots = activeTab.value === 'spots'
+  if (spots && nearby.value) return ''
+  const n = spots ? hotspotList.value.length : gridItems.value.length
+  if (!n) return ''
+  return spots ? t('region.barSpots', { n }) : t('region.count', { n })
+})
+
+/** 打开抽屉：并把已选国家滚进可视区（国家按名称排序，选中项可能在下半屏） */
+function openPicker() {
+  pickerOpen.value = true
+  scrollActiveCountryIntoView()
+}
+function closePicker() {
+  pickerOpen.value = false
+}
+function scrollActiveCountryIntoView() {
+  void nextTick(() => {
+    const list = panelRef.value?.querySelector<HTMLElement>('.country-list')
+    const active = list?.querySelector<HTMLElement>('.country-btn.active')
+    if (!list || !active) return
+    const r = active.getBoundingClientRect()
+    const lr = list.getBoundingClientRect()
+    list.scrollTop += r.top - lr.top - 8
+  })
+}
+/** 抽屉收起后把结果列表滚回视野内（否则用户看不到选择已生效） */
+function scrollToResults() {
+  document
+    .querySelector('.birding .species')
+    ?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+}
+
+/** 深链 `?cc=` 可能跨洲：数据就绪后把大洲切到该国家所在洲（否则列表里看不到选中国） */
+watch(stats, () => {
+  if (!stats.value.length) return
+  if (countriesInContinent(stats.value, continent.value).some((s) => s.code === selected.value)) return
+  const found = continents.value.find((c) =>
+    countriesInContinent(stats.value, c).some((s) => s.code === selected.value),
+  )
+  if (found) continent.value = found
+})
+
+/** 地区变化写回 URL（刷新/分享/后退都能还原） */
+watch([selected, province], syncQuery)
 
 /** 切换大洲：搜索清空；若当前国家不属于该洲，自动选中该洲物种最多的国家并展开其省级 */
 watch(continent, () => {
@@ -319,11 +420,12 @@ watch(continent, () => {
     selected.value = continentStats.value[0]?.code ?? ''
     expanded.value = true
   }
+  scrollActiveCountryIntoView()
 })
 
 /** 切换国家：省级筛选重置并展开二级列表；观鸟点详情收起 */
 watch(selected, () => {
-  province.value = ''
+  if (!applyingQuery) province.value = ''
   expanded.value = true
   expandedHotspot.value = ''
   void loadSpotsFor(selected.value)
@@ -331,14 +433,18 @@ watch(selected, () => {
 
 /**
  * 点击国家：
- * - 未选 → 选中并展开（视为「全部」）
+ * - 未选 → 选中（有省级细分=中间态，保持抽屉开着继续选省；无省级=终态，移动端直接收起）
  * - 已选且正筛选某省 → 清除省级，回到「全部」
  * - 已选且无省级筛选 → 折叠/展开二级列表
- * 故「点击国家本身 = 全部」，二级目录不再需要「全部」项。
+ * 省级列表顶部另有显式「全部」行，不再只靠"再点一次国家"这个隐性手势。
  */
 function selectCountry(code: string) {
   if (code !== selected.value) {
     selected.value = code
+    if (isMobile.value && !provinceStats(provinceData.value, code, locale.value).length) {
+      closePicker()
+      void nextTick(scrollToResults)
+    }
     return
   }
   if (province.value) {
@@ -349,20 +455,46 @@ function selectCountry(code: string) {
   }
 }
 
-/** 选择省级：移动端选完收起面板，便于直接看到下方鸟种 */
+/** 选择省级（'' = 全部省份）：移动端选完收起抽屉，并让下方结果回到视野 */
 function pickProvince(code: string) {
   province.value = code
-  pickerOpen.value = false
+  if (!isMobile.value) return
+  closePicker()
+  void nextTick(scrollToResults)
 }
 </script>
 
 <template>
-  <section class="card region birding">
+  <!-- 移动端常驻触发条：放在卡片外（.card 的 overflow:hidden 会让内部 sticky 失效）；
+       窄屏下这是**唯一**的地区入口，大洲/国家/省级都在抽屉里逐级选。 -->
+  <div
+    v-if="isMobile && stats.length"
+    class="picker-bar-wrap"
+    :style="{ top: `${stickyTop}px`, '--region-sticky-top': `${stickyTop}px` }"
+  >
+    <button
+      type="button"
+      class="picker-bar"
+      aria-haspopup="dialog"
+      :aria-controls="pickerOpen ? 'region-picker' : undefined"
+      :aria-expanded="pickerOpen"
+      :aria-label="t('region.pickCurrent', { current: selectionLabel })"
+      @click="openPicker"
+    >
+      <Globe2 class="ic globe" :size="16" />
+      <span class="picker-current">{{ selectionLabel }}</span>
+      <span v-if="barCount" class="picker-count">{{ barCount }}</span>
+      <ChevronDown class="ic chev" :size="16" />
+    </button>
+  </div>
+
+  <section class="card region birding" :style="{ '--region-sticky-top': `${stickyTop}px` }">
     <h2 class="region-head"><Globe2 class="ic" :size="22" /> {{ t('birding.title') }}</h2>
     <p class="muted lead">{{ t('birding.lead') }}</p>
 
     <template v-if="stats.length">
-      <nav class="continents" :aria-label="t('region.continentsLabel')">
+      <!-- 桌面端：大洲胶囊常驻在双栏上方（移动端搬进抽屉，避免一个控件两个交互面） -->
+      <nav v-if="!isMobile" class="continents" :aria-label="t('region.continentsLabel')">
         <button
           v-for="c in continents"
           :key="c"
@@ -377,84 +509,130 @@ function pickProvince(code: string) {
       </nav>
 
       <div class="layout">
-        <aside class="countries">
-          <!-- 移动端：折叠式「选择地区」，避免上方列表占满屏幕 -->
-          <button
-            type="button"
-            class="picker-toggle"
-            :aria-expanded="pickerOpen"
-            @click="pickerOpen = !pickerOpen"
-          >
-            <span class="picker-label">{{ t('region.pick') }}</span>
-            <span class="picker-current">{{ selectionLabel }}</span>
-            <ChevronDown class="ic" :size="16" :class="{ open: pickerOpen }" />
-          </button>
-          <div class="picker-body" :class="{ open: pickerOpen }">
-            <label class="search">
-              <Search class="ic" :size="14" />
-              <input
-                v-model="query"
-                type="search"
-                :aria-label="t('region.searchLabel')"
-                :placeholder="t('region.search')"
-              />
-            </label>
-            <div class="list-head">
-              <p class="col-title">{{ t('region.countries') }}</p>
-              <div class="sort" role="group" :aria-label="t('region.sortLabel')">
+        <!-- 桌面：左侧常驻国家树；移动端：同一份 DOM Teleport 到 body，变成底部抽屉 -->
+        <Teleport to="body" :disabled="!isMobile">
+          <template v-if="!isMobile || pickerOpen">
+            <div v-if="isMobile" class="sheet-backdrop" @click="closePicker" />
+            <aside
+              :ref="setPanelRef"
+              id="region-picker"
+              class="countries"
+              :class="{ sheet: isMobile }"
+              :role="isMobile ? 'dialog' : undefined"
+              :aria-modal="isMobile ? 'true' : undefined"
+              :aria-label="isMobile ? t('region.pick') : undefined"
+            >
+              <div v-if="isMobile" class="sheet-head">
+                <p class="sheet-title">{{ t('region.pick') }}</p>
                 <button
                   type="button"
-                  class="sort-btn"
-                  :class="{ active: sortMode === 'name' }"
-                  :aria-pressed="sortMode === 'name'"
-                  @click="sortMode = 'name'"
+                  class="sheet-close"
+                  :aria-label="t('common.close')"
+                  @click="closePicker"
                 >
-                  {{ t('region.sortName') }}
-                </button>
-                <button
-                  type="button"
-                  class="sort-btn"
-                  :class="{ active: sortMode === 'count' }"
-                  :aria-pressed="sortMode === 'count'"
-                  @click="sortMode = 'count'"
-                >
-                  {{ t('region.sortCount') }}
+                  <X class="ic" :size="18" />
                 </button>
               </div>
-            </div>
-            <ul class="country-list">
-              <li v-for="s in filtered" :key="s.code">
+              <nav
+                v-if="isMobile"
+                class="continents sheet-continents"
+                :aria-label="t('region.continentsLabel')"
+              >
                 <button
+                  v-for="c in continents"
+                  :key="c"
                   type="button"
-                  class="country-btn"
-                  :class="{ active: s.code === selected }"
-                  :aria-pressed="s.code === selected"
-                  :data-code="s.code"
-                  @click="selectCountry(s.code)"
+                  class="continent-btn"
+                  :class="{ active: c === continent }"
+                  :aria-pressed="c === continent"
+                  @click="continent = c"
                 >
-                  <span class="country-name">{{ countryName(s.code) }}</span>
-                  <span class="country-count">{{ t('region.count', { n: s.count }) }}</span>
+                  {{ t(`region.continents.${c}`) }}
                 </button>
-                <!-- 二级：省级行政区（无数据则不出；点击国家展开/折叠；点击国家本身=全部，见 021） -->
-                <ul v-if="s.code === selected && expanded && provinces.length" class="prov-list">
-                  <li v-for="p in provinces" :key="p.code">
-                    <button
-                      type="button"
-                      class="prov-btn"
-                      :class="{ active: p.code === province }"
-                      :aria-pressed="p.code === province"
-                      :data-prov="p.code"
-                      @click="pickProvince(p.code)"
-                    >
-                      <span class="prov-name">{{ p.name }}</span>
-                      <span class="prov-count">{{ t('region.count', { n: p.count }) }}</span>
-                    </button>
-                  </li>
-                </ul>
-              </li>
-            </ul>
-          </div>
-        </aside>
+              </nav>
+              <label class="search">
+                <Search class="ic" :size="14" />
+                <input
+                  v-model="query"
+                  type="search"
+                  :aria-label="t('region.searchLabel')"
+                  :placeholder="t('region.search')"
+                />
+              </label>
+              <div class="list-head">
+                <p class="col-title">{{ t('region.countries') }}</p>
+                <div class="sort" role="group" :aria-label="t('region.sortLabel')">
+                  <button
+                    type="button"
+                    class="sort-btn"
+                    :class="{ active: sortMode === 'name' }"
+                    :aria-pressed="sortMode === 'name'"
+                    @click="sortMode = 'name'"
+                  >
+                    {{ t('region.sortName') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="sort-btn"
+                    :class="{ active: sortMode === 'count' }"
+                    :aria-pressed="sortMode === 'count'"
+                    @click="sortMode = 'count'"
+                  >
+                    {{ t('region.sortCount') }}
+                  </button>
+                </div>
+              </div>
+              <ul class="country-list">
+                <li v-for="s in filtered" :key="s.code">
+                  <button
+                    type="button"
+                    class="country-btn"
+                    :class="{ active: s.code === selected }"
+                    :aria-pressed="s.code === selected"
+                    :data-code="s.code"
+                    @click="selectCountry(s.code)"
+                  >
+                    <span class="country-name">{{ countryName(s.code) }}</span>
+                    <span class="country-count">{{ t('region.count', { n: s.count }) }}</span>
+                  </button>
+                  <!-- 二级：省级行政区（无数据则不出；点击国家展开/折叠；点击国家本身=全部，见 021） -->
+                  <ul v-if="s.code === selected && expanded && provinces.length" class="prov-list">
+                    <!-- 显式「全部省份」：不再依赖"再点一次国家"这个隐性手势 -->
+                    <li>
+                      <button
+                        type="button"
+                        class="prov-btn"
+                        :class="{ active: !province }"
+                        :aria-pressed="!province"
+                        @click="pickProvince('')"
+                      >
+                        <span class="prov-name">{{ t('region.allProvinces') }}</span>
+                      </button>
+                    </li>
+                    <li v-for="p in provinces" :key="p.code">
+                      <button
+                        type="button"
+                        class="prov-btn"
+                        :class="{ active: p.code === province }"
+                        :aria-pressed="p.code === province"
+                        :data-prov="p.code"
+                        @click="pickProvince(p.code)"
+                      >
+                        <span class="prov-name">{{ p.name }}</span>
+                        <span class="prov-count">{{ t('region.count', { n: p.count }) }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+              <div v-if="isMobile" class="sheet-foot">
+                <button type="button" class="btn sheet-done" @click="closePicker">
+                  {{ t('region.done') }}
+                </button>
+              </div>
+            </aside>
+          </template>
+        </Teleport>
 
         <div class="species">
           <!-- 042：标签页顺序为「观鸟点」（默认）/「地区浏览」 -->
@@ -770,23 +948,32 @@ function pickProvince(code: string) {
   flex-direction: column;
   gap: 2px;
 }
-/* 移动端折叠式「选择地区」；桌面端始终展开 */
-.picker-toggle {
-  display: none;
+/* ---------- 移动端：常驻触发条（放在卡片外，.card 的 overflow:hidden 会让内部 sticky 失效） ---------- */
+.picker-bar-wrap {
+  position: sticky;
+  top: 60px; /* 兜底值；真实值由内联 top + --region-sticky-top（顶栏实测高度）覆盖 */
+  z-index: 15;
+  margin-bottom: 10px;
+}
+.picker-bar {
+  display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 46px;
   padding: 9px 12px;
-  border: 2px solid var(--border);
+  border: 2px solid var(--primary-light);
   border-radius: var(--radius-sm);
-  background: #f7faf8;
+  background: #fff;
   color: var(--text);
-  font-size: 0.88rem;
-  cursor: pointer;
-}
-.picker-label {
+  font-size: 0.9rem;
   font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(63, 122, 95, 0.1);
+}
+.picker-bar .globe {
   flex-shrink: 0;
+  color: var(--primary);
 }
 .picker-current {
   flex: 1;
@@ -795,16 +982,96 @@ function pickProvince(code: string) {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
-  color: var(--text-light);
-  font-size: 0.8rem;
+  color: var(--text);
+  font-size: 0.88rem;
 }
-.picker-toggle .ic {
+.picker-count {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-light);
+}
+.picker-bar .chev {
   flex-shrink: 0;
   color: var(--text-light);
-  transition: transform 0.16s ease;
 }
-.picker-toggle .ic.open {
-  transform: rotate(180deg);
+
+/* ---------- 移动端：底部抽屉（Teleport 到 body；遮罩层，不推挤文档流） ---------- */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(16, 38, 28, 0.42);
+}
+.countries.sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  max-height: 88dvh; /* 移动端浏览器地址栏收放时不跳动 */
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: #fff;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.22);
+  text-align: left;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sheet-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+.sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.sheet-continents {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  margin: 8px 0 4px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+.sheet-continents .continent-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+}
+.countries.sheet .country-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  margin-top: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sheet-foot {
+  flex-shrink: 0;
+  padding-top: 10px;
+}
+.sheet-done {
+  width: 100%;
+}
+/* 抽屉收起后 scrollIntoView 到这里：避开吸顶顶栏 + 触发条（条高 46 + 12 间距） */
+.species {
+  scroll-margin-top: calc(var(--region-sticky-top, 60px) + 58px);
 }
 .prov-btn {
   display: flex;
@@ -1060,23 +1327,10 @@ function pickProvince(code: string) {
   margin: 14px 0;
 }
 
-/* 移动端：折叠式选择器（置于末尾以确保覆盖上面的 display:none 基线） */
+/* 移动端：单栏 + 抽屉（选择器已 Teleport 到 body，见模板） */
 @media (max-width: 640px) {
   .layout {
     grid-template-columns: 1fr;
-  }
-  .picker-toggle {
-    display: flex;
-  }
-  .picker-body {
-    display: none;
-    margin-top: 8px;
-  }
-  .picker-body.open {
-    display: block;
-  }
-  .country-list {
-    max-height: 46vh;
   }
 }
 </style>

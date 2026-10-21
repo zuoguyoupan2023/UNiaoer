@@ -395,21 +395,34 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.foot')).toContainText('匿名')
   })
 
-  test('地区浏览：移动端折叠选择器（021 UI 修订）', async ({ page }) => {
+  test('地区浏览：移动端底部抽屉选择器（常驻触发条 + 自动收起，2026-10-21 重做）', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/birding?tab=regions')
 
-    // 移动端：选择按钮可见、国家树默认收起（不占屏，鸟种直接可见）
-    await expect(page.locator('.picker-toggle')).toBeVisible()
-    await expect(page.locator('.picker-body')).toBeHidden()
+    // 触发条常驻：摘要只留「国家 · 省级」（不重复大洲名）；抽屉默认关闭，鸟种直接可见
+    const bar = page.locator('.picker-bar')
+    await expect(bar).toBeVisible()
+    await expect(bar.locator('.picker-current')).toHaveText('中国')
+    await expect(page.locator('.countries.sheet')).toBeHidden()
     await expect(page.locator('.species-grid')).toBeVisible()
 
-    // 展开 → 选省 → 自动收起
-    await page.locator('.picker-toggle').click()
-    await expect(page.locator('.picker-body')).toBeVisible()
+    // 打开抽屉：大洲胶囊搬进抽屉（页面顶部不再重复一份）
+    await bar.click()
+    await expect(page.locator('.countries.sheet')).toBeVisible()
+    await expect(page.locator('.sheet-continents .continent-btn', { hasText: '亚洲' })).toBeVisible()
+
+    // 选省 → 抽屉自动收起 + 摘要更新
     await page.locator('.prov-btn[data-prov="CN-44"]').click()
-    await expect(page.locator('.picker-body')).toBeHidden()
+    await expect(page.locator('.countries.sheet')).toBeHidden()
+    await expect(bar.locator('.picker-current')).toHaveText('中国 · 广东省')
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
+
+    // 显式「全部省份」清除（不再依赖"再点一次国家"的隐性手势）
+    await bar.click()
+    await page.locator('.prov-btn', { hasText: '全部省份' }).click()
+    await expect(bar.locator('.picker-current')).toHaveText('中国')
   })
 
   test('名录排序（031 D-031-2）：分类序 / 拼音 + 字母跳转 / 常见度 / 拼音搜索', async ({
