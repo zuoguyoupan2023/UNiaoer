@@ -354,11 +354,12 @@ export const messages = {
     hotspotSource: '观鸟点数据来源：{sources}（eBird 真实点位，按 {n}° 网格去重）',
     continentsLabel: '按大洲筛选',
     tabSpecies: '鸟种',
-    tabRegions: '地区浏览',
+    tabRegions: '该地鸟种',
     tabHotspots: '观鸟点',
     hotspotEmpty: '该地区暂无观鸟点数据',
     hotspotOnEbird: '在 eBird 查看该热点',
     hotspotOfCountry: '（全国 {n} 个）',
+    speciesOfCountry: '（全国 {n} 种）',
     hotspotProvinceOnly: '仅显示本省观鸟点',
     hotspotFallback: '本省暂无观鸟点，显示全国（{n} 个）',
     regions: {

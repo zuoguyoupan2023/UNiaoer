@@ -315,8 +315,11 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
   flex-direction: column;
   height: 100%;
   min-width: 0;
+  /* 日期标签改为绝对定位（见 .bar-day）：柱高百分比必须与刻度线同一基准（= 绘图区高度），
+     否则柱子会整体偏高，出现「数据 6 却顶到 10 的刻度线」的错觉 */
+  position: relative;
 }
-/* 柱子与数字的定位容器：高度 = 绘图区高度 - 日期行 */
+/* 柱子与数字的定位容器：高度 = 绘图区高度（日期标签已绝对定位到图外，不再占位） */
 .cell {
   position: relative;
   flex: 1;
@@ -345,10 +348,13 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
   white-space: nowrap;
 }
 .bar-day {
+  /* 绝对定位：不再占据绘图区高度（否则柱子按"绘图区-日期行"折算，会整体偏高） */
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%) rotate(-60deg);
   font-size: 0.5rem;
-  transform: rotate(-60deg);
   white-space: nowrap;
-  margin-top: 2px;
   height: 14px;
   text-align: center;
 }

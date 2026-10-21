@@ -362,11 +362,12 @@ const en: typeof zhMessages = {
     hotspotSource: 'Birding-spot data source: {sources}',
     continentsLabel: 'Filter by continent',
     tabSpecies: 'Species',
-    tabRegions: 'Regions',
+    tabRegions: 'Zone birds',
     tabHotspots: 'Birding spots',
     hotspotEmpty: 'No birding spots for this region yet',
     hotspotOnEbird: 'View this hotspot on eBird',
     hotspotOfCountry: '({n} nationwide)',
+    speciesOfCountry: '({n} nationwide)',
     hotspotProvinceOnly: 'Showing spots in this province only',
     hotspotFallback: 'No spots in this province — showing the country ({n})',
     regions: {

@@ -126,8 +126,14 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
         generatedAt: 'e2e-fixture',
         days: 30,
         since: '2026-09-10',
-        totals: { visitor_unique: 7, session_start: 12, quiz_complete: 5, page_view: 40, poster_create: 2, report_submit: 1, badge_earned: 3, title_earned: 2 },
-        series: [{ day: '2026-10-09', event: 'quiz_complete', n: 5 }],
+        totals: { visitor_unique: 7, session_start: 12, quiz_complete: 463, page_view: 40, poster_create: 2, report_submit: 1, badge_earned: 3, title_earned: 2 },
+        // 30 天：首日就有数据（否则 trimLeadingZeros 会把开头的空日期裁掉）；
+        // 6 / 3 / 454 三个值专门用来钉住「柱高与对数刻度同一基准」（454 → 轴顶 500）
+        series: [
+          { day: '2026-09-10', event: 'quiz_complete', n: 6 },
+          { day: '2026-09-11', event: 'quiz_complete', n: 3 },
+          { day: '2026-10-09', event: 'quiz_complete', n: 454 },
+        ],
         badges: [{ badge: 'first-round', n: 3 }],
         titles: [{ track: 'volume', level: '1', n: 2 }],
         notes: { visitor: 'per-day dedup', scope: 'anonymous only' },
@@ -200,7 +206,7 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
         grids: { 'CN-g1-39_116': { r: 28504, s: 320, top: [{ id: 'sp-01', count: 900 }] } },
         spots: [
           { i: 'L1001', n: '颐和园 (Summer Palace)', lat: 39.95, lng: 116.35, sub: 'CN-11', p: 270, o: '2026-09-29', grid: 'CN-g1-39_116', km: 8 },
-          { i: 'L1002', n: '南汇东滩', lat: 31.0, lng: 121.9, sub: 'CN-31', p: 120 },
+          { i: 'L1002', n: '南汇东滩湿地保护区 (Nanhui Dongtan Wetland Reserve, Pudong New Area)', lat: 31.0, lng: 121.9, sub: 'CN-31', p: 120 },
         ],
       },
     }),

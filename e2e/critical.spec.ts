@@ -360,8 +360,8 @@ test.describe('入口与页面', () => {
     await expect(detail.locator('a.hotspot-ext')).toHaveAttribute('href', 'https://ebird.org/hotspot/L2001')
     await expect(page.locator('.hotspot-source')).toContainText('eBird')
 
-    // 切到「地区浏览」标签页：物种网格可见、观鸟点列表隐藏（v-show 保留节点但不可见）
-    const speciesTab = page.getByRole('tab', { name: /地区浏览/ })
+    // 切到「该地鸟种」标签页：物种网格可见、观鸟点列表隐藏（v-show 保留节点但不可见）
+    const speciesTab = page.getByRole('tab', { name: /该地鸟种/ })
     await speciesTab.click()
     await expect(page.locator('.species-grid')).toBeVisible()
     await expect(page.locator('.hotspot-btn').first()).toBeHidden()
@@ -385,9 +385,23 @@ test.describe('入口与页面', () => {
     const cards = page.locator('.card-item')
     await expect(cards).toHaveCount(6)
     await expect(page.locator('.card-item', { hasText: '独立访客' }).locator('.num')).toHaveText('7')
-    await expect(page.locator('.card-item', { hasText: '完成轮次' }).locator('.num')).toHaveText('5')
-    // 近 30 日逐日条形
+    await expect(page.locator('.card-item', { hasText: '完成轮次' }).locator('.num')).toHaveText('463')
+    // 近 30 日逐日条形（桩数据首日就有值，不会被「裁掉上线前空日期」裁短）
     await expect(page.locator('.bars li')).toHaveCount(30)
+    // 对数轴与柱高必须同一基准：6 不得高过 10 的刻度线、3 不得高过 5 的刻度线
+    // （2026-10-21 修复：日期标签曾占据绘图区 16px，柱高按更矮的盒子折算 → 柱子整体偏高）
+    const axis = await page.evaluate(() => {
+      const top = document.querySelector('.plot')!.getBoundingClientRect().top
+      const line = (label: string) =>
+        [...document.querySelectorAll('.gridLine')]
+          .find((el) => el.textContent?.trim() === label)!
+          .getBoundingClientRect().top - top
+      const bar = (n: number) =>
+        document.querySelector(`.bars li[title$="· ${n}"] .bar`)!.getBoundingClientRect().top - top
+      return { t5: line('5'), t10: line('10'), b3: bar(3), b6: bar(6) }
+    })
+    expect(axis.b6).toBeGreaterThan(axis.t10)
+    expect(axis.b3).toBeGreaterThan(axis.t5)
     // 徽章 / 称号榜（桩：first-round 3 人；volume L1 2 人）——两个独立列表，各取 first()
     await expect(page.locator('.ranks li').first()).toContainText('3 人')
     await expect(page.locator('.ranks').last()).toContainText('2 人')
@@ -399,13 +413,26 @@ test.describe('入口与页面', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/birding?tab=regions')
+    // 默认「观鸟点」标签：列表里含超长点位名（回归：Grid 子项 min-width:auto 曾被撑到 557px）
+    await page.goto('/birding')
 
-    // 触发条常驻：摘要只留「国家 · 省级」（不重复大洲名）；抽屉默认关闭，鸟种直接可见
+    // 触发条常驻：摘要只留「国家 · 省级」（不重复大洲名）；抽屉默认关闭
     const bar = page.locator('.picker-bar')
     await expect(bar).toBeVisible()
     await expect(bar.locator('.picker-current')).toHaveText('中国')
     await expect(page.locator('.countries.sheet')).toBeHidden()
+
+    // 长点位名不得把「观鸟点 / 该地鸟种」两个标签顶出卡片
+    const fit = await page.evaluate(() => {
+      const tabs = document.querySelector('.panel-tabs')!.getBoundingClientRect()
+      const card = document.querySelector('.birding')!.getBoundingClientRect()
+      return { left: tabs.left - card.left, right: card.right - tabs.right }
+    })
+    expect(fit.left).toBeGreaterThanOrEqual(-1)
+    expect(fit.right).toBeGreaterThanOrEqual(-1)
+
+    // 切到「该地鸟种」：鸟种网格可见
+    await page.getByRole('tab', { name: /该地鸟种/ }).click()
     await expect(page.locator('.species-grid')).toBeVisible()
 
     // 打开抽屉：大洲胶囊搬进抽屉（页面顶部不再重复一份）
@@ -418,6 +445,8 @@ test.describe('入口与页面', () => {
     await expect(page.locator('.countries.sheet')).toBeHidden()
     await expect(bar.locator('.picker-current')).toHaveText('中国 · 广东省')
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
+    // 「该地鸟种」与「观鸟点」同口径：本地数 + 全国数（不是只显示本地）
+    await expect(page.getByRole('tab', { name: /该地鸟种/ })).toContainText('全国')
 
     // 显式「全部省份」清除（不再依赖"再点一次国家"的隐性手势）
     await bar.click()
@@ -527,7 +556,7 @@ test.describe('入口与页面', () => {
   })
 
   test('042 观鸟页：默认「观鸟点」tab，附近开关可切到附近模式，旧路径重定向', async ({ page }) => {
-    // 默认入口：导航「观鸟」→ 落在「观鸟点」tab（不是地区浏览）
+    // 默认入口：导航「观鸟」→ 落在「观鸟点」tab（不是该地鸟种）
     await page.goto('/birding')
     await expect(page.getByRole('tab', { name: /观鸟点/ })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('.hotspot-list').first()).toBeVisible()
@@ -541,12 +570,12 @@ test.describe('入口与页面', () => {
     // 状态写回 URL：刷新后仍是附近模式
     await expect(page).toHaveURL(/nearby=1/)
 
-    // 切到「地区浏览」tab：只有鸟种网格，观鸟点/附近面板都不在
-    await page.getByRole('tab', { name: /地区浏览/ }).click()
+    // 切到「该地鸟种」tab：只有鸟种网格，观鸟点/附近面板都不在
+    await page.getByRole('tab', { name: /该地鸟种/ }).click()
     await expect(page.locator('.species-grid')).toBeVisible()
     await expect(page.locator('.nearby-toggle')).toBeHidden()
 
-    // 旧路径兼容：/region → 地区浏览 tab；/nearby → 观鸟点 tab + 附近开关
+    // 旧路径兼容：/region → 该地鸟种 tab；/nearby → 观鸟点 tab + 附近开关
     await page.goto('/region')
     await expect(page).toHaveURL(/tab=regions/)
     await page.goto('/nearby')

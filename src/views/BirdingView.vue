@@ -3,7 +3,7 @@
  * 042：「观鸟」页（合并原 `/region` 地区浏览与 `/nearby` 附近鸟点）。
  *
  * 结构：两个标签页 —— ①**观鸟点**（默认，含「附近鸟点」开关：关=按地区浏览点位，开=按定位排附近点位）
- * ②**地区浏览**（只保留鸟种网格）。
+ * ②**该地鸟种**（该国家/省份的鸟种网格；042 时叫「地区浏览」，2026-10-21 更名）。
  * 地区选择器（大洲/国家/省）在页面级常驻，两个标签页共用。
  * 旧路由 `/region` / `/nearby` 由 router 重定向到本页并还原状态（见 router/index.ts）。
  */
@@ -73,7 +73,7 @@ const continent = ref<Continent>('asia')
 const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
-/** 右侧面板标签页：观鸟点（默认）/ 地区浏览（042） */
+/** 右侧面板标签页：观鸟点（默认）/ 该地鸟种（042，2026-10-21 更名） */
 const activeTab = ref<'spots' | 'regions'>('spots')
 /** 「附近鸟点」开关（默认关；开 → 观鸟点列表改为按定位排序的附近点位） */
 const nearby = ref(false)
@@ -272,9 +272,9 @@ const bankBySci = computed<Map<string, BankSpecies>>(() => {
   for (const s of bank.value?.species ?? []) if (s.nameSci) m.set(s.nameSci.toLowerCase(), s)
   return m
 })
-const gridItems = computed<GridItem[]>(() => {
+/** 该国全部鸟种（不含省级筛选）：既用于「该地鸟种」列表，也提供「全国 N 种」计数 */
+const countryGridItems = computed<GridItem[]>(() => {
   const idx = speciesIdx.value
-  const ps = provinceSet.value
   if (idx) {
     // bank 物种按 taxonKey 短码直查(骨架条目缺失也照常渲染;真实产物中 1299 全在骨架)
     const codeOfSp = new Map<string, BankSpecies>()
@@ -297,13 +297,10 @@ const gridItems = computed<GridItem[]>(() => {
         bankId: sp?.id ?? null,
       })
     }
-    // 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种
-    const list = ps ? items.filter((it) => it.bankId && ps.has(it.bankId)) : items
-    return [...list].sort((a, b) => collator.value.compare(a.name, b.name))
+    return [...items].sort((a, b) => collator.value.compare(a.name, b.name))
   }
   // 降级:bank-only(现行为)
   return (index.value[selected.value] ?? [])
-    .filter((id) => !ps || ps.has(id))
     .map((id) => speciesById(id))
     .filter((sp): sp is BankSpecies => !!sp)
     .map((sp) => ({
@@ -315,6 +312,13 @@ const gridItems = computed<GridItem[]>(() => {
       bankId: sp.id,
     }))
 })
+/** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
+const gridItems = computed<GridItem[]>(() => {
+  const ps = provinceSet.value
+  return ps ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId)) : countryGridItems.value
+})
+/** 该国鸟种总数（「该地鸟种 431（全国 1507 种）」里的全国数；与列表同口径） */
+const countrySpeciesCount = computed(() => countryGridItems.value.length)
 const visibleItems = computed(() => gridItems.value.slice(0, visibleCount.value))
 watch([selected, province], () => {
   visibleCount.value = 200
@@ -635,7 +639,7 @@ function pickProvince(code: string) {
         </Teleport>
 
         <div class="species">
-          <!-- 042：标签页顺序为「观鸟点」（默认）/「地区浏览」 -->
+          <!-- 042：标签页顺序为「观鸟点」（默认）/「该地鸟种」 -->
           <div class="panel-tabs" role="tablist">
             <button
               type="button"
@@ -645,11 +649,11 @@ function pickProvince(code: string) {
               :aria-selected="activeTab === 'spots'"
               @click="setTab('spots')"
             >
-              {{ t('region.tabHotspots') }}
+              <span class="tab-label">{{ t('region.tabHotspots') }}</span>
               <span class="tab-count">
-                {{ nearby ? '' : hotspotList.length }}
+                <span class="tab-n">{{ nearby ? '' : hotspotList.length }}</span>
                 <template v-if="!nearby && province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
-                  {{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}
+                  <span class="tab-sub">{{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}</span>
                 </template>
               </span>
             </button>
@@ -661,8 +665,13 @@ function pickProvince(code: string) {
               :aria-selected="activeTab === 'regions'"
               @click="setTab('regions')"
             >
-              {{ t('region.tabRegions') }}
-              <span class="tab-count">{{ gridItems.length }}</span>
+              <span class="tab-label">{{ t('region.tabRegions') }}</span>
+              <span class="tab-count">
+                <span class="tab-n">{{ gridItems.length }}</span>
+                <span v-if="province && countrySpeciesCount > gridItems.length" class="tab-sub">
+                  {{ t('region.speciesOfCountry', { n: countrySpeciesCount }) }}
+                </span>
+              </span>
             </button>
           </div>
 
@@ -744,7 +753,7 @@ function pickProvince(code: string) {
             </div>
           </div>
 
-          <!-- ---------- 标签页 2：地区浏览（只保留鸟种） ---------- -->
+          <!-- ---------- 标签页 2：该地鸟种（只保留鸟种网格） ---------- -->
           <div v-show="activeTab === 'regions'" class="regions-pane">
             <p class="col-title">
               {{
@@ -1043,11 +1052,10 @@ function pickProvince(code: string) {
 }
 .sheet-continents {
   flex-shrink: 0;
-  flex-wrap: nowrap;
+  /* 允许换行：窄屏下 8 个大洲挤在一行会把「南极洲」顶出可视区 */
+  flex-wrap: wrap;
   justify-content: flex-start;
   margin: 8px 0 4px;
-  padding-bottom: 4px;
-  overflow-x: auto;
 }
 .sheet-continents .continent-btn {
   flex-shrink: 0;
@@ -1072,6 +1080,9 @@ function pickProvince(code: string) {
 /* 抽屉收起后 scrollIntoView 到这里：避开吸顶顶栏 + 触发条（条高 46 + 12 间距） */
 .species {
   scroll-margin-top: calc(var(--region-sticky-top, 60px) + 58px);
+  /* 关键：Grid 子项默认 min-width:auto，会被内部最长内容（观鸟点英文名等）撑宽，
+     把「观鸟点 / 该地鸟种」两个标签一起顶出卡片 —— 必须允许收窄到容器宽度 */
+  min-width: 0;
 }
 .prov-btn {
   display: flex;
@@ -1159,12 +1170,44 @@ function pickProvince(code: string) {
   border-bottom-color: var(--primary);
 }
 .panel-tab .tab-count {
+  /* 「124（全国 1929 个）」= 本地数 + 全国数两块；空间不够时整块落到第二行，绝不截断全国数 */
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 3px;
+  max-width: 100%;
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-light);
   background: #eef3f0;
   border-radius: 999px;
   padding: 1px 7px;
+}
+.panel-tab .tab-n,
+.panel-tab .tab-sub {
+  white-space: nowrap;
+}
+.panel-tab .tab-label {
+  white-space: nowrap;
+}
+/* 窄屏：标签与计数分两行 —— 否则「观鸟点（全国 12353 个）」会把「该地鸟种」挤成竖排 */
+@media (max-width: 480px) {
+  .panel-tabs {
+    gap: 6px;
+  }
+  .panel-tab {
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+    padding: 7px 10px;
+    font-size: 0.86rem;
+  }
+  .panel-tab .tab-count {
+    max-width: 100%;
+    font-size: 0.66rem;
+  }
 }
 .panel-tab.active .tab-count {
   background: var(--primary);
