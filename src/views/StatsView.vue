@@ -13,6 +13,7 @@ import BadgeIcon from '@/components/BadgeIcon.vue'
 import { BADGES } from '@/core/badges'
 import { TITLE_TRACKS } from '@/core/titles'
 import { dailySeries, fetchPublicStats, totalOf, type PublicStats } from '@/core/publicStats'
+import { logPct, logTicks, logTop, trimLeadingZeros } from '@/core/statsChart'
 import { currentLocale } from '@/i18n'
 
 const { t } = useI18n()
@@ -50,9 +51,27 @@ const cards = computed<{ key: CardKey; event: string; note?: boolean }[]>(() => 
 ])
 const valueOf = (event: string) => totalOf(stats.value, event)
 
-/** 近 30 日"完成轮次"逐日条形（用相对高度画，不引入图表库） */
-const roundBars = computed(() => dailySeries(stats.value, 'quiz_complete'))
-const maxRound = computed(() => Math.max(1, ...roundBars.value.map((d) => d.n)))
+/**
+ * 近 N 日「完成轮次」逐日条形。
+ *
+ * 2026-10-21 改造（用户反馈）：
+ * ① 纵轴改**对数刻度**——早期一天几轮、最近一天上百轮，线性刻度会把前期压成 0；
+ * ② 去掉开头上线前的 0（否则 9 月会显示一排"绿色小柱子"，误导成有数据）；
+ * ③ 每根柱子标出具体数值；手机端隔一根显示数值/日期，避免密密麻麻。
+ */
+const roundBars = computed(() => trimLeadingZeros(dailySeries(stats.value, 'quiz_complete')))
+const chartTop = computed(() => logTop(Math.max(0, ...roundBars.value.map((d) => d.n))))
+const yTicks = computed(() => logTicks(chartTop.value))
+const barPct = (n: number) => logPct(n, chartTop.value)
+const rangeText = computed(() => {
+  const bars = roundBars.value
+  if (!bars.length) return ''
+  return t('stats.range', {
+    from: dayLabel(bars[0]!.day),
+    to: dayLabel(bars[bars.length - 1]!.day),
+    n: bars.length,
+  })
+})
 
 /** 徽章获取榜（按人数降序；只显示 >0 的，全部为 0 时给一句占位） */
 const badgeRows = computed(() => {
@@ -118,15 +137,38 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
         </div>
       </div>
 
-      <!-- 近 30 日完成轮次 -->
+      <!-- 近 N 日完成轮次（对数刻度） -->
       <h3 class="sec">{{ t('stats.sectionActivity') }}</h3>
-      <p class="muted small">{{ t('stats.days', { n: stats?.days ?? 30 }) }}</p>
-      <ol class="bars" :aria-label="t('stats.rounds')">
-        <li v-for="d in roundBars" :key="d.day" :title="`${d.day} · ${d.n}`">
-          <span class="bar" :style="{ height: `${Math.max(4, (d.n / maxRound) * 100)}%` }" />
-          <span class="bar-day muted">{{ dayLabel(d.day) }}</span>
-        </li>
-      </ol>
+      <p class="chartMeta muted small">
+        <span>{{ rangeText }}</span>
+        <span v-if="roundBars.length" class="logNote">{{ t('stats.logScale') }}</span>
+      </p>
+      <p v-if="!roundBars.length" class="muted small">{{ t('stats.noActivity') }}</p>
+      <div
+        v-else
+        class="plot"
+        :class="{ dense: roundBars.length > 16 }"
+        role="img"
+        :aria-label="`${t('stats.rounds')} · ${rangeText} · ${t('stats.logScale')}`"
+      >
+        <!-- 纵轴：1 / 10 / 100 / 1k …（虚线网格 + 左侧刻度） -->
+        <div class="grid" aria-hidden="true">
+          <span v-for="tick in yTicks" :key="tick.v" class="gridLine" :style="{ bottom: tick.pct + '%' }">
+            <i class="tickLabel">{{ tick.label }}</i>
+          </span>
+        </div>
+        <ol class="bars">
+          <li v-for="d in roundBars" :key="d.day" :title="`${d.day} · ${d.n}`">
+            <span class="cell">
+              <template v-if="d.n > 0">
+                <span class="bar" :style="{ height: barPct(d.n) + '%' }" />
+                <span class="bar-n" :style="{ bottom: barPct(d.n) + '%' }">{{ d.n }}</span>
+              </template>
+            </span>
+            <span class="bar-day muted">{{ dayLabel(d.day) }}</span>
+          </li>
+        </ol>
+      </div>
 
       <!-- 徽章获取榜 -->
       <h3 class="sec">{{ t('stats.sectionBadges') }}</h3>
@@ -218,29 +260,89 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
   font-size: 0.66rem;
   line-height: 1.35;
 }
+.chartMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 4px;
+}
+.logNote {
+  opacity: 0.75;
+}
+/* 绘图区：左侧留出刻度文字的位置；顶部留白给最高柱子的数字 */
+.plot {
+  position: relative;
+  height: 150px;
+  /* 左侧给刻度文字、右侧给最后一根柱子的斜置日期（rotate(-60) 会横向溢出） */
+  margin: 20px 16px 20px 34px;
+}
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.gridLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--border);
+}
+.tickLabel {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 0;
+  transform: translateY(-50%);
+  font-style: normal;
+  font-size: 0.55rem;
+  color: var(--text-light);
+  white-space: nowrap;
+}
 .bars {
+  position: relative;
   list-style: none;
   display: flex;
   align-items: flex-end;
   gap: 3px;
-  height: 96px;
+  height: 100%;
   padding: 0;
-  margin: 6px 0 2px;
+  margin: 0;
 }
 .bars li {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
   height: 100%;
   min-width: 0;
 }
-.bar {
+/* 柱子与数字的定位容器：高度 = 绘图区高度 - 日期行 */
+.cell {
+  position: relative;
+  flex: 1;
   width: 100%;
+}
+.bar {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 0;
   background: var(--primary-light, var(--primary));
   border-radius: 2px 2px 0 0;
   opacity: 0.85;
+}
+/* 具体数值：贴在柱子顶部（0 轮不画柱子也不显示数字） */
+.bar-n {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-bottom: 1px;
+  font-size: 0.48rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text-light);
+  white-space: nowrap;
 }
 .bar-day {
   font-size: 0.5rem;
@@ -248,6 +350,31 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
   white-space: nowrap;
   margin-top: 2px;
   height: 14px;
+  text-align: center;
+}
+/* 手机：柱子太密 → 隔一根显示数值与日期（其余仍可长按/title 查看） */
+@media (max-width: 640px) {
+  .plot {
+    height: 130px;
+    margin-left: 28px;
+    margin-right: 14px;
+  }
+  .bars {
+    gap: 2px;
+  }
+  .bars li:nth-child(even) .bar-day {
+    visibility: hidden;
+  }
+  /* 柱子很多时（>16 天）数字每三根显示一个；少于这个数就全显示，别把关键数字藏掉 */
+  .plot.dense .bars li .bar-n {
+    visibility: hidden;
+  }
+  .plot.dense .bars li:nth-child(3n + 1) .bar-n {
+    visibility: visible;
+  }
+  .bar-n {
+    font-size: 0.46rem;
+  }
 }
 .ranks {
   list-style: none;

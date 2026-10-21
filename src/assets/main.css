@@ -223,6 +223,43 @@
     margin: 4px auto 0;
   }
 }
+/* 公开链接：GitHub 仓库 / 小红书（小红书号不是 URL，见 src/core/social.ts） */
+.app-footer .links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0 8px;
+}
+.app-footer .social {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-light);
+  background: none;
+  text-decoration: none;
+  cursor: pointer;
+}
+.app-footer .social:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+/* 小红书用品牌红做底：没有官方图标可内联（第三方便捷图标会带来额外请求，违背本站在意隐私的定位） */
+.app-footer .social.xhs {
+  border-color: #ff2442;
+  color: #ff2442;
+}
+.app-footer .social.xhs:hover {
+  background: #ff2442;
+  color: #fff;
+}
 /* 标语：UNiaoer「友鸟儿」「有鸟儿」；始终同一行、必要时才换行（015 #6；中英同序） */
 .app-footer .tagline {
   display: flex;
