@@ -33,13 +33,22 @@ interface D1PreparedStatement {
 interface D1Database {
   prepare(query: string): D1PreparedStatement
 }
+interface R2Range {
+  offset?: number
+  length?: number
+  suffix?: number
+}
 interface R2ObjectBody {
   body: ReadableStream
-  httpMetadata?: { contentType?: string }
+  size: number
+  httpEtag: string
+  range?: R2Range
+  httpMetadata?: { contentType?: string; cacheControl?: string }
+  writeHttpMetadata(headers: Headers): void
   text(): Promise<string>
 }
 interface R2Bucket {
-  get(key: string): Promise<R2ObjectBody | null>
+  get(key: string, options?: { range?: Headers | R2Range }): Promise<R2ObjectBody | null>
 }
 
 interface SpeciesRow {
@@ -104,7 +113,8 @@ const TIER_COMMONNESS: Record<number, number[]> = {
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-  'access-control-allow-headers': 'content-type, x-admin-key',
+  'access-control-allow-headers': 'content-type, x-admin-key, range',
+  'access-control-expose-headers': 'content-range, accept-ranges, etag, content-length',
 }
 
 function json(data: unknown, init: ResponseInit = {}): Response {
@@ -558,6 +568,64 @@ async function handleMedia(_env: Env, id: string): Promise<Response> {
   return json({ error: 'gone', id, hint: 'media is served directly from R2' }, { status: 410 })
 }
 
+/**
+ * 2026-10-21：`uniaoer.com/media/*` 同源媒体别名。
+ *
+ * 背景：媒体对象一直在 R2 桶 `uniaoerbucket`（键 `media/<物种>/...`），
+ * 平时通过 R2 自定义域 `bird.wewalk.world` 访问。本函数让自家域名也能直接读同一批对象
+ * （不复制、不迁移数据；两个域名并存）。
+ *
+ * 支持 GET/HEAD、Range（音频拖动）、ETag 与长缓存；只允许读 `media/` 前缀。
+ */
+async function handleMediaProxy(request: Request, env: Env, path: string): Promise<Response> {
+  const method = request.method.toUpperCase()
+  if (method !== 'GET' && method !== 'HEAD') {
+    return new Response(null, { status: 405, headers: { allow: 'GET, HEAD', ...CORS } })
+  }
+  const key = path.replace(/^\/+/, '')
+  if (!key.startsWith('media/') || key.includes('..')) {
+    return new Response('Not found', { status: 404 })
+  }
+
+  const range = request.headers.get('range')
+  const obj = await env.MEDIA.get(key, range ? { range: request.headers } : undefined)
+  if (!obj) {
+    return new Response('Not found', { status: 404, headers: { 'cache-control': 'public, max-age=60' } })
+  }
+
+  const headers = new Headers()
+  obj.writeHttpMetadata(headers)
+  headers.set('etag', obj.httpEtag)
+  headers.set('accept-ranges', 'bytes')
+  headers.set('cache-control', headers.get('cache-control') || 'public, max-age=604800')
+  headers.set('access-control-allow-origin', '*')
+
+  // Range：206 + Content-Range（Safari 音频必须）。
+  // 注意：R2 返回的对象即使没请求 Range 也可能带 `range={offset:0,length:size}`，
+  // 所以必须以**请求头**是否真的带 Range 为准，否则普通 GET 会错成 206。
+  if (range && obj.range) {
+    const r = obj.range
+    let start = r.offset ?? 0
+    let len = r.length ?? obj.size - start
+    if (r.suffix !== undefined) {
+      len = Math.min(r.suffix, obj.size)
+      start = obj.size - len
+    }
+    if (len <= 0) {
+      return new Response(null, {
+        status: 416,
+        headers: { 'content-range': `bytes */${obj.size}`, ...CORS },
+      })
+    }
+    headers.set('content-range', `bytes ${start}-${start + len - 1}/${obj.size}`)
+    headers.set('content-length', String(len))
+    return new Response(method === 'HEAD' ? null : obj.body, { status: 206, headers })
+  }
+
+  headers.set('content-length', String(obj.size))
+  return new Response(method === 'HEAD' ? null : obj.body, { status: 200, headers })
+}
+
 // ---------- B6 报错 / 大众评审 ----------
 
 const REPORT_REASONS = new Set(['image', 'audio', 'answer', 'quality', 'other'])
@@ -697,7 +765,10 @@ async function handleVote(request: Request, env: Env, reportId: string): Promise
  *  · 无 expires_at（D-035-3 永久有效）；撤回 = hidden=1（软删，公开读 404）。
  *  · 写入成本：1 行 + 2 索引 = 3 行/次（docs/032 额度纪律）。
  */
-const SHARE_MEDIA_PREFIX = 'https://bird.wewalk.world/media/'
+const SHARE_MEDIA_PREFIXES = [
+  'https://bird.wewalk.world/media/',
+  'https://uniaoer.com/media/',
+]
 const SHARE_MAX_ITEMS = 20
 const SHARE_MAX_BYTES = 32 * 1024
 
@@ -722,7 +793,7 @@ function sanitizeShareItem(raw: unknown): Record<string, unknown> | null {
   const it = raw as Record<string, unknown>
   const mediaUrl = str(it.mediaUrl, 600)
   // 必须是本站 R2 媒体域（防任意图床/跳转）
-  if (!mediaUrl || !mediaUrl.startsWith(SHARE_MEDIA_PREFIX)) return null
+  if (!mediaUrl || !SHARE_MEDIA_PREFIXES.some((p) => mediaUrl.startsWith(p))) return null
   const type = it.type === 'audio' ? 'audio' : it.type === 'image' ? 'image' : null
   if (!type) return null
   const answer = str(it.answer, 120)
@@ -1468,6 +1539,10 @@ export default {
     }
 
     try {
+      // 2026-10-21：/media/* 同源媒体别名（R2 直读；bird.wewalk.world 继续可用）
+      if ((method === 'GET' || method === 'HEAD') && path.startsWith('/media/')) {
+        return await handleMediaProxy(request, env, path)
+      }
       // 035 分享页社交预览（2026-10-09）：/s/* 由本 Worker 接管，向 Pages 的 HTML 壳注入 og meta。
       // 放在最前：这是页面请求（非 /api），命中即返回。
       if ((method === 'GET' || method === 'HEAD') && path.startsWith('/s/')) {
