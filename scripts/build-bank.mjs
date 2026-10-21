@@ -76,6 +76,8 @@ const OPT = {
   xcGap: args['xc-gap'] ? Number(args['xc-gap']) : args.slow ? 2500 : 400,
   noXc: !!args['no-xc'], // 临时禁用 Xeno-canto（XC 限流时用 iNat 音频兜底）
   per: args.per ? Number(args.per) : 1, // 每物种最多图/音数（M1=1）
+  // 只重建图片（定向修复用）：跳过 iNat sounds / Xeno-canto，音频沿用上一版，避免音频 key 漂移
+  imagesOnly: !!args['images-only'],
   // 媒体下载的两级超时（2026-10-17，见 download() 头注与 docs/054 §1.4）
   // · mediaIdleTimeout：多少秒没收到任何字节就判定死链，**放弃且不重试**（默认 30s）
   // · mediaTimeout：单文件硬上限兜底（默认 600s）。**别调小** —— XC 单连接只有 ~10 KB/s，
@@ -368,8 +370,22 @@ async function main() {
     if (prevManifest) prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
   }
   if (OPT.ids.length) {
+    // 定向重建（--ids）：载入完整层作为 prev —— ①合并结果，绝不整写覆盖；
+    // ②`--images-only` 依赖 prev 回填音频；③可从上一版复用同源素材（避免无谓重下）。
     const set = new Set(OPT.ids)
+    if (!OPT.global) {
+      const fromRel = OPT.from || 'data-cache/manifest-core-full.json'
+      const fromAbs = path.resolve(ROOT, fromRel)
+      prevManifest = JSON.parse(await fs.readFile(fromAbs, 'utf8').catch(() => null))
+      if (prevManifest) prevById = new Map((prevManifest.species || []).map((s) => [s.id, s]))
+      if (!prevManifest) {
+        console.warn(`   ⚠️ 定向重建未找到 ${fromRel}（将只输出指定物种；音频无法沿用）`)
+      }
+    }
     list = species.filter((s) => set.has(s.id) || set.has(s.nameSci))
+    if (OPT.imagesOnly && !prevManifest) {
+      console.warn('   ⚠️ --images-only 需要上一版 manifest；本次将按普通模式抓音频')
+    }
   } else if (OPT.retryFailed) {
     const fromRel = OPT.from || OPT.out || 'data-cache/manifest-m3.json'
     const fromAbs = path.resolve(ROOT, fromRel)
@@ -471,7 +487,7 @@ async function main() {
       pendingSkip.add(sp.id)
       return stub(sp)
     }
-    const rec = await buildSpecies(sp, useXc, OPT.global ? prevById?.get(sp.id) : null)
+    const rec = await buildSpecies(sp, useXc, prevById?.get(sp.id) ?? null)
     done++
     // D-023-3:playable* 按素材计数逐条写入(检查点落盘即携带;收尾主写入兜底)
     rec.playableImage = (rec.images ? rec.images.length : 0) >= 1
@@ -585,6 +601,15 @@ async function main() {
       ? path.join(ROOT, 'data-cache/manifest-global.json')
       : path.join(ROOT, 'data-cache/manifest-core-full.json')
   await ensureDir(path.dirname(outFile))
+  // 定向重建（--ids）会就地改写完整层：写盘前自动备份，出问题可原样恢复
+  if (OPT.ids.length && !OPT.global) {
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13)
+    const bak = `${outFile}.backup-${stamp}`
+    await fs.copyFile(outFile, bak).catch(() => {})
+    if (await fs.access(bak).then(() => true, () => false)) {
+      console.log(`   🗂️  已备份上一版 → ${path.relative(ROOT, bak)}`)
+    }
+  }
   await writeJsonAtomic(outFile, JSON.stringify(manifest, null, 2))
 
   // 029/S6：分层产物仅核心库采集时刷新（由 data-cache 中间件 + 台账派生到 public/data）。
@@ -621,7 +646,8 @@ async function buildSpecies(sp, useXc, prev) {
 
     const [photos, sounds, detail] = await Promise.all([
       fetchInat(taxon.id, 'photos'),
-      fetchInat(taxon.id, 'sounds'),
+      // --images-only：只更新图片，不抓声音（音频沿用上一版，见 applyOverrides 之后）
+      OPT.imagesOnly ? Promise.resolve([]) : fetchInat(taxon.id, 'sounds'),
       // --slow(假期模式):跳过 default_photo 详情调用,省 1/4 iNat 配额(023 P2)
       OPT.slow ? Promise.resolve(null) : fetchTaxon(taxon.id),
     ])
@@ -631,13 +657,20 @@ async function buildSpecies(sp, useXc, prev) {
     base.image = base.images[0] || null
 
     // 音频：XC 优先（质量 A→E、同质量取短），不足用 iNat sounds 兜底（011 §4.2）
-    const [xcAudios, inatAudios] = useXc
+    const useXcHere = useXc && !OPT.imagesOnly
+    const [xcAudios, inatAudios] = useXcHere
       ? await Promise.all([findXcAudios(sp), Promise.resolve(pickInatAudios(sounds, OPT.policy))])
       : [[], pickInatAudios(sounds, OPT.policy)]
     base.audios = [...xcAudios, ...inatAudios].slice(0, OPT.per)
     base.audio = base.audios[0] || null
 
     applyOverrides(base)
+
+    // --images-only：音频回填必须放在 applyOverrides 之后，否则会被 --per 截断
+    if (OPT.imagesOnly && prev) {
+      base.audios = prev.audios || []
+      base.audio = base.audios[0] || null
+    }
 
     // 给媒体补上归属信息（前端错题本等依赖 speciesId）
     for (const kind of ['images', 'audios']) {
@@ -952,10 +985,16 @@ function asset(url, rawLicense, author, source, sourceUrl, sourceId) {
 
 /** 下载 →（可选）转码 → 落盘 public/media，或 stage（本地暂存+URL 指向 R2），或上传 R2 */
 async function materialize(rec, id, prev) {
+  const ov = OVERRIDES[id] || OVERRIDES[rec.nameSci]
+  // 定向修复：可指定新素材的起始序号（如 6 → image-6/7/8），避免覆盖已发布 key
+  const keyBase = Math.max(1, Number(ov?.imageKeyBase) || 1)
+  // 定向修复：可显式把上一版的指定素材（按展示 URL）追加回列表，保持原 key 不重编码
+  const appendUrls = Array.isArray(ov?.appendImageUrls) ? ov.appendImageUrls : []
+
   // 序号即"从优到劣"排名（011 §6）：image-1/audio-1 为首选
   for (let i = 0; i < (rec.images || []).length; i++) {
     const kept = reusableAsset(prev?.images?.[i], rec.images[i])
-    rec.images[i] = kept || (await persistImage(rec.images[i], id, i + 1))
+    rec.images[i] = kept || (await persistImage(rec.images[i], id, i + keyBase))
   }
   for (let i = 0; i < (rec.audios || []).length; i++) {
     const kept = reusableAsset(prev?.audios?.[i], rec.audios[i])
@@ -963,7 +1002,9 @@ async function materialize(rec, id, prev) {
   }
   // 053 补采:新取材比台账短时(源站下架/过滤变化),台账里已物化的多余素材原样保留
   // (仍合规、文件已在 R2);按 sourceId/url 去重,防取材顺序漂移造成重复条目。
-  if (prev && PUBLIC_BASE) {
+  // 定向修复（--images-only / appendImageUrls）时跳过：它会把上一版的多余图/音追加回来，
+  // 且末尾的 slice(0, per) 会把显式追加的素材截掉。
+  if (prev && PUBLIC_BASE && !OPT.imagesOnly && !appendUrls.length) {
     const seen = new Set(
       [...rec.images, ...rec.audios]
         .map((a) => a && `${a.type}|${a.sourceId || a.url}`)
@@ -981,6 +1022,16 @@ async function materialize(rec, id, prev) {
     }
     rec.images = rec.images.slice(0, OPT.per)
     rec.audios = rec.audios.slice(0, OPT.per)
+  }
+  // 显式追加（保持旧 key，不重下载/重编码）
+  for (const u of appendUrls) {
+    const a = (prev?.images || []).find((x) => x && x.url === u)
+    if (!a) {
+      console.warn(`   ⚠️ appendImageUrls 未在上一版找到：${u}`)
+      continue
+    }
+    const dup = rec.images.some((x) => x && (x.url === a.url || (a.sourceId && x.sourceId === a.sourceId)))
+    if (!dup) rec.images.push(a)
   }
   rec.image = rec.images[0] || null
   rec.audio = rec.audios[0] || null

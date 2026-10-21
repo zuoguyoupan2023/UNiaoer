@@ -14,6 +14,12 @@
       "titleEn": "Why does the first photo look wrong?",
       "bodyZh": "这张照片的主体其实是一只雀鹰在扑抓水面的白骨顶，白骨顶在背景里。iNaturalist 上这条观察的首图票数最高，旧算法按“首图”取图才会出现这种情况；现已改为优先使用物种的策展默认图（default_photo），并加入人工覆盖表兜底。\n\n同一物种的不同角度、季节、雌雄或幼鸟也可能差异较大，下面的其它素材可以对照着看。",
       "bodyEn": "The main subject of this photo is actually a Eurasian Sparrowhawk grabbing a coot on the water, with the coot in the background. On iNaturalist this observation's first photo drew the most votes, and the old algorithm picked the \"first photo\", which is how it slipped in. We now prefer the species' curated default photo (default_photo) and keep a manual override table as a fallback.\n\nA single species can also look quite different by angle, season, sex or age — compare with the other media below."
+    },
+    "pica-serica": {
+      "titleZh": "喜鹊的图片换过吗？为什么？",
+      "titleEn": "Have the Oriental Magpie photos changed? Why?",
+      "bodyZh": "喜鹊原有 5 张图，其中 3 张不适合做认鸟练习，已停用并补入 3 张新图；现在展示的是原第 2、4 张 + 新增第 6、7、8 张，共 5 张。\n\n8 张图一览（编号 = 加入顺序）：\n1. 原图 1（iNaturalist 观察 253827966）— 已停用：主体与喜鹊不符\n2. 原图 2（121031511）— 保留\n3. 原图 3（38753010）— 已停用：画面模糊\n4. 原图 4（121031510）— 保留\n5. 原图 5（394144078）— 已停用：羽色异常，与典型喜鹊差异过大\n6. 新图 6（205466820，CC0）— 新增\n7. 新图 7（155853528，CC BY-NC）— 新增\n8. 新图 8（384500520，CC BY-NC）— 新增\n\n需要说明的是：这 8 条观察在 iNaturalist 上都被标注为喜鹊（Pica serica）。问题出在源站素材本身的质量与标注，而不是本站抓取时认错了物种。旧图仍保留在服务器上备查，只是不再展示。\n\n感谢在「大众评审」指出问题的朋友——每一条反馈我们都会人工核对；确认有误的素材会停用并补充替换，同时在下方更新日志留痕。",
+      "bodyEn": "The Oriental Magpie used to have 5 photos; 3 of them were unsuitable for identification practice. They are retired and replaced with 3 new photos. The gallery now shows original #2 and #4 plus new #6, #7 and #8 (5 in total).\n\nAll 8 photos (numbering = order added):\n1. Original 1 (iNaturalist obs 253827966) — retired: the subject is not a magpie\n2. Original 2 (121031511) — kept\n3. Original 3 (38753010) — retired: blurry\n4. Original 4 (121031510) — kept\n5. Original 5 (394144078) — retired: atypical plumage, too different from a typical magpie\n6. New 6 (205466820, CC0) — added\n7. New 7 (155853528, CC BY-NC) — added\n8. New 8 (384500520, CC BY-NC) — added\n\nAll 8 observations are labelled Pica serica on iNaturalist. The problem was the quality/labelling of the source material, not a species misidentification on our side. The old files are kept on the server for auditing, but are no longer displayed.\n\nThanks to the person who reported this in Public Review — every report is checked manually; confirmed problems are retired and replaced, with a note in the changelog below."
     }
   }
 }
