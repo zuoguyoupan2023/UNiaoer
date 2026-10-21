@@ -56,13 +56,18 @@ const matched = computed(() => {
   for (const o of data.value.orders) {
     const families: CatalogFamily[] = []
     for (const f of o.families) {
-      const species = f.species.filter(
-        (s) =>
-          s.sci.toLowerCase().includes(q) ||
-          s.zh?.toLowerCase().includes(q) ||
-          s.en?.toLowerCase().includes(q) ||
-          s.py?.includes(q),
-      )
+      // 科名命中（中/拉丁）时整科列出，否则按种过滤
+      const familyHit =
+        f.sci.toLowerCase().includes(q) || (f.zh ? f.zh.toLowerCase().includes(q) : false)
+      const species = familyHit
+        ? f.species
+        : f.species.filter(
+            (s) =>
+              s.sci.toLowerCase().includes(q) ||
+              s.zh?.toLowerCase().includes(q) ||
+              s.en?.toLowerCase().includes(q) ||
+              s.py?.includes(q),
+          )
       if (species.length) families.push({ ...f, species })
     }
     if (families.length) orders.push({ ...o, families })
@@ -127,6 +132,8 @@ const isFamilyOpen = (orderSci: string, familySci: string) =>
   !!matched.value || openFamilies.value.has(`${orderSci}|${familySci}`)
 
 const orderLabel = (o: CatalogOrder) => (o.zh ? `${o.zh} ${o.sci}` : o.sci)
+/** 科：中文名 + 拉丁名（没有通行中文名的科只显示拉丁名，不硬造） */
+const familyLabel = (f: CatalogFamily) => (f.zh ? `${f.zh} ${f.sci}` : f.sci)
 const speciesLabel = (s: CatalogSpecies) => s.zh || s.en || s.sci
 const hasAny = (s: CatalogSpecies) => s.image || s.audio
 </script>
@@ -204,7 +211,7 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
           >
             <summary class="cat-family-sum" @click.prevent="toggleFamily(o.sci, f.sci)">
               <ChevronRight class="cat-caret" :size="14" />
-              <span class="cat-family-name">{{ f.sci }}</span>
+              <span class="cat-family-name">{{ familyLabel(f) }}</span>
               <span class="cat-n muted">{{ f.species.length }}</span>
             </summary>
             <ul class="cat-species">

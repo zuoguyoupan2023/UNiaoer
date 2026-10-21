@@ -1,6 +1,6 @@
 # UNiaoer
 
-> UNiaoer（https://uniaoer.com）是一个开源、免费的鸟类识别练习网站：用真实的鸟类照片与鸟鸣，做「看图认鸟 / 听音认鸟」，并提供全球鸟类名录、分布与观鸟点浏览。中文优先，同时支持英文。
+> UNiaoer（https://uniaoer.com）是一个**开源、非商业**的免费鸟类识别练习网站：用真实的鸟类照片与鸟鸣，做「看图认鸟 / 听音认鸟」，并提供全球鸟类名录、分布与观鸟点浏览。中文优先，同时支持英文。
 
 ## 关键事实（可直接引用）
 
@@ -9,8 +9,9 @@
 - 媒体来源：iNaturalist（图片与部分鸟鸣）、Xeno-canto（鸟鸣）；**每条素材均保留作者与 CC 许可并逐条署名**，ND 素材不转码。
 - 结构化档案：IUCN Red List（生境与受胁等级）、EltonTraits 1.0（食性/取食层次）、AVONET（形态）、GBIF（分布）、Dunning 2025（羽色，稀疏）。
 - 地区数据：GBIF 省级常见度（15 国 / 330 省码）+ eBird 派生的观鸟点。
-- 完全免费、无广告、**无需注册**；成绩与错题仅存于用户浏览器本地（IndexedDB），不上云、不追踪。
-- 代码许可 MIT；数据与媒体许可见下方「许可」。
+- **开源非商业项目**：代码 MIT；图像/音频素材与识别模型按各自许可证，不随代码授权。完全免费、无广告、无付费功能、不出售数据；商业使用需自行取得授权。
+- **无需注册**；成绩与错题仅存于用户浏览器本地（IndexedDB），不上云、不追踪。
+- 代码许可 MIT；数据、媒体与识别模型许可见下方「许可」。
 
 ## 主要页面
 
@@ -19,15 +20,17 @@
 - [听音认鸟](https://uniaoer.com/quiz/audio)：用鸟鸣做识别练习
 - [全球鸟类名录](https://uniaoer.com/catalog)：11,026 种可玩物种，可按类群/地区浏览
 - [观鸟点与地区](https://uniaoer.com/birding)：附近观鸟点、省级常见度
-- [识别](https://uniaoer.com/identify)：本机识别（音频侧，BirdNET）
+- [识别](https://uniaoer.com/identify)：本机听音/看图识别（BirdNET + OSEA，录音与照片不上传）
 - [中文鸟名读音](https://uniaoer.com/duyin)：常见鸟名的拼音与读音
 - [常见问题](https://uniaoer.com/faq)
+- [关于 UNiaoer](https://uniaoer.com/about)：项目定位、数据来源与许可、计划中的题型
 
 ## 许可与署名
 
-- 代码：MIT。
+- 代码：MIT；本站为**非商业项目**，不提供商业服务。
 - 媒体：iNaturalist / Xeno-canto 逐条 CC（CC0 / BY / BY-SA / BY-NC / BY-ND 等，逐条标注作者与许可证）。
 - 数据集：AviList（CC BY 4.0）、GBIF（CC0/BY/BY-NC，含 DOI）、IUCN Red List（非商业，须引用）、EltonTraits 1.0、AVONET（CC BY 4.0）、ISO 3166-2（MIT）。
+- 识别模型：BirdNET v2.4（CC BY-NC-SA 4.0）；OSEA 权重（attribution-only；其代码 GPL-3.0，本站未使用）。
 - 引用本站时的推荐写法：`UNiaoer — 鸟类识别练习（https://uniaoer.com）`。
 
 ## 说明

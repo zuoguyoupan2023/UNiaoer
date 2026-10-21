@@ -97,6 +97,7 @@
   },
   "dependencies": {
     "lucide-vue-next": "^0.577.0",
+    "marked": "^15.0.12",
     "onnxruntime-web": "^1.30.0",
     "pinia": "^4.0.3",
     "qrcode-generator": "^2.0.4",

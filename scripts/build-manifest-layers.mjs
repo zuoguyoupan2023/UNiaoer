@@ -82,6 +82,22 @@ const ORDER_ZH = {
 }
 
 /**
+ * 252 个科的中文名（2026-10-21）。
+ *
+ * 目有 `ORDER_ZH`，科以前只有拉丁名 —— 用户反馈「目下面一级没有中文名」。
+ * `data/family-zh.json` 由 `npm run taxonomy:family-zh` 生成：
+ * Wikidata（specieswiki 标题反查，CC0）为主 + GBIF/Catalogue of Life 补缺；
+ * 少数没有通行中文名的科仍保持拉丁名（不猜）。
+ */
+let FAMILY_ZH = {}
+try {
+  const doc = JSON.parse(await fs.readFile(path.join(ROOT, 'data/family-zh.json'), 'utf8'))
+  FAMILY_ZH = doc.families || {}
+} catch {
+  console.warn('⚠ 未找到 data/family-zh.json —— 科名将只有拉丁名（先跑 npm run taxonomy:family-zh）')
+}
+
+/**
  * 029 数据透明度:构建全量目录（/catalog 页懒加载）。
  * 按 AviList 目顺序 → 科（拉丁名，字母序）→ 种（学名字母序）；
  * 物种条目带学名/英文名/中文名（有则给）与图/音标记（extinct 仅标记为 true）。
@@ -118,7 +134,7 @@ function buildCatalog(poolEntries, idx) {
     }
     let f = o._fm.get(familySci)
     if (!f) {
-      f = { sci: familySci, species: [] }
+      f = { sci: familySci, zh: FAMILY_ZH[familySci], species: [] }
       o._fm.set(familySci, f)
       o.families.push(f)
     }

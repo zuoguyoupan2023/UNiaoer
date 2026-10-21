@@ -196,32 +196,35 @@
 }
 
 .app-footer {
-  position: relative;
   text-align: center;
-  padding: 10px 16px;
+  padding: 10px 16px 14px;
   font-size: 0.76rem;
   color: var(--text-light);
   line-height: 1.5;
 }
-/* 答疑专栏入口：与 UNiaoer 同字号；宽屏右下，窄屏居中居下 */
-.app-footer .faq-entry {
-  position: absolute;
-  right: 16px;
-  bottom: 12px;
+/* 最下方入口：关于（README 镜像）/ 答疑专栏 */
+.app-footer .footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
   font-size: 0.76rem;
   font-weight: 700;
+}
+.app-footer .footer-links a {
   color: var(--text-light);
 }
-.app-footer .faq-entry:hover {
+.app-footer .footer-links a:hover {
   color: var(--primary);
 }
-@media (max-width: 600px) {
-  .app-footer .faq-entry {
-    position: static;
-    display: block;
-    width: fit-content;
-    margin: 4px auto 0;
-  }
+.app-footer .footer-links .dot {
+  color: var(--border);
+}
+.app-footer .noncommercial {
+  margin: 2px 0 6px;
+  font-size: 0.68rem;
+  opacity: 0.85;
 }
 /* 公开链接：GitHub 仓库 / 小红书（小红书号不是 URL，见 src/core/social.ts） */
 .app-footer .links {

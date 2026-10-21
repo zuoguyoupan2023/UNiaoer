@@ -166,6 +166,8 @@ const immersive = computed(
       <span class="tag-sep" aria-hidden="true">·</span>
       <span class="tag-side">{{ t('footer.taglineRight') }}</span>
     </p>
+    <!-- 非商业声明：项目免费、无广告；数据多含 NC 许可，商业使用需另行授权 -->
+    <p class="noncommercial">{{ t('footer.nonCommercial') }}</p>
     <!-- 公开链接：GitHub 仓库 + 小红书（没有「按小红书号直达」的公开链接，见 core/social.ts） -->
     <p class="links">
       <a class="social" :href="GITHUB_REPO" target="_blank" rel="noopener noreferrer">
@@ -190,7 +192,11 @@ const immersive = computed(
         {{ xhsCopied ? t('footer.xhsCopied') : t('footer.xhs', { id: XHS_HANDLE }) }}
       </button>
     </p>
-    <!-- 答疑专栏入口：宽屏靠右下、窄屏居中居下（与 UNiaoer 同字号） -->
-    <RouterLink class="faq-entry" to="/faq">{{ t('faq.title') }}</RouterLink>
+    <!-- 最下方：关于（README 镜像）+ 答疑专栏 -->
+    <nav class="footer-links">
+      <RouterLink to="/about">{{ t('footer.about') }}</RouterLink>
+      <span class="dot" aria-hidden="true">·</span>
+      <RouterLink to="/faq">{{ t('faq.title') }}</RouterLink>
+    </nav>
   </footer>
 </template>

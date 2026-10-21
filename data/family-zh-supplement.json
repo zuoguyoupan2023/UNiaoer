@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "note": "Wikidata 没有中文标签的科，用 GBIF/Catalogue of Life 的中文俗名补齐；繁体已人工转为简体。只补有权威来源的名字，其余保持拉丁名（不猜）。",
+  "source": "GBIF species API /vernacularNames (language=zho, Catalogue of Life)",
+  "families": {
+    "Atrichornithidae": "薮鸟科",
+    "Dasyornithidae": "刺莺科",
+    "Donacobiidae": "黑顶鹪鹩科",
+    "Erythrocercidae": "红鹟科",
+    "Hypocoliidae": "灰连雀科",
+    "Menuridae": "琴鸟科",
+    "Nicatoridae": "斗鹎科",
+    "Notiomystidae": "缝叶吸蜜鸟科",
+    "Onychorhynchidae": "皇霸鹟科",
+    "Picathartidae": "岩鹛科",
+    "Rhodinocichlidae": "玫瑰鸫科",
+    "Sapayoidae": "阔嘴霸鹟科",
+    "Scopidae": "锤头鹳科",
+    "Zeledoniidae": "冠鹩鸫科"
+  }
+}

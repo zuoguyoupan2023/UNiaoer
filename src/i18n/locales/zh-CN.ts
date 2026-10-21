@@ -31,10 +31,17 @@ export const messages = {
     source: '数据来源：Xeno-canto · iNaturalist',
     taglineLeft: '友鸟儿',
     taglineRight: '有鸟儿',
+    nonCommercial: '非商业项目 · 开源 · 代码 MIT · 图像/音频与识别模型按各自许可证',
+    about: '关于 UNiaoer',
     github: 'GitHub',
     xhs: '小红书 · {id}',
     xhsCopied: '已复制小红书号，去 App 搜索',
     xhsHint: '点一下复制小红书号，在 App 内搜索即可',
+  },
+  about: {
+    title: '关于 UNiaoer',
+    lead: '本页内容来自项目的 README：项目定位、数据来源与许可、计划中的题型。',
+    source: '原文：',
   },
   home: {
     title: '是时候挑战一下自己了！',
@@ -210,7 +217,7 @@ export const messages = {
     loading: '正在加载名录…',
     flags: '图片与音频可得性',
     footnote:
-      '中文名为空表示该种在开放数据源中暂无通行中文名（界面回退显示英文名或学名）。灰色图标表示该素材缺失（原因见答疑专栏「关于题库覆盖」）。',
+      '中文名为空表示该种在开放数据源中暂无通行中文名（界面回退显示英文名或学名）。科名来自 Wikidata / GBIF，少数没有通行中文名的科显示拉丁名。灰色图标表示该素材缺失（原因见答疑专栏「关于题库覆盖」）。',
   },
   // 039 P1 附近观鸟点（/nearby；粗定位来自 Worker /api/geo，坐标不落库）
   nearby: {
@@ -380,7 +387,8 @@ export const messages = {
     factHabit: '习性',
     viewOriginal: '查看原图',
     privacyShort: '本机识别，录音与照片不上传。',
-    credit: '图像识别：OSEA（Sun Jiao）/ DongNiao DIB-10K；声音识别：BirdNET（Cornell Lab）。',
+    credit:
+      '图像识别：OSEA（Sun Jiao）/ DongNiao DIB-10K，权重 attribution-only；声音识别：BirdNET（Cornell Lab），CC BY-NC-SA 4.0。',
     maybe: {
       one: '可能是 {name}',
     },
@@ -425,8 +433,8 @@ export const messages = {
     compareHint: '点候选可以加入或移出对比（最多两个）。',
     model: {
       need: {
-        audio: '音频识别模型（BirdNET）首次使用需下载，约 {mb} MB。',
-        image: '图像识别模型（OSEA）首次使用需下载，约 {mb} MB。',
+        audio: '音频识别模型（BirdNET，CC BY-NC-SA 4.0）首次使用需下载，约 {mb} MB。',
+        image: '图像识别模型（OSEA，权重 attribution-only）首次使用需下载，约 {mb} MB。',
       },
       downloading: {
         audio: '正在下载音频识别模型 {pct}%',

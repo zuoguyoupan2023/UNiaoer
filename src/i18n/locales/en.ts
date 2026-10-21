@@ -36,10 +36,18 @@ const en: typeof zhMessages = {
     source: 'Data: Xeno-canto · iNaturalist',
     taglineLeft: 'Meet birds friendly',
     taglineRight: 'Meet birds easy',
+    nonCommercial:
+      'Non-commercial open-source project · code MIT · images, audio and models under their own licences',
+    about: 'About UNiaoer',
     github: 'GitHub',
     xhs: 'Xiaohongshu · {id}',
     xhsCopied: 'ID copied — search it in the app',
     xhsHint: 'Click to copy the ID, then search it in the app',
+  },
+  about: {
+    title: 'About UNiaoer',
+    lead: 'This page mirrors the project README: positioning, data sources and licences, and planned modes.',
+    source: 'Source:',
   },
   home: {
     title: 'Time for a challenge!',
@@ -216,7 +224,7 @@ const en: typeof zhMessages = {
     loading: 'Loading catalogue…',
     flags: 'Photo & audio availability',
     footnote:
-      'An empty Chinese name means no common Chinese name exists in open data (the UI falls back to English or the scientific name). Grey icons mark missing media (see the Explainer, "About our coverage").',
+      'An empty Chinese name means no common Chinese name exists in open data (the UI falls back to English or the scientific name). Family names come from Wikidata / GBIF; the few families without an established Chinese name are shown in Latin. Grey icons mark missing media (see the Explainer, "About our coverage").',
   },
   // 039 P1 nearby birding spots (/nearby; coarse location from Worker /api/geo, never stored)
   nearby: {
@@ -745,7 +753,8 @@ const en: typeof zhMessages = {
     factHabit: 'Habits',
     viewOriginal: 'View original',
     privacyShort: 'Identified on this device; your recording and photo are never uploaded.',
-    credit: 'Photo ID: OSEA (Sun Jiao) / DongNiao DIB-10K; sound ID: BirdNET (Cornell Lab).',
+    credit:
+      'Photo ID: OSEA (Sun Jiao) / DongNiao DIB-10K, weights attribution-only; sound ID: BirdNET (Cornell Lab), CC BY-NC-SA 4.0.',
     maybe: {
       one: 'Possibly {name}',
     },
@@ -790,8 +799,8 @@ const en: typeof zhMessages = {
     compareHint: 'Tap a candidate to add or remove it from the comparison (up to two).',
     model: {
       need: {
-        audio: 'The sound model (BirdNET) downloads on first use — about {mb} MB.',
-        image: 'The photo model (OSEA) downloads on first use — about {mb} MB.',
+        audio: 'The sound model (BirdNET, CC BY-NC-SA 4.0) downloads on first use — about {mb} MB.',
+        image: 'The photo model (OSEA, weights attribution-only) downloads on first use — about {mb} MB.',
       },
       downloading: {
         audio: 'Downloading the sound model {pct}%',

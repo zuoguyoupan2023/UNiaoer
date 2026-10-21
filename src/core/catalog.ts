@@ -26,6 +26,8 @@ export interface CatalogSpecies {
 
 export interface CatalogFamily {
   sci: string
+  /** 科中文名（2026-10-21 起；少数无通行中文名的科缺失，显示拉丁名） */
+  zh?: string
   species: CatalogSpecies[]
 }
 

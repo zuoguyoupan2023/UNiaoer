@@ -32,6 +32,12 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
     },
     {
+      // 关于（2026-10-21）：渲染仓库 README（数据源/许可/计划题型）
+      path: '/about',
+      name: 'about',
+      component: () => import('../views/AboutView.vue'),
+    },
+    {
       // 答疑专栏（011 §9）：总览 + 单条详情
       path: '/faq',
       name: 'faq',
