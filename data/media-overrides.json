@@ -143,6 +143,57 @@
         "https://bird.wewalk.world/media/fulica-atra/image-4.full.webp",
         "https://bird.wewalk.world/media/fulica-atra/image-5.full.webp"
       ]
+    },
+    "phoenicurus-ochruros": {
+      "_reason": "2026-10-22 用户反馈图 1/图 2 有问题。核查：image-1（obs 104811044 / Valia Pavlou，CC BY-NC）是**鸟环（脚环）在手指间的特写**，画面里没有鸟体——环志记录的照片，误当成了物种图；image-2（obs 69149790 / Luís Lourenço，CC BY-NC-ND）是一只**几乎全白的白化/黄化个体**，羽色不代表该种，且为 ND（不可转码、以原始 jpeg 直出）。处置：停用 1/2，保留 3/4/5，新增 2 张（obs 339875349 雄鸟 / 189450325 雌鸟），新图使用从未占用的 key image-6/7（旧对象保留在 R2 备查）；首图由 image-1 变为 image-6 → 需同步 D1 单行（S8）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/175707288/large.jpg",
+        "https://www.inaturalist.org/observations/104811044",
+        "https://www.inaturalist.org/photos/175707288",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112142884/large.jpeg",
+        "https://www.inaturalist.org/observations/69149790",
+        "https://www.inaturalist.org/photos/112142884"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/618374817/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Константин Ординарцев, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/339875349",
+          "sourceId": "618374817"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/331881067/large.jpg",
+          "license": "cc-by",
+          "author": "(c) SteveM4560, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/189450325",
+          "sourceId": "331881067"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/phoenicurus-ochruros/image-3.full.webp",
+        "https://bird.wewalk.world/media/phoenicurus-ochruros/image-4.full.webp",
+        "https://bird.wewalk.world/media/phoenicurus-ochruros/image-5.full.webp"
+      ],
+      "rejected": [
+        {
+          "slot": "image-1",
+          "imageUrl": "https://bird.wewalk.world/media/phoenicurus-ochruros/image-1.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/104811044",
+          "reason": "画面是鸟环（脚环）特写，没有鸟体，无法作为认鸟素材（环志记录图）",
+          "reportIds": []
+        },
+        {
+          "slot": "image-2",
+          "imageUrl": "https://bird.wewalk.world/media/phoenicurus-ochruros/image-2.jpeg",
+          "sourceUrl": "https://www.inaturalist.org/observations/69149790",
+          "reason": "白化/黄化个体，通体近白，羽色不能代表该种（且 CC BY-NC-ND 不可转码）",
+          "reportIds": []
+        }
+      ]
     }
   }
 }
