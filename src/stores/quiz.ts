@@ -284,8 +284,11 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         if (speciesPool) {
           const filtered = online.species.filter((sp) => speciesPool!.has(sp.id))
           onlineHits = filtered.length
-          if (!filtered.length) {
-            // 在线候选与本地赛制池无交集（如全球种尚未练过）：回退本地池
+          // 072-a-fix-1（2026-10-22 用户定：允许不足但说明，但**不许因交集而少题**）：
+          // 交集不足目标题数时回退本地赛制池（本地池是完整的，够就能凑满）；
+          // 本地池也真的不够（复活赛只有 4 条等）才短轮，并在答题页明确说明。
+          if (filtered.length < count) {
+            // 在线候选与本地赛制池交集不足（如全球种尚未练过）：回退本地池
             buildPath = 'online-fallback'
             speciesForBuild = (await poolData(type, tier.value)).species
             distractorPool = undefined
@@ -401,10 +404,11 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       const s = await tierSuggestion(mode.value, tier.value)
       tier.value = s.tier
     }
-    // 保持与上一轮相同的题量
+    // 072-a-fix-2：不再继承上一轮的题量。
+    // 旧实现传 `count: 上一轮题数`，一旦出现 7 题，整场都是 7 题（用户明确反对）。
+    // 现在每轮都按标准题量重新申请，池子真不够时会自然少题并由答题页说明原因。
     await start(mode.value, {
       tier: tier.value,
-      count: questions.value.length || undefined,
       keepSession: true,
     })
   }

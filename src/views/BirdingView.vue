@@ -16,6 +16,7 @@ import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
+import { regionTierMap } from '@/core/provinceCommonness'
 import {
   buildCountryIndex,
   countriesInContinent,
@@ -312,10 +313,36 @@ const countryGridItems = computed<GridItem[]>(() => {
       bankId: sp.id,
     }))
 })
+/**
+ * 072-j（2026-10-22 用户要求）：物种网格的排序。
+ * 现存两种都是"名称序"（zh 拼音 / en 首字母）；预学习场景需要**按该地区常见度**排。
+ * 数据现成：`province-commonness` 的省级/国家级档位（与出题同一份），无需新管线。
+ */
+const speciesSort = ref<'name' | 'common'>('name')
+/** 该地区档位表（id → 档位，1 最常见）；null = 无数据 → 回退全局 commonness */
+const regionTiers = ref<Map<string, number> | null>(null)
+async function loadRegionTiers() {
+  const key = province.value || selected.value
+  regionTiers.value = (await regionTierMap(key).catch(() => null))?.tiers ?? null
+}
+watch([selected, province], () => void loadRegionTiers(), { immediate: true })
+
 /** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
 const gridItems = computed<GridItem[]>(() => {
   const ps = provinceSet.value
-  return ps ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId)) : countryGridItems.value
+  const base = ps ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId)) : countryGridItems.value
+  if (speciesSort.value !== 'common') return base
+  const tiers = regionTiers.value
+  const rank = (it: GridItem) => {
+    const local = it.bankId ? tiers?.get(it.bankId) : undefined
+    if (local != null) return local
+    const global = it.bankId ? (speciesById(it.bankId)?.commonness ?? 99) : 99
+    return global
+  }
+  // 档位升序（1 最常见）→ 全局常见度 → 名称兜底，保证稳定
+  return [...base].sort(
+    (a, b) => rank(a) - rank(b) || collator.value.compare(a.name, b.name),
+  )
 })
 /** 该国鸟种总数（「该地鸟种 431（全国 1507 种）」里的全国数；与列表同口径） */
 const countrySpeciesCount = computed(() => countryGridItems.value.length)
@@ -762,6 +789,26 @@ function pickProvince(code: string) {
                   : t('region.speciesTitle', { country: countryName(selected) })
               }}
             </p>
+            <div class="sort" role="group" :aria-label="t('region.sortSpeciesLabel')">
+              <button
+                type="button"
+                class="sort-btn"
+                :class="{ active: speciesSort === 'name' }"
+                :aria-pressed="speciesSort === 'name'"
+                @click="speciesSort = 'name'"
+              >
+                {{ t('region.speciesSortName') }}
+              </button>
+              <button
+                type="button"
+                class="sort-btn"
+                :class="{ active: speciesSort === 'common' }"
+                :aria-pressed="speciesSort === 'common'"
+                @click="speciesSort = 'common'"
+              >
+                {{ t('region.speciesSortCommon') }}
+              </button>
+            </div>
             <ul class="species-grid">
               <li v-for="gi in visibleItems" :key="gi.slug">
                 <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">

@@ -3,7 +3,11 @@
 /** 选项显示前所占限时的比例 */
 export const OPTION_REVEAL_RATIO = 1 / 3
 
-/** 答对时的自动进入下一题等待时长（ms，留足看答案时间，R43） */
+/**
+ * 答对时的**默认**自动切题等待（ms）。
+ * 072-h（2026-10-22）：改为用户可配（0.5/1/2/3s，见 `settings.autoNextDelaySec`，
+ * 默认 3s 与旧行为一致）。此常量仅作为默认值的来源与文档锚点。
+ */
 export const AUTO_NEXT_DELAY_CORRECT_MS = 3000
 
 /** 答错/超时且「都自动」时的等待时长（ms，R43） */

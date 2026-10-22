@@ -114,6 +114,8 @@ const en: typeof zhMessages = {
     cannotStart: 'Cannot start',
     backHome: 'Back home',
     progress: 'Q{n} / {total}',
+    shortRound: 'Only {built} of {want} questions — not enough media for this difficulty / region / mode',
+    regimePool: '{regime}: {n} candidates',
     // 072-a observation: diagnostic line (only with ?diag=1)
     diagHead: 'Diag · {tier}{region} · {regime}',
     diagBody: 'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',
@@ -283,6 +285,10 @@ const en: typeof zhMessages = {
     generatedAt: 'Data as of {at}',
     sectionVisitors: 'Visitors',
     sectionActivity: 'Activity',
+    sectionAccuracy: 'Accuracy by level',
+    accuracyEmpty: 'Not enough data yet (at least 10 rounds per level).',
+    accuracyMean: '{mean}% avg · {n} rounds',
+    accuracyNote: 'Estimated from accuracy buckets (bucket midpoints); no per-user or per-species data.',
     sectionBadges: 'Badges earned',
     sectionTitles: 'Titles earned',
     uniqueVisitors: 'Unique visitors',
@@ -353,6 +359,9 @@ const en: typeof zhMessages = {
     pick: 'Choose region',
     pickCurrent: 'Choose region, current: {current}',
     sortLabel: 'Sort by',
+    sortSpeciesLabel: 'Species sort order',
+    speciesSortName: 'Name',
+    speciesSortCommon: 'Commonness',
     sortName: 'Name',
     sortCount: 'Species',
     count: '{n} spp.',
@@ -858,6 +867,14 @@ const en: typeof zhMessages = {
     autoplayNote:
       'On by default. Question 1 always needs one manual play to satisfy browser policy; later questions autoplay.',
     autoNextTitle: 'Auto-advance',
+    // 072-h: delay after a correct answer (0s removed)
+    autoNextDelayDesc: 'How long to wait after a correct answer',
+    autoNextDelay: {
+      fast: '0.5s',
+      s1: '1s',
+      s2: '2s',
+      s3: '3s (default)',
+    },
     autoNextDesc: 'Whether to jump to the next question automatically, and when.',
     autoNext: {
       correct: {

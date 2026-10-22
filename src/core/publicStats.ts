@@ -28,6 +28,8 @@ export interface PublicStats {
   series: { day: string; event: string; n: number }[]
   badges: { badge?: string; n: number }[]
   titles: { track?: string; level?: string; n: number }[]
+  /** 072-k：各档位正确率（桶中点加权估算；n < 10 的档位不下发） */
+  accuracyByTier?: { tier: string; n: number; mean: number; bands: Record<string, number> }[]
   notes?: { visitor?: string; scope?: string }
 }
 

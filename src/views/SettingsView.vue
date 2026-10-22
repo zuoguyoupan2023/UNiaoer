@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Languages, Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
+import type { AutoNextDelaySec } from '@/types'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
 import { clearReports, countReports, pendingReportCount } from '@/core/reportStore'
 import { syncPendingReports } from '@/core/reportSync'
@@ -129,6 +130,14 @@ async function clearMediaCache() {
 /** 音轨名主/副位随 locale 切换（015 #3） */
 const isEn = computed(() => settings.locale === 'en')
 
+/** 072-h：答对后等待档位（0 秒已取消：看不到对错反馈，逻辑不统一） */
+const delayOptions: { value: AutoNextDelaySec; labelKey: string }[] = [
+  { value: 0.5, labelKey: 'settings.autoNextDelay.fast' },
+  { value: 1, labelKey: 'settings.autoNextDelay.s1' },
+  { value: 2, labelKey: 'settings.autoNextDelay.s2' },
+  { value: 3, labelKey: 'settings.autoNextDelay.s3' },
+]
+
 const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string }[] = [
   { value: 'correct', labelKey: 'settings.autoNext.correct.label', hintKey: 'settings.autoNext.correct.hint' },
   { value: 'all', labelKey: 'settings.autoNext.all.label', hintKey: 'settings.autoNext.all.hint' },
@@ -202,6 +211,22 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
           <span>{{ t(o.hintKey) }}</span>
         </button>
       </div>
+      <!-- 072-h：答对后的等待时长（自动模式才有意义；手动模式隐藏） -->
+      <template v-if="settings.autoNext !== 'manual'">
+        <p class="muted" style="margin-top: 12px">{{ t('settings.autoNextDelayDesc') }}</p>
+        <div class="choices" role="group" :aria-label="t('settings.autoNextDelayDesc')">
+          <button
+            v-for="o in delayOptions"
+            :key="o.value"
+            class="choice"
+            :class="{ on: settings.autoNextDelaySec === o.value }"
+            :aria-pressed="settings.autoNextDelaySec === o.value"
+            @click="settings.autoNextDelaySec = o.value"
+          >
+            <strong>{{ t(o.labelKey) }}</strong>
+          </button>
+        </div>
+      </template>
     </div>
 
     <div class="setting">

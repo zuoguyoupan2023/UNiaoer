@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { AutoNextMode, LicensePolicy, QuizRegime, Tier } from '@/types'
+import type { AutoNextDelaySec, AutoNextMode, LicensePolicy, QuizRegime, Tier } from '@/types'
 import { setLocale, currentLocale as i18nCurrentLocale, type AppLocale } from '@/i18n'
 
 // v2：音频自动播放默认由「关」改为「开」（见 006），旧键不复用以免沿用旧默认
@@ -12,6 +12,7 @@ interface Persisted {
   autoplayAudio: boolean
   autoplayDelayMs: number
   autoNext: AutoNextMode
+  autoNextDelaySec: AutoNextDelaySec
   /** 环境鸟鸣：被取消勾选的音轨 id（默认全部勾选，见 006 R22） */
   ambienceExcluded: string[]
   /** 佩戴的称号轨道 id（009）；null = 不佩戴 */
@@ -66,6 +67,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const autoplayDelayMs = ref<number>(saved.autoplayDelayMs ?? 2000)
   /** 自动进入下一题：默认答对后等 2s（见 006 D2） */
   const autoNext = ref<AutoNextMode>(saved.autoNext ?? 'correct')
+  /** 072-h：答对后等待秒数（默认 3 = 与旧行为一致） */
+  const autoNextDelaySec = ref<AutoNextDelaySec>(saved.autoNextDelaySec ?? 3)
   /** 环境鸟鸣：取消勾选的音轨（默认全部勾选；新增音轨默认生效） */
   const ambienceExcluded = ref<string[]>(saved.ambienceExcluded ?? [])
   /** 佩戴称号（轨道 id；称号文本由当前数据实时派生） */
@@ -110,6 +113,7 @@ export const useSettingsStore = defineStore('settings', () => {
       autoplayAudio,
       autoplayDelayMs,
       autoNext,
+      autoNextDelaySec,
       ambienceExcluded,
       wornTitle,
       wornBadge,
@@ -136,6 +140,7 @@ export const useSettingsStore = defineStore('settings', () => {
             autoplayAudio: autoplayAudio.value,
             autoplayDelayMs: autoplayDelayMs.value,
             autoNext: autoNext.value,
+            autoNextDelaySec: autoNextDelaySec.value,
             ambienceExcluded: ambienceExcluded.value,
             wornTitle: wornTitle.value,
             wornBadge: wornBadge.value,
@@ -166,6 +171,7 @@ export const useSettingsStore = defineStore('settings', () => {
     autoplayAudio,
     autoplayDelayMs,
     autoNext,
+    autoNextDelaySec,
     ambienceExcluded,
     wornTitle,
     wornBadge,

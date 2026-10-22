@@ -7,11 +7,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
 import { listRounds, setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
-import {
-  AUTO_NEXT_DELAY_CORRECT_MS,
-  AUTO_NEXT_DELAY_WRONG_MS,
-  secondsUntilReveal,
-} from '@/core/pacing'
+import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { isDiag } from '@/core/diag'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
@@ -322,6 +318,13 @@ const regionSummary = computed(() => {
     : ''
   return provName ? `${country} · ${provName}` : country
 })
+/** 当前赛制的可用物种数（null = 尚未取到；072-a-fix-5） */
+const currentRegimeCount = computed<number | null>(() => {
+  const c = regimeCountsData.value
+  if (!c) return null
+  const n = c[quiz.regime]
+  return typeof n === 'number' ? n : null
+})
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
   persistRegime(r)
@@ -357,6 +360,13 @@ async function initIntro() {
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
+
+// ---- 072-a 说明：本组题量不足时**明确告知**（用户 2026-10-22 定：允许不足但说明）----
+const shortRoundNote = computed(() => {
+  const d = quiz.lastBuild
+  if (!d || d.built >= d.want) return ''
+  return t('quiz.shortRound', { built: d.built, want: d.want })
+})
 
 // ---- 072-a 观测：诊断行（默认关闭，只有 ?diag=1 才渲染；普通用户零影响）----
 const diagOn = isDiag()
@@ -555,8 +565,11 @@ function scheduleAutoNext() {
   clearAutoNext()
   if (!willAuto.value) return
   autoPending.value = true
-  // 答对 3s；「都自动」的错题/超时 4s
-  const delay = isCorrect.value ? AUTO_NEXT_DELAY_CORRECT_MS : AUTO_NEXT_DELAY_WRONG_MS
+  // 答对：用户设置的 0.5/1/2/3s（默认 3s，072-h）；「都自动」时的错题/超时固定 4s
+  // （错题要留足时间看正确答案，不跟答对走同一档）
+  const delay = isCorrect.value
+    ? Math.round(settings.autoNextDelaySec * 1000)
+    : AUTO_NEXT_DELAY_WRONG_MS
   // 浮窗实时倒计时（0.1s 步进，015 #4）
   const deadline = Date.now() + delay
   autoNextRemaining.value = delay / 1000
@@ -961,6 +974,9 @@ function onTouchEnd(e: TouchEvent) {
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">{{ tier <= 3 ? 4 : 3 }}</i>{{ t('quiz.stepForm') }}</p>
+    <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
+      {{ t('quiz.regimePool', { regime: t(`regime.${quiz.regime}.label`), n: currentRegimeCount }) }}
+    </p>
     <div class="regimes">
       <button
         v-for="r in visibleRegimes"
@@ -997,6 +1013,8 @@ function onTouchEnd(e: TouchEvent) {
   <!-- 答题 -->
   <template v-else-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
+    <!-- 072-a：题量不足时明确说明原因（不再是"静默少几题"） -->
+    <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
     <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts） -->
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
@@ -1164,6 +1182,14 @@ function onTouchEnd(e: TouchEvent) {
   margin: 0 0 8px;
   word-break: break-word;
   font-variant-numeric: tabular-nums;
+}
+.short-round-note {
+  font-size: 0.75rem;
+  color: #8a6d00;
+  background: #fdf3d8;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin: 0 0 8px;
 }
 .diag-body {
   color: var(--text-light);

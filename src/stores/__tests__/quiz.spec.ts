@@ -197,6 +197,9 @@ describe('quiz store · D4 多轮 session', () => {
       quiz.next()
     }
     expect(quiz.accuracy).toBe(0)
-    expect(quiz.overallAccuracy).toBe(50)
+    // 072-a-fix-2：nextRound 不再继承上一轮题量（第二轮按标准题量重新申请，
+    // 池子不够时自然少题）→ 这里的整体正确率按两轮实际题数加权，不再固定 50%。
+    const expected = Math.round((5 / (5 + quiz.total)) * 100)
+    expect(quiz.overallAccuracy).toBe(expected)
   })
 })

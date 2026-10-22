@@ -108,6 +108,9 @@ export const messages = {
     cannotStart: '无法开始',
     backHome: '返回首页',
     progress: '第 {n} / {total} 题',
+    // 072-a：题量不足时明确说明（允许不足但说明）
+    shortRound: '本组 {built} 题（标准 {want} 题）：当前难度 · 地区 · 赛制组合下可选素材不足',
+    regimePool: '{regime}：候选 {n} 种',
     // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
     diagHead: '诊断 · {tier}{region} · {regime}',
     diagBody: '赛制池 {pool} · 候选 {cand}→筛后 {after} · 无素材 -{drop} · {path} · 出题 {built}/{want}',
@@ -275,6 +278,10 @@ export const messages = {
     generatedAt: '数据时间：{at}',
     sectionVisitors: '访客',
     sectionActivity: '活动',
+    sectionAccuracy: '各档位正确率',
+    accuracyEmpty: '还没有足够的数据（每个档位至少 10 轮才展示）。',
+    accuracyMean: '平均 {mean}% · {n} 轮',
+    accuracyNote: '按正确率分桶统计后估算（桶中点加权），非精确逐题数据；不含任何个人或物种信息。',
     sectionBadges: '徽章获取',
     sectionTitles: '称号获取',
     uniqueVisitors: '独立访客',
@@ -345,6 +352,10 @@ export const messages = {
     pick: '选择地区',
     pickCurrent: '选择地区，当前：{current}',
     sortLabel: '排序方式',
+    // 072-j：物种网格排序（名称序 vs 该地区常见度）
+    sortSpeciesLabel: '物种排序方式',
+    speciesSortName: '名称',
+    speciesSortCommon: '常见度',
     sortName: '按名称',
     sortCount: '按鸟种数',
     count: '{n} 种',
@@ -846,6 +857,14 @@ export const messages = {
     delay: '延迟',
     autoplayNote: '默认开启。第 1 题始终需手动播放一次以解锁浏览器策略，之后各题才会自动播放。',
     autoNextTitle: '自动进入下一题',
+    // 072-h：答对后的等待时长（0 秒已取消）
+    autoNextDelayDesc: '答对后等多久切到下一题',
+    autoNextDelay: {
+      fast: '0.5 秒',
+      s1: '1 秒',
+      s2: '2 秒',
+      s3: '3 秒（默认）',
+    },
     autoNextDesc: '作答后是否自动跳到下一题，以及触发的时机。',
     autoNext: {
       correct: {

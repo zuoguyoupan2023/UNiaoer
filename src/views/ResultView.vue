@@ -21,7 +21,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
-import { track } from '@/core/metrics'
+import { accuracyBand, track } from '@/core/metrics'
 import {
   buildShareDraft,
   createShare,
@@ -357,7 +357,11 @@ onMounted(async () => {
   newTitleTexts.value = res.newTitles.map((x) => x.text)
   roundRecord.value = res.record
   // 028 计量：一轮完成（仅在本轮真正落库时计一次——刷新结果页不会重复计数）
-  if (res.record) track('quiz_complete', { mode: quiz.mode, tier: quiz.tier })
+  if (res.record) {
+    track('quiz_complete', { mode: quiz.mode, tier: quiz.tier })
+    // 072-k：各档位正确率（分桶上报，见 core/metrics.ts；不含物种/用户）
+    track('quiz_result', { tier: quiz.tier, band: accuracyBand(quiz.accuracy) })
+  }
   // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
   if (res.record) {
     const prior = shareOfRound(res.record.id)

@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSettingsStore } from '@/stores/settings'
-import { track, trackSessionStart } from '../metrics'
+import { accuracyBand, track, trackSessionStart } from '../metrics'
 
 describe('metrics.track（匿名计量上报）', () => {
   let sent: string[] = []
@@ -48,6 +48,19 @@ describe('metrics.track（匿名计量上报）', () => {
     track('session_start')
     await new Promise((r) => setTimeout(r, 0))
     expect(sent).toHaveLength(0)
+  })
+
+  it('072-k：正确率分桶（0–20 / 20–40 / 40–60 / 60–80 / 80–100）', () => {
+    expect(accuracyBand(0)).toBe('0-20')
+    expect(accuracyBand(19)).toBe('0-20')
+    expect(accuracyBand(20)).toBe('20-40')
+    expect(accuracyBand(39)).toBe('20-40')
+    expect(accuracyBand(40)).toBe('40-60')
+    expect(accuracyBand(59)).toBe('40-60')
+    expect(accuracyBand(60)).toBe('60-80')
+    expect(accuracyBand(79)).toBe('60-80')
+    expect(accuracyBand(80)).toBe('80-100')
+    expect(accuracyBand(100)).toBe('80-100')
   })
 
   it('session_start 每会话只计一次', async () => {

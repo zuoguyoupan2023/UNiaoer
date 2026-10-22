@@ -23,6 +23,13 @@ export type LicensePolicy = 'strict' | 'relaxed'
 /** 自动进入下一题的时机 */
 export type AutoNextMode = 'correct' | 'all' | 'manual'
 
+/**
+ * 答对后等待多久切题（秒）。
+ * 072-h（用户 2026-10-22 定）：**取消 0 秒**——0 秒等于看不到对错反馈，逻辑不统一；
+ * 最快档取 0.5s（一帧渲染 + 可感知），再往上 1/2/3s。
+ */
+export type AutoNextDelaySec = 0.5 | 1 | 2 | 3
+
 /** 赛制（013 §4）：选题池规则；与难度（Tier）正交 */
 export type QuizRegime = 'standard' | 'review' | 'reinforce' | 'revival' | 'random'
 

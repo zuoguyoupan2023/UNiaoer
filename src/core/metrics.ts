@@ -35,11 +35,31 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
     category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'stats', 'other'],
   },
   quiz_complete: { mode: ['image', 'audio'], tier: ['1', '2', '3', '4', '5'] },
+  /**
+   * 072-k：一轮结果的**正确率分桶**（不是每题、不含物种、不含用户）。
+   * 用途：「各档位正确率」公开看板（`/stats`）。分桶而非精确值，避免任何可识别性。
+   */
+  quiz_result: {
+    tier: ['1', '2', '3', '4', '5'],
+    band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
+  },
   report_submit: {},
   poster_create: {},
   // 公开看板（docs/028 §3.4）：徽章/称号**获取计数**（id 来自固定枚举，非用户输入）
   badge_earned: { badge: BADGE_IDS },
   title_earned: { track: TITLE_TRACKS, level: ['1', '2', '3', '4', '5'] },
+}
+
+/**
+ * 正确率 → 分桶（072-k）。
+ * 分桶而不是精确百分比：既能算"各档位平均正确率"，又不留下可识别的高精度行为轨迹。
+ */
+export function accuracyBand(accuracy: number): '0-20' | '20-40' | '40-60' | '60-80' | '80-100' {
+  if (accuracy < 20) return '0-20'
+  if (accuracy < 40) return '20-40'
+  if (accuracy < 60) return '40-60'
+  if (accuracy < 80) return '60-80'
+  return '80-100'
 }
 
 const ENDPOINT = '/api/metrics'

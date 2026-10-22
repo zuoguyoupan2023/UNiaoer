@@ -106,7 +106,7 @@ describe('quiz store · 072-a 出题链路快照（lastBuild）', () => {
     onlinePoolMock.mockResolvedValue(null)
   })
 
-  it('在线命中赛制池 → path=online，记录候选数与命中数', async () => {
+  it('在线命中赛制池（交集 3 条且本地池也只有 3）→ 回退本地后仍只有 3 题', async () => {
     listRoundsMock.mockResolvedValue([round(['a', 'b', 'c'])])
     onlinePoolMock.mockResolvedValue({
       species: ['a', 'b', 'c', 'd', 'e'].map(sp),
@@ -118,19 +118,35 @@ describe('quiz store · 072-a 出题链路快照（lastBuild）', () => {
 
     const d = quiz.lastBuild!
     expect(d).not.toBeNull()
-    expect(d.path).toBe('online')
+    expect(d.path).toBe('online-fallback') // 072-a-fix-1：交集 < count 就回退
     expect(d.onlineTotal).toBe(5)
     expect(d.onlineHits).toBe(3)
     expect(d.onlineFrom).toBe('network')
     expect(d.regimePool).toBe(3)
     expect(d.want).toBe(10)
-    // 候选 = 交给组题的物种数（在线路径已按赛制池取过交集）
-    expect(d.candidates).toBe(3)
+    // 回退后交给组题的是本地全量池（12），再被赛制池/命名体系筛到 3
+    expect(d.candidates).toBe(12)
     expect(d.afterFilter).toBe(3)
     expect(d.dropped).toBe(0)
-    // 现状：交集 3 → 只出 3 题（这正是要观测的短轮，本轮不修改行为）
+    // 复习池本身只有 3 种 → 回退也没得补 → 3 题，并由答题页明确说明
     expect(d.built).toBe(3)
     expect(d.built).toBe(quiz.questions.length)
+  })
+
+  it('072-a-fix-1：交集不足 10 条（但本地池够）→ 回退本地池，仍出满 10 题', async () => {
+    // 练过 12 种（复习池 12），在线 50 条只有 5 条命中交集
+    listRoundsMock.mockResolvedValue([round(IDS)])
+    onlinePoolMock.mockResolvedValue({
+      species: ['a', 'b', 'c', 'd', 'e', 'no1', 'no2'].map(sp),
+      distractors: [],
+      from: 'network',
+    })
+    const quiz = useQuizStore()
+    await quiz.start('image', { tier: 2, count: 10, regime: 'review' })
+    const d = quiz.lastBuild!
+    expect(d.onlineHits).toBe(5) // 交集确实只有 5
+    expect(d.path).toBe('online-fallback') // 但已回退本地池
+    expect(quiz.questions.length).toBe(10) // 所以仍凑满 10 题
   })
 
   it('在线候选与赛制池零交集 → path=online-fallback，出题数回到目标值', async () => {
