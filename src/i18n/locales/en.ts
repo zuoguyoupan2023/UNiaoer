@@ -110,6 +110,11 @@ const en: typeof zhMessages = {
     cannotStart: 'Cannot start',
     backHome: 'Back home',
     progress: 'Q{n} / {total}',
+    // 072-a observation: diagnostic line (only with ?diag=1)
+    diag: 'Diag: {tier}{region} · {regime} · pool {pool} · {path} · built {built}/{want}',
+    diagPathOnline: 'online {hits}/{total}',
+    diagPathFallback: 'online {hits}/{total}→local',
+    diagPathLocal: 'local pool',
     accuracyLabel: 'Accuracy {acc}%',
     quit: 'Quit',
     quitConfirmDetail:

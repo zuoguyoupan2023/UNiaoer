@@ -6,6 +6,11 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { i18n } from './i18n'
+import { isDiag } from './core/diag'
+
+// 072-a 观测：`?diag=1` 在**任意页面**都生效并记住（手机上不必每次都给答题页带参数）；
+// 默认关闭时这里什么都不做，不改变任何行为。
+isDiag()
 
 const app = createApp(App)
 

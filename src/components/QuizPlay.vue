@@ -13,6 +13,7 @@ import {
   secondsUntilReveal,
 } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
+import { isDiag } from '@/core/diag'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
@@ -356,6 +357,28 @@ async function initIntro() {
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
+
+// ---- 072-a 观测：诊断行（默认关闭，只有 ?diag=1 才渲染；普通用户零影响）----
+const diagOn = isDiag()
+const diagText = computed(() => {
+  const d = quiz.lastBuild
+  if (!d) return ''
+  const path =
+    d.path === 'online'
+      ? t('quiz.diagPathOnline', { hits: d.onlineHits ?? 0, total: d.onlineTotal ?? 0 })
+      : d.path === 'online-fallback'
+        ? t('quiz.diagPathFallback', { hits: d.onlineHits ?? 0, total: d.onlineTotal ?? 0 })
+        : t('quiz.diagPathLocal')
+  return t('quiz.diag', {
+    tier: t(TIERS[d.tier].labelKey),
+    region: d.region && d.region !== 'ALL' ? ` · ${d.region}` : '',
+    regime: t(`regime.${d.regime}.label`),
+    pool: d.regimePool ?? '-',
+    path,
+    built: d.built,
+    want: d.want,
+  })
+})
 
 // ---- C3 同种多素材查看（R8）：可切换该鸟的其它图/音，并支持跨类型 ----
 /** 用户手动选择的素材（null = 用题目默认题面） */
@@ -961,6 +984,8 @@ function onTouchEnd(e: TouchEvent) {
   <!-- 答题 -->
   <template v-else-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
+    <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts） -->
+    <p v-if="diagOn && diagText" class="diag-line" data-testid="diag-line">{{ diagText }}</p>
     <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
       <span class="sb-left">
@@ -1112,6 +1137,19 @@ function onTouchEnd(e: TouchEvent) {
 </template>
 
 <style scoped>
+/* 072-a 观测：诊断行（默认不渲染；?diag=1 才出现）。小字、弱色、允许换行，不干扰答题。 */
+.diag-line {
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--text-light);
+  background: #f3f4f2;
+  border: 1px dashed #d8dcd4;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  margin: 0 0 8px;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
 .intro {
   text-align: center;
 }

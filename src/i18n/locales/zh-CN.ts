@@ -104,6 +104,11 @@ export const messages = {
     cannotStart: '无法开始',
     backHome: '返回首页',
     progress: '第 {n} / {total} 题',
+    // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
+    diag: '诊断：{tier}{region} · {regime} · 池 {pool} · {path} · 出题 {built}/{want}',
+    diagPathOnline: '在线 {hits}/{total}',
+    diagPathFallback: '在线 {hits}/{total}→回退本地',
+    diagPathLocal: '本地池',
     accuracyLabel: '正确率 {acc}%',
     quit: '退出',
     quitConfirmDetail:

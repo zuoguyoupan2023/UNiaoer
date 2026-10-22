@@ -18,6 +18,7 @@
  */
 import type { BankSpecies } from './bank'
 import type { MediaType, Tier } from '@/types'
+import { diagApiBase } from './diag'
 
 export interface OnlinePoolResult {
   /** 目标候选（带完整素材,已按档位/题型/地区/可玩过滤） */
@@ -130,11 +131,17 @@ function writeClientCache(key: string, value: CachedPool): void {
   }
 }
 
-/** 组装 API URL（与本地出题同参:档位/题型/地区；count 归一为 FETCH_COUNT） */
+/**
+ * 组装 API URL（与本地出题同参:档位/题型/地区；count 归一为 FETCH_COUNT）
+ *
+ * `diagApiBase()` 仅在诊断模式下、且当前是「没有 Worker 的域名」（`*.pages.dev` / 本地 dev）
+ * 时返回生产域名 —— 否则在线候选恒为 404/HTML，分支预览上无法复现「在线候选 ∩ 赛制池」的短轮。
+ * 生产环境该函数返回空串，URL 与今天完全一致。
+ */
 function questionsUrl(type: MediaType, tier: Tier, region: string): string {
   const q = new URLSearchParams({ tier: String(tier), type, count: String(FETCH_COUNT) })
   if (region && region !== 'ALL' && tier <= 3) q.set('region', region)
-  return `/api/questions?${q.toString()}`
+  return `${diagApiBase()}/api/questions?${q.toString()}`
 }
 
 /**

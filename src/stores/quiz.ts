@@ -5,6 +5,7 @@ import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/cor
 import { buildQuestions, speciesPlayable } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
+import { isDiag } from '@/core/diag'
 import { regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
@@ -13,6 +14,33 @@ import { currentLocale } from '@/i18n'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
+
+/** 072-a 观测：本轮实际走的出题链路 */
+export type QuizBuildPath = 'online' | 'online-fallback' | 'local'
+
+/**
+ * 072-a 观测：单轮出题的链路快照。
+ * **只读展示/日志用**，不参与任何出题判定 —— 先观测再决定「凑满 10 题」还是「允许不足但说明」。
+ */
+export interface QuizBuildDiag {
+  type: MediaType
+  tier: Tier
+  region: string
+  regime: QuizRegime
+  nameMode: NameMode
+  path: QuizBuildPath
+  /** 在线候选总条数（null = 本轮没走在线） */
+  onlineTotal: number | null
+  /** 在线候选中命中赛制池的条数（path='online' 时即实际参与组题的物种数） */
+  onlineHits: number | null
+  /** 赛制池大小（random 无池 → null） */
+  regimePool: number | null
+  /** 目标题数 */
+  want: number
+  /** 实际出题数 */
+  built: number
+  starterOnly: boolean
+}
 
 /** 出题失败错误码（UI 层映射 errors.* 文案，015 §6.5） */
 export type QuizErrorCode =
@@ -38,6 +66,8 @@ export const useQuizStore = defineStore('quiz', () => {
   const index = ref(0)
   const loading = ref(false)
   const error = ref('')
+  /** 072-a 观测：上一轮出题的链路快照（默认 null；仅诊断模式展示） */
+  const lastBuild = ref<QuizBuildDiag | null>(null)
 
   // ---- D4：连续多轮 session（再来一轮=同难度下一轮，累计轮次/整体正确率） ----
   const sessionRound = ref(1)
@@ -228,21 +258,31 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       let speciesForBuild: BankSpecies[]
       let distractorPool: BankSpecies[] | undefined
       let speciesPool = poolResult.pool
+      // 072-a 观测（只记录，不参与判定）：本轮走的是在线 / 在线回退 / 本地
+      let buildPath: QuizBuildPath = 'local'
+      let onlineTotal: number | null = null
+      let onlineHits: number | null = null
       if (online) {
+        onlineTotal = online.species.length
         speciesForBuild = online.species
         distractorPool = online.distractors.length ? online.distractors : undefined
         // 赛制池（复习/强化/错题本依赖本地练习史）仍需按 id 过滤在线候选；
         // 标准赛的"未练过"过滤同样适用
         if (speciesPool) {
           const filtered = online.species.filter((sp) => speciesPool!.has(sp.id))
+          onlineHits = filtered.length
           if (!filtered.length) {
             // 在线候选与本地赛制池无交集（如全球种尚未练过）：回退本地池
+            buildPath = 'online-fallback'
             speciesForBuild = (await poolData(type, tier.value)).species
             distractorPool = undefined
             speciesPool = poolResult.pool
           } else {
+            buildPath = 'online'
             speciesForBuild = filtered
           }
+        } else {
+          buildPath = 'online'
         }
       } else {
         speciesForBuild = (await poolData(type, tier.value)).species
@@ -268,6 +308,28 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         regionTiers,
         starterOnly,
       })
+      // 072-a 观测：把本轮链路与池子大小留痕（不改任何出题行为）。
+      // 短轮用 warn（默认就能在控制台看到）；诊断模式下每轮都打一行 info。
+      const diag: QuizBuildDiag = {
+        type,
+        tier: tier.value,
+        region: settings.region,
+        regime: regime.value,
+        nameMode: nameMode.value,
+        path: buildPath,
+        onlineTotal,
+        onlineHits,
+        regimePool: poolResult.pool?.size ?? null,
+        want: count,
+        built: qs.length,
+        starterOnly,
+      }
+      lastBuild.value = diag
+      if (qs.length < count) {
+        console.warn('[quiz] short round:', JSON.stringify(diag))
+      } else if (isDiag()) {
+        console.info('[quiz] built:', JSON.stringify(diag))
+      }
       if (!qs.length) {
         // 无素材（池内物种都缺对应媒体）：错误码入 store，文案由组件按 locale 渲染（015 §6.5）
         error.value = type === 'image' ? 'noImageMedia' : 'noAudioMedia'
@@ -354,6 +416,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     chosen.value = []
     index.value = 0
     error.value = ''
+    lastBuild.value = null
     sessionRound.value = 1
     sessionCorrect.value = 0
     sessionTotal.value = 0
@@ -374,6 +437,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     index,
     loading,
     error,
+    lastBuild,
     current,
     currentChoice,
     answered,
