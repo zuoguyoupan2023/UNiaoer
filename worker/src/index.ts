@@ -1011,6 +1011,14 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
     mode: ['image', 'audio'],
     tier: ['1', '2', '3', '4', '5'],
   },
+  /**
+   * 072-k：一轮结果的正确率分桶（不是每题、不含物种/用户）。
+   * 用于公开看板「各档位正确率」；分桶而非精确值，避免高精度行为轨迹。
+   */
+  quiz_result: {
+    tier: ['1', '2', '3', '4', '5'],
+    band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
+  },
   report_submit: {},
   poster_create: {},
   badge_earned: { badge: BADGE_IDS },
@@ -1343,7 +1351,7 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
   const today = new Date()
   const since = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
   try {
-    const [series, byEvent, badges, titles] = await Promise.all([
+    const [series, byEvent, badges, titles, results] = await Promise.all([
       env.DB.prepare(
         'SELECT day, event, SUM(n) AS n FROM metrics_daily WHERE day >= ? GROUP BY day, event ORDER BY day',
       )
@@ -1357,6 +1365,11 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
         .all<{ props: string; n: number }>(),
       env.DB.prepare(
         "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'title_earned' GROUP BY props ORDER BY n DESC",
+      )
+        .all<{ props: string; n: number }>(),
+      // 072-k：正确率分桶（按档位聚合；不含物种/用户）
+      env.DB.prepare(
+        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' GROUP BY props",
       )
         .all<{ props: string; n: number }>(),
     ])
@@ -1386,6 +1399,41 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
       series: series.results,
       badges: badges.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
       titles: titles.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
+      /**
+       * 072-k：各档位正确率（分桶聚合）。
+       * mean 用桶中点加权（10/30/50/70/90）估算，属近似值；n = 轮次数。
+       * 样本过少（n < 10）时不返回该档位，避免"1 轮 100%"误导。
+       */
+      accuracyByTier: (() => {
+        const BAND_MID: Record<string, number> = {
+          '0-20': 10,
+          '20-40': 30,
+          '40-60': 50,
+          '60-80': 70,
+          '80-100': 90,
+        }
+        const acc = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
+        for (const r of results.results) {
+          const p = parseProps(r.props)
+          const tier = p.tier ?? ''
+          const band = p.band ?? ''
+          if (!tier || !(band in BAND_MID)) continue
+          const cell = acc.get(tier) ?? { n: 0, weighted: 0, bands: {} }
+          cell.n += r.n
+          cell.weighted += r.n * (BAND_MID[band] ?? 0)
+          cell.bands[band] = (cell.bands[band] ?? 0) + r.n
+          acc.set(tier, cell)
+        }
+        return [...acc.entries()]
+          .filter(([, v]) => v.n >= 10)
+          .sort((a, b) => Number(a[0]) - Number(b[0]))
+          .map(([tier, v]) => ({
+            tier,
+            n: v.n,
+            mean: Math.round(v.weighted / v.n),
+            bands: v.bands,
+          }))
+      })(),
       /** 口径说明（前端直接展示，避免"数字怎么来的"疑问） */
       notes: {
         visitor:
@@ -1417,6 +1465,7 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
         series: [],
         badges: [],
         titles: [],
+        accuracyByTier: [],
         notes: { visitor: '', scope: '' },
       },
       { headers: { 'cache-control': 'no-store', 'x-stats-cache': 'BYPASS' } },
