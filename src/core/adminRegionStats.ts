@@ -16,13 +16,22 @@ export interface RegionAccuracyRow {
   mean: number
   bands: Record<string, number>
   tiers: Record<string, number>
+  /** 该地区数据的第一天 / 最后一天（避免把"窗口起点"当成"数据起点"） */
+  firstDay: string
+  lastDay: string
 }
 
 export interface RegionAccuracy {
   days: number
+  /** **查询窗口**起点（近 N 天），不是数据起点 */
   since: string
-  /** 该指标本身的起点（早于它的轮次没有 band，不计入） */
-  metricSince: string
+  /** 该指标的真实起点：有 band 的第一天 */
+  metricFirstDay: string | null
+  metricLastDay: string | null
+  /** 带 region 属性的第一天（地区维度真正的起点） */
+  regionFirstDay: string | null
+  /** 逐日明细（人工核对用） */
+  byDay: { day: string; n: number; mean: number }[]
   /** 有 band 但没有 region 属性的轮次数（`region` 属性上线前的历史） */
   missingRegion: number
   total: number

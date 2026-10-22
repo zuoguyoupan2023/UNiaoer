@@ -58,6 +58,30 @@ describe('core/regionGroup · 073 地区统计分组', () => {
     expect(g.countries[0]!.n).toBe(1)
   })
 
+  it('总计 / 仅国家 / 省级 三个口径分别给出（2026-10-22 用户要求）', () => {
+    const g = groupRegions([
+      { region: 'CN', n: 5, mean: 70 }, // 只选国家
+      { region: 'CN-11', n: 5, mean: 90 }, // 国家+具体地区
+      { region: 'ALL', n: 5, mean: 50 }, // 未指定
+      { region: 'US', n: 5, mean: 60 },
+    ])
+    // 总计 = 全部 20 轮：(70+90+50+60)*5/20 = 67.5 → 68
+    expect(g.total.n).toBe(20)
+    expect(g.total.mean).toBe(68)
+    // 未指定 = 只选「全球」的 5 轮
+    expect(g.unspecified).toEqual({ n: 5, mean: 50 })
+    // 中国：合计 10 轮 80%；其中「仅国家」5 轮 70%；省级 5 轮 90%
+    const cn = g.countries.find((c) => c.code === 'CN')!
+    expect(cn.n).toBe(10)
+    expect(cn.mean).toBe(80)
+    expect(cn.countryOnly).toEqual({ n: 5, mean: 70 })
+    expect(cn.provinces).toEqual([{ code: 'CN-11', n: 5, mean: 90 }])
+    // 美国：只选国家 → countryOnly 有值、没有省级行
+    const us = g.countries.find((c) => c.code === 'US')!
+    expect(us.countryOnly).toEqual({ n: 5, mean: 60 })
+    expect(us.provinces).toEqual([])
+  })
+
   it('ALL 单列为未指定，不参与国家比较', () => {
     const g = groupRegions([
       { region: 'ALL', n: 5, mean: 40 },

@@ -1224,11 +1224,19 @@ async function handleAdminStatsRegion(request: Request, env: Env, url: URL): Pro
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
   const days = clampInt(url.searchParams.get('days'), 1, 365, 30)
   const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  // 逐日 × 属性聚合：既能在服务端算总/分地区，也能把「详细日期」交给管理端核对
   const rows = await env.DB.prepare(
-    "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' AND day >= ? GROUP BY props",
+    "SELECT day, props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' AND day >= ? GROUP BY day, props",
   )
     .bind(since)
-    .all<{ props: string; n: number }>()
+    .all<{ day: string; props: string; n: number }>()
+  // 该指标的**真实起点**（不受查询窗口影响）：有 band 的第一天 / 带 region 的第一天
+  const span = await env.DB.prepare(
+    "SELECT MIN(day) AS first, MAX(day) AS last FROM metrics_daily WHERE event = 'quiz_result'",
+  ).first<{ first: string | null; last: string | null }>()
+  const spanRegion = await env.DB.prepare(
+    "SELECT MIN(day) AS first FROM metrics_daily WHERE event = 'quiz_result' AND props LIKE '%region=%'",
+  ).first<{ first: string | null }>()
 
   const BAND_MID: Record<string, number> = {
     '0-20': 10,
@@ -1248,24 +1256,41 @@ async function handleAdminStatsRegion(request: Request, env: Env, url: URL): Pro
         }),
     )
 
-  type Cell = { n: number; weighted: number; bands: Record<string, number>; tiers: Record<string, number> }
+  type Cell = {
+    n: number
+    weighted: number
+    bands: Record<string, number>
+    tiers: Record<string, number>
+    firstDay: string
+    lastDay: string
+  }
   const byRegion = new Map<string, Cell>()
+  const byDay = new Map<string, { n: number; weighted: number }>()
   let missingRegion = 0
   for (const r of rows.results) {
     const p = parseProps(r.props)
     const band = p.band ?? ''
     if (!(band in BAND_MID)) continue // 无 band 的脏行（如非法上报）忽略
+    const day = byDay.get(r.day) ?? { n: 0, weighted: 0 }
+    day.n += r.n
+    day.weighted += r.n * (BAND_MID[band] ?? 0)
+    byDay.set(r.day, day)
+
     const region = p.region ?? ''
     if (!region) {
       missingRegion += r.n
       continue
     }
-    const cell = byRegion.get(region) ?? { n: 0, weighted: 0, bands: {}, tiers: {} }
+    const cell =
+      byRegion.get(region) ??
+      { n: 0, weighted: 0, bands: {}, tiers: {}, firstDay: r.day, lastDay: r.day }
     cell.n += r.n
     cell.weighted += r.n * (BAND_MID[band] ?? 0)
     cell.bands[band] = (cell.bands[band] ?? 0) + r.n
     const tier = p.tier ?? '?'
     cell.tiers[tier] = (cell.tiers[tier] ?? 0) + r.n
+    if (r.day < cell.firstDay) cell.firstDay = r.day
+    if (r.day > cell.lastDay) cell.lastDay = r.day
     byRegion.set(region, cell)
   }
 
@@ -1276,14 +1301,24 @@ async function handleAdminStatsRegion(request: Request, env: Env, url: URL): Pro
       mean: Math.round(c.weighted / c.n),
       bands: c.bands,
       tiers: c.tiers,
+      firstDay: c.firstDay,
+      lastDay: c.lastDay,
     }))
     .sort((a, b) => b.n - a.n)
 
   return json({
     days,
+    /** 查询窗口起点（近 N 天），**不是**数据起点 */
     since,
-    /** 该指标的统计起点（早于它的轮次没有 band，天然不计入） */
-    metricSince: '2026-10-22',
+    /** 该指标的**真实起点**：有 band 的第一天（早于它的轮次没有分桶，天然不计入） */
+    metricFirstDay: span?.first ?? null,
+    metricLastDay: span?.last ?? null,
+    /** 带 region 属性的第一天（地区维度真正的起点；此前只能算「未指定」） */
+    regionFirstDay: spanRegion?.first ?? null,
+    /** 逐日明细（供人工核对：哪天的数据被算进来了） */
+    byDay: [...byDay.entries()]
+      .map(([day, v]) => ({ day, n: v.n, mean: Math.round(v.weighted / v.n) }))
+      .sort((a, b) => a.day.localeCompare(b.day)),
     /** 有 band 但没有 region 属性的轮次数（region 属性上线前的历史） */
     missingRegion,
     total: list.reduce((n, x) => n + x.n, 0),

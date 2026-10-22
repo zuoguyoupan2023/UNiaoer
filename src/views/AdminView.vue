@@ -187,6 +187,13 @@ async function ensureProvinces() {
 }
 /** 073：扁平行 → 国家榜 + 同国省级榜（港澳台归中国、做省级；不做最小轮数剔除） */
 const groupedRegionStats = computed(() => (regionStats.value ? groupRegions(regionStats.value.byRegion) : null))
+/** 日期范围显示：同一天只显示一个日期（2026-10-22 / 10-22~10-24 简写） */
+function daySpan(from?: string, to?: string): string {
+  if (!from) return ''
+  if (!to || to === from) return from
+  return `${from} ~ ${to}`
+}
+
 /** 地区码 → 可读名（CN-11 → 中国 · 北京；HK → 中国香港；ALL → 全球） */
 function regionLabelOf(code: string): string {
   if (!code || code === 'ALL') return t('admin.regionAll')
@@ -345,35 +352,75 @@ const count = computed(() => reports.value.length)
         <p v-if="regionError" class="err" role="alert">{{ regionError }}</p>
         <template v-else-if="regionStats">
           <p class="muted small">
-            {{ t('admin.regionStatsMeta', { since: regionStats.since, total: regionStats.total }) }}
+            {{ t('admin.regionStatsMetaExact', {
+              from: regionStats.regionFirstDay ?? regionStats.metricFirstDay ?? '—',
+              to: regionStats.metricLastDay ?? '—',
+              window: regionStats.since,
+              total: regionStats.total,
+            }) }}
             · {{ t('admin.regionStatsMissing', { n: regionStats.missingRegion }) }}
           </p>
+          <!-- 逐日明细：核对"哪天的数据被算进来了"，避免以后把窗口起点当数据起点 -->
+          <details v-if="regionStats.byDay.length" class="ledger">
+            <summary>{{ t('admin.regionStatsByDay', { n: regionStats.byDay.length }) }}</summary>
+            <ul class="ranks">
+              <li v-for="d in regionStats.byDay" :key="d.day">
+                <span class="rank-name">{{ d.day }}</span>
+                <span class="rank-n">{{ t('admin.regionStatsCell', { mean: d.mean, n: d.n }) }}</span>
+              </li>
+            </ul>
+          </details>
           <p v-if="!groupedRegionStats?.countries.length" class="muted small">
             {{ t('admin.regionStatsEmpty') }}
           </p>
           <template v-else>
+            <!-- 073：三个总口径 —— 全部 / 未指定 / 各国；再往下是「仅国家」与省级 -->
+            <ul class="ranks">
+              <li>
+                <span class="rank-name strong">{{ t('admin.regionStatsTotal') }}</span>
+                <span class="rank-n">
+                  {{ t('admin.regionStatsCell', { mean: groupedRegionStats.total.mean, n: groupedRegionStats.total.n }) }}
+                </span>
+              </li>
+              <li v-if="groupedRegionStats.unspecified">
+                <span class="rank-name">{{ t('admin.regionStatsUnspecifiedLabel') }}</span>
+                <span class="rank-n">
+                  {{ t('admin.regionStatsCell', {
+                    mean: groupedRegionStats.unspecified.mean,
+                    n: groupedRegionStats.unspecified.n,
+                  }) }}
+                </span>
+              </li>
+            </ul>
+
             <p class="muted small">{{ t('admin.regionStatsCountryHint') }}</p>
             <ul class="ranks">
               <li v-for="c in groupedRegionStats.countries" :key="c.code" class="country-row">
                 <div class="country-head">
-                  <span class="rank-name">{{ regionLabelOf(c.code) }}</span>
+                  <span class="rank-name">
+                    {{ regionLabelOf(c.code) }}
+                    <span v-if="c.firstDay" class="span-days">（{{ daySpan(c.firstDay, c.lastDay) }}）</span>
+                  </span>
                   <span class="rank-n">{{ t('admin.regionStatsCell', { mean: c.mean, n: c.n }) }}</span>
                 </div>
-                <!-- 省级排行只在同一国家内部，不与其它国家混排 -->
-                <ul v-if="c.provinces.length" class="ranks sub-ranks">
+                <!-- 「仅国家（未细分）」与「国家+具体地区」分开显示；省级排行只在同国内部 -->
+                <ul v-if="c.countryOnly || c.provinces.length" class="ranks sub-ranks">
+                  <li v-if="c.countryOnly">
+                    <span class="rank-name sub">{{ t('admin.regionStatsCountryOnly') }}</span>
+                    <span class="rank-n">
+                      {{ t('admin.regionStatsCell', { mean: c.countryOnly.mean, n: c.countryOnly.n }) }}
+                    </span>
+                  </li>
                   <li v-for="p in c.provinces" :key="p.code">
-                    <span class="rank-name sub">{{ regionLabelOf(p.code) }}</span>
+                    <span class="rank-name sub">
+                      {{ regionLabelOf(p.code) }}
+                      <span v-if="p.firstDay" class="span-days">（{{ daySpan(p.firstDay, p.lastDay) }}）</span>
+                    </span>
                     <span class="rank-n">{{ t('admin.regionStatsCell', { mean: p.mean, n: p.n }) }}</span>
                   </li>
                 </ul>
               </li>
             </ul>
-            <p v-if="groupedRegionStats.unspecified" class="muted small">
-              {{ t('admin.regionStatsUnspecified', {
-                mean: groupedRegionStats.unspecified.mean,
-                n: groupedRegionStats.unspecified.n,
-              }) }}
-            </p>
           </template>
         </template>
       </details>
@@ -517,6 +564,14 @@ const count = computed(() => reports.value.length)
 }
 .country-head .rank-name {
   font-weight: 600;
+}
+.ranks .rank-name.strong {
+  font-weight: 700;
+}
+.span-days {
+  color: var(--text-light);
+  font-size: 0.92em;
+  font-weight: 400;
 }
 .sub-ranks {
   margin: 2px 0 0 14px;

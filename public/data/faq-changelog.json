@@ -2,6 +2,22 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-10-22",
+      "titleZh": "赭红尾鸲：脚环特写与白化个体两张图已停用，补入雄/雌各一张",
+      "titleEn": "Black Redstart: band close-up and leucistic bird retired, one male and one female added",
+      "bodyZh": "图 1 是鸟环在手指间的特写（环志记录，画面里没有鸟），图 2 是近全白的白化个体且为 ND 许可；两张均已停用。保留 3/4/5，新增雄鸟（obs 339875349）与雌鸟（obs 189450325），写入未使用过的 image-6/7，老缓存不会看到旧图。首图随之更换，题库同步更新。",
+      "bodyEn": "Photo 1 was a close-up of a leg ring held in a hand (a ringing record with no bird), photo 2 an almost all-white leucistic individual under an ND licence; both are retired. Photos 3/4/5 kept, with a male (obs 339875349) and a female (obs 189450325) added in unused slots image-6/7 so cached clients never show the old files. The first image changed and the quiz bank was updated accordingly.",
+      "speciesId": "phoenicurus-ochruros"
+    },
+    {
+      "date": "2026-10-22",
+      "titleZh": "黄腹鹨：远景小图与两张低清图已停用，补入 3 张高清图",
+      "titleEn": "Buff-bellied Pipit: distant/low-res photos retired, three high-resolution photos added",
+      "bodyZh": "图 3 中鸟只占几十像素；复核时发现图 1（403×322，且是首图）严重模糊、图 2（517×322）也低于 1200px 门槛。三张均已停用，保留 4/5，新增 obs 142270736 / 409498438 / 35359139（长边均 ≥1260px）到 image-6/7/8。首图换为清晰成鸟照，题库同步更新。",
+      "bodyEn": "In photo 3 the bird is only a few dozen pixels wide; review also found photo 1 (403×322, and the quiz image) badly blurred and photo 2 (517×322) below our 1200px bar. All three retired; photos 4/5 kept; obs 142270736 / 409498438 / 35359139 (all ≥1260px on the long edge) added as image-6/7/8. The first image is now a sharp adult, and the quiz bank was updated.",
+      "speciesId": "anthus-japonicus"
+    },
+    {
       "date": "2026-10-21",
       "titleZh": "白骨顶旧图已从画廊移除，并补入第 5 张；答疑改为「已修复」说明",
       "titleEn": "Coot: old photo removed, a fifth photo added; note rewritten as a fixed-issue history",
