@@ -1,5 +1,10 @@
 # UNiaoer · Bird Identification Practice
 
+The environment of our planet is deteriorating, and so is our health.
+It is time to put down the phone, walk away from the computer, and go outside to watch birds and protect them!
+UNiaoer has images or audio of 10000+ bird species to help you quickly get to know these lovely little chirpers.
+(This is an open-source non-commercial project.)
+
 An open-source birding and bird-ID practice project: learn to recognise birds from real photos and recordings, and browse a global bird catalogue with distribution data. Built for birders worldwide, with Chinese-first onboarding and full English support.
 
 > **Non-commercial · Open source**
