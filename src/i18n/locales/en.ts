@@ -462,6 +462,15 @@ const en: typeof zhMessages = {
     other: 'Other',
   },
   admin: {
+    // 073 P0: accuracy by region (admin observation window)
+    regionStatsTitle: 'Accuracy by region (observation, not public)',
+    regionStatsNote: 'Basis: the region the player picked (not IP). Estimated from accuracy buckets, with round counts; treat regions under 10 rounds as indicative only.',
+    regionStatsLoad: 'Load (last 30 days)',
+    regionStatsMeta: 'Data since {since} · {total} rounds',
+    regionStatsMissing: '{n} rounds had no region attribute (before it shipped)',
+    regionStatsEmpty: 'No rounds with a region attribute yet (needs the new frontend + post-deploy data).',
+    regionStatsCell: '{mean}% avg · {n} rounds',
+    regionAll: 'Global / unspecified',
     title: 'Report admin',
     lead: 'Enter the admin key to review and handle user reports. The key is kept only in this tab.',
     keyPlaceholder: 'Admin key',

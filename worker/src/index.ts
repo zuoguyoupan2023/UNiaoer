@@ -1018,6 +1018,8 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   quiz_result: {
     tier: ['1', '2', '3', '4', '5'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
+    // 073 P0：答题时**用户自选**的地区（不是 IP）。取值形态见 REGION_VALUE_RE
+    region: ['@region'],
   },
   report_submit: {},
   poster_create: {},
@@ -1027,6 +1029,12 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
     level: ['1', '2', '3', '4', '5'],
   },
 }
+
+/**
+ * 073 P0：`region` 不用枚举（330 个省码 + 249 国，穷举不现实），改用形态校验：
+ * `ALL` | 两位国家码 `CN` | 省码 `CN-11`。非法值直接丢弃（该属性不进 props）。
+ */
+const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
 
 /** 事件体上限（字节）：白名单事件 + ≤3 枚举属性，300 足够；超过静默丢弃 */
 const METRIC_MAX_BYTES = 300
@@ -1121,7 +1129,13 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
   for (const key of Object.keys(spec).sort()) {
     const v = src[key]
     if (typeof v !== 'string') continue
-    if (spec[key]!.includes(v)) parts.push(`${key}=${v}`)
+    const allowed = spec[key]!
+    // '@region' = 形态校验（073 P0：地区码不穷举，见 REGION_VALUE_RE）
+    if (allowed.includes('@region')) {
+      if (REGION_VALUE_RE.test(v)) parts.push(`${key}=${v}`)
+      continue
+    }
+    if (allowed.includes(v)) parts.push(`${key}=${v}`)
   }
   return parts.join(';')
 }
@@ -1195,6 +1209,86 @@ async function handleMetrics(request: Request, env: Env, ctx?: ExecutionContext)
     /* 写入失败（如额度）：静默丢弃，不影响用户 */
   }
   return new Response(null, { status: 204, headers: CORS })
+}
+
+/**
+ * GET /api/stats/region?days=30（**管理，未公开**）—— 073 P0。
+ *
+ * 口径 A：`quiz_result` 里**用户自选**的地区（不是 IP）。返回按地区的正确率分桶聚合：
+ *   `{ region, n, mean, tiers, bands }`；没有 `region` 属性的行（属性上线前的轮次）单独计数。
+ *
+ * 为什么先只给管理端：新指标先自己观察一段（用户 2026-10-22 定），确认口径与体量后再决定是否公开。
+ * 公开时把同一段聚合搬进 `/api/stats/public` 即可，数据结构不变。
+ */
+async function handleAdminStatsRegion(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
+  const days = clampInt(url.searchParams.get('days'), 1, 365, 30)
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const rows = await env.DB.prepare(
+    "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' AND day >= ? GROUP BY props",
+  )
+    .bind(since)
+    .all<{ props: string; n: number }>()
+
+  const BAND_MID: Record<string, number> = {
+    '0-20': 10,
+    '20-40': 30,
+    '40-60': 50,
+    '60-80': 70,
+    '80-100': 90,
+  }
+  const parseProps = (s: string): Record<string, string> =>
+    Object.fromEntries(
+      s
+        .split(';')
+        .filter(Boolean)
+        .map((kv) => {
+          const i = kv.indexOf('=')
+          return i > 0 ? [kv.slice(0, i), kv.slice(i + 1)] : [kv, '']
+        }),
+    )
+
+  type Cell = { n: number; weighted: number; bands: Record<string, number>; tiers: Record<string, number> }
+  const byRegion = new Map<string, Cell>()
+  let missingRegion = 0
+  for (const r of rows.results) {
+    const p = parseProps(r.props)
+    const band = p.band ?? ''
+    if (!(band in BAND_MID)) continue // 无 band 的脏行（如非法上报）忽略
+    const region = p.region ?? ''
+    if (!region) {
+      missingRegion += r.n
+      continue
+    }
+    const cell = byRegion.get(region) ?? { n: 0, weighted: 0, bands: {}, tiers: {} }
+    cell.n += r.n
+    cell.weighted += r.n * (BAND_MID[band] ?? 0)
+    cell.bands[band] = (cell.bands[band] ?? 0) + r.n
+    const tier = p.tier ?? '?'
+    cell.tiers[tier] = (cell.tiers[tier] ?? 0) + r.n
+    byRegion.set(region, cell)
+  }
+
+  const list = [...byRegion.entries()]
+    .map(([region, c]) => ({
+      region,
+      n: c.n,
+      mean: Math.round(c.weighted / c.n),
+      bands: c.bands,
+      tiers: c.tiers,
+    }))
+    .sort((a, b) => b.n - a.n)
+
+  return json({
+    days,
+    since,
+    /** 该指标的统计起点（早于它的轮次没有 band，天然不计入） */
+    metricSince: '2026-10-22',
+    /** 有 band 但没有 region 属性的轮次数（region 属性上线前的历史） */
+    missingRegion,
+    total: list.reduce((n, x) => n + x.n, 0),
+    byRegion: list,
+  })
 }
 
 /** GET /api/metrics/summary?days=30（管理）：按日聚合，供人工回填 docs/028 §6 */
@@ -1620,6 +1714,8 @@ export default {
         if (shareGet) return await handleGetShare(env, shareGet[1]!)
         // 028 匿名计量：按日聚合读取（管理）
         if (path === '/api/metrics/summary') return await handleMetricsSummary(request, env, url)
+        // 073 P0：地区正确率（管理端观察期，未公开）
+        if (path === '/api/stats/region') return await handleAdminStatsRegion(request, env, url)
         // 028 公开统计看板（无需密钥；边缘缓存 1 小时）
         // 接受 `/api/stats/public` 与 `/api/stats/public/<分桶>`：分桶只用于绕开边缘缓存
         if (path === '/api/stats/public' || path.startsWith('/api/stats/public/'))

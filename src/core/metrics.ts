@@ -42,6 +42,8 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
   quiz_result: {
     tier: ['1', '2', '3', '4', '5'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
+    // 073 P0：**用户自选**的地区（不是 IP）；形态校验见 allowedMetricValue
+    region: ['@region'],
   },
   report_submit: {},
   poster_create: {},
@@ -67,6 +69,17 @@ const ENDPOINT = '/api/metrics'
 const SESSION_KEY = 'uniaoer.sess'
 
 /** 白名单裁剪：只保留允许的属性且值在枚举内（越界属性丢弃，事件本身仍计） */
+/**
+ * 073 P0：`region` 不穷举（330 省码 + 249 国），改形态校验：`ALL` | `CN` | `CN-11`。
+ * 与 Worker 的 `REGION_VALUE_RE` 保持一致（两侧都校验）。
+ */
+const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
+
+function allowedMetricValue(allowed: readonly string[], v: string): boolean {
+  if (allowed.includes('@region')) return REGION_VALUE_RE.test(v)
+  return allowed.includes(v)
+}
+
 function sanitize(event: string, props?: Props): Record<string, string> | undefined {
   const spec = EVENT_SPEC[event]
   if (!spec || !props) return undefined
@@ -74,7 +87,7 @@ function sanitize(event: string, props?: Props): Record<string, string> | undefi
   for (const k of Object.keys(spec).sort()) {
     const v = props[k]
     if (v === undefined || v === null) continue
-    if (spec[k]!.includes(String(v))) out[k] = String(v)
+    if (allowedMetricValue(spec[k]!, String(v))) out[k] = String(v)
   }
   return Object.keys(out).length ? out : undefined
 }

@@ -360,7 +360,12 @@ onMounted(async () => {
   if (res.record) {
     track('quiz_complete', { mode: quiz.mode, tier: quiz.tier })
     // 072-k：各档位正确率（分桶上报，见 core/metrics.ts；不含物种/用户）
-    track('quiz_result', { tier: quiz.tier, band: accuracyBand(quiz.accuracy) })
+    track('quiz_result', {
+      tier: quiz.tier,
+      band: accuracyBand(quiz.accuracy),
+      // 073 P0：答题时用户自选的地区（不是 IP）；`ALL` = 未指定，公开统计时单列
+      region: settings.region,
+    })
   }
   // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
   if (res.record) {

@@ -3,6 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckCheck, RefreshCw, ShieldCheck, ShieldOff, Undo2, X } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName } from '@/core/bank'
+import { fetchRegionAccuracy, type RegionAccuracy } from '@/core/adminRegionStats'
+import { regionLabel } from '@/core/region'
+import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 import {
   AdminAuthError,
   listAdminReports,
@@ -158,6 +161,39 @@ async function release(mediaKey: string) {
 
 const activeQuarantine = computed(() => quarantineItems.value.filter((x) => !x.resolved_at))
 
+// ---- 073 P0：地区正确率（管理端观察期；口径 A = 用户自选地区） ----
+const regionStats = ref<RegionAccuracy | null>(null)
+const regionLoading = ref(false)
+const regionError = ref('')
+async function loadRegionStats() {
+  if (!key.value || regionLoading.value) return
+  regionLoading.value = true
+  regionError.value = ''
+  try {
+    await ensureProvinces()
+    regionStats.value = await fetchRegionAccuracy(key.value, 30)
+  } catch (e) {
+    regionError.value = e instanceof Error ? e.message : 'failed'
+  } finally {
+    regionLoading.value = false
+  }
+}
+/** 省名需要一次懒加载（与观鸟页同一份产物；失败就退回显示省码） */
+const provinceData = ref<ProvinceData | null>(null)
+async function ensureProvinces() {
+  if (provinceData.value) return
+  provinceData.value = await loadProvinces().catch(() => null)
+}
+/** 地区码 → 可读名（CN-11 → 中国 · 北京；ALL → 全球） */
+function regionLabelOf(code: string): string {
+  if (!code || code === 'ALL') return t('admin.regionAll')
+  const [cc = '', ...rest] = code.split('-')
+  const country = regionLabel(cc, t, currentLocale())
+  if (!rest.length) return country
+  const prov = provincesOf(provinceData.value, cc, currentLocale()).find((p) => p.code === code)
+  return prov ? `${country} · ${prov.name}` : `${country} · ${code}`
+}
+
 async function setStatus(r: AdminReport, status: ReportStatus) {
   busy.value = { ...busy.value, [r.id]: true }
   savedMsg.value = ''
@@ -292,6 +328,33 @@ const count = computed(() => reports.value.length)
             </button>
           </li>
         </ul>
+      </details>
+
+      <!-- 073 P0：地区正确率（观察期，仅管理端可见；口径 = 用户自选地区，不是 IP） -->
+      <details class="ledger">
+        <summary>{{ t('admin.regionStatsTitle') }}</summary>
+        <p class="muted small">{{ t('admin.regionStatsNote') }}</p>
+        <div class="toolbar" style="margin: 8px 0">
+          <button class="btn btn-secondary btn-sm" type="button" :disabled="regionLoading" @click="loadRegionStats">
+            <RefreshCw class="ic" :size="13" /> {{ t('admin.regionStatsLoad') }}
+          </button>
+        </div>
+        <p v-if="regionError" class="err" role="alert">{{ regionError }}</p>
+        <template v-else-if="regionStats">
+          <p class="muted small">
+            {{ t('admin.regionStatsMeta', { since: regionStats.since, total: regionStats.total }) }}
+            · {{ t('admin.regionStatsMissing', { n: regionStats.missingRegion }) }}
+          </p>
+          <p v-if="!regionStats.byRegion.length" class="muted small">
+            {{ t('admin.regionStatsEmpty') }}
+          </p>
+          <ul v-else class="ranks">
+            <li v-for="r in regionStats.byRegion" :key="r.region">
+              <span class="rank-name">{{ regionLabelOf(r.region) }}</span>
+              <span class="rank-n">{{ t('admin.regionStatsCell', { mean: r.mean, n: r.n }) }}</span>
+            </li>
+          </ul>
+        </template>
       </details>
 
       <p v-if="loading" class="muted empty" role="status">{{ t('common.loading') }}</p>

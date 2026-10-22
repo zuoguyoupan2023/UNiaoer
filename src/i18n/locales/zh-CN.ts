@@ -544,6 +544,15 @@ export const messages = {
     other: '其他',
   },
   admin: {
+    // 073 P0：地区正确率（管理端观察期）
+    regionStatsTitle: '地区正确率（观察期，未公开）',
+    regionStatsNote: '口径：答题时用户自选的地区（不是 IP）。按正确率分桶聚合估算，含轮次数；样本少于 10 轮的地区仅作参考。',
+    regionStatsLoad: '拉取（近 30 天）',
+    regionStatsMeta: '数据自 {since} 起 · 共 {total} 轮',
+    regionStatsMissing: '其中 {n} 轮无地区属性（属性上线前）',
+    regionStatsEmpty: '还没有带地区属性的轮次（需要新版前端 + 部署后产生的数据）。',
+    regionStatsCell: '平均 {mean}% · {n} 轮',
+    regionAll: '全球 / 未指定',
     title: '报错管理',
     lead: '输入管理密钥以查看与处理用户反馈。密钥仅保存在本标签页，关闭即失效。',
     keyPlaceholder: '管理密钥',
