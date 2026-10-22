@@ -13,7 +13,18 @@ import { parseArgs } from '../lib/util.mjs'
 import { SUPPORTED_COUNTRIES } from './config.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
-const BASE = 'https://cdn.jsdelivr.net/gh/alexander-schranz/iso-3166-2@master/subdivisions'
+/**
+ * 数据源 = alexander-schranz/iso-3166-2（MIT，见 config.mjs SUBDIVISION_SOURCE）。
+ * 2026-10-23：本机 `cdn.jsdelivr.net` 与 `raw.githubusercontent.com` 常年超时（curl 000），
+ * 故按**同一份数据**的多个 jsDelivr CNAME 依次回退（内容一致，仅 CDN 入口不同）。
+ */
+const BASES = [
+  'https://cdn.jsdelivr.net/gh/alexander-schranz/iso-3166-2@master/subdivisions',
+  'https://fastly.jsdelivr.net/gh/alexander-schranz/iso-3166-2@master/subdivisions',
+  'https://gcore.jsdelivr.net/gh/alexander-schranz/iso-3166-2@master/subdivisions',
+  'https://testingcf.jsdelivr.net/gh/alexander-schranz/iso-3166-2@master/subdivisions',
+]
+let BASE = BASES[0]
 
 const args = parseArgs(process.argv.slice(2))
 const COUNTRIES = String(args.countries || SUPPORTED_COUNTRIES.join(',')).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
@@ -36,13 +47,30 @@ try {
 } catch {
   /* 无旧文件 */
 }
+/** 依次尝试各 jsDelivr CNAME（首个成功后固定用它，避免每次都重试坏入口） */
+async function fetchOne(cc) {
+  let lastErr = null
+  for (const base of [BASE, ...BASES.filter((b) => b !== BASE)]) {
+    try {
+      const data = await client.getJson(`${base}/${cc.toLowerCase()}.json`, {
+        cacheFile: `${cc.toLowerCase()}.json`,
+        force: !!args.refresh,
+      })
+      if (BASE !== base) {
+        console.log(`· 入口回退到 ${new URL(base).host}（${new URL(BASE).host} 不通）`)
+        BASE = base
+      }
+      return data
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr || new Error('无可用入口')
+}
+
 for (const cc of COUNTRIES) {
   try {
-    const data = await client.getJson(`${BASE}/${cc.toLowerCase()}.json`, {
-      cacheFile: `${cc.toLowerCase()}.json`,
-      force: !!args.refresh,
-    })
-    merged[cc] = data
+    merged[cc] = await fetchOne(cc)
   } catch (e) {
     failed.push(`${cc}: ${e.message}`)
   }

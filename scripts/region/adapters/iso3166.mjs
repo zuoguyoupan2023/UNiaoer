@@ -30,7 +30,7 @@ export function canonName(s) {
 
 // 行政后缀/连接词：多语种（含西语 comunidad/foral/principado、越南 thanh pho、中文 sheng、英语 prov）
 const SUFFIX =
-  /\b(state|province|prov|prefecture|territory|region|county|district|city|comunidad|foral|autonoma|principado|ciudad|thanh|pho|sheng|of|the|de|del|la|el)\b/g
+  /\b(state|province|prov|prefecture|territory|region|county|district|city|comunidad|foral|autonoma|principado|ciudad|thanh|pho|sheng|division|bibhag|of|the|de|del|la|el)\b/g
 
 /**
  * 一个名称（ISO 名或 GBIF 自由文本）→ 可能的匹配键集合。
@@ -101,6 +101,51 @@ export const NAME_ALIASES = {
   'nct delhi': 'IN-DL', 'new delhi': 'IN-DL', orissa: 'IN-OR', bombay: 'IN-MH',
   maharastra: 'IN-MH', 'west benga': 'IN-WB',
   'andaman and nicobar': 'IN-AN', 'andaman nicobar': 'IN-AN',
+  // ── 2026-10-23 扩国（074 P1-4 第 1 批·亚洲）：只收"有量且语义明确"的变体；
+  //    政治敏感的写法（Kashmir / Golan / West Bank / Northern Areas 之外的争议区）一律**不映射**，宁缺勿错（铁律 6）。
+  // 孟加拉：GBIF 用 "Dhaka bibhag"（bibhag=division，已进 SUFFIX 自动处理）；下面是英文/拼写变体
+  chattogram: 'BD-B', 'chittagong hill tracts': 'BD-B', barishal: 'BD-A', mymensingh: 'BD-C', rajshani: 'BD-E',
+  // 以色列：GBIF 用希伯来语转写（HaDarom/HaZafon/HaMerkaz），数据集用英文 District 名
+  hadarom: 'IL-D', 'south district': 'IL-D', 'southern dist': 'IL-D', 'yughnyy okrug izrailya': 'IL-D',
+  hazafon: 'IL-Z', 'north district': 'IL-Z', 'northern dist': 'IL-Z', cafon: 'IL-Z',
+  hamerkaz: 'IL-M', 'center district': 'IL-M', 'central dist': 'IL-M',
+  yerushalayim: 'IL-JM', 'jerusalem dist': 'IL-JM', hefa: 'IL-HA', 'haifa dist': 'IL-HA',
+  // 沙特：GBIF 用简称（Makkah/Jizan/Al Madinah/Eastern Region），数据集用全称（Makkah al Mukarramah…）
+  makkah: 'SA-02', mecca: 'SA-02', 'makkah region': 'SA-02', 'mecca region': 'SA-02', "makkah div n": 'SA-02',
+  jizan: 'SA-09', 'al madinah': 'SA-03', 'al madinah region': 'SA-03',
+  'eastern region': 'SA-04', 'eastern province': 'SA-04', eastern: 'SA-04', 'ash sharquiyah': 'SA-04',
+  'riyadh region': 'SA-01', riyadh: 'SA-01', 'ar riyadh': 'SA-01', 'al quassim': 'SA-05', 'hayel region': 'SA-06',
+  // 巴基斯坦：GBIF 大量用旧名（Sind/North-West Frontier/Baluchistan/F.C.T./N.W.F.P./Northern Areas/F.A.T.A.）
+  sind: 'PK-SD', 'sind province': 'PK-SD', 'hyderabad district': 'PK-SD',
+  'north west frontier': 'PK-KP', 'north west frontier province': 'PK-KP', 'n w f p': 'PK-KP', 'hazara district': 'PK-KP',
+  baluchistan: 'PK-BA', 'baluchistan province': 'PK-BA',
+  'f c t': 'PK-IS', 'capital territory islamabad': 'PK-IS',
+  'northern areas': 'PK-GB', 'northern region': 'PK-GB', 'f a t a': 'PK-TA',
+  punyab: 'PK-PB', 'west punjab province': 'PK-PB', 'dera ghazi khan': 'PK-PB', rawalpindi: 'PK-PB',
+  // 哈萨克斯坦：**不能**把 oblysy/oblast 加进 SUFFIX（会把 "Almaty oblysy" 撞成 "Almaty" 市）→ 逐名映射；
+  //   西里尔写法（Кызылординская обл.）canon 后为空，保持未映射（约占 1%）
+  qaraghandy: 'KZ-KAR', karaganda: 'KZ-KAR', karagandinskaya: 'KZ-KAR',
+  aqmola: 'KZ-AKM', akmola: 'KZ-AKM', aktyubinskaya: 'KZ-AKT', aktobe: 'KZ-AKT',
+  'south kazakhstan': 'KZ-YUZ', 'yuzhno kazahstanskaya': 'KZ-YUZ', 'yuzhno kazakhstanskaya': 'KZ-YUZ',
+  'east kazakhstan': 'KZ-VOS', 'vostochno kazahstanskaya': 'KZ-VOS',
+  'north kazakhstan': 'KZ-SEV', 'severokazahstanskaya': 'KZ-SEV',
+  'west kazakhstan': 'KZ-ZAP', 'zapadno kazahstanskaya': 'KZ-ZAP',
+  mangghystau: 'KZ-MAN', mangistauskaya: 'KZ-MAN', pavlodarskaya: 'KZ-PAV', almatinskaya: 'KZ-ALM',
+  kyzylorda: 'KZ-KZY', kyzylordinskaya: 'KZ-KZY', kostanay: 'KZ-KUS', kostanayskaya: 'KZ-KUS',
+  atyrau: 'KZ-ATY', atyrauskaya: 'KZ-ATY', zhambyl: 'KZ-ZHA', zhambylskaya: 'KZ-ZHA',
+  astana: 'KZ-AST', 'nur sultan': 'KZ-AST',
+  // 柬埔寨：GBIF 用法式转写（Siemréab/Phnum Pénh/Kândal），数据集用 ISO 罗马化（Siem Reab/Phnom Penh/Kandaal）
+  siemreab: 'KH-17', 'siem reap': 'KH-17', 'phnum penh': 'KH-12', batdambang: 'KH-02', kandal: 'KH-08',
+  'banteay meanchey': 'KH-01', 'kampong sp': 'KH-05', 'kampong spoe': 'KH-05', 'kampong speu': 'KH-05',
+  'kampong cham': 'KH-03', 'krong keb': 'KH-23', kep: 'KH-23', takev: 'KH-21', rotanokiri: 'KH-16',
+  'prey veng': 'KH-14', 'otdar meanchey': 'KH-22', 'svay rieng': 'KH-20', pouthisat: 'KH-15', kratie: 'KH-10',
+  'stung treng': 'KH-19', 'stng treng': 'KH-19', 'st ng treng': 'KH-19', 'kampong thom': 'KH-06',
+  'koh kong': 'KH-09', 'preah sihanouk': 'KH-18', mondulkiri: 'KH-11', pailin: 'KH-24',
+  // 缅甸：GBIF 用旧名/异拼（Ayeyarwady/Tanintharyi/Pegu/Rangoon/Arakan/Naypyitaw）
+  ayeyarwady: 'MM-07', ayeyarwadi: 'MM-07', tanintharyi: 'MM-05', tenasserim: 'MM-05', pegu: 'MM-02',
+  rangoon: 'MM-06', arakan: 'MM-16', rakhaine: 'MM-16', naypyitaw: 'MM-18', 'chin hills': 'MM-14',
+  'shan states': 'MM-17', 's shan states': 'MM-17', 'n shan states': 'MM-17', bhamo: 'MM-11',
+  'lower chindwin': 'MM-01', 'lower pegu': 'MM-02', 'low pegu': 'MM-02',
 }
 
 /** 英国的 ISO 一级区就是 4 个构成国；把「Scotland - 某郡」「England - 某郡」归属回去 */

@@ -93,7 +93,8 @@
 | 把 `manifest.json` 传到 R2（`/api/manifest` 优先读它；重建 manifest 后需重跑） | `npm run r2:manifest` |
 | 题库一致性校验（CI 已接入；`--no-net` 跳过抽查） | `npm run check:bank` |
 | 媒体完整性全量检查（`--fix` 从本地重传缺失文件） | `npm run check:media` |
-| 抓 ISO 3166-2 省级基准清单（021 M2，缓存到 data-cache） | `npm run region:subdiv` |
+| 抓 ISO 3166-2 省级基准清单（021 M2，缓存到 data-cache；本机 jsDelivr 主站不通，脚本自动回退 fastly/gcore 入口） | `npm run region:subdiv` |
+| **省级层扩国前的覆盖率干跑**（只读；按记录加权算「GBIF 省名 → ISO 码」可映射比例，<90% 不该发布） | `npm run region:coverage -- --countries TH,MY,ID` |
 | 构建季节层 / 省级层（`-- --mock` 全离线；产 `public/data/*.json`） | `npm run region:build` / `npm run region:provinces` |
 | 构建观鸟点（XC 源；`-- --mock` 离线） | `npm run region:hotspots` |
 | 构建观鸟点（GBIF SQL 1° 源 + eBird 命名 + 网格×省补码；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names --cell-provinces <GBIF 下载 key，如 0017635-260928105237408>` |

@@ -462,11 +462,16 @@ for (const file of files) {
     continue
   }
   // 039 P1 分片：US 最大约 1.8MB，给 3MB 上限；索引与其余产物沿用 2MB
+  // 2026-10-23 扩国（15→29 国）：region-provinces.json 是**单文件**（观鸟页记录数 + 物种页省份热力条都读它），
+  // 3.0MB 原始 / **brotli ~691KB**（懒加载，只在 /birding 与物种页触发）→ 预算放宽到 4MB。
+  // ⚠️ 再加洲（欧洲+美洲）会到 ~6MB → **必须先按国分片**（见 docs/074 P1-4）。
   const budget = /species-distribution/.test(name)
     ? 3 * 1024 * 1024
     : /hotspots-ebird[\\/]/.test(file)
       ? 3 * 1024 * 1024
-      : MAX_BYTES
+      : name.endsWith('region-provinces.json')
+        ? 4 * 1024 * 1024
+        : MAX_BYTES
   checkCommon(name, raw, data, budget, { shard: isNearbyShard(data, file) })
   if (Array.isArray(data.tiers)) errors.push(`${name}: tiers 必须是对象`)
   else if (data.tiers || data.sharding) {

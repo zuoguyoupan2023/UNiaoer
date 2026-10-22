@@ -54,19 +54,21 @@ const round = (x, d = 4) => Number(Number(x).toFixed(d))
 const subsRaw = await readJson(path.join(ROOT, 'data-cache/region/iso3166-2/subs.json'))
 const index = buildIndex(subsRaw.subdivisions, SUPPORTED_COUNTRIES)
 const speciesIndex = await readJson(path.join(ROOT, 'public/data/species-index.json'))
-const core = await readJson(path.join(ROOT, 'public/data/manifest-core.json'))
-const globalPool = await readJson(path.join(ROOT, 'public/data/manifest-global.min.json'))
+/**
+ * 2026-10-23 修：本脚本此前读 `manifest-core.json` + `manifest-global.min.json`，
+ * 而这两个文件在 P5/S6（2026-10-10）**已退役** → 脚本一跑就 ENOENT，档位产物因此半年没重建过
+ * （与 `region:verify-provinces` 同类腐烂）。现改为读**唯一权威层** `manifest-meta.json`：
+ * 它同时带 `id`（slug）与 `taxonKey`（Avibase 短码），足够建 id↔taxonKey 映射。
+ */
+const metaLayer = await readJson(path.join(ROOT, 'public/data/manifest-meta.json'))
 
 /**
  * 产物键统一为 **manifest 物种 id（slug）**——因为出题/D1/前端画廊都以它为主键。
  * 映射链：GBIF backboneTaxonId → 骨架 taxonKey（AvibaseID）→ manifest id。
- * （骨架自身只有 taxonKey；manifest 核心层 + 全球池提供 taxonKey → id。）
+ * （骨架自身只有 taxonKey；权威层提供 taxonKey → id。）
  */
 const idByTaxonKey = new Map()
-for (const s of core.species || []) if (s.taxonKey) idByTaxonKey.set(s.taxonKey, s.id)
-for (const s of globalPool.species || []) {
-  if (s.taxonKey && !idByTaxonKey.has(s.taxonKey)) idByTaxonKey.set(s.taxonKey, s.id)
-}
+for (const s of metaLayer.species || []) if (s.taxonKey) idByTaxonKey.set(s.taxonKey, s.id)
 /** GBIF backbone id → manifest id（specieskey 形态） */
 const byBackbone = new Map()
 for (const s of speciesIndex.species) {

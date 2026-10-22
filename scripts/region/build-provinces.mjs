@@ -121,6 +121,9 @@ const client = createClient({
   retries: 4,
 })
 
+/** 物种 → 解析结果（预解析一次，任务与冲突消解共用；见 resolveTaxon / resolveCollisions） */
+const resolvedById = new Map()
+
 /**
  * P0-0（2026-10-23）：解析「物种 → 用哪种方式在 GBIF 上计数」。
  *
@@ -141,7 +144,7 @@ async function resolveTaxon(sp) {
     try {
       const cached = await readJson(path.join(ROOT, `data-cache/gbif/${sp.taxonId}.json`))
       if (cached?.rank === 'SPECIES' && Number(cached?.usageKey) > 1) {
-        return { mode: 'taxonKey', key: cached.usageKey, src: 'local-cache' }
+        return { mode: 'taxonKey', key: cached.usageKey, src: 'local-cache', name: sp.nameSci }
       }
     } catch {
       /* 无缓存 */
@@ -161,14 +164,113 @@ async function resolveTaxon(sp) {
     m.kingdom === 'Animalia'
   if (ok) {
     const key = m.status === 'SYNONYM' ? (m.acceptedUsageKey ?? m.usageKey) : m.usageKey
-    return { mode: 'taxonKey', key, src: 'match' }
+    return {
+      mode: 'taxonKey',
+      key,
+      src: 'match',
+      name: sp.nameSci,
+      canonicalName: m.canonicalName ?? null,
+      status: m.status ?? null,
+      usageKey: m.usageKey,
+    }
   }
   if (!sp.nameSci) return null
   return {
     mode: 'verbatim',
     name: sp.nameSci,
+    usageKey: m?.usageKey ?? null,
     rejected: { matchType: m?.matchType ?? '(无响应)', rank: m?.rank ?? '-', usageKey: m?.usageKey ?? '-' },
   }
+}
+
+/** GBIF facet 响应 → { 省码: 记录数 }（未映射的省名计入 unmatched，不臆造） */
+function facetToCounts(payload, cc) {
+  const counts = {}
+  for (const { name, count } of facetCounts(payload, 'stateProvince')) {
+    const code = matchSubdivision(index, cc, name)
+    if (code) counts[code] = (counts[code] || 0) + count
+    else unmatched.set(`${cc}\t${name}`, (unmatched.get(`${cc}\t${name}`) || 0) + count)
+  }
+  return counts
+}
+
+/**
+ * P0-0 补充（2026-10-23 扩国实测）：**两个 AviList 物种不得共用同一份 GBIF 数据**。
+ *
+ * 扩国时抓到 2 组"省份向量完全相同"（同一个 fallback key 的指纹）：
+ *   · `Phylloscopus poliocephalus` 是 `P. maforensis` 的 SYNONYM → accepted key 相同；
+ *   · `Pycnonotus conradi` 的 accepted key 是**亚种** `P. blanfordi conradi`（GBIF 会展开成整种）。
+ * 两者都导致两个物种拿到一模一样的数字（对其中一个必然错）。
+ *
+ * 规则：每个"重复向量组"里挑一个**名字所有者**（`matchType` 命中且 `status=ACCEPTED` 且
+ * canonicalName === AviList 学名），其余改走 `verbatimScientificName`（按字面学名计数）重查；
+ * 重查为空 → 该 (物种,国家) 直接丢弃（宁缺勿错）。仍无法消解 → 交给后面的不变量硬失败。
+ */
+async function resolveCollisions(results) {
+  const vecKey = (cc, counts) => {
+    const codes = Object.keys(counts)
+    if (codes.length < 2) return null
+    const sum = Object.values(counts).reduce((a, b) => a + b, 0)
+    if (sum <= 1000) return null
+    return `${cc}|${[...codes].sort().map((c) => `${c}:${counts[c]}`).join(',')}`
+  }
+  /** 按字面学名重查（带缓存；同一 (物种,国家) 只查一次） */
+  const verbatimCache = new Map()
+  async function verbatim(sp, cc) {
+    const k = `${cc}/${sp.id}`
+    if (verbatimCache.has(k)) return verbatimCache.get(k)
+    const url =
+      `${GBIF}/occurrence/search?verbatimScientificName=${encodeURIComponent(sp.nameSci)}&country=${cc}` +
+      `&facet=stateProvince&facetLimit=200&limit=0&occurrenceStatus=PRESENT`
+    const payload = await client.getJson(url, { cacheFile: `${cc}/${sp.id}.verbatim.json`, timeout: 90_000 })
+    const counts = facetToCounts(payload, cc)
+    verbatimCache.set(k, counts)
+    return counts
+  }
+  /** 找出当前 results 里所有重复向量组 */
+  function findGroups() {
+    const byKey = new Map()
+    results.forEach((r, i) => {
+      if (!r) return
+      const k = vecKey(r.cc, r.counts)
+      if (!k) return
+      if (!byKey.has(k)) byKey.set(k, [])
+      byKey.get(k).push({ i, spId: r.sp.id })
+    })
+    return [...byKey.values()].filter((g) => g.length > 1)
+  }
+
+  let fixed = 0
+  for (let round = 1; round <= 2; round++) {
+    const groups = findGroups()
+    if (!groups.length) break
+    for (const g of groups) {
+      // 第 1 轮：只把"非名字所有者"改成按字面学名计数；第 2 轮：整组都改（应对 GBIF 把两个种当成同一 taxon 的情况）
+      const owner = g.find((x) => {
+        const t = resolvedById.get(x.spId)
+        return t?.mode === 'taxonKey' && t.status === 'ACCEPTED' && t.canonicalName === t.name
+      })
+      const ownerId = owner?.spId ?? g[0].spId
+      const targets = round === 1 ? g.filter((x) => x.spId !== ownerId) : g
+      if (!targets.length) continue
+      for (const x of targets) {
+        const { sp, cc, counts: before } = results[x.i]
+        const after = await verbatim(sp, cc)
+        const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0)
+        if (sum(after) === sum(before) && JSON.stringify(Object.keys(after).sort()) === JSON.stringify(Object.keys(before).sort())) {
+          continue // 字面计数与原来一致 → 换了也没用，留给下一轮/不变量
+        }
+        console.log(
+          `· 冲突消解（第 ${round} 轮）：${sp.nameSci} / ${cc}` +
+            `${x.spId === ownerId ? '（名字所有者，但 GBIF 把近缘种并入同一 taxon）' : `（与 ${ownerId} 共用数据）`}` +
+            ` → 改按字面学名计数：${sum(before).toLocaleString()} → ${sum(after).toLocaleString()}`,
+        )
+        results[x.i] = { ...results[x.i], counts: after, mode: 'verbatim' }
+        fixed++
+      }
+    }
+  }
+  return fixed
 }
 
 /** P0-0 不变量：同国内不得有两个物种的省份向量完全相同（合计 > 1,000）——那是"同一个 fallback key"的指纹 */
@@ -200,13 +302,25 @@ let done = 0
 const tasks = COUNTRIES.flatMap((cc) => speciesForCountry(cc).map((sp) => ({ cc, sp })))
 console.log(`region-provinces: ${COUNTRIES.length} 国 × 相关物种 = ${tasks.length} 次查询`)
 
+// 预解析（每个物种一次；match 缓存是热的 → 秒级），冲突消解与任务共用这张表
+const speciesList = [...new Map(tasks.map((t) => [t.sp.id, t.sp])).values()]
+await mapPool(speciesList, CONCURRENCY, async (sp) => {
+  resolvedById.set(sp.id, await resolveTaxon(sp))
+})
+{
+  const vals = [...resolvedById.values()]
+  const nTaxon = vals.filter((r) => r?.mode === 'taxonKey').length
+  const nVerbatim = vals.filter((r) => r?.mode === 'verbatim').length
+  console.log(`解析：${speciesList.length} 物种 · taxonKey ${nTaxon} · verbatim ${nVerbatim} · 跳过 ${vals.filter((r) => !r).length}`)
+}
+
 const results = await mapPool(tasks, CONCURRENCY, async ({ cc, sp }) => {
   try {
     let payload
     if (MOCK) {
       payload = await readJson(path.join(FIX, `gbif-province/${cc}/${sp.id}.json`)).catch(() => ({}))
     } else {
-      const t = await resolveTaxon(sp)
+      const t = resolvedById.get(sp.id)
       if (!t) {
         modeStats.skipped++
         return null
@@ -228,12 +342,7 @@ const results = await mapPool(tasks, CONCURRENCY, async ({ cc, sp }) => {
         timeout: 90_000,
       })
     }
-    const counts = {}
-    for (const { name, count } of facetCounts(payload, 'stateProvince')) {
-      const code = matchSubdivision(index, cc, name)
-      if (code) counts[code] = (counts[code] || 0) + count
-      else unmatched.set(`${cc}\t${name}`, (unmatched.get(`${cc}\t${name}`) || 0) + count)
-    }
+    const counts = facetToCounts(payload, cc)
     if (++done % 200 === 0) console.log(`  … ${done}/${tasks.length}`)
     return { cc, sp, counts }
   } catch (e) {
@@ -241,6 +350,10 @@ const results = await mapPool(tasks, CONCURRENCY, async ({ cc, sp }) => {
     return null
   }
 })
+
+// P0-0 补充：消解"两个物种共用同一份 GBIF 数据"（扩国实测 2 组，见 resolveCollisions 注释）
+const collisionFixed = await resolveCollisions(results)
+if (collisionFixed) console.log(`冲突消解完成：${collisionFixed} 个 (物种,国家) 改按字面学名计数`)
 
 /** 日本：优先用赫本式别名做展示名（ISO 原名为训令式，如 Aiti/Hukusima） */
 const JP_DISPLAY = {}
