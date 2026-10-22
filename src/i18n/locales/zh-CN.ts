@@ -17,6 +17,10 @@ export const messages = {
     skipToMain: '跳到主内容',
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
+    // 072-b：懒加载 chunk 失败横幅（自动重试一次仍失败才出现）
+    chunkError: '页面资源加载失败（网络不稳定），可以重试或刷新',
+    chunkRetry: '重试',
+    chunkReload: '刷新',
     birding: '观鸟',
     identify: '识别',
     catalog: '名录',

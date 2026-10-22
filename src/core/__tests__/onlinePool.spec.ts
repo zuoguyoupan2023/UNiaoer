@@ -64,7 +64,7 @@ describe('fetchOnlinePool', () => {
     expect(r?.from).toBe('network')
     expect(calls[0]).toContain('tier=3')
     expect(calls[0]).toContain('type=image')
-    expect(calls[0]).toContain('count=30') // 措施 3：常量,收敛边缘缓存 key
+    expect(calls[0]).toContain('count=50') // 措施 3：常量,收敛边缘缓存 key（072-a：30→50 修首轮短轮）
     expect(calls[0]).not.toContain('region=') // ALL 不带 region
   })
 
@@ -113,20 +113,12 @@ describe('fetchOnlinePool', () => {
     expect(calls).toHaveLength(3)
   })
 
-  it('措施 3：缓存条目上限 24——超量淘汰最旧', async () => {
+  it('措施 3：缓存条目上限 16——超量淘汰最旧（072-a：30→50 后 24→16）', async () => {
     const calls = stubFetch((u) => okResponse(u))
     // 唯一键空间 = tier × type × 生效地区（region 仅 L1–L3 生效,见 D-029-2）：
     //   L1–L3: 3 档 × 2 题型 × 3 地区(ALL/CN/US) = 18
     //   L4–L5: 2 档 × 2 题型 × 1 地区(忽略 region) = 4   → 合计 22
     const combos: [('image' | 'audio'), 1 | 2 | 3 | 4 | 5, string][] = []
-    for (const tier of [1, 2] as const) {
-      for (const type of ['image', 'audio'] as const) {
-        // 用多个地区把键填满（L1–L3 才计 region）
-        combos.push([type, tier, 'ALL'])
-      }
-    }
-    // 直接构造 25 个"唯一键"不可行（键空间 22）,故改测"淘汰行为"本身：
-    // 写入 22 个唯一键（未达上限 24）→ 全部命中缓存
     for (const tier of [1, 2, 3] as const) {
       for (const type of ['image', 'audio'] as const) {
         for (const r of ['ALL', 'CN', 'US']) combos.push([type, tier, r])
@@ -135,7 +127,6 @@ describe('fetchOnlinePool', () => {
     for (const tier of [4, 5] as const) {
       for (const type of ['image', 'audio'] as const) combos.push([type, tier, 'ALL'])
     }
-    // 去重（避免重复键影响计数）
     const uniq = new Map<string, [('image' | 'audio'), 1 | 2 | 3 | 4 | 5, string]>()
     for (const c of combos) {
       const effRegion = c[1] <= 3 ? c[2] : 'ALL'
@@ -144,18 +135,20 @@ describe('fetchOnlinePool', () => {
     const keys = [...uniq.values()]
     expect(keys.length).toBe(22) // 键空间确为 22
 
+    // 写满 22 个键：上限 16 → 淘汰最旧的 6 个，最终只留 16 条
     for (const [t, tier, r] of keys) await fetchOnlinePool(t, tier, r)
-    expect(calls).toHaveLength(keys.length)
+    expect(calls).toHaveLength(22)
 
-    // 未达上限（22 < 24）→ 全部命中缓存，零新增请求
-    for (const [t, tier, r] of keys) await fetchOnlinePool(t, tier, r)
-    expect(calls).toHaveLength(keys.length)
+    const stored = Object.keys(sessionStorage).filter((k) => k.startsWith('uniaoer.onlinePool.v3:'))
+    expect(stored.length).toBe(16)
+    expect(stored.length).toBeLessThanOrEqual(16)
 
-    // 再写 3 个新键（借用 L4/L5 的 region 变体不会产生新键,改用清空后重填验证淘汰）
-    // 简化：验证"写入不超过上限"由 CLIENT_MAX_ENTRIES 保证即可 —— 通过 storage 条目数断言
-    const stored = Object.keys(sessionStorage).filter((k) => k.startsWith('uniaoer.onlinePool.v2:'))
-    expect(stored.length).toBeLessThanOrEqual(24)
-    expect(stored.length).toBe(keys.length)
+    // 最近写入的 16 个仍在缓存里 → 再取一次不产生新请求
+    for (const k of stored) {
+      const [tierStr, type, region] = k.split(':').slice(1)
+      await fetchOnlinePool(type as 'image' | 'audio', Number(tierStr) as 1 | 2 | 3 | 4 | 5, region ?? 'ALL')
+    }
+    expect(calls).toHaveLength(22)
   })
 
   it('clearClientPoolCache 清空后重新请求', async () => {

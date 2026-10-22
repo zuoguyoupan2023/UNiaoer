@@ -249,4 +249,67 @@ describe('loadSpeciesAssets（029 M1：assets 分片懒加载）', () => {
     await loadBank()
     expect(await loadSpeciesAssets('sp-01')).toBeNull()
   })
+
+  // 072-a-fix：旧实现把 bucketLoaded.add() 放在 finally 里 → 一次失败就"毒化"整桶，
+  // 整个会话不再重试，导致该桶所有物种取不到素材（= 一轮少几题）。
+  it('分片请求失败后**不再毒化**：下一次调用会重试并成功', async () => {
+    _resetBankCache()
+    const bucket = {
+      layer: 'assets',
+      bucket: 'sp',
+      species: { 'sp-01': { images: [{ url: 'https://m/1.webp' }], audios: [] } },
+    }
+    let assetCalls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        if (u.includes('data/manifest-meta.json')) {
+          return new Response(JSON.stringify({ ...manifest, layer: 'meta', buckets: ['sp', 'a'] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        }
+        if (u.includes('data/assets/sp.json')) {
+          assetCalls += 1
+          if (assetCalls === 1) throw new TypeError('network down') // 第一次失败
+          return new Response(JSON.stringify(bucket), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        }
+        return new Response('nope', { status: 404 })
+      }),
+    )
+    await loadBank()
+    expect(await loadSpeciesAssets('sp-01')).toBeNull() // 第一次：失败
+    const second = await loadSpeciesAssets('sp-01') // 第二次：重试成功
+    expect(second?.images).toHaveLength(1)
+    expect(assetCalls).toBe(2)
+  })
+
+  it('同一分片最多重试 3 次（离线时不无限打空请求）', async () => {
+    _resetBankCache()
+    let assetCalls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        if (u.includes('data/manifest-meta.json')) {
+          return new Response(JSON.stringify({ ...manifest, layer: 'meta', buckets: ['sp', 'a'] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        }
+        if (u.includes('data/assets/sp.json')) {
+          assetCalls += 1
+          throw new TypeError('offline')
+        }
+        return new Response('nope', { status: 404 })
+      }),
+    )
+    await loadBank()
+    for (let i = 0; i < 6; i++) expect(await loadSpeciesAssets('sp-01')).toBeNull()
+    expect(assetCalls).toBe(3)
+  })
 })

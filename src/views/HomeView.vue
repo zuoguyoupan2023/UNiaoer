@@ -42,19 +42,24 @@ onMounted(async () => {
     <h2 class="pick-title">{{ t('home.title') }}</h2>
     <p class="muted lead">{{ t('home.lead') }}</p>
 
-    <p v-if="stats" class="bank-stats">
-      <Library class="ic" :size="14" />
-      <template v-if="stats.core && stats.global">
-        {{ t('home.bankStatsFull', { total: stats.total, core: stats.core, global: stats.global, image: stats.image, audio: stats.audio }) }}
-      </template>
-      <template v-else>
-        {{ t('home.bankStats', { total: stats.total, image: stats.image, audio: stats.audio }) }}
-      </template>
-    </p>
-    <p v-else-if="bankErrorCode" class="bank-error">
-      <AlertTriangle class="ic" :size="14" />
-      {{ t(`errors.${bankErrorCode.code}`, { status: bankErrorCode.status, url: bankErrorCode.url }) }}
-    </p>
+    <!-- 072-b：统计行是异步插入的，之前会把下方模式卡片整体下移 41px
+         （手指按下/抬起之间被挪走 → click 丢失 = "第一次点了没反应"）。
+         这里固定槽位高度，插不插入都不改变下方位置。 -->
+    <div class="stats-slot">
+      <p v-if="stats" class="bank-stats">
+        <Library class="ic" :size="14" />
+        <template v-if="stats.core && stats.global">
+          {{ t('home.bankStatsFull', { total: stats.total, core: stats.core, global: stats.global, image: stats.image, audio: stats.audio }) }}
+        </template>
+        <template v-else>
+          {{ t('home.bankStats', { total: stats.total, image: stats.image, audio: stats.audio }) }}
+        </template>
+      </p>
+      <p v-else-if="bankErrorCode" class="bank-error">
+        <AlertTriangle class="ic" :size="14" />
+        {{ t(`errors.${bankErrorCode.code}`, { status: bankErrorCode.status, url: bankErrorCode.url }) }}
+      </p>
+    </div>
 
     <div class="modes">
       <RouterLink to="/quiz/image" class="mode-card">
@@ -94,6 +99,12 @@ onMounted(async () => {
   padding: 5px 12px;
   margin-bottom: 12px;
   display: inline-block;
+}
+/* 072-b：固定槽位高度，避免异步插入统计行把下方卡片下移（曾导致 tap 丢失） */
+.stats-slot {
+  min-height: 34px;
+  display: flex;
+  justify-content: center;
 }
 .bank-error {
   font-size: 0.78rem;

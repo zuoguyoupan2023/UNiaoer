@@ -25,6 +25,53 @@
   text-decoration: none;
 }
 
+/* ---------- 072-b：路由挂起进度条 + chunk 失败横幅 ---------- */
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 3000;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--primary));
+  background-size: 200% 100%;
+  animation: route-progress-slide 1s linear infinite;
+}
+@keyframes route-progress-slide {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.route-error {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3001;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  color: #8a6d00;
+  background: #fdf3d8;
+  border-bottom: 1px solid #f0d9a0;
+}
+.route-error-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-progress {
+    animation: none;
+  }
+}
+
 /* ---------- 顶部：品牌（=首页链接）+ 导航同一行（R21） ---------- */
 .app-topbar {
   display: flex;

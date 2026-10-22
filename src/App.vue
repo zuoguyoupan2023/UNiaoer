@@ -8,9 +8,12 @@ import { useReportsMetaStore } from '@/stores/reportsMeta'
 import { useSettingsStore } from '@/stores/settings'
 import { ambiencePlayer, getAmbienceState, subscribeAmbience } from '@/core/ambience'
 import { trackSessionStart } from '@/core/metrics'
+import { manualRetry, routeStatus } from '@/core/routeStatus'
+import { useRouter } from 'vue-router'
 import { GITHUB_REPO } from '@/core/social'
 
 const route = useRoute()
+const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const reportsMeta = useReportsMetaStore()
@@ -85,6 +88,10 @@ async function toggleAmbience() {
     await tryStartAmbience()
   }
 }
+/** 072-b：chunk 失败横幅的「刷新」（整页重载，绕过已损坏的模块状态） */
+function reloadPage() {
+  window.location.reload()
+}
 /**
  * 答题模式沉浸式：仅在"正式答题中"（本轮题目已就绪或加载中；介绍页/选难度除外）
  * 隐藏顶部标题与导航。介绍页 questions 为空且未在加载，顶部正常显示。
@@ -96,6 +103,18 @@ const immersive = computed(
 </script>
 
 <template>
+  <!-- 072-b：路由挂起进度条（>120ms 才出现，避免快路由闪烁） -->
+  <div v-if="routeStatus.pending.value" class="route-progress" aria-hidden="true"></div>
+  <!-- 072-b：chunk 加载失败横幅（自动重试一次仍失败时出现；绝不静默） -->
+  <div v-if="routeStatus.failed.value" class="route-error" role="alert">
+    <span>{{ t('nav.chunkError') }}</span>
+    <span class="route-error-actions">
+      <button type="button" class="btn-mini" @click="manualRetry((p) => router.replace(p))">
+        {{ t('nav.chunkRetry') }}
+      </button>
+      <button type="button" class="btn-mini" @click="reloadPage">{{ t('nav.chunkReload') }}</button>
+    </span>
+  </div>
   <!-- 键盘用户跳过导航直达主内容（H3） -->
   <a class="skip-link" href="#main">{{ t('nav.skipToMain') }}</a>
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->

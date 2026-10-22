@@ -30,22 +30,32 @@ export interface OnlinePoolResult {
 }
 
 const TIMEOUT_MS = 8000
-/** 固定请求条数（一次请求覆盖多轮；同时收敛边缘缓存 key） */
-const FETCH_COUNT = 30
+/**
+ * 固定请求条数（一次请求覆盖多轮；同时收敛边缘缓存 key）。
+ *
+ * 072-a（2026-10-22）：30 → **50**。原因：中文卷只收「有中文名」的种，而默认地区 `ALL`
+ * 的在线候选里只有约 11/30 有中文名 → 有效池 ~11 条，二项分布下有 **28.9%** 的 L1 首轮
+ * 不足 10 题（实测见 `docs/072` §a-2.2）。改为 50 后该概率降到 **0.34%**。
+ * 代价：响应体积约 +20KB（仍远小于 100KB），边缘缓存 key 不变。
+ */
+const FETCH_COUNT = 50
 /** 客户端缓存有效期（10 分钟；大于边缘缓存 300s，命中即零网络） */
 const CLIENT_TTL_MS = 10 * 60_000
 /**
- * 客户端缓存条目上限（每条约 30-60KB，24 条 ≈ 最多 1.5MB，远低于 sessionStorage 常见配额 5MB）。
+ * 客户端缓存条目上限（每条约 50–90KB（50 条候选），16 条 ≈ 最多 1.4MB，远低于 sessionStorage 常见配额 5MB）。
  * 组合空间 = 5 档 × 2 题型 × (ALL + 用户切换过的地区数)：
  * 上限过小（曾试 8）会在正常使用中互相淘汰——用户切几次档位/题型就废掉缓存。
+ * 072-a：FETCH_COUNT 30→50 后单条变大，24→16 条以守住总量。
  */
-const CLIENT_MAX_ENTRIES = 24
+const CLIENT_MAX_ENTRIES = 16
 /**
  * 客户端缓存前缀。版本变更即整体失效旧条目：
  *   v1 → v2（2026-10-09）：Worker 候选池改为"地区档位过滤"（表外物种不再回退全局
  *   commonness，见 docs/036 §10），旧缓存可能含本地没有的鸟，必须作废。
+ *   v2 → v3（2026-10-22）：FETCH_COUNT 30→50（072-a 短轮修复），旧条目只有 30 条，
+ *   继续复用会让"首轮短轮"照旧发生 → 必须作废。
  */
-const CLIENT_PREFIX = 'uniaoer.onlinePool.v2:'
+const CLIENT_PREFIX = 'uniaoer.onlinePool.v3:'
 
 interface CachedPool {
   at: number

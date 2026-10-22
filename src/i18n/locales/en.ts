@@ -22,6 +22,10 @@ const en: typeof zhMessages = {
     skipToMain: 'Skip to main content',
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
+    // 072-b: lazy chunk failure banner (shown only after the single automatic retry fails)
+    chunkError: 'Failed to load page resources (unstable network). Retry or reload.',
+    chunkRetry: 'Retry',
+    chunkReload: 'Reload',
     birding: 'Birding',
     identify: 'Identify',
     catalog: 'Catalogue',

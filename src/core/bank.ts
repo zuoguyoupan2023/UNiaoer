@@ -150,6 +150,18 @@ function bucketNameFor(id: string): string {
  * 029 M1:按需加载某物种的完整素材(详情页画廊 / 结果页 / 海报)。
  * 命中 core 首图首音之外的素材时才有额外请求;无 core(未 loadBank)或物种无分片返回 null。
  */
+/**
+ * 物种素材分片缓存。
+ *
+ * 072-a-fix（2026-10-22）：**失败不再"毒化"整桶**。
+ * 旧实现把 `bucketLoaded.add(name)` 放在 `finally` 里 —— fetch 失败（弱网/离线/断点续传中断）
+ * 也会被标记为"已加载"，于是该桶在本会话内**永远不再重试**，所有属于该桶的物种都取不到素材，
+ * 被 `questionEngine.ensureMedia` 静默剔除 → **一轮少几题**（且刷新页面后才恢复）。
+ * 现在：只有成功才标记；失败允许重试，但每桶最多 MAX_BUCKET_ATTEMPTS 次，避免离线时反复打空请求。
+ */
+const MAX_BUCKET_ATTEMPTS = 3
+const bucketAttempts = new Map<string, number>()
+
 export async function loadSpeciesAssets(
   id: string,
 ): Promise<{ images?: MediaAsset[]; audios?: MediaAsset[] } | null> {
@@ -159,6 +171,9 @@ export async function loadSpeciesAssets(
   if (!bucketLoaded.has(name)) {
     let p = bucketInflight.get(name)
     if (!p) {
+      const attempts = bucketAttempts.get(name) ?? 0
+      if (attempts >= MAX_BUCKET_ATTEMPTS) return null // 放弃（离线/持续失败），不再打空请求
+      bucketAttempts.set(name, attempts + 1)
       p = (async () => {
         const url = `${import.meta.env.BASE_URL}data/assets/${name}.json`
         try {
@@ -168,11 +183,12 @@ export async function loadSpeciesAssets(
             for (const [sid, entry] of Object.entries(data.species || {})) {
               assetCache.set(sid, entry)
             }
+            // 只有成功才标记"该桶已加载"——失败保持可重试
+            bucketLoaded.add(name)
           }
         } catch {
-          /* 分片加载失败:调用方回退 core 首图首音 */
+          /* 分片加载失败:调用方回退 core 首图首音；下次调用会再试（有次数上限） */
         } finally {
-          bucketLoaded.add(name)
           bucketInflight.delete(name)
         }
       })()
@@ -364,5 +380,6 @@ export function _resetBankCache() {
   assetCache.clear()
   bucketLoaded.clear()
   bucketInflight.clear()
+  bucketAttempts.clear()
   _resetMetaCache()
 }

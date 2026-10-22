@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { track } from '@/core/metrics'
+import { beginNavigation, endNavigation, handleRouteError } from '@/core/routeStatus'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -199,7 +200,24 @@ function pageCategory(path: string): string {
 /** 上一次计入的类目：同 category 连续切换不重复计（docs/028 §3.1 的 SPA 去重语义） */
 let lastCategory: string | null = null
 
+/**
+ * 072-b：路由级 loading + chunk 失败恢复。
+ *   · 导航挂起 > 120ms 显示顶部细进度条（点击立刻有反馈，不等 chunk 到达）
+ *   · chunk 加载失败自动重试一次，仍失败则显示可操作横幅（绝不静默丢弃导航）
+ */
+router.beforeEach(() => {
+  beginNavigation()
+  return true
+})
+
+router.onError((err, to) => {
+  // 只处理懒加载 chunk 失败；其它错误照常抛给控制台
+  console.warn('[router] navigation failed:', err?.message ?? err)
+  handleRouteError(to?.fullPath ?? '', (path) => router.replace(path))
+})
+
 router.afterEach((to) => {
+  endNavigation()
   const existing = document.getElementById(ROBOTS_META_ID)
   if (to.name === 'share') {
     if (!existing) {
