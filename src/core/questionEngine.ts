@@ -3,6 +3,18 @@ import { speciesName, loadSpeciesAssets, type BankSpecies } from './bank'
 import { TIERS, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
 
+/** 072-a 观测：组题过程的计数（只用于诊断，不参与判定） */
+export interface BuildStats {
+  /** 进入组题链路的物种数（= 入参 bank 的长度） */
+  candidates: number
+  /** 过命名体系/档位/轮内去重后的池大小 */
+  unique: number
+  /** 其中真正取到素材、进入题目的物种数 */
+  enriched: number
+  /** 目标题数（min(count, unique)） */
+  want: number
+}
+
 export interface BuildOptions {
   type: MediaType
   count?: number
@@ -44,6 +56,11 @@ export interface BuildOptions {
    * 之后照常走 地区档位 → 媒体 → 轮内去重 既有链路（地域自适应，见 starterBirds.ts）。
    */
   starterOnly?: boolean
+  /**
+   * 072-a 观测：组题计数回调（可选；不改变任何行为）。
+   * 用来区分「池子本来就小」与「素材取不到被丢弃」——两者的修法完全不同。
+   */
+  onStats?: (s: BuildStats) => void
 }
 
 
@@ -218,6 +235,7 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
     distractorPool,
     regionTiers,
     starterOnly,
+    onStats,
   } = opts
   const cfg = TIERS[tier]
   // 051 S1：**先按命名体系过滤，再进后续所有链路**（档位筛选、干扰项、新手池都基于过滤后的集合）
@@ -297,6 +315,8 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
         ` (meta "playable" flag disagrees with assets shards, or a shard failed to load)`,
     )
   }
+  // 072-a 观测：把「池子多大 / 素材丢了几只」交给调用方记录（不影响返回结果）
+  onStats?.({ candidates: bank.length, unique: unique.length, enriched: enriched.length, want })
 
   return enriched.map((sp, i) => {
     // 上面已按 assetsOf(sp, type).length 过滤，此处的 media 必定存在

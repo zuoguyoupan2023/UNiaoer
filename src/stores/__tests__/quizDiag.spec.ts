@@ -121,8 +121,13 @@ describe('quiz store · 072-a 出题链路快照（lastBuild）', () => {
     expect(d.path).toBe('online')
     expect(d.onlineTotal).toBe(5)
     expect(d.onlineHits).toBe(3)
+    expect(d.onlineFrom).toBe('network')
     expect(d.regimePool).toBe(3)
     expect(d.want).toBe(10)
+    // 候选 = 交给组题的物种数（在线路径已按赛制池取过交集）
+    expect(d.candidates).toBe(3)
+    expect(d.afterFilter).toBe(3)
+    expect(d.dropped).toBe(0)
     // 现状：交集 3 → 只出 3 题（这正是要观测的短轮，本轮不修改行为）
     expect(d.built).toBe(3)
     expect(d.built).toBe(quiz.questions.length)
@@ -150,6 +155,10 @@ describe('quiz store · 072-a 出题链路快照（lastBuild）', () => {
     expect(d.path).toBe('local')
     expect(d.onlineTotal).toBeNull()
     expect(d.onlineHits).toBeNull()
+    expect(d.onlineFrom).toBeNull()
+    expect(d.candidates).toBe(12)
+    expect(d.afterFilter).toBe(12)
+    expect(d.dropped).toBe(0)
     expect(d.built).toBe(4)
   })
 

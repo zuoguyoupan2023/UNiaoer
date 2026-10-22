@@ -360,20 +360,33 @@ const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.cu
 
 // ---- 072-a 观测：诊断行（默认关闭，只有 ?diag=1 才渲染；普通用户零影响）----
 const diagOn = isDiag()
-const diagText = computed(() => {
+const diagHead = computed(() => {
+  const d = quiz.lastBuild
+  if (!d) return ''
+  return t('quiz.diagHead', {
+    tier: t(TIERS[d.tier].labelKey),
+    region: d.region && d.region !== 'ALL' ? ` · ${d.region}` : '',
+    regime: t(`regime.${d.regime}.label`),
+  })
+})
+const diagBody = computed(() => {
   const d = quiz.lastBuild
   if (!d) return ''
   const path =
     d.path === 'online'
-      ? t('quiz.diagPathOnline', { hits: d.onlineHits ?? 0, total: d.onlineTotal ?? 0 })
+      ? t('quiz.diagPathOnline', {
+          from: d.onlineFrom === 'client' ? t('quiz.diagFromCache') : t('quiz.diagFromNet'),
+          hits: d.onlineHits ?? 0,
+          total: d.onlineTotal ?? 0,
+        })
       : d.path === 'online-fallback'
         ? t('quiz.diagPathFallback', { hits: d.onlineHits ?? 0, total: d.onlineTotal ?? 0 })
         : t('quiz.diagPathLocal')
-  return t('quiz.diag', {
-    tier: t(TIERS[d.tier].labelKey),
-    region: d.region && d.region !== 'ALL' ? ` · ${d.region}` : '',
-    regime: t(`regime.${d.regime}.label`),
+  return t('quiz.diagBody', {
     pool: d.regimePool ?? '-',
+    cand: d.candidates,
+    after: d.afterFilter,
+    drop: d.dropped,
     path,
     built: d.built,
     want: d.want,
@@ -985,7 +998,9 @@ function onTouchEnd(e: TouchEvent) {
   <template v-else-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts） -->
-    <p v-if="diagOn && diagText" class="diag-line" data-testid="diag-line">{{ diagText }}</p>
+    <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
+      {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
+    </p>
     <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
       <span class="sb-left">
@@ -1149,6 +1164,10 @@ function onTouchEnd(e: TouchEvent) {
   margin: 0 0 8px;
   word-break: break-word;
   font-variant-numeric: tabular-nums;
+}
+.diag-body {
+  color: var(--text-light);
+  opacity: 0.92;
 }
 .intro {
   text-align: center;

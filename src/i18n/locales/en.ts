@@ -111,10 +111,13 @@ const en: typeof zhMessages = {
     backHome: 'Back home',
     progress: 'Q{n} / {total}',
     // 072-a observation: diagnostic line (only with ?diag=1)
-    diag: 'Diag: {tier}{region} · {regime} · pool {pool} · {path} · built {built}/{want}',
-    diagPathOnline: 'online {hits}/{total}',
+    diagHead: 'Diag · {tier}{region} · {regime}',
+    diagBody: 'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',
+    diagPathOnline: 'online({from}) {hits}/{total}',
     diagPathFallback: 'online {hits}/{total}→local',
     diagPathLocal: 'local pool',
+    diagFromNet: 'net',
+    diagFromCache: 'cache',
     accuracyLabel: 'Accuracy {acc}%',
     quit: 'Quit',
     quitConfirmDetail:

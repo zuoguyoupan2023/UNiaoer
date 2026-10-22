@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { MediaType, NameMode, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
 import { buildQuestions, speciesPlayable } from '@/core/questionEngine'
+import type { BuildStats } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
 import { isDiag } from '@/core/diag'
@@ -35,6 +36,14 @@ export interface QuizBuildDiag {
   onlineHits: number | null
   /** 赛制池大小（random 无池 → null） */
   regimePool: number | null
+  /** 在线候选来源（null = 本轮没走在线） */
+  onlineFrom: 'client' | 'network' | null
+  /** 进入组题链路的物种数 */
+  candidates: number
+  /** 过档位/命名/去重后的池大小 */
+  afterFilter: number
+  /** 有"可玩"标记但取不到素材而被丢弃的物种数（= 目标数 − 实际取到素材数） */
+  dropped: number
   /** 目标题数 */
   want: number
   /** 实际出题数 */
@@ -262,8 +271,12 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       let buildPath: QuizBuildPath = 'local'
       let onlineTotal: number | null = null
       let onlineHits: number | null = null
+      let onlineFrom: 'client' | 'network' | null = null
+      /** 072-a 观测：组题计数（由 questionEngine 回调填充；用对象持有点位，避免 TS 把闭包赋值判成 never） */
+      const buildStats: { v: BuildStats | null } = { v: null }
       if (online) {
         onlineTotal = online.species.length
+        onlineFrom = online.from ?? null
         speciesForBuild = online.species
         distractorPool = online.distractors.length ? online.distractors : undefined
         // 赛制池（复习/强化/错题本依赖本地练习史）仍需按 id 过滤在线候选；
@@ -307,6 +320,9 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         distractorPool,
         regionTiers,
         starterOnly,
+        onStats: (s) => {
+          buildStats.v = s
+        },
       })
       // 072-a 观测：把本轮链路与池子大小留痕（不改任何出题行为）。
       // 短轮用 warn（默认就能在控制台看到）；诊断模式下每轮都打一行 info。
@@ -320,6 +336,10 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         onlineTotal,
         onlineHits,
         regimePool: poolResult.pool?.size ?? null,
+        onlineFrom,
+        candidates: buildStats.v?.candidates ?? speciesForBuild.length,
+        afterFilter: buildStats.v?.unique ?? 0,
+        dropped: buildStats.v ? Math.max(0, buildStats.v.want - buildStats.v.enriched) : 0,
         want: count,
         built: qs.length,
         starterOnly,

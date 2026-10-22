@@ -105,10 +105,13 @@ export const messages = {
     backHome: '返回首页',
     progress: '第 {n} / {total} 题',
     // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
-    diag: '诊断：{tier}{region} · {regime} · 池 {pool} · {path} · 出题 {built}/{want}',
-    diagPathOnline: '在线 {hits}/{total}',
+    diagHead: '诊断 · {tier}{region} · {regime}',
+    diagBody: '赛制池 {pool} · 候选 {cand}→筛后 {after} · 无素材 -{drop} · {path} · 出题 {built}/{want}',
+    diagPathOnline: '在线({from}) {hits}/{total}',
     diagPathFallback: '在线 {hits}/{total}→回退本地',
     diagPathLocal: '本地池',
+    diagFromNet: '网络',
+    diagFromCache: '缓存',
     accuracyLabel: '正确率 {acc}%',
     quit: '退出',
     quitConfirmDetail:
