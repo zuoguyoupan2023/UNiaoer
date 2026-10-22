@@ -121,12 +121,28 @@ const client = createClient({
   retries: 4,
 })
 
-/** taxonomy key：优先复用 build-taxa 缓存，缺则 species/match */
-async function resolveUsageKey(sp) {
+/**
+ * P0-0（2026-10-23）：解析「物种 → 用哪种方式在 GBIF 上计数」。
+ *
+ * 背景（docs/075 §5）：`species/match` 对 AviList 新拆分/新组合的学名（GBIF 骨架上还没有）会返回
+ *   { matchType: 'HIGHERRANK', rank: 'GENUS' | 'KINGDOM', usageKey: <属key> 或 1 }
+ * 旧实现只判 `matchType !== 'NONE'` 就采信 → `usageKey = 1` 是**根节点**，查出来的是「该国全部类群」。
+ * 实测：`anarhynchus-dealbatus` 的 CN-11 = 809,195 = 北京全部类群（真值 486），US 合计虚高 7 倍。
+ *
+ * 现在分两路：
+ *   · `taxonKey`  —— 只有 EXACT/FUZZY + rank=SPECIES + usageKey>1 + confidence≥90 才采信（SYNONYM 取 acceptedUsageKey）；
+ *   · `verbatim`  —— 其余一律改为按**学名字面**计数（`verbatimScientificName=`）。这是 GBIF 上对
+ *                    「骨架上还没有的名字」能拿到的最准口径（与 SQL 名册矩阵逐物种吻合）。
+ *   · `null`      —— 无学名，跳过（不臆造）。
+ */
+async function resolveTaxon(sp) {
+  // 本地 build-taxa 缓存：只在**带 rank 且为 SPECIES**时采信（该缓存里存在 usageKey=1 的脏条目）
   if (sp.taxonId) {
     try {
       const cached = await readJson(path.join(ROOT, `data-cache/gbif/${sp.taxonId}.json`))
-      if (cached?.usageKey) return cached.usageKey
+      if (cached?.rank === 'SPECIES' && Number(cached?.usageKey) > 1) {
+        return { mode: 'taxonKey', key: cached.usageKey, src: 'local-cache' }
+      }
     } catch {
       /* 无缓存 */
     }
@@ -135,13 +151,50 @@ async function resolveUsageKey(sp) {
     cacheFile: `match/${slug(sp.nameSci)}.json`,
     force: !!args.refresh,
   })
-  return m && m.matchType !== 'NONE' ? (m.usageKey ?? null) : null
+  const ok =
+    m &&
+    (m.matchType === 'EXACT' || m.matchType === 'FUZZY') &&
+    m.rank === 'SPECIES' &&
+    Number(m.usageKey) > 1 &&
+    Number(m.confidence ?? 0) >= 90 &&
+    // 必须落在动物界：`Astur cooperii` 曾 FUZZY 命中植物（kingdom=Plantae/class=Magnoliopsida，置信 84）
+    m.kingdom === 'Animalia'
+  if (ok) {
+    const key = m.status === 'SYNONYM' ? (m.acceptedUsageKey ?? m.usageKey) : m.usageKey
+    return { mode: 'taxonKey', key, src: 'match' }
+  }
+  if (!sp.nameSci) return null
+  return {
+    mode: 'verbatim',
+    name: sp.nameSci,
+    rejected: { matchType: m?.matchType ?? '(无响应)', rank: m?.rank ?? '-', usageKey: m?.usageKey ?? '-' },
+  }
+}
+
+/** P0-0 不变量：同国内不得有两个物种的省份向量完全相同（合计 > 1,000）——那是"同一个 fallback key"的指纹 */
+function findDuplicateVectors(bySpecies) {
+  const seen = new Map()
+  const dup = []
+  for (const [spId, byCc] of Object.entries(bySpecies)) {
+    for (const [cc, cells] of Object.entries(byCc)) {
+      const codes = Object.keys(cells)
+      const sum = Object.values(cells).reduce((a, b) => a + b, 0)
+      if (codes.length < 2 || sum <= 1000) continue
+      const key = `${cc}|${codes.sort().map((k) => `${k}:${cells[k]}`).join(',')}`
+      if (seen.has(key)) dup.push(`${cc}: ${seen.get(key)} ↔ ${spId}（省份向量完全相同，合计 ${sum.toLocaleString()}）`)
+      else seen.set(key, spId)
+    }
+  }
+  return dup
 }
 
 const byCountry = {}
 const bySpecies = {}
 const unmatched = new Map()
 const failed = []
+/** P0-0 观测：走了哪条计数路径 / 被降级（verbatim）的物种清单 */
+const modeStats = { taxonKey: 0, verbatim: 0, skipped: 0 }
+const fallbacks = new Map()
 let done = 0
 
 const tasks = COUNTRIES.flatMap((cc) => speciesForCountry(cc).map((sp) => ({ cc, sp })))
@@ -153,13 +206,24 @@ const results = await mapPool(tasks, CONCURRENCY, async ({ cc, sp }) => {
     if (MOCK) {
       payload = await readJson(path.join(FIX, `gbif-province/${cc}/${sp.id}.json`)).catch(() => ({}))
     } else {
-      const key = await resolveUsageKey(sp)
-      if (!key) return null
+      const t = await resolveTaxon(sp)
+      if (!t) {
+        modeStats.skipped++
+        return null
+      }
+      modeStats[t.mode]++
+      if (t.mode === 'verbatim' && !fallbacks.has(sp.id)) {
+        fallbacks.set(sp.id, { name: sp.nameSci, ...t.rejected })
+      }
       const url =
-        `${GBIF}/occurrence/search?taxonKey=${key}&country=${cc}` +
-        `&facet=stateProvince&facetLimit=200&limit=0&occurrenceStatus=PRESENT`
+        t.mode === 'taxonKey'
+          ? `${GBIF}/occurrence/search?taxonKey=${t.key}&country=${cc}` +
+            `&facet=stateProvince&facetLimit=200&limit=0&occurrenceStatus=PRESENT`
+          : `${GBIF}/occurrence/search?verbatimScientificName=${encodeURIComponent(t.name)}&country=${cc}` +
+            `&facet=stateProvince&facetLimit=200&limit=0&occurrenceStatus=PRESENT`
       payload = await client.getJson(url, {
-        cacheFile: `${cc}/${sp.id}.json`,
+        // P0-0：两种模式的缓存键必须分开，否则 verbatim 会命中旧 taxonKey 的坏响应
+        cacheFile: t.mode === 'taxonKey' ? `${cc}/${sp.id}.json` : `${cc}/${sp.id}.verbatim.json`,
         force: !!args.refresh,
         timeout: 90_000,
       })
@@ -224,11 +288,23 @@ if (byCountry.CN) {
   byCountry.CN = Object.fromEntries(CN_PROVINCES.map((p) => [p.code, p.zh]))
 }
 
+/** P0-0 不变量（2026-10-23）：同国出现"省份向量完全相同"的物种 = 解析缺陷指纹 → 宁可不出产物，也不出错数字 */
+const dupVectors = findDuplicateVectors(bySpecies)
+if (dupVectors.length) {
+  console.error(`\n✗ P0-0 不变量失败：发现 ${dupVectors.length} 组"省份向量完全相同"的物种（同一个 fallback key 的指纹）`)
+  for (const d of dupVectors.slice(0, 20)) console.error(`  - ${d}`)
+  console.error('  排查：resolveTaxon() 的 rank/matchType 校验是否失效（见 docs/075 §5）')
+  process.exit(1)
+}
+
 const out = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
   method:
     'GBIF facet=stateProvince；自由文本经 ISO 3166-2 名称归一化映射到 code；count=GBIF 该国该省记录数。' +
+    'P0-0（2026-10-23）：物种解析只在 matchType=EXACT/FUZZY 且 rank=SPECIES 且 confidence>=90 时用 taxonKey；' +
+    'AviList 新拆分/新组合的学名（GBIF 骨架上还没有）改用 verbatimScientificName 按学名计数（此前会落到根节点 usageKey=1，' +
+    '把"该国全部类群"当成该物种记录数，见 docs/075 §5）。' +
     'CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）由 distribution.json 国家层存在性并入（count=1），显示名按铁律 6 标注',
   sources: [GBIF_SOURCE, SUBDIVISION_SOURCE],
   countries: COUNTRIES,
@@ -254,3 +330,14 @@ if (unmatched.size) {
   for (const [k, n] of top) console.log(`  - ${k.replace('\t', ' / ')} (${n})`)
 }
 if (failed.length) console.error(`失败 ${failed.length} 条（可重跑续传）：\n  - ${failed.slice(0, 10).join('\n  - ')}`)
+console.log(
+  `计数路径：taxonKey ${modeStats.taxonKey} · verbatim（按学名兜底）${modeStats.verbatim} · 跳过 ${modeStats.skipped}` +
+    (fallbacks.size ? ` · 兜底物种 ${fallbacks.size}` : ''),
+)
+if (fallbacks.size) {
+  console.log('  verbatim 兜底物种（GBIF 骨架无该学名，多为 AviList 新拆分/新组合）：')
+  for (const [id, f] of [...fallbacks.entries()].slice(0, 80)) {
+    console.log(`  - ${f.name} (${id}) ← match=${f.matchType}/rank=${f.rank}/usageKey=${f.usageKey}`)
+  }
+  if (fallbacks.size > 80) console.log(`  … 其余 ${fallbacks.size - 80} 个见产物 method 说明`)
+}

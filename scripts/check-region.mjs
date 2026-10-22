@@ -168,9 +168,60 @@ function checkProvinces(name, data) {
       }
     }
   }
+  // P0-0（2026-10-23，docs/075 §5）：两条不变量，防止「GBIF 学名解析降级」类错误再次静默上线。
+  // 旧实现只判 matchType !== 'NONE'，把 HIGHERRANK 的属/根节点当物种 → 记录数变成「该国全部类群」
+  // （实测 anarhynchus-dealbatus 的 CN-11 = 809,195 = 北京全部类群；真值 486）。
+  const vectorSeen = new Map()
+  const ccTotals = new Map()
+  const codeTotals = new Map()
+  const ccMax = new Map()
+  const codeMax = new Map()
+  for (const [spId, byCc] of Object.entries(data.bySpecies || {})) {
+    for (const [cc, counts] of Object.entries(byCc || {})) {
+      const codes = Object.keys(counts || {})
+      const sum = codes.reduce((a, c) => a + counts[c], 0)
+      // ① 同国内「省份向量完全相同」= 同一个 fallback key 的指纹（小样本会天然重合，故只查合计 > 1,000 且 ≥2 省）
+      if (codes.length >= 2 && sum > 1000) {
+        const key = `${cc}|${[...codes].sort().map((c) => `${c}:${counts[c]}`).join(',')}`
+        if (vectorSeen.has(key)) {
+          errors.push(
+            `${name}: 省份向量完全相同（P0-0 指纹）→ ${cc}: ${vectorSeen.get(key)} ↔ ${spId}（合计 ${sum}）`,
+          )
+        } else {
+          vectorSeen.set(key, spId)
+        }
+      }
+      ccTotals.set(cc, (ccTotals.get(cc) || 0) + sum)
+      if (sum > (ccMax.get(cc) || 0)) ccMax.set(cc, sum)
+      for (const c of codes) {
+        const k = `${cc}|${c}`
+        codeTotals.set(k, (codeTotals.get(k) || 0) + counts[c])
+        if (counts[c] > (codeMax.get(k) || 0)) codeMax.set(k, counts[c])
+      }
+    }
+  }
+  // ② 任一地区（国家或省）里，单个物种不得同时满足「记录数 ≥ 100,000」且「份额 ≥ 20%」。
+  //    下限取 10 万：解析降级拿到的是"整个地区"的量级（最小也 ≥ 86 万），而小地区（如 ES-ML 梅利利亚
+  //    的奥氏鸥 67%、ES-CE 休达的欧洲丝雀 21%）是真实的小样本集中，不能误判 → 这类只打印提示、不判错。
+  const dominanceNote = []
+  for (const [cc, total] of ccTotals) {
+    const mx = ccMax.get(cc) || 0
+    if (total < 10000 || mx / total < 0.2) continue
+    if (mx >= 100000) errors.push(`${name}: ${cc} 出现异常主导物种（${mx} / ${total} = ${((mx / total) * 100).toFixed(1)}% ≥ 20%）`)
+    else dominanceNote.push(`${cc} ${((mx / total) * 100).toFixed(1)}%（${mx}，样本小，人工确认即可）`)
+  }
+  for (const [k, total] of codeTotals) {
+    const mx = codeMax.get(k) || 0
+    if (total < 10000 || mx / total < 0.2) continue
+    if (mx >= 100000) errors.push(`${name}: ${k} 出现异常主导物种（${mx} / ${total} = ${((mx / total) * 100).toFixed(1)}% ≥ 20%）`)
+    else dominanceNote.push(`${k} ${((mx / total) * 100).toFixed(1)}%（${mx}，样本小，人工确认即可）`)
+  }
+  if (dominanceNote.length) {
+    console.log(`  · ${name} 小样本主导（不判错，人工确认）：${dominanceNote.slice(0, 8).join(' · ')}${dominanceNote.length > 8 ? ` …共 ${dominanceNote.length} 处` : ''}`)
+  }
+
   // 021 M3 §2.4：CN 省级清单硬校验（34 官方区划 + 港澳台标注名，铁律 6）
-  if (data.byCountry?.CN) {
-    const cnMap = data.byCountry.CN
+  if (data.byCountry?.CN) {    const cnMap = data.byCountry.CN
     check(
       Object.keys(cnMap).length === CN_PROVINCES.length,
       `${name}: CN 省级清单必须完整等于 ${CN_PROVINCES.length} 个官方区划，实际 ${Object.keys(cnMap).length}`,

@@ -59,9 +59,9 @@ test.describe('核心答题链路', () => {
     await page.keyboard.press('Escape')
     await expect(posterDialog).toBeHidden()
 
-    // 再来一轮：跳过介绍页直接进入答题（沿用上一轮题量=截断后的 2 题）
+    // 再来一轮：跳过介绍页直接进入答题（072-a a-fix-2：短轮不再被 nextRound 继承 → 恢复标准 10 题）
     await page.getByRole('button', { name: '再来一轮' }).click()
-    await expect(page.getByText('第 1 / 2 题')).toBeVisible()
+    await expect(page.getByText('第 1 / 10 题')).toBeVisible()
 
     // 档案：一轮已落库（退出时截断为 2 题）
     await page.goto('/profile')
