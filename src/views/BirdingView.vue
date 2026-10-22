@@ -31,6 +31,7 @@ import {
   speciesInProvince,
   type ProvinceData,
 } from '@/core/provinces'
+import { findAnomalyIds } from '@/core/regionAnomaly'
 import {
   ebirdHotspotUrl,
   hotspotsInProvince,
@@ -349,8 +350,15 @@ const recordCounts = computed(() => {
 /** 某物种在当前选择下的记录数（0 = 无记录） */
 const recordCountOf = (id: string | null | undefined) => (id ? (recordCounts.value.get(id) ?? 0) : 0)
 
+/**
+ * 074 方案 B：把 Top5 里"记录数极高但明显不像本地常见鸟"的物种挑出来，
+ * 挪到顶部「异常数据」折叠栏。**不改任何数字**，只是分组（见 core/regionAnomaly.ts）。
+ * 省与国家的分母不同，所以上海与全国的异常各自独立。
+ */
+const anomalyIds = computed(() => findAnomalyIds(recordCounts.value))
+
 /** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
-const gridItems = computed<GridItem[]>(() => {
+const sortedGridItems = computed<GridItem[]>(() => {
   const ps = provinceSet.value
   const base = ps ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId)) : countryGridItems.value
   if (speciesSort.value !== 'records') return base
@@ -360,6 +368,12 @@ const gridItems = computed<GridItem[]>(() => {
       recordCountOf(b.bankId) - recordCountOf(a.bankId) || collator.value.compare(a.name, b.name),
   )
 })
+/** 顶部「异常数据」栏（默认折叠）：命中异常规则的物种 */
+const anomalyItems = computed(() =>
+  sortedGridItems.value.filter((it) => it.bankId && anomalyIds.value.has(it.bankId)),
+)
+/** 主列表：剔除异常项，其余照旧 */
+const gridItems = computed(() => sortedGridItems.value.filter((it) => !(it.bankId && anomalyIds.value.has(it.bankId))))
 /** 该国鸟种总数（「该地鸟种 431（全国 1507 种）」里的全国数；与列表同口径） */
 const countrySpeciesCount = computed(() => countryGridItems.value.length)
 const visibleItems = computed(() => gridItems.value.slice(0, visibleCount.value))
@@ -803,6 +817,34 @@ function pickProvince(code: string) {
                   : t('region.speciesTitle', { country: countryName(selected) })
               }}
             </p>
+            <!-- 074 方案 B：异常数据折叠栏（默认折叠；数字不改，只挪位置） -->
+            <details v-if="anomalyItems.length" class="anomaly-box">
+              <summary>{{ t('region.anomalySummary', { n: anomalyItems.length }) }}</summary>
+              <p class="anomaly-title">{{ t('region.anomalyTitle') }}</p>
+              <p class="anomaly-note">{{ t('region.anomalyNote') }}</p>
+              <ul class="species-grid">
+                <li v-for="gi in anomalyItems" :key="`anomaly-${gi.slug}`">
+                  <RouterLink class="species-card" :to="`/species/${gi.slug}`">
+                    <img
+                      v-if="gi.thumb"
+                      class="thumb"
+                      :src="gi.thumb"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <span class="sp-text">
+                      <span class="sp-name">{{ gi.name }}</span>
+                      <span class="sp-sci">{{ gi.nameSci }}</span>
+                      <span v-if="recordCountOf(gi.bankId) > 0" class="sp-count muted">
+                        {{ t('region.provinceRecords', { n: recordCountOf(gi.bankId) }) }}
+                      </span>
+                    </span>
+                  </RouterLink>
+                </li>
+              </ul>
+            </details>
+
             <div class="sort" role="group" :aria-label="t('region.sortSpeciesLabel')">
               <button
                 type="button"
@@ -949,6 +991,30 @@ function pickProvince(code: string) {
 }
 .list-head .col-title {
   margin: 12px 0 6px;
+}
+.anomaly-box {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: #fbfaf6;
+}
+.anomaly-box > summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #8a6d00;
+}
+.anomaly-title {
+  margin: 8px 0 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.anomaly-note {
+  margin: 0 0 8px;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-light);
 }
 .sort {
   display: inline-flex;

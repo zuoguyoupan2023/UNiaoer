@@ -356,6 +356,10 @@ export const messages = {
     sortSpeciesLabel: '物种排序方式',
     speciesSortName: '名称',
     speciesSortRecords: '记录数',
+    // 074 方案 B：异常数据折叠栏（默认折叠）
+    anomalySummary: '异常数据（{n}）',
+    anomalyTitle: '异常数据',
+    anomalyNote: '按 GBIF 的记录，这几种鸟在本地区的记录数远高于其他鸟种；但结合它们的实际分布看，这个数字看起来有些异常，很可能是单一数据集或调查项目造成的统计偏差。开发者不是鸟类学专业人士，无法自行判断，因此暂时把它们作为「异常数据」单独列出，不影响其他鸟种的排序与数字。求专业人士指教俺这个菜鸟 - -!（小红书：左顾右盼 / zuoguyoupan2026）',
     sortName: '按名称',
     sortCount: '按鸟种数',
     count: '{n} 种',
