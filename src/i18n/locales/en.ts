@@ -471,6 +471,8 @@ const en: typeof zhMessages = {
     regionStatsEmpty: 'No rounds with a region attribute yet (needs the new frontend + post-deploy data).',
     regionStatsCell: '{mean}% avg · {n} rounds',
     regionAll: 'Global / unspecified',
+    regionStatsCountryHint: 'Country comparison (includes country-only rounds); provinces are ranked within their own country only.',
+    regionStatsUnspecified: 'Global / unspecified: {mean}% avg · {n} rounds (not compared)',
     title: 'Report admin',
     lead: 'Enter the admin key to review and handle user reports. The key is kept only in this tab.',
     keyPlaceholder: 'Admin key',

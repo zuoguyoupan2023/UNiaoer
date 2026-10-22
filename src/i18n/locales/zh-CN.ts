@@ -553,6 +553,8 @@ export const messages = {
     regionStatsEmpty: '还没有带地区属性的轮次（需要新版前端 + 部署后产生的数据）。',
     regionStatsCell: '平均 {mean}% · {n} 轮',
     regionAll: '全球 / 未指定',
+    regionStatsCountryHint: '国家级比较（含只选到国家的轮次）；省级排行只在同一国家内部，不与其它国家混排。',
+    regionStatsUnspecified: '全球 / 未指定：平均 {mean}% · {n} 轮（不参与比较）',
     title: '报错管理',
     lead: '输入管理密钥以查看与处理用户反馈。密钥仅保存在本标签页，关闭即失效。',
     keyPlaceholder: '管理密钥',

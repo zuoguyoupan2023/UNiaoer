@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { CheckCheck, RefreshCw, ShieldCheck, ShieldOff, Undo2, X } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName } from '@/core/bank'
 import { fetchRegionAccuracy, type RegionAccuracy } from '@/core/adminRegionStats'
+import { groupRegions } from '@/core/regionGroup'
 import { regionLabel } from '@/core/region'
 import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
 import {
@@ -184,7 +185,9 @@ async function ensureProvinces() {
   if (provinceData.value) return
   provinceData.value = await loadProvinces().catch(() => null)
 }
-/** 地区码 → 可读名（CN-11 → 中国 · 北京；ALL → 全球） */
+/** 073：扁平行 → 国家榜 + 同国省级榜（港澳台归中国、做省级；不做最小轮数剔除） */
+const groupedRegionStats = computed(() => (regionStats.value ? groupRegions(regionStats.value.byRegion) : null))
+/** 地区码 → 可读名（CN-11 → 中国 · 北京；HK → 中国香港；ALL → 全球） */
 function regionLabelOf(code: string): string {
   if (!code || code === 'ALL') return t('admin.regionAll')
   const [cc = '', ...rest] = code.split('-')
@@ -345,15 +348,33 @@ const count = computed(() => reports.value.length)
             {{ t('admin.regionStatsMeta', { since: regionStats.since, total: regionStats.total }) }}
             · {{ t('admin.regionStatsMissing', { n: regionStats.missingRegion }) }}
           </p>
-          <p v-if="!regionStats.byRegion.length" class="muted small">
+          <p v-if="!groupedRegionStats?.countries.length" class="muted small">
             {{ t('admin.regionStatsEmpty') }}
           </p>
-          <ul v-else class="ranks">
-            <li v-for="r in regionStats.byRegion" :key="r.region">
-              <span class="rank-name">{{ regionLabelOf(r.region) }}</span>
-              <span class="rank-n">{{ t('admin.regionStatsCell', { mean: r.mean, n: r.n }) }}</span>
-            </li>
-          </ul>
+          <template v-else>
+            <p class="muted small">{{ t('admin.regionStatsCountryHint') }}</p>
+            <ul class="ranks">
+              <li v-for="c in groupedRegionStats.countries" :key="c.code" class="country-row">
+                <div class="country-head">
+                  <span class="rank-name">{{ regionLabelOf(c.code) }}</span>
+                  <span class="rank-n">{{ t('admin.regionStatsCell', { mean: c.mean, n: c.n }) }}</span>
+                </div>
+                <!-- 省级排行只在同一国家内部，不与其它国家混排 -->
+                <ul v-if="c.provinces.length" class="ranks sub-ranks">
+                  <li v-for="p in c.provinces" :key="p.code">
+                    <span class="rank-name sub">{{ regionLabelOf(p.code) }}</span>
+                    <span class="rank-n">{{ t('admin.regionStatsCell', { mean: p.mean, n: p.n }) }}</span>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <p v-if="groupedRegionStats.unspecified" class="muted small">
+              {{ t('admin.regionStatsUnspecified', {
+                mean: groupedRegionStats.unspecified.mean,
+                n: groupedRegionStats.unspecified.n,
+              }) }}
+            </p>
+          </template>
         </template>
       </details>
 
@@ -451,6 +472,62 @@ const count = computed(() => reports.value.length)
 </template>
 
 <style scoped>
+/* 073：地区榜基础排版（本页此前没有 .ranks 样式，StatsView 里那份是 scoped 的） */
+.ranks {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+}
+.ranks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+}
+.ranks .rank-name {
+  flex: 1;
+  min-width: 0;
+}
+.ranks .rank-n {
+  color: var(--text-light);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* 073：国家榜 + 同国省级（缩进 + 弱色，避免和国家级混在一起读）。
+   注意用 `.ranks .country-row`（0,2,0）压过 `.ranks li`（0,1,1）的 align-items:center，
+   否则国家行会收缩成内容宽并居中。 */
+.ranks .country-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+.country-row + .country-row {
+  margin-top: 6px;
+}
+.country-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  text-align: left;
+}
+.country-head .rank-name {
+  font-weight: 600;
+}
+.sub-ranks {
+  margin: 2px 0 0 14px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+.sub-ranks .rank-name.sub {
+  font-size: 0.85em;
+  color: var(--text-light);
+}
+
 .admin {
   text-align: center;
 }
