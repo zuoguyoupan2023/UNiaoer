@@ -194,6 +194,71 @@
           "reportIds": []
         }
       ]
+    },
+    "anthus-japonicus": {
+      "_reason": "2026-10-22 用户反馈图 3 不合适。取证：image-3（obs 101151360）画面 1024×684，鸟只占几十像素、缩在水泥地中间，完全无法辨认；顺带复核发现 image-1（403×322）严重模糊且是**题目首图**、image-2（517×322）长边不足 1200 偏糊——三张均不达 `000-SOP` §3 的「长边 ≥1200px」标准。处置：停用 1/2/3，保留 4（1024）/5（ND，飞行图），新增 3 张（obs 142270736 / 409498438 / 35359139，均 ≥1260px）；新图使用从未占用的 key image-6/7/8（旧对象保留在 R2 备查）；首图由 image-1 变为 image-6 → 需同步 D1 单行（S8）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/444900736/large.jpeg",
+        "https://www.inaturalist.org/observations/248937056",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/14911674/large.jpeg",
+        "https://www.inaturalist.org/observations/10680482",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/168885267/large.jpeg",
+        "https://www.inaturalist.org/observations/101151360"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/243885902/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) saintsfc, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/142270736",
+          "sourceId": "243885902"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/752941550/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Alexander Naumov, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/409498438",
+          "sourceId": "752941550"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/55748784/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) alexdersu, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/35359139",
+          "sourceId": "55748784"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/anthus-japonicus/image-4.full.webp",
+        "https://bird.wewalk.world/media/anthus-japonicus/image-5.jpg"
+      ],
+      "rejected": [
+        {
+          "slot": "image-1",
+          "imageUrl": "https://bird.wewalk.world/media/anthus-japonicus/image-1.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/248937056",
+          "reason": "母版只有 403×322，严重模糊/马赛克，且是题目首图",
+          "reportIds": []
+        },
+        {
+          "slot": "image-2",
+          "imageUrl": "https://bird.wewalk.world/media/anthus-japonicus/image-2.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/10680482",
+          "reason": "长边 517px，低于 1200px 门槛，主体偏糊",
+          "reportIds": []
+        },
+        {
+          "slot": "image-3",
+          "imageUrl": "https://bird.wewalk.world/media/anthus-japonicus/image-3.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/101151360",
+          "reason": "鸟在画面中只有几十像素（水泥地远景），无法辨认",
+          "reportIds": []
+        }
+      ]
     }
   }
 }
