@@ -355,7 +355,7 @@ export const messages = {
     // 072-j：物种网格排序（名称序 vs 该地区常见度）
     sortSpeciesLabel: '物种排序方式',
     speciesSortName: '名称',
-    speciesSortCommon: '常见度',
+    speciesSortRecords: '记录数',
     sortName: '按名称',
     sortCount: '按鸟种数',
     count: '{n} 种',

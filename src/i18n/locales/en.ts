@@ -361,7 +361,7 @@ const en: typeof zhMessages = {
     sortLabel: 'Sort by',
     sortSpeciesLabel: 'Species sort order',
     speciesSortName: 'Name',
-    speciesSortCommon: 'Commonness',
+    speciesSortRecords: 'Records',
     sortName: 'Name',
     sortCount: 'Species',
     count: '{n} spp.',

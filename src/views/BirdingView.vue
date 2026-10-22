@@ -16,7 +16,6 @@ import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
-import { regionTierMap } from '@/core/provinceCommonness'
 import {
   buildCountryIndex,
   countriesInContinent,
@@ -28,7 +27,6 @@ import {
 } from '@/core/region'
 import {
   loadProvinces,
-  provinceCount,
   provinceStats,
   speciesInProvince,
   type ProvinceData,
@@ -314,34 +312,52 @@ const countryGridItems = computed<GridItem[]>(() => {
     }))
 })
 /**
- * 072-j（2026-10-22 用户要求）：物种网格的排序。
- * 现存两种都是"名称序"（zh 拼音 / en 首字母）；预学习场景需要**按该地区常见度**排。
- * 数据现成：`province-commonness` 的省级/国家级档位（与出题同一份），无需新管线。
+ * 072-j / 074（2026-10-22→23 用户纠正）：物种网格排序。
+ *
+ * 第一版做的是「按常见度（`province-commonness` 的档位）」——**这个思路是错的**：
+ * 档位是"份额分位五等分"（上海每档约 100 种），档位内无法再排序，前端只能退化成
+ * "全局 commonness + 名称"，于是出现「暗绿绣眼鸟（2752 条）排在白头鹎（14965 条）前面」。
+ * 档位适合**出题分档抽样**，不适合**展示排序**。
+ *
+ * 现在改为按**记录数**（`region-provinces.json` 的 `bySpecies[id][国家][省]`）降序：
+ * 选省 → 该省记录数；只选国家 → 该国各省记录数之和。最多人记录过的鸟排最前。
  */
-const speciesSort = ref<'name' | 'common'>('name')
-/** 该地区档位表（id → 档位，1 最常见）；null = 无数据 → 回退全局 commonness */
-const regionTiers = ref<Map<string, number> | null>(null)
-async function loadRegionTiers() {
-  const key = province.value || selected.value
-  regionTiers.value = (await regionTierMap(key).catch(() => null))?.tiers ?? null
-}
-watch([selected, province], () => void loadRegionTiers(), { immediate: true })
+const speciesSort = ref<'name' | 'records'>('name')
+
+/** 当前选择下「物种 id → 记录数」（一次遍历预计算，避免排序时反复求和） */
+const recordCounts = computed(() => {
+  const data = provinceData.value
+  const cc = selected.value
+  const prov = province.value
+  const m = new Map<string, number>()
+  if (!data?.bySpecies || !cc) return m
+  for (const [id, byCc] of Object.entries(data.bySpecies)) {
+    const per = byCc?.[cc]
+    if (!per) continue
+    if (prov) {
+      const n = per[prov]
+      if (n) m.set(id, n)
+    } else {
+      let sum = 0
+      for (const n of Object.values(per)) sum += n
+      if (sum) m.set(id, sum)
+    }
+  }
+  return m
+})
+
+/** 某物种在当前选择下的记录数（0 = 无记录） */
+const recordCountOf = (id: string | null | undefined) => (id ? (recordCounts.value.get(id) ?? 0) : 0)
 
 /** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
 const gridItems = computed<GridItem[]>(() => {
   const ps = provinceSet.value
   const base = ps ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId)) : countryGridItems.value
-  if (speciesSort.value !== 'common') return base
-  const tiers = regionTiers.value
-  const rank = (it: GridItem) => {
-    const local = it.bankId ? tiers?.get(it.bankId) : undefined
-    if (local != null) return local
-    const global = it.bankId ? (speciesById(it.bankId)?.commonness ?? 99) : 99
-    return global
-  }
-  // 档位升序（1 最常见）→ 全局常见度 → 名称兜底，保证稳定
+  if (speciesSort.value !== 'records') return base
+  // 记录数降序 → 名称兜底（保证稳定）；无记录（0）自然排在最后
   return [...base].sort(
-    (a, b) => rank(a) - rank(b) || collator.value.compare(a.name, b.name),
+    (a, b) =>
+      recordCountOf(b.bankId) - recordCountOf(a.bankId) || collator.value.compare(a.name, b.name),
   )
 })
 /** 该国鸟种总数（「该地鸟种 431（全国 1507 种）」里的全国数；与列表同口径） */
@@ -351,8 +367,6 @@ watch([selected, province], () => {
   visibleCount.value = 200
 })
 const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
-const countInProvince = (id: string) =>
-  province.value ? provinceCount(provinceData.value, id, selected.value, province.value) : 0
 const provinceSources = computed(() =>
   (provinceData.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
@@ -802,11 +816,11 @@ function pickProvince(code: string) {
               <button
                 type="button"
                 class="sort-btn"
-                :class="{ active: speciesSort === 'common' }"
-                :aria-pressed="speciesSort === 'common'"
-                @click="speciesSort = 'common'"
+                :class="{ active: speciesSort === 'records' }"
+                :aria-pressed="speciesSort === 'records'"
+                @click="speciesSort = 'records'"
               >
-                {{ t('region.speciesSortCommon') }}
+                {{ t('region.speciesSortRecords') }}
               </button>
             </div>
             <ul class="species-grid">
@@ -823,8 +837,8 @@ function pickProvince(code: string) {
                   <span class="sp-text">
                     <span class="sp-name">{{ gi.name }}</span>
                     <span class="sp-sci">{{ gi.nameSci }}</span>
-                    <span v-if="province && gi.bankId" class="sp-count muted">
-                      {{ t('region.provinceRecords', { n: countInProvince(gi.bankId) }) }}
+                    <span v-if="gi.bankId && recordCountOf(gi.bankId) > 0" class="sp-count muted">
+                      {{ t('region.provinceRecords', { n: recordCountOf(gi.bankId) }) }}
                     </span>
                     <span v-else-if="!gi.playable" class="sp-badge">{{ t('region.notInBank') }}</span>
                   </span>
