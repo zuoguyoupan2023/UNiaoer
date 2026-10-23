@@ -9,7 +9,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import SpeciesProvinces from '@/components/SpeciesProvinces.vue'
 import { _resetProvincesCache } from '@/core/provinces'
 
-const provinces = {
+/** P1-6：索引（不含 bySpecies）+ 按物种前缀分桶（SpeciesProvinces 读这两份） */
+const index = {
   schemaVersion: 1,
   generatedAt: 'test',
   method: 'test fixture',
@@ -19,19 +20,40 @@ const provinces = {
     CN: { 'CN-11': '北京市', 'CN-31': '上海市', 'CN-71': '中国台湾', 'CN-91': '中国香港' },
     US: { 'US-CA': 'California' },
   },
-  bySpecies: {
-    'sp-1': {
-      CN: { 'CN-11': 18582, 'CN-31': 14965, 'CN-71': 3070, 'CN-91': 5585 },
-      US: { 'US-CA': 120 },
-    },
-    'sp-empty': {},
+  counts: { countries: 2, species: 1, cells: 5 },
+  sharding: { dir: 'region-provinces', files: ['CN.json', 'US.json'], bytes: {}, maxBytes: 0, totalBytes: 0 },
+  speciesSharding: {
+    dir: 'region-species',
+    bucketChars: 2,
+    buckets: ['sp'],
+    files: ['sp.json'],
+    bytes: {},
+    maxBytes: 0,
+    totalBytes: 0,
   },
 }
 
-function stubFetch() {
+/** `data/region-species/<桶>.json` */
+function bucket(bySpecies: Record<string, Record<string, Record<string, number>>>) {
+  return { schemaVersion: 1, bucket: 'sp', generatedAt: 'test', bySpecies }
+}
+
+type BySpecies = Record<string, Record<string, Record<string, number>>>
+
+function stubFetch(bySpecies: BySpecies = {
+  'sp-1': {
+    CN: { 'CN-11': 18582, 'CN-31': 14965, 'CN-71': 3070, 'CN-91': 5585 },
+    US: { 'US-CA': 120 },
+  },
+  'sp-empty': {},
+}) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => new Response(JSON.stringify(provinces), { status: 200 })),
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const body = url.includes('region-species/') ? bucket(bySpecies) : index
+      return new Response(JSON.stringify(body), { status: 200 })
+    }),
   )
 }
 
@@ -83,14 +105,10 @@ describe('省份热力条（036）', () => {
   })
 
   it('超过 8 条时显示「展开全部」，点击后全部展示', async () => {
-    const many = {
-      ...provinces,
-      bySpecies: {
-        'sp-many': { CN: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`CN-${i + 10}`, 100 - i])) },
-      },
-    }
     _resetProvincesCache()
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(many), { status: 200 })))
+    stubFetch({
+      'sp-many': { CN: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`CN-${i + 10}`, 100 - i])) },
+    })
     const w = mount(SpeciesProvinces, { props: { speciesId: 'sp-many' } })
     await flushPromises()
     expect(w.findAll('.bar-row')).toHaveLength(8)

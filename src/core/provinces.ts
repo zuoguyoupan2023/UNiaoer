@@ -1,5 +1,5 @@
 /**
- * 省级层（021 M2/M3）——**P1-6 分片版**（2026-10-23）。
+ * 省级层（021 M2/M3）——**P1-6 分片版 + P1-4B 全量国**（2026-10-23）。
  *
  * 为什么分片：单文件 `region-provinces.json` 在 29 国时已 3.0MB，且被 `/birding`（按国看鸟种）
  * 与**每个物种页**（省份热力条）一起加载；扩到欧洲+美洲会到 ~6MB（docs/074 P1-6）。
@@ -8,7 +8,8 @@
  *   `data/region-provinces/index.json`      —— 元数据 + 国家/省名 + 分片清单（不含 bySpecies）
  *   `data/region-provinces/<CC>.json`       —— `/birding` 选中国家时读 1 个：`{ bySpecies: { id: { 省码: n } } }`
  *   `data/region-species/<前两位>.json`      —— `/species/:id` 只读 1 个：`{ bySpecies: { id: { 国家: { 省码: n } } } }`
- *   `data/region-provinces.json`            —— **旧单文件**，仅在索引/分片缺失时回退（发一个周期后删）
+ * （旧单文件 `data/region-provinces.json` 已于 2026-10-23 删除：扩到 198 国后它会有 ~14MB，
+ *  前端不再保留回退分支——索引/分片缺失时整层静默隐藏。）
  *
  * 数据由 GBIF stateProvince + ISO 3166-2 归一化构建（见 scripts/region/build-provinces.mjs）。
  * CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）按铁律 6 并入并标注
@@ -47,8 +48,27 @@ export interface ProvinceIndex {
   counts?: { countries: number; species: number; cells: number }
   /** 国家码 → { species, cells }（该分片的物种数/省格数） */
   countryCounts?: Record<string, { species: number; cells: number }>
+  /**
+   * 省级明细的**记录覆盖率**（P1-4B）：可映射到 ISO 省名的记录 / 该国全部 Aves 记录。
+   * <0.9 的国家前端必须标注「省级明细仅覆盖 X% 的记录」——不折叠地区，但也不假装完整
+   * （历史上 GBIF 的省名是自由文本：瑞典用历史地理省、肯尼亚用殖民时期大区）。
+   */
+  coverage?: { countries: number; byCountry: Record<string, CountryCoverage> }
   sharding?: ShardList
   speciesSharding?: ShardList & { bucketChars: number; buckets: string[] }
+}
+
+/** 单国覆盖率（`coverage.byCountry[cc]`） */
+export interface CountryCoverage {
+  allRecords: number
+  mappedRecords: number
+  unmatchedRecords: number
+  /** mappedRecords / allRecords（0–1） */
+  coverage: number
+  rawNames: number
+  mappedNames: number
+  species: number
+  cells: number
 }
 
 /** 按国分片：物种 id → { 省码: 记录数 } */
@@ -67,26 +87,18 @@ export interface SpeciesProvinceShard {
   bySpecies: Record<string, Record<string, Record<string, number>>>
 }
 
-/** 旧单文件形态（回退路径用） */
-interface LegacyProvinceData extends ProvinceIndex {
-  bySpecies: Record<string, Record<string, Record<string, number>>>
-}
-
 const DATA = `${import.meta.env.BASE_URL}data`
 const INDEX_URL = `${DATA}/region-provinces/index.json`
-const LEGACY_URL = `${DATA}/region-provinces.json`
 /** 与构建脚本的 BUCKET_CHARS 默认值一致（索引缺失时兜底） */
 const FALLBACK_BUCKET_CHARS = 2
 
 let indexCache: Promise<ProvinceIndex | null> | null = null
-let legacyCache: Promise<LegacyProvinceData | null> | null = null
 const countryCache = new Map<string, Promise<CountryProvinceShard | null>>()
 const speciesCache = new Map<string, Promise<SpeciesProvinceShard | null>>()
 
 /** 测试用：清空加载缓存（与其他 core 模块的 _reset 惯例一致） */
 export function _resetProvincesCache(): void {
   indexCache = null
-  legacyCache = null
   countryCache.clear()
   speciesCache.clear()
 }
@@ -96,20 +108,11 @@ const fetchJson = <T>(url: string): Promise<T | null> =>
     .then((r) => (r.ok ? (r.json() as Promise<T>) : null))
     .catch(() => null)
 
-/** 旧单文件（只在新索引缺失时读；读一次后缓存） */
-function loadLegacy(): Promise<LegacyProvinceData | null> {
-  legacyCache ??= fetchJson<LegacyProvinceData>(LEGACY_URL)
-  return legacyCache
-}
-
 /** 加载省级索引（元数据 + 国家/省名 + 分片清单）；失败返回 null，不阻塞页面 */
 export function loadProvincesIndex(): Promise<ProvinceIndex | null> {
-  indexCache ??= fetchJson<ProvinceIndex>(INDEX_URL).then((idx) => (idx ? idx : loadLegacy()))
+  indexCache ??= fetchJson<ProvinceIndex>(INDEX_URL)
   return indexCache
 }
-
-/** 兼容名（旧调用点：`loadProvinces()`）；语义已变为"加载索引" */
-export const loadProvinces = loadProvincesIndex
 
 /** 加载某国分片；无数据/失败 → null */
 export function loadCountryProvinces(cc: string): Promise<CountryProvinceShard | null> {
@@ -117,18 +120,9 @@ export function loadCountryProvinces(cc: string): Promise<CountryProvinceShard |
   if (!key) return Promise.resolve(null)
   let p = countryCache.get(key)
   if (!p) {
-    p = loadProvincesIndex().then(async (idx) => {
-      if (idx?.sharding) return fetchJson<CountryProvinceShard>(`${DATA}/${idx.sharding.dir}/${key}.json`)
-      // 回退：旧单文件 → 裁出该国的子树（结构与分片一致）
-      const legacy = await loadLegacy()
-      if (!legacy?.bySpecies) return null
-      const bySpecies: Record<string, Record<string, number>> = {}
-      for (const [spId, byCc] of Object.entries(legacy.bySpecies)) {
-        const cells = byCc?.[key]
-        if (cells && Object.keys(cells).length) bySpecies[spId] = cells
-      }
-      return Object.keys(bySpecies).length ? { schemaVersion: 1, cc: key, bySpecies } : null
-    })
+    p = loadProvincesIndex().then(async (idx) =>
+      idx?.sharding ? fetchJson<CountryProvinceShard>(`${DATA}/${idx.sharding.dir}/${key}.json`) : null,
+    )
     countryCache.set(key, p)
   }
   return p
@@ -141,17 +135,11 @@ export function loadSpeciesProvinces(speciesId: string): Promise<SpeciesProvince
   let p = speciesCache.get(id)
   if (!p) {
     p = loadProvincesIndex().then(async (idx) => {
-      if (idx?.speciesSharding) {
-        const chars = idx.speciesSharding.bucketChars || FALLBACK_BUCKET_CHARS
-        const bucket = id.slice(0, chars)
-        const shard = await fetchJson<SpeciesProvinceShard>(`${DATA}/${idx.speciesSharding.dir}/${bucket}.json`)
-        return shard ?? null
-      }
-      // 回退：旧单文件 → 只取该物种一层
-      const legacy = await loadLegacy()
-      const byCc = legacy?.bySpecies?.[id]
-      if (!byCc) return null
-      return { schemaVersion: 1, bucket: id.slice(0, FALLBACK_BUCKET_CHARS), bySpecies: { [id]: byCc } }
+      if (!idx?.speciesSharding) return null
+      const chars = idx.speciesSharding.bucketChars || FALLBACK_BUCKET_CHARS
+      const bucket = id.slice(0, chars)
+      const shard = await fetchJson<SpeciesProvinceShard>(`${DATA}/${idx.speciesSharding.dir}/${bucket}.json`)
+      return shard ?? null
     })
     speciesCache.set(id, p)
   }
@@ -159,6 +147,12 @@ export function loadSpeciesProvinces(speciesId: string): Promise<SpeciesProvince
 }
 
 /** 该国省级列表（按展示名排序）；无数据返回 []。en 优先取 byCountryAlt（如 CN 的港澳台标注名） */
+/** 该国的省级明细覆盖率（0–1）；无数据 → null（未知，别乱标） */
+export function provinceCoverage(index: ProvinceIndex | null, country: string): number | null {
+  const c = index?.coverage?.byCountry?.[country]?.coverage
+  return typeof c === 'number' ? c : null
+}
+
 export function provincesOf(
   data: ProvinceIndex | null,
   country: string,

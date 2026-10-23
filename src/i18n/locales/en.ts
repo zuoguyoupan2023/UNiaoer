@@ -374,6 +374,7 @@ const en: typeof zhMessages = {
     recordCount: 'GBIF {n} records',
     recordNote:
       'Record counts are GBIF public occurrence records: a country total includes records without a province, while a province total only counts records that map to an ISO subdivision name (the two layers are not additive). Record volume depends on dataset composition — do not compare regions by size.',
+    provinceCoverage: 'Subnational detail covers only {pct}% of GBIF records (unmapped province names are excluded; country totals are unaffected)',
     provinceSource: 'Subnational data source: {sources}',
     notInBank: 'No media yet',
     showMore: 'Show more',

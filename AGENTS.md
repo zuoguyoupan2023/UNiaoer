@@ -45,6 +45,9 @@
    - 当前只做**国家/地区文本**，不含地图/边界；未来若上地图，边界须按官方立场处理，**逐项复核后再合并**。
    - 港澳台**单独列出**，显示名必须是「中国香港／中国澳门／中国台湾」（英文 `Hong Kong, China / Macao, China / Taiwan, China`），见 `src/core/region.ts` 的 `REGION_LABEL_KEY` + i18n `region.regions.*`。
    - 南海诸岛、藏南及一切边界归属，按官方表述；不得把有争议地区作为独立国家呈现。
+   - **不因为数据缺少而折叠任何地区（2026-10-23 用户定）。** 布韦岛（BV）、赫德岛（HM）、皮特凯恩（PN）这类
+     属地只有几十条记录，也必须和中国、美国一样正常列出、正常显示「GBIF N 条」——**不设记录量门槛**；
+     地区条目数只由 GBIF `countrycode`（ISO 3166-1，249 个码，含属地）决定，只排除 `ZZ/XK/XZ`。
 
 7. **i18n 文案的 `{x}` 由 vue-i18n 插值，不是自定义占位符。**
    - `t(key)` **不带参**取值会把 `{name}` 替换成**空串**；"先取模板、再 `.replace('{x}', …)`" 的写法必然失效
@@ -94,9 +97,10 @@
 | 题库一致性校验（CI 已接入；`--no-net` 跳过抽查） | `npm run check:bank` |
 | 媒体完整性全量检查（`--fix` 从本地重传缺失文件） | `npm run check:media` |
 | 抓 ISO 3166-2 省级基准清单（021 M2，缓存到 data-cache；本机 jsDelivr 主站不通，脚本自动回退 fastly/gcore 入口） | `npm run region:subdiv` |
-| **省级层扩国前的覆盖率干跑**（只读；按记录加权算「GBIF 省名 → ISO 码」可映射比例，<90% 不该发布） | `npm run region:coverage -- --countries TH,MY,ID` |
-| 构建季节层 / 省级层（`-- --mock` 全离线；产 `public/data/*.json`） | `npm run region:build` / `npm run region:provinces` |
+| **省级层覆盖率干跑**（只读；按记录加权算「GBIF 省名 → ISO 码」可映射比例；<90% 的国家仍发布，但前端标注「仅覆盖 X%」） | `npm run region:coverage -- --countries TH,MY,ID`（`--json` 出全量报告） |
+| 构建季节层 / **省级层（194 国，按省×学名切法）** | `npm run region:build` / `npm run region:provinces`（旧切法 `region:provinces:legacy` 仅供交叉校验） |
 | **国家层记录数（249 个国家/地区码，零新下载）**（P0-5；产 `public/data/region-records/`） | `npm run region:records`（`-- --dry` 只看统计） |
+| **重建省级出题档位**（从省级分片算，无需 GBIF 下载；**分片只推 R2、不进 git**） | `npm run region:province-commonness -- --from-provinces` |
 | 构建观鸟点（XC 源；`-- --mock` 离线） | `npm run region:hotspots` |
 | 构建观鸟点（GBIF SQL 1° 源 + eBird 命名 + 网格×省补码；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names --cell-provinces <GBIF 下载 key，如 0017635-260928105237408>` |
 | 构建全球区系层（GBIF SQL 国家矩阵 → `species-distribution.json`；025 M1） | `npm run region:distribution`（`-- --mock --out …` 离线） |

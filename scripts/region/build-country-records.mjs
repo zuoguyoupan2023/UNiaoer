@@ -87,7 +87,22 @@ for (const sp of meta.species || []) {
   if (k && !bySci.has(k)) bySci.set(k, sp.id)
 }
 const knownIds = new Set((meta.species || []).map((sp) => sp.id))
-/** 旧分类组合名 → id（`Carduelis chloris` → `chloris-chloris` 之类；由 region:resolve-names 生成） */
+/** 旧分类组合名 → id（`Carduelis chloris` → `chloris-chloris` 之类）。两级来源：
+ *   ① `data/region-name-aliases.json`（**提交物**，`npm run region:name-aliases` 生成，可复查）
+ *   ② `data-cache/region/name-bridge.json`（本地缓存，旧的 resolve-names 产物；缺失不影响）
+ *  2026-10-23：加别名表后，矩阵里"未匹配"的只剩属/科/纲级行与 GBIF 独有分类。 */
+const aliases = new Map()
+let aliasEntries = 0
+try {
+  const a = await readJson(path.join(ROOT, 'data/region-name-aliases.json'))
+  for (const [name, id] of Object.entries(a.map || {})) {
+    if (!knownIds.has(id)) continue
+    aliases.set(normBinomial(name), id)
+    aliasEntries++
+  }
+} catch {
+  /* 无别名表：覆盖率略低，流程照常 */
+}
 const bridge = new Map()
 let bridgeEntries = 0
 try {
@@ -104,8 +119,18 @@ try {
 const byCountry = {} // cc → { speciesId: n }
 const rawTotals = {} // cc → 该行全部记录数（含未匹配到物种的行）
 const unmatchedNames = new Map() // 学名 → 记录数（未匹配）
-let viaBridge = 0
-let viaBridgeRecords = 0
+/** 别名表 / 桥接表补上的行数与记录数（旧组合名 → 权威层物种） */
+let aliasHits = 0
+let aliasRecords = 0
+/** 未匹配里属于**属/科/纲级行**（`Aves`、`Corvus Linnaeus, 1758`、`Laridae Vigors, 1825`）的记录数——
+ *  这些本来就**不该有物种级记录数**，是"对不上"的合理部分，报表里单独列出来 */
+let nonSpeciesRecords = 0
+
+/** 「属 种」形态（种加词必须全小写；属级行的第二词是作者名，首字母大写） */
+function isBinomial(name) {
+  const w = String(name || '').split(/\s+/)
+  return /^[A-Z][a-z]+$/.test(w[0] || '') && /^[a-z][a-z-]+$/.test(w[1] || '')
+}
 
 for (const r of rows) {
   const n = Number(r?.n) || 0
@@ -118,14 +143,15 @@ for (const r of rows) {
   if (!key) continue
   let id = bySci.get(key)
   if (!id) {
-    const bridged = bridge.get(key)
-    if (bridged) {
-      id = bridged
-      viaBridge++
-      viaBridgeRecords += n
+    const alias = aliases.get(key) ?? bridge.get(key)
+    if (alias) {
+      id = alias
+      aliasHits++
+      aliasRecords += n
     }
   }
   if (!id) {
+    if (!isBinomial(r?.scientificname)) nonSpeciesRecords += n
     unmatchedNames.set(String(r?.scientificname || ''), (unmatchedNames.get(String(r?.scientificname || '')) || 0) + n)
     continue
   }
@@ -165,7 +191,7 @@ console.log(`  SQL ${rows.length.toLocaleString()} 行 / ${Object.keys(rawTotals
 console.log(
   `  匹配：${pairs.toLocaleString()} 个 (地区码, 种) 对（n>=${MIN}，丢弃孤证 ${dropped}）/ ` +
     `${countries.length} 个国家/地区 / ${(matchedCoverage * 100).toFixed(2)}% 的记录挂到了权威层物种` +
-    (viaBridge ? `（其中 name-bridge 补 ${viaBridge} 行 / ${viaBridgeRecords.toLocaleString()} 条）` : ''),
+    (aliasHits ? `（其中别名表/桥接表补 ${aliasHits} 行 / ${aliasRecords.toLocaleString()} 条）` : ''),
 )
 if (unmatchedNames.size) {
   const top = [...unmatchedNames.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
@@ -230,8 +256,13 @@ const index = {
     species: new Set(Object.values(shards).flatMap((s) => Object.keys(s.bySpecies))).size,
     matchedRecords: mappedRecords,
     matchedShare: Number(matchedCoverage.toFixed(4)),
-    viaBridge,
+    viaAlias: aliasHits,
+    viaAliasRecords: aliasRecords,
+    aliasTable: { file: 'data/region-name-aliases.json', entries: aliasEntries, bridgeEntries },
     unmatchedNames: unmatchedNames.size,
+    unmatchedRecords: [...unmatchedNames.values()].reduce((a, b) => a + b, 0),
+    /** 未匹配里"非种级行"（属/科/纲：Aves/Corvus/Laridae…）占用多少——这部分本来就不该有记录数 */
+    unmatchedNonSpeciesRecords: nonSpeciesRecords,
   },
   /** 该国已归一记录数合计（= 分片 count；与 counts.rawRecords 不同，后者含被丢弃的行） */
   totals: shardTotals,

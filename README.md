@@ -107,7 +107,7 @@ npm run format       # 格式化
 - ✅ P6 边缘后端：Cloudflare Workers + D1 + R2（`/api/manifest`、`/api/questions`、`/api/media/:id`、报错/大众评审 `/reports`+`/admin`）
 - ✅ P7 自适应难度（最近 5 轮滚动正确率升降档）
 - ✅ 内容：物种档案（类群/分布/居留型）、答疑专栏 `/faq`、地区浏览 `/region`（七大洲→国家/省级→鸟种）
-- ✅ 地区数据层：季节层 `seasonality.json`；**省级层（P1-6 分片）** `region-provinces/index.json` + 29 国分片（含中国 34 区划/港澳台标注）+ 物种前缀桶 `region-species/*.json`；**国家层记录数** `region-records/`（**249 个国家/地区码**——GBIF countrycode 即 ISO 3166-1 全集，含属地与特殊领地，不是主权国家数；口径含未归属省份的记录）；观鸟点 `hotspots-ebird/`（eBird 派生点位 + GBIF 网格）
+- ✅ 地区数据层：季节层 `seasonality.json`；**省级层（分片，194 国/地区）** `region-provinces/index.json` + 194 国分片（含中国 34 区划/港澳台标注）+ 物种前缀桶 `region-species/*.json`；**国家层记录数** `region-records/`（**249 个国家/地区码**——GBIF countrycode 即 ISO 3166-1 全集，含属地与特殊领地，不是主权国家数；口径含未归属省份的记录）；观鸟点 `hotspots-ebird/`（eBird 派生点位 + GBIF 网格）
 - ✅ i18n（zh-CN / en，875 keys，CI 门禁）· 无障碍（H3）· E2E（Playwright 13 条，全离线）
 - ✅ 全球扩张（数据层）：AviList v2025b 全球骨架 `species-index.json`（11,131 种）+ manifest 增 `taxonKey`/`playable`；中文名 5,808 种（curated 优先 + Wikidata CC0）；backbone 映射 10,892/11,131；全球区系层 `/region`（249 国）+ 无媒体种轻量详情页
 - ✅ 全球媒体采集：**11,026 种可玩**（图 10,888 / 音 10,356）已上传 R2，逐条署名，ND 不转码

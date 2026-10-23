@@ -1,4 +1,10 @@
 /**
+ * ⚠️ 2026-10-23 起**已被 `build-provinces-fast.mjs` 取代**（`npm run region:provinces` 现在指向新脚本）：
+ *   旧切法「按物种 × 国家」扩到 198 国要 10 万+ 次 GBIF 请求；新切法「按省 × 学名」只要 ~2,000–3,000 次，
+ *   且结构性避免 `usageKey=1` 那类降级（见 docs/079 / docs/078）。
+ *   本文件保留 `--pivot species` 能力做**交叉校验**（`npm run region:provinces:legacy`），
+ *   产物写单文件（`--out` 指定路径），**不再写 public/data 的正式分片**。
+ *
  * 021 M2：构建外国省级数据 public/data/region-provinces.json。
  *
  * 数据链：manifest（species/taxonId）+ distribution.json（物种→国家）
@@ -485,7 +491,8 @@ console.log(`\nregion-provinces: ${countryN} 国 / ${speciesN} 物种 → ${OUT}
  * 索引 `region-provinces/index.json` 只放元数据 + 国家/省名 + 分片清单（不含 bySpecies）。
  * 省份粒度分片没有收益（观鸟页仍要一国全部省，物种页要 330 个文件），故不做。
  */
-const official = !MOCK && !args.out
+// 2026-10-23：正式产物由 build-provinces-fast.mjs 产出，本脚本只在 --out 下写单文件
+const official = false
 if (official) {
   const DATA_DIR = path.join(ROOT, 'public/data')
   const COUNTRY_DIR = path.join(DATA_DIR, 'region-provinces')

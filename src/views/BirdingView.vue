@@ -28,6 +28,7 @@ import {
 import {
   loadCountryProvinces,
   loadProvincesIndex,
+  provinceCoverage,
   provinceStats,
   speciesInProvince,
   type CountryProvinceShard,
@@ -246,6 +247,14 @@ const mergedBySpecies = computed<Record<string, string[]> | null>(() => {
   }
   return Object.fromEntries([...merged.entries()].map(([code, set]) => [code, [...set].sort()]))
 })
+/**
+ * 国家/地区列表（按七大洲）。
+ *
+ * **硬规则（2026-10-23 用户定）：不因为数据缺少而折叠/隐藏任何地区。**
+ * 布韦岛（BV）、赫德岛（HM）、皮特凯恩（PN）这类属地只有几十条记录，也照常出现在列表里、
+ * 照常显示「GBIF N 条」——"数据少"不是删除一个地区的理由；国家/地区条目数只由
+ * GBIF countrycode（ISO 3166-1，249 个码）决定，**不设记录量门槛**。
+ */
 const stats = computed(() => {
   const src = mergedBySpecies.value ?? bySpecies.value
   return src ? countryStats(src) : []
@@ -406,6 +415,15 @@ const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
 const provinceSources = computed(() =>
   (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
+/**
+ * 该国省级明细的**记录覆盖率**（P1-4B）：可映射到 ISO 省名的记录 / 该国全部 Aves 记录。
+ * <90% 时在页面标注「仅覆盖 X%」——不折叠地区（BV/HM/PN 之类照常列出），也不假装完整
+ * （瑞典 5.4%、肯尼亚 13% 这类是 GBIF 用历史省名导致的，属数据源事实）。
+ */
+const provinceCoveragePct = computed(() => {
+  const c = provinceCoverage(provinceIndex.value, selected.value)
+  return c == null ? null : Math.round(c * 1000) / 10
+})
 
 /** 该国观鸟点（腿 B 网格聚合；缺失/无数据则为空，整块隐藏）。
  *  2026-10-09：选中省份时**按 subnational1 过滤到省**；本省无点时回退全国并在窄条说明。 */
@@ -896,6 +914,12 @@ function pickProvince(code: string) {
                 {{ t('region.showMore') }}
               </button>
             </div>
+            <p
+              v-if="provinces.length && provinceCoveragePct !== null && provinceCoveragePct < 90"
+              class="record-note muted"
+            >
+              {{ t('region.provinceCoverage', { pct: provinceCoveragePct }) }}
+            </p>
             <p v-if="recordCounts.size" class="record-note muted">
               {{ t('region.recordNote') }}
             </p>

@@ -88,3 +88,7 @@ blob-report/
 
 # 055 P1 端上识鸟模型权重(25MB 二进制):本地开发放这里便于调试,生产走 R2(同媒体口径)
 /public/models/
+
+# 2026-10-23（用户定）：省级档位分片只推 R2、不进 git（扩到 198 国后 ~22-25MB）
+# 索引 public/data/province-commonness.json 仍入库（前端/Worker 靠它发现分片）。
+/public/data/province-commonness/

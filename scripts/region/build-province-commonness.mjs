@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from '../lib/util.mjs'
 import { buildIndex, matchSubdivision } from './adapters/iso3166.mjs'
 import { normBinomial } from './verify-provinces-lib.mjs'
-import { SUPPORTED_COUNTRIES, GBIF_SQL_SOURCE, SUBDIVISION_SOURCE } from './config.mjs'
+import { SUPPORTED_COUNTRIES, COUNTRY_DENY, GBIF_SQL_SOURCE, SUBDIVISION_SOURCE } from './config.mjs'
 import {
   DEFAULT_GUARDS,
   applyOverrides,
@@ -52,7 +52,20 @@ const round = (x, d = 4) => Number(Number(x).toFixed(d))
 
 // ── 输入：ISO 省名索引 + 骨架 + 现有省级产物 ──────────────────────────
 const subsRaw = await readJson(path.join(ROOT, 'data-cache/region/iso3166-2/subs.json'))
-const index = buildIndex(subsRaw.subdivisions, SUPPORTED_COUNTRIES)
+/**
+ * 2026-10-23（P1-4B）：档位不再只做 `SUPPORTED_COUNTRIES` 那 29 国 —— 省级层已扩到 198 国。
+ * 国家清单改为「区划缓存里有区划的全部国家」（排除 ZZ/XK/XZ 与港澳台：按铁律 6 它们是 CN 的省）。
+ * `--countries` 可显式收窄（调参/冒烟用）。
+ */
+const ALL_PROVINCE_COUNTRIES = Object.keys(subsRaw.subdivisions || {}).filter(
+  (cc) => !COUNTRY_DENY.has(cc) && !['HK', 'MO', 'TW'].includes(cc),
+)
+const COUNTRIES = String(args.countries || '').trim()
+  ? String(args.countries).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+  : FROM_PROVINCES
+    ? ALL_PROVINCE_COUNTRIES
+    : SUPPORTED_COUNTRIES
+const index = buildIndex(subsRaw.subdivisions, COUNTRIES)
 const speciesIndex = await readJson(path.join(ROOT, 'public/data/species-index.json'))
 /**
  * 2026-10-23 修：本脚本此前读 `manifest-core.json` + `manifest-global.min.json`，
@@ -103,17 +116,23 @@ let rows = []
 let sourceInfo = null
 
 if (FROM_PROVINCES) {
-  // region-provinces.json 的 bySpecies 结构是 **三层**：speciesId → cc → { code: n }；
-  // 且物种已按 id 归一（无需再走匹配，故带上 speciesId 直通）。
-  const p = await readJson(path.join(ROOT, 'public/data/region-provinces.json'))
-  for (const [speciesId, byCc] of Object.entries(p.bySpecies || {})) {
-    for (const [cc, byCode] of Object.entries(byCc || {})) {
+  // 2026-10-23（P1-6 分片）：省级层已拆成「索引 + 按国分片」，不再有单文件。
+  // 这里直接读索引 + 全部分片，拼成 rows（speciesId → cc → code → n）。
+  const pvIndex = await readJson(path.join(ROOT, 'public/data/region-provinces/index.json'))
+  const pvDir = path.join(ROOT, 'public/data', pvIndex.sharding?.dir || 'region-provinces')
+  const files = pvIndex.sharding?.files?.length
+    ? pvIndex.sharding.files
+    : (await fs.readdir(pvDir).catch(() => [])).filter((f) => f.endsWith('.json') && f !== 'index.json')
+  for (const f of files) {
+    const shard = await readJson(path.join(pvDir, f)).catch(() => null)
+    if (!shard) continue
+    for (const [speciesId, byCode] of Object.entries(shard.bySpecies || {})) {
       for (const [code, n] of Object.entries(byCode || {})) {
-        if (Number(n) > 0) rows.push({ speciesId, cc, code, n: Number(n) })
+        if (Number(n) > 0) rows.push({ speciesId, cc: shard.cc, code, n: Number(n) })
       }
     }
   }
-  sourceInfo = { kind: 'region-provinces.json', file: 'public/data/region-provinces.json', rawRows: rows.length }
+  sourceInfo = { kind: 'region-provinces 分片', file: `public/data/${pvIndex.sharding?.dir || 'region-provinces'}/`, rawRows: rows.length }
 } else {
   let file = SQL_FILE
   if (!file) {
@@ -142,7 +161,7 @@ for (const r of rows) {
   const n = Number(r.n) || 0
   if (n <= 0) continue
   const cc = String(r.countrycode || r.cc || '').toUpperCase()
-  if (!SUPPORTED_COUNTRIES.includes(cc)) continue
+  if (!COUNTRIES.includes(cc)) continue
   // 两种输入形态：GBIF SQL 给**原始省名**（需 ISO 归一）；region-provinces 已给 **ISO 码**（直通）
   const code =
     r.code && /^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(String(r.code))
@@ -235,7 +254,7 @@ const product = {
   method:
     'province share (n / province total) → dominance & seasonal-spike guards → quantile banding (1 most common … 5 rarest) → manual overrides',
   sources: [GBIF_SQL_SOURCE, SUBDIVISION_SOURCE],
-  scope: { countries: SUPPORTED_COUNTRIES, levels: ['province', 'country'] },
+  scope: { countries: COUNTRIES, levels: ['province', 'country'] },
   guards,
   provenance: {
     ...sourceInfo,

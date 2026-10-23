@@ -103,7 +103,23 @@ const provLabel = (code) => {
 }
 
 // ── 原始记录（用于 A 类排序与 B 类复核） ─────────────────────────────
-const provincesData = await readJson(path.join(ROOT, 'public/data/region-provinces.json'))
+/**
+ * 2026-10-23（P1-6 分片）：省级层已拆成「索引 + 按国分片」，不再有单文件。
+ * 这里按索引读全部分片 → 拼成与旧 bySpecies 同构的结构（speciesId → cc → { code: n }）。
+ */
+const pvIndex = await readJson(path.join(ROOT, 'public/data/region-provinces/index.json'))
+const pvDir = path.join(ROOT, 'public/data', pvIndex.sharding?.dir || 'region-provinces')
+const pvFiles = pvIndex.sharding?.files?.length
+  ? pvIndex.sharding.files
+  : (await fs.readdir(pvDir).catch(() => [])).filter((f) => f.endsWith('.json') && f !== 'index.json')
+const provincesData = { bySpecies: {} }
+for (const f of pvFiles) {
+  const shard = await readJson(path.join(pvDir, f)).catch(() => null)
+  if (!shard) continue
+  for (const [id, byCode] of Object.entries(shard.bySpecies || {})) {
+    ;(provincesData.bySpecies[id] ??= {})[shard.cc] = byCode
+  }
+}
 /** `${cc}|${code}` → [{ id, n }] 降序 */
 const topByProvince = new Map()
 const totals = new Map()
@@ -124,7 +140,7 @@ const push = (s = '') => lines.push(s)
 
 push('# 省级常见度 · 人工审阅清单')
 push('')
-push(`> 生成：${new Date().toISOString()} · 每省取前 ${TOP} 名 · 记录数门槛 ≥ ${MIN_RECORDS} · 数据源 region-provinces.json`)
+push(`> 生成：${new Date().toISOString()} · 每省取前 ${TOP} 名 · 记录数门槛 ≥ ${MIN_RECORDS} · 数据源 region-provinces 分片（索引 + 按国）`)
 push('>')
 push('> **门槛的意义**：记录数很少时低档位通常是**正确的**（分布边缘/迷鸟）。只审"记录数足够却档位偏低"的。')
 push('> 用途：勾选需要人工覆盖的（种,省）→ 写入 `data/region-commonness-overrides.json` → 重跑 `npm run region:province-commonness`')

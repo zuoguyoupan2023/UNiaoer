@@ -5,6 +5,7 @@ import {
   loadProvincesIndex,
   loadSpeciesProvinces,
   provinceCount,
+  provinceCoverage,
   provinceStats,
   provincesOf,
   speciesInProvince,
@@ -63,6 +64,24 @@ describe('provinceStats（每省鸟种数，供二级排序/展示）', () => {
   it('分片缺失 → 省列表仍在（count 为 0，目录不塌）', () => {
     const stats = provinceStats(index, null, 'CN')
     expect(stats.map((s) => s.count)).toEqual([0, 0, 0])
+  })
+})
+
+describe('provinceCoverage（P1-4B：低覆盖国要标注）', () => {
+  it('有覆盖率就返回、没有就 null', () => {
+    const withCov: ProvinceIndex = {
+      ...index,
+      coverage: {
+        countries: 1,
+        byCountry: {
+          CN: { allRecords: 100, mappedRecords: 94, unmatchedRecords: 6, coverage: 0.94, rawNames: 3, mappedNames: 2, species: 2, cells: 4 },
+        },
+      },
+    }
+    expect(provinceCoverage(withCov, 'CN')).toBeCloseTo(0.94)
+    expect(provinceCoverage(withCov, 'US')).toBeNull()
+    expect(provinceCoverage(index, 'CN')).toBeNull()
+    expect(provinceCoverage(null, 'CN')).toBeNull()
   })
 })
 
@@ -135,11 +154,10 @@ describe('P1-6 分片加载', () => {
     expect(calls.some((u) => u.endsWith('region-species/pa.json'))).toBe(true)
   })
 
-  it('索引缺失 → 回退旧单文件，结构与分片一致', async () => {
-    stubFetch({
-      'region-provinces.json': { ...fullIndex, bySpecies: { a: { CN: { 'CN-11': 3 } } }, sharding: undefined },
-    })
-    expect((await loadCountryProvinces('CN'))?.bySpecies.a).toEqual({ 'CN-11': 3 })
-    expect((await loadCountryProvinces('US'))).toBeNull()
+  it('索引缺失 → 返回 null（旧单文件已退役，不再回退）', async () => {
+    stubFetch({})
+    expect(await loadProvincesIndex()).toBeNull()
+    expect(await loadCountryProvinces('CN')).toBeNull()
+    expect(await loadSpeciesProvinces('passer-montanus')).toBeNull()
   })
 })

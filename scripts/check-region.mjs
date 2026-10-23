@@ -165,6 +165,19 @@ function checkProvincesIndex(name, data) {
     if (COUNTRY_DENY.has(cc)) errors.push(`${name}: 排除码 ${cc}（铁律 6）`)
   }
   check(!Object.keys(data.byCountry || {}).some((cc) => COUNTRY_DENY.has(cc)), `${name}: byCountry 出现排除码（铁律 6）`)
+  // P1-4B：每国覆盖率可追溯（低覆盖国前端要标注"仅覆盖 X%"）
+  const cov = data.coverage?.byCountry || {}
+  for (const [cc, c] of Object.entries(cov)) {
+    check(
+      Number.isFinite(c?.coverage) && c.coverage >= 0 && c.coverage <= 1,
+      `${name}: ${cc} coverage 非法（${c?.coverage}）`,
+    )
+    check(
+      !Number.isFinite(c?.mappedRecords) || c.mappedRecords <= c.allRecords,
+      `${name}: ${cc} mappedRecords > allRecords`,
+    )
+  }
+  check(Number.isInteger(data.coverage?.countries) && data.coverage.countries > 0, `${name}: coverage.countries 非法`)
 }
 
 /** 递归规范化（键排序）→ 用于"同一格数据在两个分片里必须一致"的比对 */
@@ -349,8 +362,8 @@ async function checkCountryRecords(baseDir, name, data) {
   check(data.counts?.pairs === pairs, `${name}: counts.pairs(${data.counts?.pairs}) ≠ 实际(${pairs})`)
   check(data.counts?.matchedRecords === matched, `${name}: counts.matchedRecords(${data.counts?.matchedRecords}) ≠ 实际(${matched})`)
   check(
-    Number.isFinite(data.counts?.matchedShare) && data.counts.matchedShare > 0.9,
-    `${name}: 物种匹配率 ${data.counts?.matchedShare} 偏低（< 90%，说明学名映射链断了）`,
+    Number.isFinite(data.counts?.matchedShare) && data.counts.matchedShare > 0.99,
+    `${name}: 物种匹配率 ${data.counts?.matchedShare} 偏低（< 99%，说明学名映射链断了：先看 data/region-name-aliases.json 是否过期）`,
   )
   const gbif = (data.sources || []).find((s) => s.key === 'gbif')
   check(!!gbif, `${name}: sources 缺 gbif 署名条目`)
@@ -647,7 +660,6 @@ const files = args.file
   ? [path.resolve(ROOT, args.file)]
   : [
       'public/data/seasonality.json',
-      'public/data/region-provinces.json',
       'public/data/hotspots.json',
       'public/data/species-distribution.json',
       'public/data/province-commonness.json',
@@ -683,17 +695,13 @@ for (const file of files) {
     errors.push(`${name}: 不是合法 JSON`)
     continue
   }
-  // 039 P1 分片：US 最大约 1.8MB，给 3MB 上限；索引与其余产物沿用 2MB
-  // 2026-10-23 扩国（15→29 国）：region-provinces.json 是**单文件**（观鸟页记录数 + 物种页省份热力条都读它），
-  // 3.0MB 原始 / **brotli ~691KB**（懒加载，只在 /birding 与物种页触发）→ 预算放宽到 4MB。
-  // ⚠️ 再加洲（欧洲+美洲）会到 ~6MB → **必须先按国分片**（见 docs/074 P1-4）。
+  // 039 P1 分片：US 最大约 1.8MB，给 3MB 上限；索引与其余产物沿用 2MB。
+  // 2026-10-23：`region-provinces.json` 旧单文件已退役（扩到 198 国后会有 ~14MB），改为分片闭环校验。
   const budget = /species-distribution/.test(name)
     ? 3 * 1024 * 1024
     : /hotspots-ebird[\\/]/.test(file)
       ? 3 * 1024 * 1024
-      : name.endsWith('region-provinces.json')
-        ? 4 * 1024 * 1024
-        : MAX_BYTES
+      : MAX_BYTES
   checkCommon(name, raw, data, budget, { shard: isNearbyShard(data, file) })
   if (Array.isArray(data.tiers)) errors.push(`${name}: tiers 必须是对象`)
   else if (data.tiers || data.sharding) {
@@ -701,21 +709,28 @@ for (const file of files) {
     checkProvinceCommonness(name, data)
     if (data.sharding) {
       const dir = path.join(path.dirname(file), data.sharding.dir)
-      for (const f of data.sharding.files || []) {
-        const raw2 = await fs.readFile(path.join(dir, f), 'utf8').catch(() => null)
-        if (raw2 === null) {
-          errors.push(`${name}: 缺少分片 ${data.sharding.dir}/${f}`)
-          continue
+      const onDisk = (await fs.readdir(dir).catch(() => [])).filter((f) => f.endsWith('.json'))
+      // 2026-10-23 用户定：档位分片**只推 R2、不进 git**（~22-25MB）→ 新克隆/CI 上没有分片，
+      // 整个目录缺失时跳过闭环校验并提示（本地构建过就会有，门禁照常生效）。
+      if (!onDisk.length) {
+        console.log(`  · ${name}: 分片未在本地产出（只推 R2）→ 跳过 ${data.sharding.files?.length ?? 0} 片的闭环校验`)
+      } else {
+        for (const f of data.sharding.files || []) {
+          const raw2 = await fs.readFile(path.join(dir, f), 'utf8').catch(() => null)
+          if (raw2 === null) {
+            errors.push(`${name}: 缺少分片 ${data.sharding.dir}/${f}`)
+            continue
+          }
+          present.push(`${data.sharding.dir}/${f}`)
+          let shard = null
+          try {
+            shard = JSON.parse(raw2)
+          } catch {
+            errors.push(`分片 ${f}: 不是合法 JSON`)
+            continue
+          }
+          checkProvinceCommonnessShard(`${data.sharding.dir}/${f}`, shard)
         }
-        present.push(`${data.sharding.dir}/${f}`)
-        let shard = null
-        try {
-          shard = JSON.parse(raw2)
-        } catch {
-          errors.push(`分片 ${f}: 不是合法 JSON`)
-          continue
-        }
-        checkProvinceCommonnessShard(`${data.sharding.dir}/${f}`, shard)
       }
     }
   } else if (Array.isArray(data.spots) || (data.countries && data.total != null && nearbyFiles.includes(file))) {

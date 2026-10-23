@@ -370,6 +370,7 @@ export const messages = {
     /** P0-5：国家层与省级层口径不同（含/不含未归属省份的记录），且不宜跨地区比大小 */
     recordNote:
       '记录数为 GBIF 公开观测条数：选国家时含未被归属到省份的记录，选省份时只计能映射到省名的记录（两层数字天然不等）。各国记录量受数据集构成影响，不宜跨地区比较大小。',
+    provinceCoverage: '省级明细仅覆盖 GBIF 记录的 {pct}%（其余省名未能归入 ISO 区划，未计入；不影响国家层数字）',
     provinceSource: '省级数据来源：{sources}',
     notInBank: '未收录媒体',
     showMore: '显示更多',
