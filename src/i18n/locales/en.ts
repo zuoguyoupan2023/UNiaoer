@@ -727,7 +727,7 @@ const en: typeof zhMessages = {
     nicknameLabel: 'Nickname',
     nicknameEmpty: 'Nickname cannot be empty',
     nicknameShort: 'Nickname needs at least 2 characters',
-    metricsHint: 'Only non-personal attributes such as date and difficulty; no cookies, device IDs or stored IP. Change anytime in Settings.',
+    metricsHint: 'Only non-personal attributes such as date, event type, difficulty and score; no cookies, device IDs or stored IP. Change anytime in Settings.',
     noNickname: 'No nickname yet',
     setNickname: 'Set nickname',
     statRounds: 'Rounds',
@@ -939,7 +939,7 @@ const en: typeof zhMessages = {
     cacheUnsupported: 'Cache management is not supported in this browser',
     metricsTitle: 'Anonymous stats',
     metricsDesc:
-      'This site counts anonymous events (event type, date and non-personal attributes such as quiz tier only — no cookies, no device IDs, no IP storage). Your scores and archives stay on this device.',
+      'This site counts anonymous events (event type, date, and non-personal attributes such as quiz tier and score — no cookies, no device IDs, no IP storage). Your scores and archives stay on this device.',
     metricsSwitch: 'Allow anonymous stats (turn off to send nothing)',
     metricsGeoDesc:
       'Province-level stats (optional): only the province inferred from IP is used (no IP stored, no city-level location), for province activity and regional accuracy. Off by default; change anytime.',

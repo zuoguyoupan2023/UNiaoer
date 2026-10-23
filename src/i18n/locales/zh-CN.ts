@@ -809,7 +809,7 @@ export const messages = {
     nicknameLabel: '昵称',
     nicknameEmpty: '昵称不能为空',
     nicknameShort: '昵称至少 2 个字符',
-    metricsHint: '只记录日期、难度等非个人属性；无 cookie、无设备标识、不存 IP。可在设置里修改。',
+    metricsHint: '只记录日期、事件类型、难度与得分等非个人属性；无 cookie、无设备标识、不存 IP。可在设置里修改。',
     noNickname: '未设置昵称',
     setNickname: '设置昵称',
     statRounds: '轮次',
@@ -926,7 +926,7 @@ export const messages = {
     cacheUnsupported: '当前浏览器不支持缓存管理',
     metricsTitle: '匿名统计',
     metricsDesc:
-      '本站使用匿名事件计数（仅事件类型、日期与题目难度等非个人属性；无 cookie、无设备标识、不存 IP）。你的成绩与档案仍只存在本机。',
+      '本站使用匿名事件计数（仅事件类型、日期、题目难度与得分等非个人属性；无 cookie、无设备标识、不存 IP）。你的成绩与档案仍只存在本机。',
     metricsSwitch: '允许匿名统计（关掉即完全不上报）',
     metricsGeoDesc:
       '省际统计（可选）：按 IP 归属地只取到省级（不存 IP、不定位到城市），用于省际活跃与地区正确率。默认关闭，可随时改。',
