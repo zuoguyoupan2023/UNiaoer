@@ -74,10 +74,14 @@ const rangeText = computed(() => {
 })
 
 /**
- * 072-k：各档位正确率（服务端按正确率分桶聚合；桶中点加权估算，n<10 的档位不下发）。
+ * 072-k / 076：各水平正确率（076 起服务端优先用精确得分 Σcorrect/Σtotal；
+ * 只有分桶历史数据时才回退到桶中点估算，并在该档位标记 approx）。
  * 只展示有数据的档位，并按 L1..L5 升序。
  */
 const tierAccuracy = computed(() => stats.value?.accuracyByTier ?? [])
+
+/** 有任何档位仍是分桶估算（精确事件上线前的历史数据）→ 显示一行说明 */
+const anyApprox = computed(() => tierAccuracy.value.some((a) => a.approx))
 
 /** 徽章获取榜（按人数降序；只显示 >0 的，全部为 0 时给一句占位） */
 const badgeRows = computed(() => {
@@ -176,16 +180,17 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
         </ol>
       </div>
 
-      <!-- 072-k：各档位正确率 -->
+      <!-- 072-k：各水平正确率 -->
       <h3 class="sec">{{ t('stats.sectionAccuracy') }}</h3>
       <p v-if="!tierAccuracy.length" class="muted small">{{ t('stats.accuracyEmpty') }}</p>
       <ul v-else class="ranks">
         <li v-for="a in tierAccuracy" :key="a.tier">
           <span class="rank-name">{{ t(`difficulty.l${a.tier}.label`) }}</span>
-          <span class="rank-n">{{ t('stats.accuracyMean', { mean: a.mean, n: a.n }) }}</span>
+          <span class="rank-n">{{ t('stats.accuracyMean', { mean: a.approx ? `≈${a.mean}` : a.mean, n: a.n }) }}</span>
         </li>
       </ul>
       <p v-if="tierAccuracy.length" class="muted small">{{ t('stats.accuracyNote') }}</p>
+      <p v-if="anyApprox" class="muted small">{{ t('stats.accuracyApproxNote') }}</p>
 
       <!-- 徽章获取榜 -->
       <h3 class="sec">{{ t('stats.sectionBadges') }}</h3>

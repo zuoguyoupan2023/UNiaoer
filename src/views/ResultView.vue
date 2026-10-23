@@ -366,6 +366,13 @@ onMounted(async () => {
       // 073 P0：答题时用户自选的地区（不是 IP）；`ALL` = 未指定，公开统计时单列
       region: settings.region,
     })
+    // 076：精确得分（correct/total）——公开看板改用精确加权，分桶事件仅作历史兼容
+    track('quiz_score', {
+      tier: quiz.tier,
+      correct: quiz.correctCount,
+      total: quiz.total,
+      region: settings.region,
+    })
   }
   // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
   if (res.record) {

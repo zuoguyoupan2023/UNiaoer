@@ -1014,11 +1014,22 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   /**
    * 072-k：一轮结果的正确率分桶（不是每题、不含物种/用户）。
    * 用于公开看板「各档位正确率」；分桶而非精确值，避免高精度行为轨迹。
+   * 076 起精确口径走 `quiz_score`；本事件保留仅为历史数据兼容。
    */
   quiz_result: {
     tier: ['1', '2', '3', '4', '5'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：答题时**用户自选**的地区（不是 IP）。取值形态见 REGION_VALUE_RE
+    region: ['@region'],
+  },
+  /**
+   * 076：精确得分（correct / total，0–99 整数）。
+   * 取代分桶估算：正确率 = Σcorrect / Σtotal（题级加权，题量不足 10 也不失真）。
+   */
+  quiz_score: {
+    tier: ['1', '2', '3', '4', '5'],
+    correct: ['@score'],
+    total: ['@score'],
     region: ['@region'],
   },
   report_submit: {},
@@ -1035,6 +1046,9 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
  * `ALL` | 两位国家码 `CN` | 省码 `CN-11`。非法值直接丢弃（该属性不进 props）。
  */
 const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
+
+/** 076：精确得分属性只接受 0–99 的整数（与前端 metrics.ts 的 SCORE_VALUE_RE 一致） */
+const SCORE_VALUE_RE = /^\d{1,2}$/
 
 /** 事件体上限（字节）：白名单事件 + ≤3 枚举属性，300 足够；超过静默丢弃 */
 const METRIC_MAX_BYTES = 300
@@ -1133,6 +1147,11 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
     // '@region' = 形态校验（073 P0：地区码不穷举，见 REGION_VALUE_RE）
     if (allowed.includes('@region')) {
       if (REGION_VALUE_RE.test(v)) parts.push(`${key}=${v}`)
+      continue
+    }
+    // '@score' = 0–99 整数（076 精确得分；跨字段的 correct ≤ total 由聚合端再判）
+    if (allowed.includes('@score')) {
+      if (SCORE_VALUE_RE.test(v)) parts.push(`${key}=${v}`)
       continue
     }
     if (allowed.includes(v)) parts.push(`${key}=${v}`)
@@ -1480,7 +1499,7 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
   const today = new Date()
   const since = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
   try {
-    const [series, byEvent, badges, titles, results] = await Promise.all([
+    const [series, byEvent, badges, titles, results, scores] = await Promise.all([
       env.DB.prepare(
         'SELECT day, event, SUM(n) AS n FROM metrics_daily WHERE day >= ? GROUP BY day, event ORDER BY day',
       )
@@ -1496,9 +1515,14 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
         "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'title_earned' GROUP BY props ORDER BY n DESC",
       )
         .all<{ props: string; n: number }>(),
-      // 072-k：正确率分桶（按档位聚合；不含物种/用户）
+      // 072-k：正确率分桶（按档位聚合；不含物种/用户）——**只作为历史口径的回退**
       env.DB.prepare(
         "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' GROUP BY props",
+      )
+        .all<{ props: string; n: number }>(),
+      // 076：精确得分（correct/total）——新口径，正确率 = Σcorrect / Σtotal
+      env.DB.prepare(
+        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_score' GROUP BY props",
       )
         .all<{ props: string; n: number }>(),
     ])
@@ -1529,9 +1553,15 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
       badges: badges.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
       titles: titles.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
       /**
-       * 072-k：各档位正确率（分桶聚合）。
-       * mean 用桶中点加权（10/30/50/70/90）估算，属近似值；n = 轮次数。
-       * 样本过少（n < 10）时不返回该档位，避免"1 轮 100%"误导。
+       * 072-k / 076：各档位正确率。
+       *
+       * **精确口径（076，优先）**：`quiz_score{tier,correct,total}` → 正确率 = Σcorrect / Σtotal，
+       * 题级加权（题量不足 10 的轮次不会被放大或缩小），`approx: false`。
+       *
+       * **历史回退（072-k）**：精确事件上线前的轮次只有 5 档分桶，用桶中点（10/30/50/70/90）
+       * 加权估算，`approx: true`；前端在均值前加 ≈ 标注，不把估算值当精确值展示。
+       *
+       * 两种口径都要求 n ≥ 10，避免「1 轮 100%」误导。
        */
       accuracyByTier: (() => {
         const BAND_MID: Record<string, number> = {
@@ -1541,27 +1571,53 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
           '60-80': 70,
           '80-100': 90,
         }
-        const acc = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
+        type TierStat = { tier: string; n: number; mean: number; approx: boolean; bands?: Record<string, number> }
+
+        // 精确：按 (tier) 累计轮次与题量
+        const exact = new Map<string, { rounds: number; correct: number; total: number }>()
+        for (const r of scores.results) {
+          const p = parseProps(r.props)
+          const tier = p.tier ?? ''
+          const correct = Number(p.correct)
+          const total = Number(p.total)
+          // correct ≤ total 的跨字段校验只能在这里做（单属性校验看不到彼此）
+          if (!tier || !Number.isInteger(correct) || !Number.isInteger(total) || total <= 0) continue
+          if (correct < 0 || correct > total) continue
+          const cell = exact.get(tier) ?? { rounds: 0, correct: 0, total: 0 }
+          cell.rounds += r.n
+          cell.correct += correct * r.n
+          cell.total += total * r.n
+          exact.set(tier, cell)
+        }
+
+        // 历史分桶：桶中点加权
+        const band = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
         for (const r of results.results) {
           const p = parseProps(r.props)
           const tier = p.tier ?? ''
-          const band = p.band ?? ''
-          if (!tier || !(band in BAND_MID)) continue
-          const cell = acc.get(tier) ?? { n: 0, weighted: 0, bands: {} }
+          const b = p.band ?? ''
+          if (!tier || !(b in BAND_MID)) continue
+          const cell = band.get(tier) ?? { n: 0, weighted: 0, bands: {} }
           cell.n += r.n
-          cell.weighted += r.n * (BAND_MID[band] ?? 0)
-          cell.bands[band] = (cell.bands[band] ?? 0) + r.n
-          acc.set(tier, cell)
+          cell.weighted += r.n * (BAND_MID[b] ?? 0)
+          cell.bands[b] = (cell.bands[b] ?? 0) + r.n
+          band.set(tier, cell)
         }
-        return [...acc.entries()]
-          .filter(([, v]) => v.n >= 10)
-          .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([tier, v]) => ({
-            tier,
-            n: v.n,
-            mean: Math.round(v.weighted / v.n),
-            bands: v.bands,
-          }))
+
+        const tiers = new Set([...exact.keys(), ...band.keys()])
+        const out: TierStat[] = []
+        for (const tier of tiers) {
+          const ex = exact.get(tier)
+          if (ex && ex.rounds >= 10) {
+            out.push({ tier, n: ex.rounds, mean: Math.round((ex.correct / ex.total) * 100), approx: false })
+            continue
+          }
+          const bd = band.get(tier)
+          if (bd && bd.n >= 10) {
+            out.push({ tier, n: bd.n, mean: Math.round(bd.weighted / bd.n), bands: bd.bands, approx: true })
+          }
+        }
+        return out.sort((a, b) => Number(a.tier) - Number(b.tier))
       })(),
       /** 口径说明（前端直接展示，避免"数字怎么来的"疑问） */
       notes: {

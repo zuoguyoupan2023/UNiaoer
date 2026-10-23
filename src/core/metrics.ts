@@ -38,11 +38,24 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
   /**
    * 072-k：一轮结果的**正确率分桶**（不是每题、不含物种、不含用户）。
    * 用途：「各档位正确率」公开看板（`/stats`）。分桶而非精确值，避免任何可识别性。
+   * 076 起精确口径由 `quiz_score` 承担；本事件**保留一段时间**，
+   * 只为让历史曲线不断层（精确数据上线前的轮次只能按桶中点估算）。
    */
   quiz_result: {
     tier: ['1', '2', '3', '4', '5'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：**用户自选**的地区（不是 IP）；形态校验见 allowedMetricValue
+    region: ['@region'],
+  },
+  /**
+   * 076：一轮的**精确得分**（correct / total），取代分桶估算。
+   * 用整数而不是百分比：题量可能不足 10（072-a），存原始分数才能按题加权、也不丢信息。
+   * 不含物种、不含任何用户标识；`region` 仍是**用户自选**地区（不是 IP）。
+   */
+  quiz_score: {
+    tier: ['1', '2', '3', '4', '5'],
+    correct: ['@score'],
+    total: ['@score'],
     region: ['@region'],
   },
   report_submit: {},
@@ -75,8 +88,15 @@ const SESSION_KEY = 'uniaoer.sess'
  */
 const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
 
+/**
+ * 076：精确得分属性（`correct`/`total`）只接受 **0–99 的整数**。
+ * Worker 侧用同一条规则硬校验，且聚合时再判 `correct ≤ total`。
+ */
+const SCORE_VALUE_RE = /^\d{1,2}$/
+
 function allowedMetricValue(allowed: readonly string[], v: string): boolean {
   if (allowed.includes('@region')) return REGION_VALUE_RE.test(v)
+  if (allowed.includes('@score')) return SCORE_VALUE_RE.test(v)
   return allowed.includes(v)
 }
 

@@ -63,6 +63,19 @@ describe('metrics.track（匿名计量上报）', () => {
     expect(accuracyBand(100)).toBe('80-100')
   })
 
+  it('076：精确得分只接受 0–99 的整数（非法值被裁掉）', async () => {
+    track('quiz_score', { tier: 2, correct: 9, total: 10, region: 'CN-32' })
+    track('quiz_score', { tier: 2, correct: '9;x', total: '10.5', region: 'not a region' })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(sent).toHaveLength(2)
+    expect(JSON.parse(sent[0]!)).toEqual({
+      e: 'quiz_score',
+      p: { correct: '9', region: 'CN-32', tier: '2', total: '10' },
+    })
+    // 非法 correct/total/region 全被丢弃，事件本身仍计
+    expect(JSON.parse(sent[1]!)).toEqual({ e: 'quiz_score', p: { tier: '2' } })
+  })
+
   it('session_start 每会话只计一次', async () => {
     trackSessionStart()
     trackSessionStart()

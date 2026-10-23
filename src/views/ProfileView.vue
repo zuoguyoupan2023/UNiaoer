@@ -180,6 +180,16 @@ async function saveNickname() {
         <span v-if="nicknameMsg" class="nickname-msg" role="alert">{{ nicknameMsg }}</span>
       </div>
 
+      <!-- 028/076：设昵称当场告知匿名统计（同一开关，设置页也可改）；
+           以前只写在设置页，首次建立身份时看不到 → 现在提前告知 -->
+      <label v-if="editingNickname" class="metrics-opt">
+        <input v-model="settings.metricsEnabled" type="checkbox" />
+        <span class="metrics-opt-text">
+          <strong>{{ t('settings.metricsTitle') }}</strong>
+          <span class="muted">{{ t('profile.metricsHint') }}</span>
+        </span>
+      </label>
+
       <div class="archive-row">
         <span class="archive-cap">
           <Archive class="ic" :size="13" /> {{ t('archive.count', { n: archives.length }) }}
@@ -357,6 +367,29 @@ async function saveNickname() {
 .nickname-msg {
   font-size: 0.78rem;
   color: var(--wrong);
+}
+/* 028/076：设昵称时的匿名统计告知（小面板，不遮挡表单） */
+.metrics-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.metrics-opt input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.metrics-opt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 /* ---- 档案（013 A3-lite） ---- */
 .archive-row {

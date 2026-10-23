@@ -120,10 +120,21 @@
   gap: 4px;
   flex-wrap: wrap;
 }
-.nav-group {
-  display: flex;
-  gap: 4px;
+/* 两个逻辑分组只用于窄屏分行；桌面用 display:contents 摊平，配合下面的 order 实现单行顺序 */
+.nav-line {
+  display: contents;
 }
+/* 单行顺序（2026-10-23 用户指定）：看图 · 听音 · 统计 · 观鸟 · 名录 · 识别 · [评审] · 我的 · 设置 · 喇叭 */
+.nav-i-image { order: 1; }
+.nav-i-audio { order: 2; }
+.nav-i-stats { order: 3; }
+.nav-i-birding { order: 4; }
+.nav-i-catalog { order: 5; }
+.nav-i-identify { order: 6; }
+.nav-i-reports { order: 7; }
+.nav-i-profile { order: 8; }
+.nav-i-settings { order: 9; }
+.nav-ambience { order: 10; }
 .app-nav a {
   padding: 5px 11px;
   border-radius: var(--radius-sm);
@@ -178,11 +189,15 @@
     transform: scale(0.85);
   }
 }
-/* 移动端：第一行 = 鸟图标 + UNiaoer + 统计/我的/设置/喇叭（R35，工具条固定 4 键）；
-   大众评审与看图/听音/地区/附近/名录在第二行，宽度足够显示完整品牌 */
-@media (max-width: 640px) {
+/* 窄屏（≤699px = 单行放不下的宽度）两行导航：
+   第一行 = 鸟图标 + 品牌 + 看图/听音/统计/观鸟/名录（屏幕太窄时只留鸟图标，见 ≤380px）；
+   第二行 = 识别/我的/设置/喇叭，居中。 */
+@media (max-width: 699px) {
   .app-topbar {
     flex-wrap: wrap;
+    /* display:contents 让胶囊直接成为顶栏的 flex 项 → 间距要用顶栏的 gap 控制
+       （否则每个胶囊之间都会套用顶栏原来的 12px） */
+    column-gap: 4px;
     row-gap: 6px;
     padding-left: 8px;
   }
@@ -191,37 +206,56 @@
   }
   .brand {
     order: 0;
+    margin-right: 8px;
   }
-  .nav-utility {
+  /* 第一行的胶囊靠右排（品牌在左），第二行整行居中 */
+  .nav-i-image {
     order: 1;
     margin-left: auto;
   }
-  .nav-primary {
-    order: 2;
-    flex-basis: 100%;
+  .nav-i-audio { order: 2; }
+  .nav-i-stats { order: 3; }
+  .nav-i-birding { order: 4; }
+  .nav-i-catalog { order: 5; }
+  .nav-i-reports { order: 6; }
+  .nav-line2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
+    gap: 4px;
+    flex-basis: 100%;
+    order: 20;
   }
   /* 收紧胶囊：窄屏下 5 个中/英文标签并排更从容（文字本身不折行） */
   .app-nav a {
-    padding: 5px 9px;
+    padding: 5px 7px;
     font-size: 0.78rem;
   }
-  /* 极窄屏（iPhone SE 等）：允许**整颗胶囊**换到下一行，绝不把文字压进胶囊内部 */
-  .nav-group {
-    flex-wrap: wrap;
-    justify-content: center;
+  /* 极窄屏：允许**整颗胶囊**换到下一行，绝不把文字压进胶囊内部 */
+  .nav-line2 {
     row-gap: 4px;
   }
 }
 
-/* 超窄屏再收一档：品牌名与胶囊同步缩小，避免第一行溢出 */
-@media (max-width: 400px) {
+/* 超窄屏再收一档：品牌名与胶囊同步缩小；仍放不下时只留鸟图标（见 ≤380px） */
+@media (max-width: 430px) {
   .brand-name {
     font-size: 1.2rem;
   }
   .app-nav a {
-    padding: 5px 8px;
+    padding: 5px 6px;
+  }
+}
+@media (max-width: 400px) {
+  .app-nav a {
     font-size: 0.74rem;
+  }
+}
+/* 375px 及以下：第一行「品牌 + 5 个胶囊」放不下 → 只留鸟图标（仍是首页链接，aria-label 不变） */
+@media (max-width: 380px) {
+  .brand-name {
+    display: none;
   }
 }
 

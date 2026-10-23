@@ -118,31 +118,32 @@ const immersive = computed(
   <!-- 键盘用户跳过导航直达主内容（H3） -->
   <a class="skip-link" href="#main">{{ t('nav.skipToMain') }}</a>
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
-  <!-- R35：工具条固定 4 键（统计·我的·设置·喇叭）→ 右上角；大众评审归入第二行主导航 -->
+  <!-- 导航顺序（2026-10-23 用户指定）：
+       单行 = 看图 · 听音 · 统计 · 观鸟 · 名录 · 识别 [· 大众评审] · 我的 · 设置 · 喇叭；
+       两行（≤699px）= 第一行 品牌 + 看图 · 听音 · 统计 · 观鸟 · 名录，第二行 识别 · 我的 · 设置 · 喇叭。 -->
   <header v-if="!immersive" class="app-topbar">
     <RouterLink to="/" class="brand" :aria-label="t('nav.brandHome')">
       <Bird class="brand-icon" :size="26" />
       <h1 class="brand-name">UNiaoer</h1>
     </RouterLink>
     <nav class="app-nav" :aria-label="t('nav.mainNav')">
-      <span class="nav-group nav-primary">
-        <RouterLink to="/quiz/image">{{ t('nav.imageQuiz') }}</RouterLink>
-        <RouterLink to="/quiz/audio">{{ t('nav.audioQuiz') }}</RouterLink>
-        <RouterLink to="/birding">{{ t('nav.birding') }}</RouterLink>
-        <RouterLink to="/identify">{{ t('nav.identify') }}</RouterLink>
-        <RouterLink to="/catalog">{{ t('nav.catalog') }}</RouterLink>
-        <!-- 大众评审（R35）：第二行主导航末尾，不占右上角固定 4 键的位置 -->
-        <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports">
+      <span class="nav-line nav-line1">
+        <RouterLink to="/quiz/image" class="nav-i-image">{{ t('nav.imageQuiz') }}</RouterLink>
+        <RouterLink to="/quiz/audio" class="nav-i-audio">{{ t('nav.audioQuiz') }}</RouterLink>
+        <RouterLink to="/stats" class="nav-i-stats">{{ t('nav.stats') }}</RouterLink>
+        <RouterLink to="/birding" class="nav-i-birding">{{ t('nav.birding') }}</RouterLink>
+        <RouterLink to="/catalog" class="nav-i-catalog">{{ t('nav.catalog') }}</RouterLink>
+        <!-- 大众评审：有已发布条目时才出现，跟着名录（两行模式下也在第一行末尾） -->
+        <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports" class="nav-i-reports">
           {{ t('nav.reports') }}
         </RouterLink>
       </span>
-      <span class="nav-group nav-utility">
-        <!-- 统计（R35）：工具条首位，移动端右上角 = 统计·我的·设置·喇叭 -->
-        <RouterLink to="/stats">{{ t('nav.stats') }}</RouterLink>
-        <RouterLink to="/profile">{{ t('nav.profile') }}</RouterLink>
-        <RouterLink to="/settings">{{ t('nav.settings') }}</RouterLink>
+      <span class="nav-line nav-line2">
+        <RouterLink to="/identify" class="nav-i-identify">{{ t('nav.identify') }}</RouterLink>
+        <RouterLink to="/profile" class="nav-i-profile">{{ t('nav.profile') }}</RouterLink>
+        <RouterLink to="/settings" class="nav-i-settings">{{ t('nav.settings') }}</RouterLink>
         <button
-          class="ambience-btn"
+          class="ambience-btn nav-ambience"
           type="button"
           :class="{ on: ambienceOn }"
           :title="ambienceOn ? t('nav.ambienceStop') : t('nav.ambiencePlay')"
