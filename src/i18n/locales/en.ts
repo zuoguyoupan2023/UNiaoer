@@ -493,7 +493,7 @@ const en: typeof zhMessages = {
     // 077: species-level error rates (admin observation window)
     speciesStatsTitle: 'Species error rate (observation, not public)',
     speciesStatsNote:
-      'Per-question stats with no user or province dimension; error rate = wrong / answers (exposure as denominator). T+1: only up to yesterday. Admin does not filter samples; under 10 answers is marked “small sample”.',
+      'Per-question stats with no user or province dimension; error rate = wrong / answers (exposure as denominator). Admin is real-time (including today); the public page will use T+1 (up to yesterday) later. Admin does not filter samples; under 10 answers is marked “small sample”.',
     speciesStatsLoad: 'Load (last 30 days)',
     speciesStatsMeta: 'Window since {window} · updated to {until} · {answers} answers / {species} species',
     speciesStatsEmpty: 'No per-question data yet (it starts accumulating once the new frontend is live).',

@@ -5,7 +5,7 @@
  *   · 数据来自逐题事件 `quiz_answer{species,ok,tier,region,chosen}`，**不含用户/省份维度**；
  *   · 错误率 = 答错次数 / 作答次数（以曝光为分母，避免热门鸟天然错得多）；
  *   · `chosen` 只在答错时上报 → 可得到「A 被认成 B」的组合；
- *   · **T+1**：只统计昨天及以前，不做定时任务；
+ *   · **管理端实时**（含今天）；T+1 只用于将来公开页；
  *   · 管理端不过滤样本（`answers < 10` 标 `small`）。
  */
 
@@ -28,14 +28,14 @@ export interface WrongPairRow {
 export interface SpeciesStats {
   days: number
   since: string
-  /** T+1：数据只到这一天 */
+  /** 已更新到哪一天（管理端 = 今天；公开页将来 = 昨天） */
   until: string
   firstDay: string | null
   lastDay: string | null
   totals: { answers: number; species: number; pairs: number }
   species: SpeciesRateRow[]
   pairs: WrongPairRow[]
-  notes: { metric?: string; privacy?: string; threshold?: string }
+  notes: { metric?: string; privacy?: string; threshold?: string; freshness?: string }
 }
 
 export class AdminSpeciesError extends Error {}

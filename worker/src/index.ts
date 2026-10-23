@@ -1550,7 +1550,8 @@ async function handleAdminStatsProvince(request: Request, env: Env, url: URL): P
  *   · 数据来自 `quiz_answer{species,ok,tier,region,chosen}`（**逐题**，不含任何用户/省份维度）；
  *   · 错误率 = 答错次数 / 作答次数（分母是曝光量，避免「热门鸟天然错得多」的偏差）；
  *   · `chosen` 只在答错时上报 → 「A 被认成 B」的组合榜；
- *   · **T+1**：只统计 `day < 今天`（用户要求「每天只更新前一天的数据」），不做定时任务；
+ *   · **管理端实时**：包含今天（便于观察口径与个案）；**T+1 只用于将来公开页**，
+ *     即公开时再改成 `day < 今天`，不需要定时任务；
  *   · 管理端不过滤样本（`answers < 10` 只标 `small`）。
  */
 async function handleAdminStatsSpecies(request: Request, env: Env, url: URL): Promise<Response> {
@@ -1562,10 +1563,11 @@ async function handleAdminStatsSpecies(request: Request, env: Env, url: URL): Pr
   const SMALL_N = 10
 
   const [rows, span] = await Promise.all([
+    // 管理端**含今天**（实时）；公开页将来再加 `day < today` 的 T+1 过滤
     env.DB.prepare(
-      "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_answer' AND day >= ? AND day < ? GROUP BY props",
+      "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_answer' AND day >= ? GROUP BY props",
     )
-      .bind(since, today)
+      .bind(since)
       .all<{ props: string; n: number }>(),
     env.DB.prepare(
       "SELECT MIN(day) AS first, MAX(day) AS last FROM metrics_daily WHERE event = 'quiz_answer'",
@@ -1617,8 +1619,8 @@ async function handleAdminStatsSpecies(request: Request, env: Env, url: URL): Pr
     {
       days,
       since,
-      /** T+1：只到昨天 */
-      until: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+      /** 已更新到哪一天（管理端 = 今天，实时；公开页将来改成昨天，T+1） */
+      until: today,
       /** 该指标的真实起点（不受窗口影响） */
       firstDay: span?.first ?? null,
       lastDay: span?.last ?? null,
@@ -1627,7 +1629,8 @@ async function handleAdminStatsSpecies(request: Request, env: Env, url: URL): Pr
       pairs: pairList,
       notes: {
         metric: '错误率 = 答错次数 / 作答次数（曝光作分母），管理端不设样本门槛',
-        privacy: '逐题事件不含用户/省份维度；T+1 展示',
+        privacy: '逐题事件不含用户/省份维度',
+        freshness: '管理端实时（含今天）；公开页将来用 T+1',
         threshold: `answers < ${SMALL_N} 标 small`,
       },
     },

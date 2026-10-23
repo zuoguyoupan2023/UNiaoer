@@ -576,7 +576,7 @@ export const messages = {
     // 077：鸟种级错误率（管理端观察期）
     speciesStatsTitle: '鸟种错误率（观察期，未公开）',
     speciesStatsNote:
-      '逐题统计，不含用户与省份维度；错误率 = 答错次数 / 作答次数（以曝光为分母）。T+1：只统计到昨天。管理端不做样本过滤，n<10 标「样本少」。',
+      '逐题统计，不含用户与省份维度；错误率 = 答错次数 / 作答次数（以曝光为分母）。管理端实时（含今天）；公开页将来才用 T+1（只到昨天）。管理端不做样本过滤，n<10 标「样本少」。',
     speciesStatsLoad: '拉取（近 30 天）',
     speciesStatsMeta: '窗口自 {window} 起 · 已更新到 {until} · {answers} 次作答 / {species} 种',
     speciesStatsEmpty: '还没有逐题数据（需要新版前端上报后才能积累）。',
