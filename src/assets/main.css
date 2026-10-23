@@ -190,8 +190,8 @@
   }
 }
 /* 窄屏（≤699px = 单行放不下的宽度）两行导航：
-   第一行 = 鸟图标 + 品牌 + 看图/听音/统计/观鸟/名录（屏幕太窄时只留鸟图标，见 ≤380px）；
-   第二行 = 识别/我的/设置/喇叭，居中。 */
+   第一行 = 鸟图标 + 品牌 + 识别/我的/设置/喇叭；
+   第二行 = 看图/听音/统计/观鸟/名录（居中）。 */
 @media (max-width: 699px) {
   .app-topbar {
     flex-wrap: wrap;
@@ -208,17 +208,15 @@
     order: 0;
     margin-right: 8px;
   }
-  /* 第一行的胶囊靠右排（品牌在左），第二行整行居中 */
-  .nav-i-image {
-    order: 1;
+  /* 第一行右半 = 识别/我的/设置/喇叭（识别用 margin-left:auto 把这组推到右边） */
+  .nav-line2 {
+    display: contents;
+  }
+  .nav-i-identify {
     margin-left: auto;
   }
-  .nav-i-audio { order: 2; }
-  .nav-i-stats { order: 3; }
-  .nav-i-birding { order: 4; }
-  .nav-i-catalog { order: 5; }
-  .nav-i-reports { order: 6; }
-  .nav-line2 {
+  /* 第二行整行占满、居中 */
+  .nav-line1 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -233,7 +231,7 @@
     font-size: 0.78rem;
   }
   /* 极窄屏：允许**整颗胶囊**换到下一行，绝不把文字压进胶囊内部 */
-  .nav-line2 {
+  .nav-line1 {
     row-gap: 4px;
   }
 }
@@ -252,7 +250,8 @@
     font-size: 0.74rem;
   }
 }
-/* 375px 及以下：第一行「品牌 + 5 个胶囊」放不下 → 只留鸟图标（仍是首页链接，aria-label 不变） */
+/* 375px 及以下：第一行「品牌 + 识别/我的/设置/喇叭」会挤（尤其中英文标签更长的英文界面）→ 只留鸟图标
+   （仍是首页链接，aria-label 不变） */
 @media (max-width: 380px) {
   .brand-name {
     display: none;

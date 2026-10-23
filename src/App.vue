@@ -120,7 +120,7 @@ const immersive = computed(
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
   <!-- 导航顺序（2026-10-23 用户指定）：
        单行 = 看图 · 听音 · 统计 · 观鸟 · 名录 · 识别 [· 大众评审] · 我的 · 设置 · 喇叭；
-       两行（≤699px）= 第一行 品牌 + 看图 · 听音 · 统计 · 观鸟 · 名录，第二行 识别 · 我的 · 设置 · 喇叭。 -->
+       两行（≤699px）= 第一行 品牌 + 识别 · 我的 · 设置 · 喇叭，第二行 看图 · 听音 · 统计 · 观鸟 · 名录。 -->
   <header v-if="!immersive" class="app-topbar">
     <RouterLink to="/" class="brand" :aria-label="t('nav.brandHome')">
       <Bird class="brand-icon" :size="26" />
