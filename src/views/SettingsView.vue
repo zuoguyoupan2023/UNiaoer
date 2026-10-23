@@ -277,6 +277,21 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
     <div class="setting">
       <h3>{{ t('settings.metricsTitle') }}</h3>
       <p class="muted">{{ t('settings.metricsDesc') }}</p>
+      <!-- 076：公开说明「收集什么 / 为什么 / 不收集什么」（昵称浮窗只留一句） -->
+      <ul class="metrics-list">
+        <li>
+          <strong>{{ t('settings.metricsWhatTitle') }}</strong>
+          <span class="muted">{{ t('settings.metricsWhat') }}</span>
+        </li>
+        <li>
+          <strong>{{ t('settings.metricsWhyTitle') }}</strong>
+          <span class="muted">{{ t('settings.metricsWhy') }}</span>
+        </li>
+        <li>
+          <strong>{{ t('settings.metricsNotTitle') }}</strong>
+          <span class="muted">{{ t('settings.metricsNot') }}</span>
+        </li>
+      </ul>
       <label class="switch">
         <input v-model="settings.metricsEnabled" type="checkbox" />
         <span>{{ t('settings.metricsSwitch') }}</span>
@@ -388,6 +403,20 @@ h2.sec {
   margin-top: 8px;
   font-size: 0.85rem;
   cursor: pointer;
+}
+/* 028/076：匿名统计的「收集什么 / 为什么 / 不收集什么」说明 */
+.metrics-list {
+  margin: 8px 0 0 18px;
+  padding: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.metrics-list li {
+  margin-bottom: 4px;
+}
+.metrics-list strong {
+  margin-right: 6px;
+  color: var(--primary-dark);
 }
 .delay {
   display: inline-flex;

@@ -472,6 +472,7 @@ const count = computed(() => reports.value.length)
                 {{ t('admin.provinceStatsCell', { users: p.users, visits: p.visits, rounds: p.rounds }) }}
                 <template v-if="p.accuracy">
                   · {{ t('admin.provinceStatsAcc', { mean: p.accuracy.mean, n: p.accuracy.n }) }}
+                  <template v-if="p.accuracy.small">（{{ t('admin.provinceStatsSmall') }}）</template>
                 </template>
               </span>
             </li>
@@ -486,7 +487,10 @@ const count = computed(() => reports.value.length)
                   {{ provLabel(m.uprov) }} →
                   {{ m.region === 'ALL' ? t('admin.regionAll') : provLabel(m.region) }} · L{{ m.tier }}
                 </span>
-                <span class="rank-n">{{ t('admin.regionStatsCell', { mean: m.mean, n: m.n }) }}</span>
+                <span class="rank-n">
+                  {{ t('admin.regionStatsCell', { mean: m.mean, n: m.n }) }}
+                  <template v-if="m.small">（{{ t('admin.provinceStatsSmall') }}）</template>
+                </span>
               </li>
             </ul>
           </details>

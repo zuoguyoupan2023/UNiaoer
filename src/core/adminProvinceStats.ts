@@ -4,7 +4,8 @@
  * 口径（docs/076）：
  *   · `prov` = **做题者**的省级归属地（Worker 从 `request.cf` 派生，不存 IP；仅统计已同意用户）；
  *   · `region` = 题目地区（用户自选）—— 与归属地是两套口径，展示时必须分列；
- *   · 人数 = 每省**每日去重**后累加（人日）；正确率 = Σcorrect / Σtotal，`n < 10` 不展示；
+ *   · 人数 = 每省**每日去重**后累加（人日）；正确率 = Σcorrect / Σtotal；
+ *     **管理端不过滤样本**（`n < 10` 只标 `small`），公开页才用 10 轮门槛；
  *   · 港澳台在服务端归并为 `CN-91/92/71`，展示名走 i18n（中国香港/中国澳门/中国台湾）。
  */
 
@@ -16,8 +17,8 @@ export interface ProvinceRow {
   visits: number
   /** 轮次数 */
   rounds: number
-  /** 平均正确率（n < 10 时为 null） */
-  accuracy: { n: number; mean: number } | null
+  /** 平均正确率（轮次 > 0 就有；`small` = 样本 < 10，仅管理端标注、不过滤） */
+  accuracy: { n: number; mean: number; small?: boolean } | null
 }
 
 export interface ProvinceMatrixRow {
@@ -26,6 +27,8 @@ export interface ProvinceMatrixRow {
   tier: string
   n: number
   mean: number
+  /** 样本 < 10（管理端只标注，不隐藏） */
+  small?: boolean
 }
 
 export interface ProvinceStats {

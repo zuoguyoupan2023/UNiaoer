@@ -1150,6 +1150,14 @@ async function recordVisitor(env: Env, request: Request, day: string, prov: stri
       )
         .bind(day)
         .run()
+    } else if (prov) {
+      // 当天已登记过（原先未同意 → prov 为空）：补写省码，让「同意后当天」的人数不漏
+      // 只补空值，不改已写入的省（同一人当天以首次记录的省为准）
+      await env.DB.prepare(
+        'UPDATE metrics_visitors SET prov = ? WHERE day = ? AND vhash = ? AND prov IS NULL',
+      )
+        .bind(prov, day, hash)
+        .run()
     }
   } catch {
     /* 静默：去重表异常不影响其他计数 */
@@ -1393,7 +1401,8 @@ async function handleAdminStatsProvince(request: Request, env: Env, url: URL): P
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
   const days = clampInt(url.searchParams.get('days'), 1, 90, 30)
   const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
-  const MIN_N = 10
+  /** 小样本阈值：管理端**只标注、不过滤**（公开页才用 10 轮门槛） */
+  const SMALL_N = 10
 
   const [visitors, rows] = await Promise.all([
     env.DB.prepare(
@@ -1457,21 +1466,23 @@ async function handleAdminStatsProvince(request: Request, env: Env, url: URL): P
       users: c.users,
       visits: c.visits,
       rounds: c.rounds,
-      accuracy: c.rounds >= MIN_N ? { n: c.rounds, mean: Math.round((c.correct / c.total) * 100) } : null,
+      /** 管理端**不做样本门槛**：轮次 > 0 就给出结果，样本小由 small 标注 */
+      accuracy: c.rounds > 0 ? { n: c.rounds, mean: Math.round((c.correct / c.total) * 100), small: c.rounds < SMALL_N } : null,
     }))
     .sort((a, b) => b.users - a.users || b.visits - a.visits || b.rounds - a.rounds)
 
+  /** 省 × 题区 × 档位：同样**不过滤**，n=1 也返回（管理端用来核对口径与个案） */
   const matrixOut = [...matrix.values()]
-    .filter((m) => m.rounds >= MIN_N)
     .map((m) => ({
       uprov: m.uprov,
       region: m.region,
       tier: m.tier,
       n: m.rounds,
       mean: Math.round((m.correct / m.total) * 100),
+      small: m.rounds < SMALL_N,
     }))
-    .sort((a, b) => b.n - a.n)
-    .slice(0, 300)
+    .sort((a, b) => b.n - a.n || a.uprov.localeCompare(b.uprov))
+    .slice(0, 500)
 
   return json(
     {
@@ -1483,7 +1494,7 @@ async function handleAdminStatsProvince(request: Request, env: Env, url: URL): P
       notes: {
         uprov: '按 IP 归属地（省级近似，原始 IP 不落库）；港澳台归入中国省级',
         region: '题目地区 = 用户自选，与归属地不是同一口径',
-        threshold: `正确率需 n ≥ ${MIN_N}；人数为每省每日去重后累加`,
+        threshold: `管理端不过滤样本（n<${SMALL_N} 标 small）；公开页才用 10 轮门槛`,
         consent: '仅统计已同意「按省级归属地统计」的用户',
       },
     },
