@@ -3,29 +3,43 @@
  * 036（用户 2026-10-08 决策 D）：**省份热力条**——某物种在各省级区划的出现强度。
  *
  * 为什么不是地图：铁律 6 要求边界逐项复核；热力条信息量等价且零边界风险（见 docs/037）。
- * 数据：`region-provinces.json`（GBIF stateProvince 记录数；15 国 / 全球种，051 S3 扩自核心库 1,186 种）。
+ * 数据：省级层分片（P1-6，2026-10-23）——只读该物种所在的前缀桶
+ * `data/region-species/<前两位>.json`（实测最大 133KB / brotli 33KB），
+ * 不再整包下载 3MB 的单文件；国家/省名与署名取自 `region-provinces/index.json`。
  *
  * 口径与诚实性（重要）：
- *   · 条形长度用 **log10 缩放**——原始记录数跨度极大（实测 1 ~ 1.3 亿），线性会让其余条形不可见；
+ *   · 条形长度用 **平方根缩放**——原始记录数跨度极大（实测 1 ~ 1.3 亿），线性会让其余条形不可见；
  *   · 记录数受**观测努力**与**单一数据集**影响（实测：蒙古沙鸻占香港记录 94.7%），
- *     故本视图是"公开记录多少"的相对比较，**不是严格丰度**（docs/036 §1.3 实测）。
+ *     故本视图是"公开记录多少"的相对比较，**不是严格丰度**（docs/036 §1.3 实测）；
+ *   · 只计能映射到 ISO 省名的记录（该国未归属省份的记录不在内）。
  *   · 无该物种省级数据时整块不显示（未覆盖的种暂无省级数据，见 docs/036 §1.2）。
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MapPinned } from 'lucide-vue-next'
-import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
+import {
+  loadProvincesIndex,
+  loadSpeciesProvinces,
+  provincesOf,
+  type ProvinceIndex,
+} from '@/core/provinces'
 import { regionLabel } from '@/core/region'
 import { currentLocale } from '@/i18n'
 
 const props = defineProps<{ speciesId: string }>()
 const { t } = useI18n()
 
-const data = ref<ProvinceData | null>(null)
+const index = ref<ProvinceIndex | null>(null)
+const byCountry = ref<Record<string, Record<string, number>>>({})
 const expanded = ref(false)
 
 onMounted(async () => {
-  data.value = await loadProvinces()
+  const [idx, shard] = await Promise.all([
+    loadProvincesIndex(),
+    loadSpeciesProvinces(props.speciesId),
+  ])
+  index.value = idx
+  byCountry.value = shard?.bySpecies?.[props.speciesId] ?? {}
 })
 
 /** 地区名：统一入口（铁律 6） */
@@ -43,11 +57,10 @@ interface Row {
 
 /** 该物种有记录的省，按记录数降序 */
 const rows = computed<Row[]>(() => {
-  const d = data.value
+  const d = index.value
   if (!d) return []
   const out: Row[] = []
-  for (const cc of d.countries) {
-    const counts = d.bySpecies?.[props.speciesId]?.[cc]
+  for (const [cc, counts] of Object.entries(byCountry.value)) {
     if (!counts) continue
     const names = new Map(provincesOf(d, cc, currentLocale()).map((p) => [p.code, p.name]))
     for (const [code, count] of Object.entries(counts)) {
@@ -80,7 +93,7 @@ function barWidth(count: number): string {
   return `${Math.max(w, 4)}%`
 }
 
-const sourcesText = computed(() => (data.value?.sources ?? []).map((s) => s.name).join(' · '))
+const sourcesText = computed(() => (index.value?.sources ?? []).map((s) => s.name).join(' · '))
 const fmt = (n: number) => n.toLocaleString('en-US')
 </script>
 

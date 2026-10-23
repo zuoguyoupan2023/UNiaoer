@@ -26,11 +26,14 @@ import {
   type Continent,
 } from '@/core/region'
 import {
-  loadProvinces,
+  loadCountryProvinces,
+  loadProvincesIndex,
   provinceStats,
   speciesInProvince,
-  type ProvinceData,
+  type CountryProvinceShard,
+  type ProvinceIndex,
 } from '@/core/provinces'
+import { loadCountryRecords, type CountryRecordsShard } from '@/core/regionRecords'
 import {
   ebirdHotspotUrl,
   hotspotsInProvince,
@@ -55,7 +58,11 @@ const route = useRoute()
 const router = useRouter()
 const bank = ref<Manifest | null>(null)
 const bySpecies = ref<Record<string, string[]> | null>(null)
-const provinceData = ref<ProvinceData | null>(null)
+const provinceIndex = ref<ProvinceIndex | null>(null)
+/** 当前所选国家的省级分片（P1-6：按国懒加载，只读 1 个文件） */
+const countryProvince = ref<CountryProvinceShard | null>(null)
+/** 当前所选国家/地区的**国家层**记录数（P0-5：249 个 GBIF 国家/地区码都有；含未归属省份的记录） */
+const countryRecords = ref<CountryRecordsShard | null>(null)
 const hotspotData = ref<HotspotIndex | null>(null)
 /** 当前所选国家的点位（懒加载；null = 加载中/无数据） */
 const countrySpots = ref<Hotspot[]>([])
@@ -173,8 +180,9 @@ onMounted(async () => {
       ? ((await res.json()) as { bySpecies?: Record<string, string[]> })
       : { bySpecies: {} }
     bySpecies.value = data.bySpecies ?? {}
-    // 省级层：缺失则整层不显示（021 §2.5 薄数据回退国家层）
-    provinceData.value = await loadProvinces()
+    // 省级层索引（元数据 + 省名 + 分片清单）；缺失则整层不显示（021 §2.5 薄数据回退国家层）
+    provinceIndex.value = await loadProvincesIndex()
+    await loadRegionLayers(selected.value)
     // 观鸟点（eBird 派生点位）：索引缺失则整块不显示
     hotspotData.value = await loadHotspots()
     void loadSpotsFor(selected.value)
@@ -185,6 +193,27 @@ onMounted(async () => {
   void loadSpeciesIndex().then((idx) => (speciesIdx.value = idx))
   void loadSpeciesDistribution().then((d) => (globalByCountry.value = d?.byCountry ?? null))
 })
+
+/**
+ * 按国懒加载两层地区数据（P1-6 分片 + P0-5 国家层）：
+ * · 省级分片 `region-provinces/<CC>.json` —— 只有 29 国，其余国家返回 null（省级目录为空）；
+ * · 国家层记录数 `region-records/<CC>.json` —— 249 个国家/地区码都有 → 网格能排序、卡片能显示「GBIF N 条」。
+ * 切国竞态：迟到的旧响应直接丢弃（否则快速连点会串数据）。
+ */
+async function loadRegionLayers(cc: string) {
+  if (!cc) {
+    countryProvince.value = null
+    countryRecords.value = null
+    return
+  }
+  // 切国时立刻丢掉上一国的数据（否则列表会短暂用上一国的记录数排序/显示）
+  if (countryProvince.value?.cc !== cc) countryProvince.value = null
+  if (countryRecords.value?.cc !== cc) countryRecords.value = null
+  const [prov, rec] = await Promise.all([loadCountryProvinces(cc), loadCountryRecords(cc)])
+  if (cc !== selected.value) return
+  countryProvince.value = prov
+  countryRecords.value = rec
+}
 
 /** ISO 3166-1 alpha-2 → 本地化地区名（Intl.DisplayNames；港澳台走特别标注；不支持时回退代码） */
 function countryName(code: string): string {
@@ -234,7 +263,7 @@ const filtered = computed(() => {
 const mergedIndex = computed(() => (mergedBySpecies.value ? buildCountryIndex(mergedBySpecies.value) : {}))
 const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
 const provinces = computed(() => {
-  const list = provinceStats(provinceData.value, selected.value, locale.value)
+  const list = provinceStats(provinceIndex.value, countryProvince.value, selected.value, locale.value)
   if (sortMode.value === 'count') return [...list].sort((a, b) => b.count - a.count)
   return [...list].sort((a, b) => collator.value.compare(a.name, b.name))
 })
@@ -242,7 +271,7 @@ const provinceName = computed(
   () => provinces.value.find((p) => p.code === province.value)?.name ?? '',
 )
 const provinceSet = computed(() =>
-  province.value ? speciesInProvince(provinceData.value, selected.value, province.value) : null,
+  province.value ? speciesInProvince(countryProvince.value, province.value) : null,
 )
 /** 统一网格条目:bank 物种(可玩,带头图)+ 全球骨架物种(未收录媒体,轻量详情) */
 interface GridItem {
@@ -319,34 +348,39 @@ const countryGridItems = computed<GridItem[]>(() => {
  * "全局 commonness + 名称"，于是出现「暗绿绣眼鸟（2752 条）排在白头鹎（14965 条）前面」。
  * 档位适合**出题分档抽样**，不适合**展示排序**。
  *
- * 现在改为按**记录数**（`region-provinces.json` 的 `bySpecies[id][国家][省]`）降序：
- * 选省 → 该省记录数；只选国家 → 该国各省记录数之和。最多人记录过的鸟排最前。
+ * 现在改为按**记录数**降序。数字源按选择分层（P0-5 / P1-6，2026-10-23）：
+ * · 选省 → 省级分片 `region-provinces/<CC>.json` 的 `bySpecies[id][省码]`（只计能映射到 ISO 省名的记录）；
+ * · 只选国 → **国家层** `region-records/<CC>.json`（249 个国家/地区码都有，含未被归属到省份的记录）。
+ *   旧做法"各省求和"会把未归属省份的记录整块丢掉 → 美国这类国家系统性偏低。
  */
 const speciesSort = ref<'name' | 'records'>('name')
 
 /** 当前选择下「物种 id → 记录数」（一次遍历预计算，避免排序时反复求和） */
 const recordCounts = computed(() => {
-  const data = provinceData.value
-  const cc = selected.value
+  const shard = countryProvince.value
+  const records = countryRecords.value
   const prov = province.value
   const m = new Map<string, number>()
-  if (!data?.bySpecies || !cc) return m
-  for (const [id, byCc] of Object.entries(data.bySpecies)) {
-    const per = byCc?.[cc]
-    if (!per) continue
-    if (prov) {
-      const n = per[prov]
+  if (prov) {
+    for (const [id, cells] of Object.entries(shard?.bySpecies || {})) {
+      const n = cells?.[prov]
       if (n) m.set(id, n)
-    } else {
-      let sum = 0
-      for (const n of Object.values(per)) sum += n
-      if (sum) m.set(id, sum)
     }
+    return m
+  }
+  for (const [id, n] of Object.entries(records?.bySpecies || {})) if (n) m.set(id, n)
+  if (m.size) return m
+  // 回退：国家层产物缺失/加载失败 → 仍用"各省求和"（宁缺勿空）
+  for (const [id, cells] of Object.entries(shard?.bySpecies || {})) {
+    let sum = 0
+    for (const n of Object.values(cells || {})) sum += n
+    if (sum) m.set(id, sum)
   }
   return m
 })
 
-/** 某物种在当前选择下的记录数（0 = 无记录） */
+/** 某物种在当前选择下的记录数（0 = 无记录）。用 slug（= 产物里的物种 id），
+ *  这样**未收录媒体**的骨架物种也能显示「GBIF N 条」（`bankId` 只有可玩种才有）。 */
 const recordCountOf = (id: string | null | undefined) => (id ? (recordCounts.value.get(id) ?? 0) : 0)
 
 /** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
@@ -370,7 +404,7 @@ watch([selected, province], () => {
 })
 const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
 const provinceSources = computed(() =>
-  (provinceData.value?.sources ?? []).map((s) => s.name).join(' · '),
+  (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
 
 /** 该国观鸟点（腿 B 网格聚合；缺失/无数据则为空，整块隐藏）。
@@ -476,6 +510,7 @@ watch(selected, () => {
   expanded.value = true
   expandedHotspot.value = ''
   void loadSpotsFor(selected.value)
+  void loadRegionLayers(selected.value)
 })
 
 /**
@@ -488,7 +523,8 @@ watch(selected, () => {
 function selectCountry(code: string) {
   if (code !== selected.value) {
     selected.value = code
-    if (isMobile.value && !provinceStats(provinceData.value, code, locale.value).length) {
+    // 有省级细分的国家保持抽屉打开，让用户接着选省；没有的（绝大多数国家）直接收起
+    if (isMobile.value && !hasProvinceList(code)) {
       closePicker()
       void nextTick(scrollToResults)
     }
@@ -500,6 +536,13 @@ function selectCountry(code: string) {
   } else {
     expanded.value = !expanded.value
   }
+}
+
+/** 该国有省级细分吗？（只看索引里的 byCountry，不依赖该国的分片是否已加载） */
+function hasProvinceList(cc: string): boolean {
+  const idx = provinceIndex.value
+  if (!idx) return false
+  return Object.keys(idx.byCountry?.[cc] ?? {}).length > 0
 }
 
 /** 选择省级（'' = 全部省份）：移动端选完收起抽屉，并让下方结果回到视野 */
@@ -840,10 +883,10 @@ function pickProvince(code: string) {
                   <span class="sp-text">
                     <span class="sp-name">{{ gi.name }}</span>
                     <span class="sp-sci">{{ gi.nameSci }}</span>
-                    <span v-if="gi.bankId && recordCountOf(gi.bankId) > 0" class="sp-count muted">
-                      {{ t('region.provinceRecords', { n: recordCountOf(gi.bankId) }) }}
+                    <span v-if="recordCountOf(gi.slug) > 0" class="sp-count muted">
+                      {{ t('region.recordCount', { n: recordCountOf(gi.slug) }) }}
                     </span>
-                    <span v-else-if="!gi.playable" class="sp-badge">{{ t('region.notInBank') }}</span>
+                    <span v-if="!gi.playable" class="sp-badge">{{ t('region.notInBank') }}</span>
                   </span>
                 </RouterLink>
               </li>
@@ -853,6 +896,9 @@ function pickProvince(code: string) {
                 {{ t('region.showMore') }}
               </button>
             </div>
+            <p v-if="recordCounts.size" class="record-note muted">
+              {{ t('region.recordNote') }}
+            </p>
             <p v-if="provinces.length" class="prov-source muted">
               {{ t('region.provinceSource', { sources: provinceSources }) }}
             </p>
@@ -1204,6 +1250,12 @@ function pickProvince(code: string) {
 .prov-source {
   margin-top: 10px;
   font-size: 0.68rem;
+}
+/* P0-5：记录数口径说明（国家层含未归属省份 / 省级只计已归属；不跨地区比大小） */
+.record-note {
+  margin-top: 10px;
+  font-size: 0.68rem;
+  line-height: 1.6;
 }
 /* 右侧面板标签页（2026-10-09：鸟种 / 观鸟点并列，替代上下堆叠） */
 .panel-tabs {

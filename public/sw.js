@@ -133,6 +133,18 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
     return
   }
+  // P1-6 / P0-5（2026-10-23）省级层与国家层**分片**：内容随构建更新（URL 不含版本号），
+  // 与 036/039 同口径走 stale-while-revalidate —— 切国切省时首屏立刻可用、后台拉新；
+  // 构建版本变更时由 refreshBuildTag 清 RUNTIME_CACHE 兜底。
+  // （覆盖 region-provinces.json 旧单文件、region-provinces/<CC>.json、region-species/<桶>.json）
+  if (
+    url.pathname.includes('/data/region-provinces') ||
+    url.pathname.includes('/data/region-species/') ||
+    url.pathname.includes('/data/region-records/')
+  ) {
+    event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE))
+    return
+  }
   // 036 省级常见度分片：内容随构建更新（URL 不含版本号），故 stale-while-revalidate
   // （首屏立刻可用 + 后台更新；构建版本变更时由 refreshBuildTag 清缓存兜底）
   if (url.pathname.includes('/data/province-commonness')) {

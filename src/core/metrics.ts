@@ -95,7 +95,7 @@ const SESSION_KEY = 'uniaoer.sess'
 
 /** 白名单裁剪：只保留允许的属性且值在枚举内（越界属性丢弃，事件本身仍计） */
 /**
- * 073 P0：`region` 不穷举（330 省码 + 249 国），改形态校验：`ALL` | `CN` | `CN-11`。
+ * 073 P0：`region` 不穷举（330 省码 + 249 个国家/地区码），改形态校验：`ALL` | `CN` | `CN-11`。
  * 与 Worker 的 `REGION_VALUE_RE` 保持一致（两侧都校验）。
  */
 const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/

@@ -14,7 +14,7 @@
  * 实测信号分布(2026-10-08,全量):
  *   GBIF 记录数  p10=1  p50=32   p90=5,606    max=33,139,497
  *   XC 录音数    p10=0  p50=21   p90=152      max=9,653      (1,962 种为 0)
- *   分布国家数*  由 species-distribution.json 反演(249 国 / 11,065 种覆盖)
+ *   分布国家数*  由 species-distribution.json 反演(249 个国家/地区码 / 11,065 种覆盖)
  *   *国家数分布随骨架导出,见 docs/029 M0 完成记录。
  */
 export const SIGNAL_WEIGHTS = { gbifRecords: 0.4, countries: 0.3, xcRecordings: 0.3 }

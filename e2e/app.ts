@@ -75,22 +75,66 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
     }),
   )
   await page.route('**/data/faq-changelog.json', (r) => r.fulfill({ json: [] }))
-  // 省级层（021 M2/M3）：美国 CA/WA；中国 34 区划之一角（含港澳台标注名，铁律 6）
-  await page.route('**/data/region-provinces.json', (r) =>
+  // 省级层（021 M2/M3）；P1-6（2026-10-23）起改为**索引 + 按国/按物种分片**：
+  const provSources = [
+    { key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' },
+  ]
+  const provByCountry = {
+    CN: { 'CN-11': '北京市', 'CN-44': '广东省', 'CN-71': '中国台湾', 'CN-91': '中国香港', 'CN-92': '中国澳门' },
+    US: { 'US-CA': 'California', 'US-WA': 'Washington' },
+  }
+  const provByCountryAlt = {
+    CN: { 'CN-11': 'Beijing', 'CN-44': 'Guangdong', 'CN-71': 'Taiwan, China', 'CN-91': 'Hong Kong, China', 'CN-92': 'Macao, China' },
+  }
+  const provNoShards = { schemaVersion: 1, generatedAt: 'e2e-fixture', method: 'gbif stateProvince → ISO 3166-2', sources: provSources }
+  await page.route('**/data/region-provinces/index.json', (r) =>
+    r.fulfill({
+      json: {
+        ...provNoShards,
+        countries: ['CN', 'US'],
+        byCountry: provByCountry,
+        byCountryAlt: provByCountryAlt,
+        counts: { countries: 2, species: 3, cells: 7 },
+        countryCounts: { CN: { species: 2, cells: 4 }, US: { species: 2, cells: 3 } },
+        sharding: { dir: 'region-provinces', files: ['CN.json', 'US.json'], bytes: {}, maxBytes: 0, totalBytes: 0 },
+        speciesSharding: {
+          dir: 'region-species',
+          bucketChars: 2,
+          buckets: ['sp'],
+          files: ['sp.json'],
+          bytes: {},
+          maxBytes: 0,
+          totalBytes: 0,
+        },
+      },
+    }),
+  )
+  await page.route('**/data/region-provinces/CN.json', (r) =>
     r.fulfill({
       json: {
         schemaVersion: 1,
+        cc: 'CN',
         generatedAt: 'e2e-fixture',
-        method: 'gbif stateProvince → ISO 3166-2；CN 港澳台由 distribution 存在性并入',
-        sources: [{ key: 'gbif', name: 'GBIF', url: 'https://www.gbif.org/', license: 'CC0', attribution: 'GBIF' }],
-        countries: ['CN', 'US'],
-        byCountry: {
-          CN: { 'CN-11': '北京市', 'CN-44': '广东省', 'CN-71': '中国台湾', 'CN-91': '中国香港', 'CN-92': '中国澳门' },
-          US: { 'US-CA': 'California', 'US-WA': 'Washington' },
-        },
-        byCountryAlt: {
-          CN: { 'CN-11': 'Beijing', 'CN-44': 'Guangdong', 'CN-71': 'Taiwan, China', 'CN-91': 'Hong Kong, China', 'CN-92': 'Macao, China' },
-        },
+        bySpecies: { 'sp-01': { 'CN-44': 500, 'CN-91': 1 }, 'sp-02': { 'CN-11': 30, 'CN-71': 1 } },
+      },
+    }),
+  )
+  await page.route('**/data/region-provinces/US.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        cc: 'US',
+        generatedAt: 'e2e-fixture',
+        bySpecies: { 'sp-01': { 'US-CA': 120, 'US-WA': 4 }, 'sp-02': { 'US-CA': 30 }, 'sp-03': { 'US-WA': 8 } },
+      },
+    }),
+  )
+  await page.route('**/data/region-species/sp.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        bucket: 'sp',
+        generatedAt: 'e2e-fixture',
         bySpecies: {
           'sp-01': { CN: { 'CN-44': 500, 'CN-91': 1 }, US: { 'US-CA': 120, 'US-WA': 4 } },
           'sp-02': { CN: { 'CN-11': 30, 'CN-71': 1 }, US: { 'US-CA': 30 } },
@@ -98,6 +142,30 @@ export async function stubApp(page: Routable, opts?: { shares?: ShareStubStore }
         },
       },
     }),
+  )
+  // 旧单文件已退役（P1-6）：回 404，确保前端不再依赖它
+  await page.route('**/data/region-provinces.json', (r) => r.fulfill({ status: 404, body: '' }))
+  // P0-5：国家层记录数（索引 + 按国分片；夹具只给 CN/US）
+  await page.route('**/data/region-records/index.json', (r) =>
+    r.fulfill({
+      json: {
+        schemaVersion: 1,
+        generatedAt: 'e2e-fixture',
+        method: 'e2e fixture: GBIF species × country',
+        sources: provSources,
+        threshold: { minRecords: 2 },
+        scope: { countries: 2 },
+        counts: { rows: 6, rawRecords: 1000, pairs: 5, species: 3, matchedRecords: 693, matchedShare: 0.693, viaBridge: 0, unmatchedNames: 0 },
+        totals: { CN: 531, US: 162 },
+        sharding: { dir: 'region-records', files: ['CN.json', 'US.json'], bytes: {}, maxBytes: 0, totalBytes: 0 },
+      },
+    }),
+  )
+  await page.route('**/data/region-records/CN.json', (r) =>
+    r.fulfill({ json: { schemaVersion: 1, cc: 'CN', count: 531, species: 2, bySpecies: { 'sp-01': 501, 'sp-02': 30 } } }),
+  )
+  await page.route('**/data/region-records/US.json', (r) =>
+    r.fulfill({ json: { schemaVersion: 1, cc: 'US', count: 162, species: 3, bySpecies: { 'sp-01': 124, 'sp-02': 30, 'sp-03': 8 } } }),
   )
   // 季节性数据（021 M1/M3）：sp-01 有 12 月向量 + 权威居留型；其余物种无条目（块隐藏）
   await page.route('**/data/seasonality.json', (r) =>

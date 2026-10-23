@@ -366,10 +366,13 @@ export const messages = {
     allProvinces: '全部省份',
     done: '完成',
     barSpots: '{n} 个鸟点',
-    provinceRecords: '{n} 条记录',
+    recordCount: 'GBIF {n} 条',
+    /** P0-5：国家层与省级层口径不同（含/不含未归属省份的记录），且不宜跨地区比大小 */
+    recordNote:
+      '记录数为 GBIF 公开观测条数：选国家时含未被归属到省份的记录，选省份时只计能映射到省名的记录（两层数字天然不等）。各国记录量受数据集构成影响，不宜跨地区比较大小。',
+    provinceSource: '省级数据来源：{sources}',
     notInBank: '未收录媒体',
     showMore: '显示更多',
-    provinceSource: '省级数据来源：{sources}',
     hotspotTitle: '观鸟点',
     hotspotLatest: '最近记录 {d}',
     hotspotSpeciesN: '{n} 种',

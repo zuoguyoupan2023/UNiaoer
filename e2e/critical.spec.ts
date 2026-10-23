@@ -281,7 +281,8 @@ test.describe('入口与页面', () => {
     await expect(page.getByText('测试鸟1', { exact: true })).toBeVisible()
     await expect(page.getByText('测试鸟2', { exact: true })).toBeVisible()
     await expect(page.getByText('测试鸟3', { exact: true })).toBeHidden()
-    await expect(page.locator('.sp-count').first()).toContainText('条记录')
+    // P0-5：记录数标注统一为「GBIF N 条」（选省=该省记录数；只选国=国家层记录数）
+    await expect(page.locator('.sp-count').first()).toContainText('GBIF')
 
     // 点击国家本身 = 全部：sp-03 重现（二级目录已无「全部」项）
     await us.click()
@@ -384,7 +385,7 @@ test.describe('入口与页面', () => {
     // 数字卡（桩数据：独立访客 7 / 会话 12 / 轮次 5 / 浏览 40）
     const cards = page.locator('.card-item')
     await expect(cards).toHaveCount(6)
-    await expect(page.locator('.card-item', { hasText: '独立访客' }).locator('.num')).toHaveText('7')
+    await expect(page.locator('.card-item', { hasText: '累计访问人次' }).locator('.num')).toHaveText('7')
     await expect(page.locator('.card-item', { hasText: '完成轮次' }).locator('.num')).toHaveText('463')
     // 近 30 日逐日条形（桩数据首日就有值，不会被「裁掉上线前空日期」裁短）
     await expect(page.locator('.bars li')).toHaveCount(30)

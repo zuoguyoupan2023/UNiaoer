@@ -145,6 +145,221 @@ function checkProvinceCommonnessShard(name, shard) {
   }
 }
 
+/**
+ * P1-6（2026-10-23）省级层分片索引 `public/data/region-provinces/index.json`：
+ * 只承载元数据 + 国家/省名 + 两类分片清单（**不得内嵌 bySpecies**，否则又变成单文件）。
+ * 分片内容与整体不变量在 checkProvincesShards 里合并后复用 checkProvinces 校验。
+ */
+function checkProvincesIndex(name, data) {
+  check(Array.isArray(data.countries) && data.countries.length > 0, `${name}: countries 缺失`)
+  check(data.bySpecies === undefined, `${name}: 索引不得内嵌 bySpecies（P1-6 已拆成按国/按物种分片）`)
+  check(data.sharding && Array.isArray(data.sharding.files), `${name}: sharding.files 缺失`)
+  check(
+    data.speciesSharding && Array.isArray(data.speciesSharding.buckets),
+    `${name}: speciesSharding.buckets 缺失（物种页热力条要按桶取）`,
+  )
+  const chars = data.speciesSharding?.bucketChars
+  check(Number.isInteger(chars) && chars >= 1 && chars <= 4, `${name}: speciesSharding.bucketChars 非法（${chars}）`)
+  for (const cc of data.countries || []) {
+    if (!/^[A-Z]{2}$/.test(cc)) errors.push(`${name}: 非法国家码 ${cc}`)
+    if (COUNTRY_DENY.has(cc)) errors.push(`${name}: 排除码 ${cc}（铁律 6）`)
+  }
+  check(!Object.keys(data.byCountry || {}).some((cc) => COUNTRY_DENY.has(cc)), `${name}: byCountry 出现排除码（铁律 6）`)
+}
+
+/** 递归规范化（键排序）→ 用于"同一格数据在两个分片里必须一致"的比对 */
+function canon(v) {
+  if (Array.isArray(v)) return `[${v.map(canon).join(',')}]`
+  if (v && typeof v === 'object') {
+    return `{${Object.keys(v)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canon(v[k])}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(v)
+}
+
+/**
+ * P1-6：省级层分片的**闭环校验**（索引 ↔ 磁盘 ↔ 两种分片之间的逐格一致）。
+ * 合并后的结构直接复用 checkProvinces（重复向量/异常主导/CN 34 区划/港澳台标注名等不变量）。
+ */
+async function checkProvincesShards(baseDir, name, data) {
+  const base = path.join(baseDir, 'public/data')
+  const readDir = (d) => fs.readdir(d).catch(() => [])
+  const readShard = async (dir, f, label) => {
+    const raw = await fs.readFile(path.join(dir, f), 'utf8').catch(() => null)
+    if (raw === null) {
+      errors.push(`${name}: 缺少分片 ${label}`)
+      return null
+    }
+    check(raw.length < MAX_BYTES, `${name}: 分片 ${label} 体积 ${Math.round(raw.length / 1024)}KB 超 ${MAX_BYTES / 1024 / 1024}MB`)
+    try {
+      const shard = JSON.parse(raw)
+      const geo = findGeo(shard)
+      check(geo.length === 0, `${name}: 分片 ${label} 含边界/几何数据：${geo.slice(0, 3).join(', ')}`)
+      return shard
+    } catch {
+      errors.push(`${name}: 分片 ${label} 不是合法 JSON`)
+      return null
+    }
+  }
+
+  // ① 按国分片
+  const dir = path.join(base, data.sharding.dir)
+  const onDisk = (await readDir(dir)).filter((f) => f.endsWith('.json') && f !== 'index.json').sort()
+  for (const f of data.sharding.files || []) if (!onDisk.includes(f)) errors.push(`${name}: 清单里的分片 ${f} 不存在`)
+  for (const f of onDisk) if (!(data.sharding.files || []).includes(f)) errors.push(`${name}: 磁盘上有多余分片 ${f}（清单未登记）`)
+
+  const bySpecies = {}
+  const countriesWithData = new Set()
+  for (const f of onDisk) {
+    const cc = f.replace(/\.json$/, '')
+    if (!/^[A-Z]{2}$/.test(cc)) {
+      errors.push(`${name}: 分片文件名 ${f} 不是国家码`)
+      continue
+    }
+    if (COUNTRY_DENY.has(cc)) errors.push(`${name}: 分片 ${f} 是国家排除码（铁律 6）`)
+    const shard = await readShard(dir, f, `region-provinces/${f}`)
+    if (!shard) continue
+    check(shard.schemaVersion === 1, `${name}: 分片 ${f} schemaVersion 应为 1`)
+    check(shard.cc === cc, `${name}: 分片 ${f} 的 cc(${shard.cc}) 与文件名不一致`)
+    const n = Object.keys(shard.bySpecies || {}).length
+    check(n > 0, `${name}: 分片 ${f} 为空`)
+    const meta = data.countryCounts?.[cc]
+    check(!!meta, `${name}: 分片 ${f} 未登记在 countryCounts`)
+    if (meta) check(meta.species === n, `${name}: ${cc} countryCounts.species(${meta.species}) ≠ 分片实际(${n})`)
+    for (const [spId, cells] of Object.entries(shard.bySpecies || {})) {
+      if (!spId) errors.push(`${name}: 分片 ${f} 存在空 speciesId`)
+      for (const [code, count] of Object.entries(cells || {})) {
+        if (!String(code).startsWith(`${cc}-`)) errors.push(`${name}: ${f} 的 ${spId} 引用了不属于 ${cc} 的省码 ${code}`)
+        if (!Number.isInteger(count) || count <= 0) errors.push(`${name}: ${f} 的 ${spId}/${code} 记录数非法（${count}）`)
+      }
+      ;(bySpecies[spId] ??= {})[cc] = cells
+    }
+    countriesWithData.add(cc)
+  }
+
+  // 合并后跑原有全部省级层不变量（等价于旧单文件的校验路径）
+  checkProvinces(`${name}(分片合集)`, {
+    byCountry: data.byCountry,
+    byCountryAlt: data.byCountryAlt,
+    bySpecies,
+  })
+  const speciesN = Object.keys(bySpecies).length
+  check(data.counts?.species === speciesN, `${name}: counts.species(${data.counts?.species}) ≠ 分片合集(${speciesN})`)
+  check(
+    data.counts?.countries === countriesWithData.size,
+    `${name}: counts.countries(${data.counts?.countries}) ≠ 有数据国家数(${countriesWithData.size})`,
+  )
+
+  // ② 按物种前缀分桶
+  const sdir = path.join(base, data.speciesSharding.dir)
+  const onDiskS = (await readDir(sdir)).filter((f) => f.endsWith('.json')).sort()
+  const chars = data.speciesSharding.bucketChars
+  for (const f of data.speciesSharding.buckets || []) if (!onDiskS.includes(f)) errors.push(`${name}: 清单里的物种桶 ${f} 不存在`)
+  for (const f of onDiskS) if (!(data.speciesSharding.buckets || []).includes(f)) errors.push(`${name}: 磁盘上有多余物种桶 ${f}`)
+
+  const seen = new Set()
+  let cells = 0
+  for (const f of onDiskS) {
+    const bucket = f.replace(/\.json$/, '')
+    const shard = await readShard(sdir, f, `${data.speciesSharding.dir}/${f}`)
+    if (!shard) continue
+    check(shard.schemaVersion === 1, `${name}: 物种桶 ${f} schemaVersion 应为 1`)
+    check(shard.bucket === bucket, `${name}: 物种桶 ${f} 的 bucket(${shard.bucket}) 与文件名不一致`)
+    check(bucket.length === chars, `${name}: 物种桶 ${f} 名长度应等于 bucketChars=${chars}`)
+    for (const [spId, byCc] of Object.entries(shard.bySpecies || {})) {
+      if (spId.slice(0, chars) !== bucket) errors.push(`${name}: ${spId} 落在错误的桶 ${bucket}`)
+      if (seen.has(spId)) errors.push(`${name}: 物种 ${spId} 出现在多个桶里`)
+      seen.add(spId)
+      const merged = bySpecies[spId]
+      if (!merged) {
+        errors.push(`${name}: 物种桶里的 ${spId} 不在按国分片里（两种分片不一致）`)
+        continue
+      }
+      if (canon(merged) !== canon(byCc)) errors.push(`${name}: ${spId} 的省份数据在两种分片里不一致（同源必须逐格相等）`)
+      for (const c of Object.values(byCc || {})) cells += Object.keys(c || {}).length
+    }
+  }
+  check(seen.size === speciesN, `${name}: 物种桶覆盖 ${seen.size} 种 ≠ 按国分片 ${speciesN} 种`)
+  check(data.counts?.cells === cells, `${name}: counts.cells(${data.counts?.cells}) ≠ 物种桶逐格合计(${cells})`)
+  console.log(
+    `  · ${name}：${data.sharding.files.length} 国分片 / ${data.speciesSharding.buckets.length} 物种桶 / ` +
+      `${speciesN} 物种 / ${cells} 格（索引↔分片逐格一致）`,
+  )
+}
+
+/**
+ * P0-5（2026-10-23）国家层记录数分片 `public/data/region-records/`：
+ * 索引的 totals 必须等于分片 count，分片 count 必须等于 bySpecies 之和；
+ * 物种 id 必须是 slug 形态（不能是学术名/空串），国家码不得是排除码。
+ */
+async function checkCountryRecords(baseDir, name, data) {
+  const base = path.join(baseDir, 'public/data')
+  const dir = path.join(base, data.sharding.dir)
+  const onDisk = (await fs.readdir(dir).catch(() => [])).filter((f) => f.endsWith('.json') && f !== 'index.json').sort()
+  for (const f of data.sharding.files || []) if (!onDisk.includes(f)) errors.push(`${name}: 清单里的分片 ${f} 不存在`)
+  for (const f of onDisk) if (!(data.sharding.files || []).includes(f)) errors.push(`${name}: 磁盘上有多余分片 ${f}（清单未登记）`)
+
+  let pairs = 0
+  let speciesSeen = new Set()
+  let matched = 0
+  for (const f of onDisk) {
+    const cc = f.replace(/\.json$/, '')
+    if (!/^[A-Z]{2}$/.test(cc)) {
+      errors.push(`${name}: 分片文件名 ${f} 不是国家码`)
+      continue
+    }
+    if (COUNTRY_DENY.has(cc)) errors.push(`${name}: 分片 ${f} 是国家排除码（铁律 6）`)
+    const raw = await fs.readFile(path.join(dir, f), 'utf8').catch(() => null)
+    if (raw === null) continue
+    check(raw.length < MAX_BYTES, `${name}: 分片 ${f} 体积超 ${MAX_BYTES / 1024 / 1024}MB`)
+    let shard = null
+    try {
+      shard = JSON.parse(raw)
+    } catch {
+      errors.push(`${name}: 分片 ${f} 不是合法 JSON`)
+      continue
+    }
+    check(shard.schemaVersion === 1, `${name}: 分片 ${f} schemaVersion 应为 1`)
+    check(shard.cc === cc, `${name}: 分片 ${f} 的 cc(${shard.cc}) 与文件名不一致`)
+    const geo = findGeo(shard)
+    check(geo.length === 0, `${name}: 分片 ${f} 含边界/几何数据：${geo.slice(0, 3).join(', ')}`)
+    let sum = 0
+    const ids = Object.keys(shard.bySpecies || {})
+    for (const [spId, n] of Object.entries(shard.bySpecies || {})) {
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(spId)) errors.push(`${name}: ${f} 的物种 id 非法（${spId}）`)
+      if (!Number.isInteger(n) || n < (data.threshold?.minRecords ?? 1)) {
+        errors.push(`${name}: ${f}/${spId} 记录数非法（${n}，地板 ${data.threshold?.minRecords}）`)
+      }
+      sum += n
+      speciesSeen.add(spId)
+    }
+    check(shard.count === sum, `${name}: ${f} 的 count(${shard.count}) ≠ bySpecies 之和(${sum})`)
+    check(shard.species === ids.length, `${name}: ${f} 的 species(${shard.species}) ≠ 物种数(${ids.length})`)
+    check(data.totals?.[cc] === shard.count, `${name}: ${cc} 索引合计(${data.totals?.[cc]}) ≠ 分片 count(${shard.count})`)
+    pairs += ids.length
+    matched += sum
+  }
+  const files = new Set((data.sharding.files || []).map((f) => f.replace(/\.json$/, '')))
+  for (const cc of Object.keys(data.totals || {})) {
+    if (!files.has(cc)) errors.push(`${name}: totals 里的 ${cc} 没有对应分片`)
+  }
+  check(files.size === (data.scope?.countries ?? -1), `${name}: scope.countries(${data.scope?.countries}) ≠ 分片数(${files.size})`)
+  check(data.counts?.pairs === pairs, `${name}: counts.pairs(${data.counts?.pairs}) ≠ 实际(${pairs})`)
+  check(data.counts?.matchedRecords === matched, `${name}: counts.matchedRecords(${data.counts?.matchedRecords}) ≠ 实际(${matched})`)
+  check(
+    Number.isFinite(data.counts?.matchedShare) && data.counts.matchedShare > 0.9,
+    `${name}: 物种匹配率 ${data.counts?.matchedShare} 偏低（< 90%，说明学名映射链断了）`,
+  )
+  const gbif = (data.sources || []).find((s) => s.key === 'gbif')
+  check(!!gbif, `${name}: sources 缺 gbif 署名条目`)
+  console.log(
+    `  · ${name}：${files.size} 个国家/地区 / ${speciesSeen.size} 物种 / ${pairs} 个(地区码,种)对 / ` +
+      `匹配率 ${(Number(data.counts?.matchedShare) * 100).toFixed(2)}%（索引↔分片合计一致）`,
+  )
+}
+
 function checkProvinces(name, data) {
   check(data.byCountry && typeof data.byCountry === 'object', `${name}: byCountry 缺失`)
   check(data.bySpecies && typeof data.bySpecies === 'object', `${name}: bySpecies 缺失`)
@@ -441,6 +656,13 @@ const files = args.file
       .concat(nearbyFiles)
 
 const present = []
+/** P1-6 / P0-5（2026-10-23）：分片产物的索引（在目录里，故不走上面的单文件清单） */
+const shardedIndexes = args.file
+  ? []
+  : [
+      ['region-provinces', 'public/data/region-provinces/index.json'],
+      ['region-records', 'public/data/region-records/index.json'],
+    ].map(([kind, p]) => ({ kind, file: path.join(ROOT, p) }))
 // 025 M1:species-distribution 闭环校验需要骨架短码全集(缺骨架时报错,由 checkDistributionGlobal 呈现)
 let indexCodes = null
 try {
@@ -504,6 +726,28 @@ for (const file of files) {
   else if (data.bySpecies) checkSeasonality(name, data)
   else if (data.byCountry && data.counts?.pairs != null) checkDistributionGlobal(name, data, indexCodes)
   else errors.push(`${name}: 无法识别的产物形状`)
+}
+
+// ── P1-6 / P0-5：分片产物的索引 → 目录闭环（2026-10-23） ────────────────
+for (const { kind, file } of shardedIndexes) {
+  const raw = await fs.readFile(file, 'utf8').catch(() => null)
+  if (raw === null) continue
+  const name = path.relative(path.join(ROOT, 'public/data'), file)
+  present.push(name)
+  let data = null
+  try {
+    data = JSON.parse(raw)
+  } catch {
+    errors.push(`${name}: 不是合法 JSON`)
+    continue
+  }
+  checkCommon(name, raw, data)
+  if (kind === 'region-provinces') {
+    checkProvincesIndex(name, data)
+    await checkProvincesShards(ROOT, name, data)
+  } else {
+    await checkCountryRecords(ROOT, name, data)
+  }
 }
 
 if (!present.length && !args.file) {

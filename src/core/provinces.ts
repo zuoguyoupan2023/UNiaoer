@@ -1,7 +1,20 @@
 /**
- * 中国+外国省级层（021 M2/M3）：public/data/region-provinces.json，按需加载、失败静默为 null。
+ * 省级层（021 M2/M3）——**P1-6 分片版**（2026-10-23）。
+ *
+ * 为什么分片：单文件 `region-provinces.json` 在 29 国时已 3.0MB，且被 `/birding`（按国看鸟种）
+ * 与**每个物种页**（省份热力条）一起加载；扩到欧洲+美洲会到 ~6MB（docs/074 P1-6）。
+ * 两个页面的访问模式互补，所以产物拆成两种分片：
+ *
+ *   `data/region-provinces/index.json`      —— 元数据 + 国家/省名 + 分片清单（不含 bySpecies）
+ *   `data/region-provinces/<CC>.json`       —— `/birding` 选中国家时读 1 个：`{ bySpecies: { id: { 省码: n } } }`
+ *   `data/region-species/<前两位>.json`      —— `/species/:id` 只读 1 个：`{ bySpecies: { id: { 国家: { 省码: n } } } }`
+ *   `data/region-provinces.json`            —— **旧单文件**，仅在索引/分片缺失时回退（发一个周期后删）
+ *
  * 数据由 GBIF stateProvince + ISO 3166-2 归一化构建（见 scripts/region/build-provinces.mjs）。
- * CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）按铁律 6 并入并标注，存在性来自 distribution.json。
+ * CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）按铁律 6 并入并标注
+ * 「中国香港／中国澳门／中国台湾」，记录数取该国国家码（TW/HK/MO）的国家层真值。
+ *
+ * 全部加载失败静默为 null（调用方隐藏整块，不阻塞页面）。
  */
 export interface ProvinceSource {
   key: string
@@ -11,7 +24,17 @@ export interface ProvinceSource {
   attribution: string
 }
 
-export interface ProvinceData {
+/** 分片清单（索引里自带体积，便于前端/门禁发现与核对） */
+export interface ShardList {
+  dir: string
+  files: string[]
+  bytes: Record<string, number>
+  maxBytes: number
+  totalBytes: number
+}
+
+/** 索引（不含 bySpecies） */
+export interface ProvinceIndex {
   schemaVersion: number
   generatedAt: string
   method: string
@@ -21,28 +44,123 @@ export interface ProvinceData {
   byCountry: Record<string, Record<string, string>>
   /** 英文展示名（仅当与 byCountry 不同时提供，当前仅 CN；provincesOf 按 locale 取用） */
   byCountryAlt?: Record<string, Record<string, string>>
-  /** 物种 id → 国家码 → { code: 记录数 } */
+  counts?: { countries: number; species: number; cells: number }
+  /** 国家码 → { species, cells }（该分片的物种数/省格数） */
+  countryCounts?: Record<string, { species: number; cells: number }>
+  sharding?: ShardList
+  speciesSharding?: ShardList & { bucketChars: number; buckets: string[] }
+}
+
+/** 按国分片：物种 id → { 省码: 记录数 } */
+export interface CountryProvinceShard {
+  schemaVersion: number
+  cc: string
+  generatedAt?: string
+  bySpecies: Record<string, Record<string, number>>
+}
+
+/** 按物种前缀分片：物种 id → 国家码 → { 省码: 记录数 } */
+export interface SpeciesProvinceShard {
+  schemaVersion: number
+  bucket: string
+  generatedAt?: string
   bySpecies: Record<string, Record<string, Record<string, number>>>
 }
 
-let cache: Promise<ProvinceData | null> | null = null
+/** 旧单文件形态（回退路径用） */
+interface LegacyProvinceData extends ProvinceIndex {
+  bySpecies: Record<string, Record<string, Record<string, number>>>
+}
+
+const DATA = `${import.meta.env.BASE_URL}data`
+const INDEX_URL = `${DATA}/region-provinces/index.json`
+const LEGACY_URL = `${DATA}/region-provinces.json`
+/** 与构建脚本的 BUCKET_CHARS 默认值一致（索引缺失时兜底） */
+const FALLBACK_BUCKET_CHARS = 2
+
+let indexCache: Promise<ProvinceIndex | null> | null = null
+let legacyCache: Promise<LegacyProvinceData | null> | null = null
+const countryCache = new Map<string, Promise<CountryProvinceShard | null>>()
+const speciesCache = new Map<string, Promise<SpeciesProvinceShard | null>>()
 
 /** 测试用：清空加载缓存（与其他 core 模块的 _reset 惯例一致） */
 export function _resetProvincesCache(): void {
-  cache = null
+  indexCache = null
+  legacyCache = null
+  countryCache.clear()
+  speciesCache.clear()
 }
 
-/** 加载省级数据；失败/不存在返回 null，不阻塞页面 */
-export function loadProvinces(): Promise<ProvinceData | null> {
-  cache ??= fetch(`${import.meta.env.BASE_URL}data/region-provinces.json`)
-    .then((r) => (r.ok ? (r.json() as Promise<ProvinceData>) : null))
+const fetchJson = <T>(url: string): Promise<T | null> =>
+  fetch(url)
+    .then((r) => (r.ok ? (r.json() as Promise<T>) : null))
     .catch(() => null)
-  return cache
+
+/** 旧单文件（只在新索引缺失时读；读一次后缓存） */
+function loadLegacy(): Promise<LegacyProvinceData | null> {
+  legacyCache ??= fetchJson<LegacyProvinceData>(LEGACY_URL)
+  return legacyCache
+}
+
+/** 加载省级索引（元数据 + 国家/省名 + 分片清单）；失败返回 null，不阻塞页面 */
+export function loadProvincesIndex(): Promise<ProvinceIndex | null> {
+  indexCache ??= fetchJson<ProvinceIndex>(INDEX_URL).then((idx) => (idx ? idx : loadLegacy()))
+  return indexCache
+}
+
+/** 兼容名（旧调用点：`loadProvinces()`）；语义已变为"加载索引" */
+export const loadProvinces = loadProvincesIndex
+
+/** 加载某国分片；无数据/失败 → null */
+export function loadCountryProvinces(cc: string): Promise<CountryProvinceShard | null> {
+  const key = String(cc || '').toUpperCase()
+  if (!key) return Promise.resolve(null)
+  let p = countryCache.get(key)
+  if (!p) {
+    p = loadProvincesIndex().then(async (idx) => {
+      if (idx?.sharding) return fetchJson<CountryProvinceShard>(`${DATA}/${idx.sharding.dir}/${key}.json`)
+      // 回退：旧单文件 → 裁出该国的子树（结构与分片一致）
+      const legacy = await loadLegacy()
+      if (!legacy?.bySpecies) return null
+      const bySpecies: Record<string, Record<string, number>> = {}
+      for (const [spId, byCc] of Object.entries(legacy.bySpecies)) {
+        const cells = byCc?.[key]
+        if (cells && Object.keys(cells).length) bySpecies[spId] = cells
+      }
+      return Object.keys(bySpecies).length ? { schemaVersion: 1, cc: key, bySpecies } : null
+    })
+    countryCache.set(key, p)
+  }
+  return p
+}
+
+/** 加载某物种所在的前缀桶分片；无数据/失败 → null */
+export function loadSpeciesProvinces(speciesId: string): Promise<SpeciesProvinceShard | null> {
+  const id = String(speciesId || '')
+  if (!id) return Promise.resolve(null)
+  let p = speciesCache.get(id)
+  if (!p) {
+    p = loadProvincesIndex().then(async (idx) => {
+      if (idx?.speciesSharding) {
+        const chars = idx.speciesSharding.bucketChars || FALLBACK_BUCKET_CHARS
+        const bucket = id.slice(0, chars)
+        const shard = await fetchJson<SpeciesProvinceShard>(`${DATA}/${idx.speciesSharding.dir}/${bucket}.json`)
+        return shard ?? null
+      }
+      // 回退：旧单文件 → 只取该物种一层
+      const legacy = await loadLegacy()
+      const byCc = legacy?.bySpecies?.[id]
+      if (!byCc) return null
+      return { schemaVersion: 1, bucket: id.slice(0, FALLBACK_BUCKET_CHARS), bySpecies: { [id]: byCc } }
+    })
+    speciesCache.set(id, p)
+  }
+  return p
 }
 
 /** 该国省级列表（按展示名排序）；无数据返回 []。en 优先取 byCountryAlt（如 CN 的港澳台标注名） */
 export function provincesOf(
-  data: ProvinceData | null,
+  data: ProvinceIndex | null,
   country: string,
   locale = 'zh-CN',
 ): { code: string; name: string }[] {
@@ -55,35 +173,39 @@ export function provincesOf(
 
 /**
  * 该国省级列表 + 每省鸟种数（供二级目录按鸟种数排序/展示）。
- * count = 该国该省有记录的物种数（与一级目录的「N 种」同口径）。
+ * count = 该国该省有记录的物种数（与一级目录的「N 种」同口径）→ 只需该国分片。
  */
 export function provinceStats(
-  data: ProvinceData | null,
+  index: ProvinceIndex | null,
+  shard: CountryProvinceShard | null,
   country: string,
   locale = 'zh-CN',
 ): { code: string; name: string; count: number }[] {
-  const list = provincesOf(data, country, locale)
+  const list = provincesOf(index, country, locale)
   if (!list.length) return []
   const counts = new Map<string, number>()
-  for (const byCc of Object.values(data?.bySpecies || {})) {
-    const m = byCc?.[country]
-    if (!m) continue
-    for (const code of Object.keys(m)) counts.set(code, (counts.get(code) ?? 0) + 1)
+  for (const cells of Object.values(shard?.bySpecies || {})) {
+    for (const code of Object.keys(cells)) counts.set(code, (counts.get(code) ?? 0) + 1)
   }
   return list.map((p) => ({ ...p, count: counts.get(p.code) ?? 0 }))
 }
 
 /** 某物种在某国某省的记录数；无则 0 */
-export function provinceCount(data: ProvinceData | null, speciesId: string, country: string, code: string): number {
-  return data?.bySpecies?.[speciesId]?.[country]?.[code] ?? 0
+export function provinceCount(shard: CountryProvinceShard | null, speciesId: string, code: string): number {
+  return shard?.bySpecies?.[speciesId]?.[code] ?? 0
 }
 
 /** 该省有记录的物种 id 集合（用于过滤） */
-export function speciesInProvince(data: ProvinceData | null, country: string, code: string): Set<string> {
+export function speciesInProvince(shard: CountryProvinceShard | null, code: string): Set<string> {
   const out = new Set<string>()
-  if (!data || !code) return out
-  for (const [spId, byCc] of Object.entries(data.bySpecies || {})) {
-    if (byCc?.[country]?.[code]) out.add(spId)
+  if (!shard || !code) return out
+  for (const [spId, cells] of Object.entries(shard.bySpecies || {})) {
+    if (cells?.[code]) out.add(spId)
   }
   return out
+}
+
+/** 该国「物种 id → 各省记录数」（视图做记录数排序时一次取用） */
+export function countsBySpecies(shard: CountryProvinceShard | null): Map<string, Record<string, number>> {
+  return new Map(Object.entries(shard?.bySpecies || {}))
 }

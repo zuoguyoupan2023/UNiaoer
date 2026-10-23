@@ -1,13 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi, afterEach } from 'vitest'
 import {
+  _resetProvincesCache,
+  loadCountryProvinces,
+  loadProvincesIndex,
+  loadSpeciesProvinces,
   provinceCount,
   provinceStats,
   provincesOf,
   speciesInProvince,
-  type ProvinceData,
+  type CountryProvinceShard,
+  type ProvinceIndex,
 } from '../provinces'
 
-const data: ProvinceData = {
+afterEach(() => {
+  _resetProvincesCache()
+  vi.unstubAllGlobals()
+})
+
+/** 索引：只有元数据 + 国家/省名（P1-6：不含 bySpecies） */
+const index: ProvinceIndex = {
   schemaVersion: 1,
   generatedAt: '',
   method: '',
@@ -15,41 +26,120 @@ const data: ProvinceData = {
   countries: ['CN'],
   byCountry: { CN: { 'CN-11': '北京市', 'CN-44': '广东省', 'CN-91': '中国香港' } },
   byCountryAlt: { CN: { 'CN-11': 'Beijing', 'CN-44': 'Guangdong', 'CN-91': 'Hong Kong, China' } },
+}
+
+/** 按国分片：物种 id → { 省码: 记录数 } */
+const shard: CountryProvinceShard = {
+  schemaVersion: 1,
+  cc: 'CN',
   bySpecies: {
-    a: { CN: { 'CN-11': 5, 'CN-44': 2 } },
-    b: { CN: { 'CN-44': 3 } },
-    c: { CN: { 'CN-91': 1 } },
+    a: { 'CN-11': 5, 'CN-44': 2 },
+    b: { 'CN-44': 3 },
+    c: { 'CN-91': 1 },
   },
 }
 
 describe('provincesOf（按 locale 取 zh / en 展示名，按名排序）', () => {
   it('zh 用 byCountry，en 用 byCountryAlt', () => {
-    expect(provincesOf(data, 'CN').map((p) => p.name)).toEqual(['北京市', '广东省', '中国香港'])
-    expect(provincesOf(data, 'CN', 'en').map((p) => p.name)).toEqual([
+    expect(provincesOf(index, 'CN').map((p) => p.name)).toEqual(['北京市', '广东省', '中国香港'])
+    expect(provincesOf(index, 'CN', 'en').map((p) => p.name)).toEqual([
       'Beijing',
       'Guangdong',
       'Hong Kong, China',
     ])
   })
   it('无数据返回空', () => {
-    expect(provincesOf(data, 'US')).toEqual([])
+    expect(provincesOf(index, 'US')).toEqual([])
     expect(provincesOf(null, 'CN')).toEqual([])
   })
 })
 
 describe('provinceStats（每省鸟种数，供二级排序/展示）', () => {
-  it('count = 该省有记录的物种数', () => {
-    const stats = provinceStats(data, 'CN')
+  it('count = 该省有记录的物种数（只读该国分片）', () => {
+    const stats = provinceStats(index, shard, 'CN')
     const by = Object.fromEntries(stats.map((s) => [s.code, s.count]))
     expect(by).toEqual({ 'CN-11': 1, 'CN-44': 2, 'CN-91': 1 })
+  })
+  it('分片缺失 → 省列表仍在（count 为 0，目录不塌）', () => {
+    const stats = provinceStats(index, null, 'CN')
+    expect(stats.map((s) => s.count)).toEqual([0, 0, 0])
   })
 })
 
 describe('speciesInProvince / provinceCount', () => {
   it('该省物种集合与单条记录数', () => {
-    expect([...speciesInProvince(data, 'CN', 'CN-44')].sort()).toEqual(['a', 'b'])
-    expect(speciesInProvince(data, 'CN', '')).toEqual(new Set())
-    expect(provinceCount(data, 'a', 'CN', 'CN-11')).toBe(5)
-    expect(provinceCount(data, 'a', 'CN', 'CN-99')).toBe(0)
+    expect([...speciesInProvince(shard, 'CN-44')].sort()).toEqual(['a', 'b'])
+    expect(speciesInProvince(shard, '')).toEqual(new Set())
+    expect(provinceCount(shard, 'a', 'CN-11')).toBe(5)
+    expect(provinceCount(shard, 'a', 'CN-99')).toBe(0)
+  })
+})
+
+/** 按 URL 分派的 fetch 桩（P1-6 分片加载路径） */
+function stubFetch(routes: Record<string, unknown>) {
+  const calls: string[] = []
+  const f = vi.fn<typeof fetch>().mockImplementation((async (input: RequestInfo | URL) => {
+    const url = String(input)
+    calls.push(url)
+    const hit = Object.entries(routes).find(([k]) => url.endsWith(k))
+    if (!hit) return { ok: false, json: async () => null } as Response
+    return { ok: true, json: async () => hit[1] } as Response
+  }) as unknown as typeof fetch)
+  vi.stubGlobal('fetch', f)
+  return calls
+}
+
+const fullIndex: ProvinceIndex = {
+  ...index,
+  sharding: { dir: 'region-provinces', files: ['CN.json'], bytes: {}, maxBytes: 0, totalBytes: 0 },
+  speciesSharding: {
+    dir: 'region-species',
+    bucketChars: 2,
+    buckets: ['pa'],
+    files: ['pa.json'],
+    bytes: {},
+    maxBytes: 0,
+    totalBytes: 0,
+  },
+}
+
+describe('P1-6 分片加载', () => {
+  it('索引失效不重复请求（缓存）', async () => {
+    const calls = stubFetch({ 'region-provinces/index.json': fullIndex })
+    await loadProvincesIndex()
+    await loadProvincesIndex()
+    expect(calls.filter((u) => u.endsWith('index.json'))).toHaveLength(1)
+  })
+
+  it('按国懒加载：只读该国分片，同国只请求一次', async () => {
+    const calls = stubFetch({
+      'region-provinces/index.json': fullIndex,
+      'region-provinces/CN.json': shard,
+    })
+    expect((await loadCountryProvinces('cn'))?.bySpecies.a).toEqual({ 'CN-11': 5, 'CN-44': 2 })
+    await loadCountryProvinces('CN')
+    expect(calls.filter((u) => u.endsWith('/CN.json'))).toHaveLength(1)
+  })
+
+  it('按物种前缀分桶：只读该物种所在的桶', async () => {
+    const calls = stubFetch({
+      'region-provinces/index.json': fullIndex,
+      'region-species/pa.json': {
+        schemaVersion: 1,
+        bucket: 'pa',
+        bySpecies: { 'passer-montanus': { CN: { 'CN-11': 7 } } },
+      },
+    })
+    const s = await loadSpeciesProvinces('passer-montanus')
+    expect(s?.bySpecies['passer-montanus']?.CN?.['CN-11']).toBe(7)
+    expect(calls.some((u) => u.endsWith('region-species/pa.json'))).toBe(true)
+  })
+
+  it('索引缺失 → 回退旧单文件，结构与分片一致', async () => {
+    stubFetch({
+      'region-provinces.json': { ...fullIndex, bySpecies: { a: { CN: { 'CN-11': 3 } } }, sharding: undefined },
+    })
+    expect((await loadCountryProvinces('CN'))?.bySpecies.a).toEqual({ 'CN-11': 3 })
+    expect((await loadCountryProvinces('US'))).toBeNull()
   })
 })

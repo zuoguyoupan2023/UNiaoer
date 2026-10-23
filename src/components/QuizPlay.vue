@@ -37,7 +37,7 @@ import { submitReport as uploadReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
-import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
+import { loadProvincesIndex, provincesOf, type ProvinceIndex } from '@/core/provinces'
 import { REGION_LABEL_KEY } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
@@ -215,7 +215,7 @@ const REGION_CHOICES_FALLBACK = ['CN', 'US', 'GB', 'AU', 'JP', 'BR', 'IN', 'ZA']
  * 2026-10-09 UI 重做（用户反馈）：选择器不再直接铺 14 国按钮（选完看不出选了哪儿），
  * 改为「**已选摘要**（中国·北京）+ 更改」两步流程——默认收起，点「更改」才展开。
  */
-const provinceData = ref<ProvinceData | null>(null)
+const provinceData = ref<ProvinceIndex | null>(null)
 const regionOptions = ref<{ code: string; label: string }[]>([{ code: 'ALL', label: '' }])
 /** 地区选择面板是否展开（收起时只显示已选摘要） */
 const regionPickerOpen = ref(false)
@@ -239,8 +239,8 @@ onMounted(async () => {
   void listRounds()
     .then((rs) => (firstRoundEver.value = rs.length === 0))
     .catch(() => (firstRoundEver.value = false))
-  // 036：省级细分（可选；失败不影响国家级选择）
-  void loadProvinces().then((d) => (provinceData.value = d))
+  // 036：省级细分（可选；失败不影响国家级选择）。P1-6：只读索引（省名 + 分片清单），不读记录数分片
+  void loadProvincesIndex().then((d) => (provinceData.value = d))
   try {
     const dist = await loadSpeciesDistribution()
     const codes = dist ? Object.keys(dist.byCountry) : []

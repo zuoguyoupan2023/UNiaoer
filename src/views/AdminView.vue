@@ -8,7 +8,7 @@ import { fetchProvinceStats, type ProvinceStats } from '@/core/adminProvinceStat
 import { fetchSpeciesStats, type SpeciesStats } from '@/core/adminSpeciesStats'
 import { groupRegions } from '@/core/regionGroup'
 import { regionLabel } from '@/core/region'
-import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
+import { loadProvincesIndex, provincesOf, type ProvinceIndex } from '@/core/provinces'
 import {
   AdminAuthError,
   listAdminReports,
@@ -182,10 +182,10 @@ async function loadRegionStats() {
   }
 }
 /** 省名需要一次懒加载（与观鸟页同一份产物；失败就退回显示省码） */
-const provinceData = ref<ProvinceData | null>(null)
+const provinceData = ref<ProvinceIndex | null>(null)
 async function ensureProvinces() {
   if (provinceData.value) return
-  provinceData.value = await loadProvinces().catch(() => null)
+  provinceData.value = await loadProvincesIndex().catch(() => null)
 }
 /** 073：扁平行 → 国家榜 + 同国省级榜（港澳台归中国、做省级；不做最小轮数剔除） */
 const groupedRegionStats = computed(() => (regionStats.value ? groupRegions(regionStats.value.byRegion) : null))

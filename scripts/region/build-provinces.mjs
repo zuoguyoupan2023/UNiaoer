@@ -381,11 +381,27 @@ for (const r of results) {
  * M3 中国省级层：
  * - 内地 31 省 = GBIF 记录数（与外国同管线，上方 results 已含 CN）；
  * - 港澳台 = GBIF 里是独立国家码（TW/HK/MO），按铁律 6 并入 CN 省级层并标注
- *   「中国台湾／中国香港／中国澳门」；count 用 distribution.json 国家层存在性（1），
- *   不臆造记录数（birdreport.cn 授权后可换真值，见 021 §5）。
+ *   「中国台湾／中国香港／中国澳门」。
+ *
+ * P0-5（2026-10-23）：港澳台的记录数原来只是**存在性占位 1**。现在国家层记录数产物
+ * （`region-records/<CC>.json`，见 build-country-records.mjs）已经有 TW/HK/MO 的真值，
+ * 直接拿来填；真值缺失时仍退回占位 1（不退化成"没有记录数"——省级 UI 需要能列出这些区划）。
+ * 口径与内地 31 省不同（内地=GBIF stateProvince facet，港澳台=该国家码的全部记录），
+ * 已在产物 `method` 里写明。
  */
 const cnKey = 'CN'
 let cnSpecialSpecies = 0
+/** 有真值（而非占位 1）的港澳台 (物种,区划) 对数 */
+let cnSpecialReal = 0
+/** 至少一处港澳台有真值的物种数（日志用） */
+const cnSpecialRealSpecies = new Set()
+/** TW/HK/MO 的国家层记录数分片（缺失 → 全走占位 1，不报错） */
+const specialRecords = {}
+for (const cc3 of Object.keys(CN_SPECIAL_COUNTRY)) {
+  specialRecords[cc3] = await readJson(
+    path.join(ROOT, `public/data/region-records/${cc3}.json`),
+  ).catch(() => null)
+}
 if (byCountry.CN) {
   for (const [spId, ccs] of Object.entries(distBySpecies)) {
     let touched = false
@@ -393,7 +409,14 @@ if (byCountry.CN) {
       if (!ccs.includes(cc3)) continue
       touched = true
       const byCc = ((bySpecies[spId] ??= {})[cnKey] ??= {})
-      byCc[code] ??= 1
+      const real = specialRecords[cc3]?.bySpecies?.[spId]
+      if (Number(real) > 0) {
+        byCc[code] = Number(real)
+        cnSpecialReal++
+        cnSpecialRealSpecies.add(spId)
+      } else {
+        byCc[code] ??= 1
+      }
     }
     if (touched) cnSpecialSpecies++
   }
@@ -410,33 +433,161 @@ if (dupVectors.length) {
   process.exit(1)
 }
 
+const generatedAt = new Date().toISOString()
+const sortedByCountry = Object.fromEntries(
+  Object.entries(byCountry).map(([cc, m]) => [cc, Object.fromEntries(Object.entries(m).sort())]),
+)
+const byCountryAlt =
+  byCountry.CN && Object.keys(byCountry.CN).length
+    ? { CN: Object.fromEntries(CN_PROVINCES.map((p) => [p.code, p.en])) }
+    : undefined
+
+const METHOD =
+  'GBIF facet=stateProvince；自由文本经 ISO 3166-2 名称归一化映射到 code；count=GBIF 该国该省记录数。' +
+  'P0-0（2026-10-23）：物种解析只在 matchType=EXACT/FUZZY 且 rank=SPECIES 且 confidence>=90 时用 taxonKey；' +
+  'AviList 新拆分/新组合的学名（GBIF 骨架上还没有）改用 verbatimScientificName 按学名计数（此前会落到根节点 usageKey=1，' +
+  '把"该国全部类群"当成该物种记录数，见 docs/075 §5）。' +
+  'CN：内地 31 省=GBIF stateProvince 记录数；港澳台（CN-71/91/92）按铁律 6 并入，' +
+  '记录数取该国家码（TW/HK/MO）的国家层真值（region-records；缺失时退回存在性占位 1）——' +
+  '与内地口径不同，不与其他省比大小。' +
+  '分片（P1-6，2026-10-23）：索引 region-provinces/index.json + 按国分片 <CC>.json（服务 /birding）' +
+  '+ 按物种 id 前两位分桶 region-species/<bucket>.json（服务 /species/:id 省份热力条）；' +
+  '分片内容与旧单文件 region-provinces.json 逐格一致。'
+
 const out = {
   schemaVersion: 1,
-  generatedAt: new Date().toISOString(),
-  method:
-    'GBIF facet=stateProvince；自由文本经 ISO 3166-2 名称归一化映射到 code；count=GBIF 该国该省记录数。' +
-    'P0-0（2026-10-23）：物种解析只在 matchType=EXACT/FUZZY 且 rank=SPECIES 且 confidence>=90 时用 taxonKey；' +
-    'AviList 新拆分/新组合的学名（GBIF 骨架上还没有）改用 verbatimScientificName 按学名计数（此前会落到根节点 usageKey=1，' +
-    '把"该国全部类群"当成该物种记录数，见 docs/075 §5）。' +
-    'CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）由 distribution.json 国家层存在性并入（count=1），显示名按铁律 6 标注',
+  generatedAt,
+  method: METHOD,
   sources: [GBIF_SOURCE, SUBDIVISION_SOURCE],
   countries: COUNTRIES,
-  byCountry: Object.fromEntries(Object.entries(byCountry).map(([cc, m]) => [cc, Object.fromEntries(Object.entries(m).sort())])),
+  byCountry: sortedByCountry,
   // 英文展示名（provincesOf 按 locale 取用）；仅 CN 与 byCountry（zh）不同
-  byCountryAlt:
-    byCountry.CN && Object.keys(byCountry.CN).length
-      ? { CN: Object.fromEntries(CN_PROVINCES.map((p) => [p.code, p.en])) }
-      : undefined,
+  byCountryAlt,
   bySpecies,
 }
 
+// 旧单文件（P1-6 之前的形态）：**保留一个发布周期做回退**，前端已改为懒加载分片。
+// 注意 --out / --mock 只写单文件（不碰正式 public/data 目录）。
 await fs.mkdir(path.dirname(OUT), { recursive: true })
 await fs.writeFile(OUT, JSON.stringify(out))
 const sizeKb = Math.round((await fs.stat(OUT)).size / 1024)
 const speciesN = Object.keys(bySpecies).length
 const countryN = Object.keys(byCountry).length
 console.log(`\nregion-provinces: ${countryN} 国 / ${speciesN} 物种 → ${OUT} (${sizeKb}KB)` +
-  (cnSpecialSpecies ? `（CN 港澳台并入物种 ${cnSpecialSpecies}）` : ''))
+  (cnSpecialSpecies ? `（CN 港澳台并入物种 ${cnSpecialSpecies}，其中 ${cnSpecialRealSpecies.size} 种有真值 / ${cnSpecialReal} 格）` : ''))
+
+/**
+ * ── P1-6 分片（2026-10-23）────────────────────────────────────────────────
+ * 为什么拆：单文件 3.0MB 被 `/birding`（按国看鸟种）与**每个物种页**（省份热力条）一起加载，
+ * 扩到欧洲+美洲会到 ~6MB（docs/074 P1-6 实测）。两个页面的访问模式互补，所以做**两种分片**：
+ *   · 按国   `<CC>.json`        —— /birding 选中国家只读 1 个（实测 US 最大 ~410KB）
+ *   · 按物种 `region-species/<前两位>.json` —— /species/:id 只读 1 个（实测最大 ~133KB / brotli 33KB）
+ * 索引 `region-provinces/index.json` 只放元数据 + 国家/省名 + 分片清单（不含 bySpecies）。
+ * 省份粒度分片没有收益（观鸟页仍要一国全部省，物种页要 330 个文件），故不做。
+ */
+const official = !MOCK && !args.out
+if (official) {
+  const DATA_DIR = path.join(ROOT, 'public/data')
+  const COUNTRY_DIR = path.join(DATA_DIR, 'region-provinces')
+  const SPECIES_DIR = path.join(DATA_DIR, 'region-species')
+  /** 物种 id 前缀桶位数（与前端 `loadSpeciesProvinces` 一致；check:region 会校验） */
+  const BUCKET_CHARS = 2
+
+  const writeShard = async (file, obj) => {
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    const text = JSON.stringify(obj)
+    await fs.writeFile(file, text)
+    return Buffer.byteLength(text)
+  }
+
+  // ① 按国分片：{ cc, bySpecies: { 物种id: { 省码: n } } }
+  const countryBytes = {}
+  const countryCounts = {}
+  for (const cc of COUNTRIES) {
+    const bySpeciesCc = {}
+    for (const [spId, byCc] of Object.entries(bySpecies)) {
+      const cells = byCc?.[cc]
+      if (cells && Object.keys(cells).length) bySpeciesCc[spId] = cells
+    }
+    if (!Object.keys(bySpeciesCc).length) continue
+    countryCounts[cc] = { species: Object.keys(bySpeciesCc).length, cells: Object.values(bySpeciesCc).reduce((a, c) => a + Object.keys(c).length, 0) }
+    countryBytes[`${cc}.json`] = await writeShard(path.join(COUNTRY_DIR, `${cc}.json`), {
+      schemaVersion: 1,
+      cc,
+      generatedAt,
+      bySpecies: bySpeciesCc,
+    })
+  }
+
+  // ② 按物种前缀分桶：{ bucket, bySpecies: { 物种id: { 国码: { 省码: n } } } }
+  const buckets = {}
+  for (const [spId, byCc] of Object.entries(bySpecies)) {
+    const key = spId.slice(0, BUCKET_CHARS)
+    ;(buckets[key] ??= {})[spId] = byCc
+  }
+  const bucketBytes = {}
+  for (const [name, bySpeciesBucket] of Object.entries(buckets)) {
+    bucketBytes[`${name}.json`] = await writeShard(path.join(SPECIES_DIR, `${name}.json`), {
+      schemaVersion: 1,
+      bucket: name,
+      generatedAt,
+      bySpecies: Object.fromEntries(Object.entries(bySpeciesBucket).sort((a, b) => (a[0] < b[0] ? -1 : 1))),
+    })
+  }
+
+  // 清理过期分片（国家集合/桶名随数据变化，旧文件留着会被误读）
+  for (const [dir, keep] of [
+    [COUNTRY_DIR, new Set(Object.keys(countryBytes))],
+    [SPECIES_DIR, new Set(Object.keys(bucketBytes))],
+  ]) {
+    for (const f of (await fs.readdir(dir).catch(() => [])).filter((x) => x.endsWith('.json'))) {
+      if (f === 'index.json' || keep.has(f)) continue
+      await fs.rm(path.join(dir, f), { force: true })
+    }
+  }
+
+  const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0)
+  const index = {
+    schemaVersion: 1,
+    generatedAt,
+    method: METHOD,
+    sources: [GBIF_SOURCE, SUBDIVISION_SOURCE],
+    countries: COUNTRIES,
+    byCountry: sortedByCountry,
+    byCountryAlt,
+    counts: {
+      countries: Object.keys(countryBytes).length,
+      species: speciesN,
+      cells: Object.values(countryCounts).reduce((a, c) => a + c.cells, 0),
+    },
+    /** 该国分片里的物种数与省格数（前端可据此画出"省级列表"的计数，无需先读分片） */
+    countryCounts,
+    sharding: {
+      dir: 'region-provinces',
+      files: Object.keys(countryBytes).sort(),
+      bytes: countryBytes,
+      maxBytes: Math.max(0, ...Object.values(countryBytes)),
+      totalBytes: sum(countryBytes),
+    },
+    speciesSharding: {
+      dir: 'region-species',
+      bucketChars: BUCKET_CHARS,
+      buckets: Object.keys(bucketBytes).sort(),
+      bytes: bucketBytes,
+      maxBytes: Math.max(0, ...Object.values(bucketBytes)),
+      totalBytes: sum(bucketBytes),
+    },
+  }
+  const indexBytes = await writeShard(path.join(COUNTRY_DIR, 'index.json'), index)
+
+  const maxCountry = Object.entries(countryBytes).sort((a, b) => b[1] - a[1])[0]
+  const maxBucket = Object.entries(bucketBytes).sort((a, b) => b[1] - a[1])[0]
+  console.log(
+    `  分片：索引 ${(indexBytes / 1024).toFixed(0)}KB · 国家 ${Object.keys(countryBytes).length} 个 ` +
+      `（合计 ${(sum(countryBytes) / 1e6).toFixed(2)}MB，最大 ${maxCountry?.[0]} ${((maxCountry?.[1] ?? 0) / 1024).toFixed(0)}KB）· ` +
+      `物种桶 ${Object.keys(bucketBytes).length} 个（${(sum(bucketBytes) / 1e6).toFixed(2)}MB，最大 ${maxBucket?.[0]} ${((maxBucket?.[1] ?? 0) / 1024).toFixed(0)}KB）`,
+  )
+}
 if (unmatched.size) {
   const top = [...unmatched.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)
   console.log(`未映射 stateProvince 名 ${unmatched.size} 个（已丢弃，不臆造），Top：`)

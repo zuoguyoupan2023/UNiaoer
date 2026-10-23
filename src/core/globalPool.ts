@@ -7,7 +7,7 @@
  *
  * 数据来源：
  *   · 名单/可玩标记 —— `manifest-meta.json`（见 meta.ts）
- *   · 国家区系 —— `species-distribution.json`（按国短码，249 国）
+ *   · 国家区系 —— `species-distribution.json`（按国短码，249 个国家/地区码）
  */
 import type { BankSpecies } from './bank'
 import { loadMeta, _resetMetaCache } from './meta'

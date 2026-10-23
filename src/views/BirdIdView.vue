@@ -40,7 +40,7 @@ import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
 import { regionLabel } from '@/core/region'
 import { useSettingsStore } from '@/stores/settings'
-import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
+import { loadProvincesIndex, provincesOf, type ProvinceIndex } from '@/core/provinces'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -378,7 +378,7 @@ const fmtMB = (b: number) => (b / 1048576).toFixed(1)
 const settings = useSettingsStore()
 const regionCountry = ref(String(settings.region ?? 'ALL').split('-')[0] || 'ALL')
 const regionCode = ref<string>(settings.region?.includes('-') ? settings.region : '')
-const provinceData = ref<ProvinceData | null>(null)
+const provinceData = ref<ProvinceIndex | null>(null)
 const REGION_COUNTRIES = ['CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL', 'IN', 'VN']
 
 const regionKey = computed(() =>
@@ -389,7 +389,7 @@ const provinceOptions = computed(() =>
 )
 const countryName = (cc: string) => (cc === 'ALL' ? t('birdId.region.all') : regionLabel(cc, t, String(locale.value)))
 
-loadProvinces().then((d) => {
+loadProvincesIndex().then((d) => {
   provinceData.value = d
 })
 

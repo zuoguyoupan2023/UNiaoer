@@ -45,6 +45,7 @@
     "fix:media-ext": "node scripts/repair-media-ext.mjs",
     "region:build": "node scripts/region/build-seasonality.mjs",
     "region:provinces": "node scripts/region/build-provinces.mjs",
+    "region:records": "node scripts/region/build-country-records.mjs",
     "region:hotspots": "node scripts/region/build-hotspots.mjs",
     "region:hotspots-sql": "node scripts/region/build-hotspots-sql.mjs",
     "region:hotspots-gbif": "node scripts/region/build-hotspots-gbif.mjs",

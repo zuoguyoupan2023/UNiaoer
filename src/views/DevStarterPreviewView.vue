@@ -15,6 +15,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { cachedSpeciesAssets, loadBank, loadSpeciesAssets, speciesName, type BankSpecies } from '@/core/bank'
 import { loadRegionCommonnessIndex, loadRegionCommonnessShard } from '@/core/provinceCommonness'
+import { loadProvincesIndex } from '@/core/provinces'
 import { STARTER_BIRD_IDS } from '@/core/starterBirds'
 
 const loading = ref(true)
@@ -42,12 +43,12 @@ onMounted(async () => {
     const byId = new Map(bank.species.map((s) => [s.id, s]))
     species.value = starterIds.map((id) => byId.get(id)).filter((s): s is BankSpecies => !!s)
 
-    const [provincesRaw, index] = await Promise.all([
-      fetch(`${import.meta.env.BASE_URL}data/region-provinces.json`).then((r) => r.json()),
+    const [provincesIndex, index] = await Promise.all([
+      loadProvincesIndex(),
       loadRegionCommonnessIndex(),
     ])
     // 有省级档位的国家（取产物自述口径，避免前端再维护一份常量）
-    const ccs = index?.scope?.countries ?? Object.keys(provincesRaw.byCountry ?? {})
+    const ccs = index?.scope?.countries ?? provincesIndex?.countries ?? []
     const shards = await Promise.all(
       ccs.map(async (cc: string) => ({
         cc,
@@ -58,7 +59,7 @@ onMounted(async () => {
 
     const names: Record<string, string> = {}
     const provList: Record<string, string[]> = {}
-    for (const [cc, divisions] of Object.entries(provincesRaw.byCountry ?? {})) {
+    for (const [cc, divisions] of Object.entries(provincesIndex?.byCountry ?? {})) {
       for (const [code, name] of Object.entries(divisions as Record<string, string>)) names[code] = name
       provList[cc] = Object.keys(divisions as Record<string, string>)
     }
