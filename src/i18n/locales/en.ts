@@ -942,11 +942,14 @@ const en: typeof zhMessages = {
     metricsTitle: 'Anonymous stats',
     metricsDesc: 'Anonymous stats are only used to understand usage and accuracy per difficulty (to improve questions and UI); no ads, and never linked to a specific person.',
     metricsWhatTitle: 'What is collected',
-    metricsWhat: 'Date, event type, page category, quiz mode, difficulty, correct/total questions, the question region you picked, and earned badge/title ids.',
+    metricsWhat:
+      'Date; per-province (only if you enable province stats, e.g. Guangdong) answer counts; question region and difficulty; correct/total per round; earned titles/badges; page category. Never linked to “who did which round”.',
     metricsWhyTitle: 'Why',
-    metricsWhy: 'To see which features are used and how accuracy varies by difficulty, so questions and UI can be adjusted; only aggregates are ever shown.',
+    metricsWhy:
+      'To measure accuracy of regional bird questions, accuracy per level, and how many people reach each badge/title, then show players’ identification level on the public stats page (aggregates only).',
     metricsNotTitle: 'What is not collected',
-    metricsNot: 'No IP/UA stored, no cookies, no device IDs, no cross-day linking; scores and archives stay on this device.',
+    metricsNot:
+      'No IP/UA stored, no cookies, no device IDs; never city/county/town/village level, never who you are, what device you use, or how many rounds in total (scores and archives stay on this device); no cross-day linking.',
     metricsSwitch: 'Allow anonymous stats (turn off to send nothing)',
     metricsGeoDesc:
       'Province-level stats (optional): only the province inferred from IP is used (no IP stored, no city-level location), for province activity and regional accuracy. Off by default; change anytime.',
