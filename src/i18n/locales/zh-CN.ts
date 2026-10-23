@@ -573,6 +573,16 @@ export const messages = {
     provinceMatrixNote:
       '左 = 做题者归属地；右 = 题目地区（用户自选）——两套口径，不要相加或混算。管理端不做 n≥10 过滤，样本 <10 标「样本少」。',
     provinceStatsSmall: '样本少',
+    // 077：鸟种级错误率（管理端观察期）
+    speciesStatsTitle: '鸟种错误率（观察期，未公开）',
+    speciesStatsNote:
+      '逐题统计，不含用户与省份维度；错误率 = 答错次数 / 作答次数（以曝光为分母）。T+1：只统计到昨天。管理端不做样本过滤，n<10 标「样本少」。',
+    speciesStatsLoad: '拉取（近 30 天）',
+    speciesStatsMeta: '窗口自 {window} 起 · 已更新到 {until} · {answers} 次作答 / {species} 种',
+    speciesStatsEmpty: '还没有逐题数据（需要新版前端上报后才能积累）。',
+    speciesStatsRate: '错 {wrong}/{answers} · {rate}%',
+    speciesPairsTitle: '被错认成（{n} 组）',
+    speciesPairsCell: '{n} 次',
     regionStatsUnspecified: '全球 / 未指定：平均 {mean}% · {n} 轮（不参与比较）',
     title: '报错管理',
     lead: '输入管理密钥以查看与处理用户反馈。密钥仅保存在本标签页，关闭即失效。',
@@ -930,7 +940,7 @@ export const messages = {
     metricsDesc: '匿名统计只用来了解使用情况与各难度正确率（改进出题与界面），不做广告、也无法关联到具体的人。',
     metricsWhatTitle: '收集什么',
     metricsWhat:
-      '日期；某省（需你开启省级统计，如广东）的答题人数与次数；题目地区与水平；每轮正确题数/总题数；获得的称号/徽章；浏览的页面类目。不把「谁」和「哪一轮」对应起来。',
+      '日期；某省（需你开启省级统计，如广东）的答题人数与次数；题目地区与水平；每轮正确题数/总题数；每道题的鸟种、答对/答错、答错时错认成哪种鸟；获得的称号/徽章；浏览的页面类目。不把「谁」和「哪一轮」对应起来。',
     metricsWhyTitle: '为什么',
     metricsWhy:
       '统计各地鸟种题目的正确率、各水平正确率、徽章与称号的达成人数，在公开统计页直观展示大家的认鸟水平（只发布聚合结果）。',

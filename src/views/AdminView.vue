@@ -5,6 +5,7 @@ import { CheckCheck, RefreshCw, ShieldCheck, ShieldOff, Undo2, X } from 'lucide-
 import { loadBank, speciesById, speciesName } from '@/core/bank'
 import { fetchRegionAccuracy, type RegionAccuracy } from '@/core/adminRegionStats'
 import { fetchProvinceStats, type ProvinceStats } from '@/core/adminProvinceStats'
+import { fetchSpeciesStats, type SpeciesStats } from '@/core/adminSpeciesStats'
 import { groupRegions } from '@/core/regionGroup'
 import { regionLabel } from '@/core/region'
 import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
@@ -222,6 +223,29 @@ async function loadProvinceStats() {
     provinceLoading.value = false
   }
 }
+// ---- 077：鸟种级错误率（管理端观察期；T+1；不含用户/省份） ----
+const speciesStats = ref<SpeciesStats | null>(null)
+const speciesLoading = ref(false)
+const speciesError = ref('')
+async function loadSpeciesStats() {
+  if (!key.value || speciesLoading.value) return
+  speciesLoading.value = true
+  speciesError.value = ''
+  try {
+    await loadBank()
+    speciesStats.value = await fetchSpeciesStats(key.value, 30)
+  } catch (e) {
+    speciesError.value = e instanceof Error ? e.message : 'failed'
+  } finally {
+    speciesLoading.value = false
+  }
+}
+/** 物种 id → 当前语言俗名（查不到就显示 id） */
+function speciesLabel(id: string): string {
+  const sp = speciesById(id)
+  return sp ? speciesName(sp, currentLocale()) : id
+}
+
 /** 归属地展示名：港澳台一律「中国香港／中国澳门／中国台湾」（铁律 6） */
 function provLabel(code: string): string {
   if (code === 'CN-91') return regionLabel('HK', t, currentLocale())
@@ -495,6 +519,53 @@ const count = computed(() => reports.value.length)
             </ul>
           </details>
           <p v-if="provinceStats.notes?.consent" class="muted small">{{ provinceStats.notes.consent }}</p>
+        </template>
+      </details>
+
+      <!-- 077：鸟种错误率 + 被错认组合（T+1；管理端观察期） -->
+      <details class="ledger">
+        <summary>{{ t('admin.speciesStatsTitle') }}</summary>
+        <p class="muted small">{{ t('admin.speciesStatsNote') }}</p>
+        <div class="toolbar" style="margin: 8px 0">
+          <button class="btn btn-secondary btn-sm" type="button" :disabled="speciesLoading" @click="loadSpeciesStats">
+            <RefreshCw class="ic" :size="13" /> {{ t('admin.speciesStatsLoad') }}
+          </button>
+        </div>
+        <p v-if="speciesError" class="err" role="alert">{{ speciesError }}</p>
+        <template v-else-if="speciesStats">
+          <p class="muted small">
+            {{ t('admin.speciesStatsMeta', {
+              window: speciesStats.since,
+              until: speciesStats.until,
+              answers: speciesStats.totals.answers,
+              species: speciesStats.totals.species,
+            }) }}
+          </p>
+          <p v-if="!speciesStats.species.length" class="muted small">{{ t('admin.speciesStatsEmpty') }}</p>
+          <ul v-else class="ranks">
+            <li v-for="sp in speciesStats.species" :key="sp.species">
+              <span class="rank-name">{{ speciesLabel(sp.species) }}</span>
+              <span class="rank-n">
+                {{ t('admin.speciesStatsRate', { wrong: sp.wrong, answers: sp.answers, rate: sp.rate }) }}
+                <template v-if="sp.small">（{{ t('admin.provinceStatsSmall') }}）</template>
+              </span>
+            </li>
+          </ul>
+
+          <details v-if="speciesStats.pairs.length" class="ledger">
+            <summary>{{ t('admin.speciesPairsTitle', { n: speciesStats.pairs.length }) }}</summary>
+            <ul class="ranks">
+              <li v-for="pair in speciesStats.pairs" :key="`${pair.species}>${pair.chosen}`">
+                <span class="rank-name">
+                  {{ speciesLabel(pair.species) }} → {{ speciesLabel(pair.chosen) }}
+                </span>
+                <span class="rank-n">
+                  {{ t('admin.speciesPairsCell', { n: pair.n }) }}
+                  <template v-if="pair.small">（{{ t('admin.provinceStatsSmall') }}）</template>
+                </span>
+              </li>
+            </ul>
+          </details>
         </template>
       </details>
 

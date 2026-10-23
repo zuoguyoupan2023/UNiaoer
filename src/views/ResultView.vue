@@ -21,7 +21,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { TIERS } from '@/core/difficulty'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
-import { accuracyBand, track } from '@/core/metrics'
+import { accuracyBand, track, trackBatch } from '@/core/metrics'
 import {
   buildShareDraft,
   createShare,
@@ -366,13 +366,30 @@ onMounted(async () => {
       // 073 P0：答题时用户自选的地区（不是 IP）；`ALL` = 未指定，公开统计时单列
       region: settings.region,
     })
-    // 076：精确得分（correct/total）——公开看板改用精确加权，分桶事件仅作历史兼容
-    track('quiz_score', {
-      tier: quiz.tier,
-      correct: quiz.correctCount,
-      total: quiz.total,
-      region: settings.region,
-    })
+    // 076 + 077：精确得分（correct/total）+ 逐题物种级对错，**一轮一次批量请求**
+    //  - quiz_score 可能带省码（用户同意时由 Worker 注入），供省际统计；
+    //  - quiz_answer 不带省码（Worker 的 GEO_EVENTS 不含它），供 admin 的鸟种错误率。
+    const answers = res.record.items
+      // 旧题库兜底：没有 speciesId 时记录里塞的是媒体 URL，不能当物种 id 上报
+      .filter((it) => it.speciesId && it.speciesId !== it.mediaUrl)
+      .map((it) => ({
+        e: 'quiz_answer',
+        p: {
+          species: it.speciesId,
+          ok: it.correct ? 1 : 0,
+          tier: quiz.tier,
+          region: settings.region,
+          // 只在上报错选（超时没有「错认成谁」，不发 chosen）
+          ...(it.correct || !it.chosenId ? {} : { chosen: it.chosenId }),
+        },
+      }))
+    trackBatch([
+      {
+        e: 'quiz_score',
+        p: { tier: quiz.tier, correct: quiz.correctCount, total: quiz.total, region: settings.region },
+      },
+      ...answers,
+    ])
   }
   // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
   if (res.record) {

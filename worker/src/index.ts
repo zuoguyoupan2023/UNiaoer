@@ -1050,6 +1050,17 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
     total: ['@score'],
     region: ['@region'],
   },
+  /**
+   * 077：逐题作答（物种级）。用于 admin 的「鸟种错误率 / 错认成哪种鸟」；
+   * **不在 GEO_EVENTS 里** → 永远不会带 `uprov`，与省级口径物理隔离。
+   */
+  quiz_answer: {
+    species: ['@species'],
+    ok: ['0', '1'],
+    tier: ['1', '2', '3', '4', '5'],
+    region: ['@region'],
+    chosen: ['@species'],
+  },
   report_submit: {},
   poster_create: {},
   badge_earned: { badge: BADGE_IDS },
@@ -1068,8 +1079,15 @@ const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
 /** 076：精确得分属性只接受 0–99 的整数（与前端 metrics.ts 的 SCORE_VALUE_RE 一致） */
 const SCORE_VALUE_RE = /^\d{1,2}$/
 
+/** 077：物种 id 形态（小写 slug，如 cyanopica-cyana）；拒绝 URL / 任意文本 */
+const SPECIES_VALUE_RE = /^[a-z][a-z0-9-]{2,49}$/
+
 /** 事件体上限（字节）：白名单事件 + ≤3 枚举属性，300 足够；超过静默丢弃 */
 const METRIC_MAX_BYTES = 300
+/** 077：批量体上限（一轮一次请求，10 题 ≈ 1KB；4096 足够且能挡住刷量） */
+const METRIC_BATCH_MAX_BYTES = 4096
+/** 077：批量体最多条数（一轮 10 题 + 1 条汇总，留余量） */
+const METRIC_BATCH_MAX_EVENTS = 16
 
 /**
  * 简易内存限流（按 IP；**不落库、不记录**，仅防刷）。
@@ -1183,6 +1201,11 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
       if (SCORE_VALUE_RE.test(v)) parts.push(`${key}=${v}`)
       continue
     }
+    // '@species' = 物种 id 形态（077 逐题作答）
+    if (allowed.includes('@species')) {
+      if (SPECIES_VALUE_RE.test(v)) parts.push(`${key}=${v}`)
+      continue
+    }
     if (allowed.includes(v)) parts.push(`${key}=${v}`)
   }
   return parts.join(';')
@@ -1220,7 +1243,12 @@ function handleGeo(request: Request): Response {
   })
 }
 
-/** POST /api/metrics：公开上报（事件计数；无 PII）。所有异常路径静默，绝不 5xx 打扰用户 */
+/**
+ * POST /api/metrics：公开上报（事件计数；无 PII）。所有异常路径静默，绝不 5xx 打扰用户。
+ *
+ * 077：支持**批量体** `{ b: [{e,p}, …], g?: 1 }`（一轮一次请求，避免 10 次 beacon 打限流）。
+ * 单事件体仍是 `{ e, p, g? }`；两种写法走同一份白名单与规范化逻辑。
+ */
 async function handleMetrics(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const ip = clientIp(request)
   if (!rateAllowed(`m:${ip}`, 60)) return new Response(null, { status: 202, headers: CORS })
@@ -1230,39 +1258,52 @@ async function handleMetrics(request: Request, env: Env, ctx?: ExecutionContext)
   } catch {
     return new Response(null, { status: 204, headers: CORS })
   }
-  if (raw.length > METRIC_MAX_BYTES) return new Response(null, { status: 204, headers: CORS })
-  let body: { e?: unknown; p?: unknown }
+  if (raw.length > METRIC_BATCH_MAX_BYTES) return new Response(null, { status: 204, headers: CORS })
+  let body: { e?: unknown; p?: unknown; b?: unknown; g?: unknown }
   try {
-    body = JSON.parse(raw) as { e?: unknown; p?: unknown }
+    body = JSON.parse(raw) as { e?: unknown; p?: unknown; b?: unknown; g?: unknown }
   } catch {
     return new Response(null, { status: 204, headers: CORS })
   }
-  const event = typeof body.e === 'string' ? body.e : ''
-  const spec = METRIC_EVENTS[event]
-  if (!spec) return new Response(null, { status: 204, headers: CORS }) // 非白名单：静默丢弃
+
+  const batch = Array.isArray(body.b)
+  // 单事件体维持 300 字节上限（批量体用上面的 4096）
+  if (!batch && raw.length > METRIC_MAX_BYTES) return new Response(null, { status: 204, headers: CORS })
+
+  const items: { e: unknown; p: unknown }[] = batch
+    ? (body.b as unknown[])
+        .slice(0, METRIC_BATCH_MAX_EVENTS)
+        .flatMap((x) =>
+          x && typeof x === 'object' ? [{ e: (x as { e?: unknown }).e, p: (x as { p?: unknown }).p }] : [],
+        )
+    : [{ e: body.e, p: body.p }]
+  if (!items.length) return new Response(null, { status: 204, headers: CORS })
+
   // 076：省码**由服务端派生**（前端只能表达「已同意」= g:1，无法伪造省码）。
-  // 兼容两种写法：数字 `1`（前端 metrics.ts 的省字节写法）与布尔 `true`。
-  const g = (body as { g?: unknown }).g
-  const geoOk = g === 1 || g === true
+  // 兼容两种写法：数字 `1`（前端 metrics.ts 的写法）与布尔 `true`。
+  const geoOk = body.g === 1 || body.g === true
   const prov = geoOk ? clientProvince((request as Request & { cf?: unknown }).cf) : null
-  const baseProps = normalizeMetricProps(spec, body.p)
-  // `uprov` 只挂在需要的两个事件上（其余事件不加维度，避免行数无谓膨胀）
-  const props =
-    prov && GEO_EVENTS.has(event)
-      ? [baseProps, `uprov=${prov}`].filter(Boolean).join(';')
-      : baseProps
   const day = new Date().toISOString().slice(0, 10)
-  // 独立访客（2026-10-09）：每个上报都尝试登记（当日哈希去重；只存不可逆哈希）。
-  // 与事件计数并行（waitUntil 不阻塞响应）。
+  // 独立访客（2026-10-09）：每次请求尝试登记一次（当日哈希去重；只存不可逆哈希）。
   ctx?.waitUntil(recordVisitor(env, request, day, prov))
+
   try {
-    // 原子自增（无读改写竞态）；每事件 1 行写
-    await env.DB.prepare(
-      `INSERT INTO metrics_daily (day, event, props, n) VALUES (?, ?, ?, 1)
-       ON CONFLICT(day, event, props) DO UPDATE SET n = n + 1`,
-    )
-      .bind(day, event, props)
-      .run()
+    for (const it of items) {
+      const event = typeof it.e === 'string' ? it.e : ''
+      const spec = METRIC_EVENTS[event]
+      if (!spec) continue // 非白名单：单条静默丢弃，不影响同批其它条目
+      const baseProps = normalizeMetricProps(spec, it.p)
+      // `uprov` 只挂在需要的两个事件上（quiz_answer 永远不带省码，见 GEO_EVENTS）
+      const props =
+        prov && GEO_EVENTS.has(event) ? [baseProps, `uprov=${prov}`].filter(Boolean).join(';') : baseProps
+      // 原子自增（无读改写竞态）；每事件 1 行写
+      await env.DB.prepare(
+        `INSERT INTO metrics_daily (day, event, props, n) VALUES (?, ?, ?, 1)
+         ON CONFLICT(day, event, props) DO UPDATE SET n = n + 1`,
+      )
+        .bind(day, event, props)
+        .run()
+    }
   } catch {
     /* 写入失败（如额度）：静默丢弃，不影响用户 */
   }
@@ -1496,6 +1537,98 @@ async function handleAdminStatsProvince(request: Request, env: Env, url: URL): P
         region: '题目地区 = 用户自选，与归属地不是同一口径',
         threshold: `管理端不过滤样本（n<${SMALL_N} 标 small）；公开页才用 10 轮门槛`,
         consent: '仅统计已同意「按省级归属地统计」的用户',
+      },
+    },
+    { headers: { 'cache-control': 'no-store' } },
+  )
+}
+
+/**
+ * GET /api/admin/stats/species?days=30（**管理，不公开**）—— 077 鸟种级错误率。
+ *
+ * 口径（docs/076 后续 / 077）：
+ *   · 数据来自 `quiz_answer{species,ok,tier,region,chosen}`（**逐题**，不含任何用户/省份维度）；
+ *   · 错误率 = 答错次数 / 作答次数（分母是曝光量，避免「热门鸟天然错得多」的偏差）；
+ *   · `chosen` 只在答错时上报 → 「A 被认成 B」的组合榜；
+ *   · **T+1**：只统计 `day < 今天`（用户要求「每天只更新前一天的数据」），不做定时任务；
+ *   · 管理端不过滤样本（`answers < 10` 只标 `small`）。
+ */
+async function handleAdminStatsSpecies(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
+  const days = clampInt(url.searchParams.get('days'), 1, 90, 30)
+  const today = new Date().toISOString().slice(0, 10)
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  /** 小样本阈值：管理端只标注、不过滤 */
+  const SMALL_N = 10
+
+  const [rows, span] = await Promise.all([
+    env.DB.prepare(
+      "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_answer' AND day >= ? AND day < ? GROUP BY props",
+    )
+      .bind(since, today)
+      .all<{ props: string; n: number }>(),
+    env.DB.prepare(
+      "SELECT MIN(day) AS first, MAX(day) AS last FROM metrics_daily WHERE event = 'quiz_answer'",
+    ).first<{ first: string | null; last: string | null }>(),
+  ])
+
+  type SpCell = { answers: number; wrong: number }
+  const bySpecies = new Map<string, SpCell>()
+  const pairs = new Map<string, { species: string; chosen: string; n: number }>()
+  let totalAnswers = 0
+
+  for (const r of rows.results) {
+    const p = parseProps(r.props)
+    const species = p.species ?? ''
+    if (!species) continue
+    const ok = p.ok === '1'
+    totalAnswers += r.n
+    const cell = bySpecies.get(species) ?? { answers: 0, wrong: 0 }
+    cell.answers += r.n
+    if (!ok) cell.wrong += r.n
+    bySpecies.set(species, cell)
+    const chosen = p.chosen ?? ''
+    if (!ok && chosen) {
+      const key = `${species}>${chosen}`
+      const pair = pairs.get(key) ?? { species, chosen, n: 0 }
+      pair.n += r.n
+      pairs.set(key, pair)
+    }
+  }
+
+  const species = [...bySpecies.entries()]
+    .map(([id, c]) => ({
+      species: id,
+      answers: c.answers,
+      wrong: c.wrong,
+      /** 错误率（%）；分母 = 被作答次数 */
+      rate: c.answers > 0 ? Math.round((c.wrong / c.answers) * 100) : 0,
+      small: c.answers < SMALL_N,
+    }))
+    .sort((a, b) => b.rate - a.rate || b.answers - a.answers)
+    .slice(0, 200)
+
+  const pairList = [...pairs.values()]
+    .map((x) => ({ ...x, small: x.n < SMALL_N }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 200)
+
+  return json(
+    {
+      days,
+      since,
+      /** T+1：只到昨天 */
+      until: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+      /** 该指标的真实起点（不受窗口影响） */
+      firstDay: span?.first ?? null,
+      lastDay: span?.last ?? null,
+      totals: { answers: totalAnswers, species: bySpecies.size, pairs: pairs.size },
+      species,
+      pairs: pairList,
+      notes: {
+        metric: '错误率 = 答错次数 / 作答次数（曝光作分母），管理端不设样本门槛',
+        privacy: '逐题事件不含用户/省份维度；T+1 展示',
+        threshold: `answers < ${SMALL_N} 标 small`,
       },
     },
     { headers: { 'cache-control': 'no-store' } },
@@ -1953,6 +2086,8 @@ export default {
         if (path === '/api/stats/region') return await handleAdminStatsRegion(request, env, url)
         // 076：省际统计（管理端观察期，未公开；公开看板不加省级字段）
         if (path === '/api/admin/stats/province') return await handleAdminStatsProvince(request, env, url)
+        // 077：鸟种级错误率 / 错认组合（管理端观察期，T+1；公开页暂不展示）
+        if (path === '/api/admin/stats/species') return await handleAdminStatsSpecies(request, env, url)
         // 028 公开统计看板（无需密钥；边缘缓存 1 小时）
         // 接受 `/api/stats/public` 与 `/api/stats/public/<分桶>`：分桶只用于绕开边缘缓存
         if (path === '/api/stats/public' || path.startsWith('/api/stats/public/'))

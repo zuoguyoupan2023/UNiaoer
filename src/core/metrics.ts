@@ -58,6 +58,18 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
     total: ['@score'],
     region: ['@region'],
   },
+  /**
+   * 077：**逐题**作答（物种级，用于 admin 的「鸟种错误率 / 错认成哪种鸟」）。
+   * 与 `quiz_score` 的省级维度**完全分开**：本事件不在 GEO_EVENTS 里，永远不会带 `uprov`。
+   * `chosen` 只在答错时上报（超时不报，避免把「没选」当成错选）。
+   */
+  quiz_answer: {
+    species: ['@species'],
+    ok: ['0', '1'],
+    tier: ['1', '2', '3', '4', '5'],
+    region: ['@region'],
+    chosen: ['@species'],
+  },
   report_submit: {},
   poster_create: {},
   // 公开看板（docs/028 §3.4）：徽章/称号**获取计数**（id 来自固定枚举，非用户输入）
@@ -94,9 +106,13 @@ const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
  */
 const SCORE_VALUE_RE = /^\d{1,2}$/
 
+/** 物种 id 形态：小写 slug（如 `cyanopica-cyana`），拒绝 URL / 任意文本 */
+const SPECIES_VALUE_RE = /^[a-z][a-z0-9-]{2,49}$/
+
 function allowedMetricValue(allowed: readonly string[], v: string): boolean {
   if (allowed.includes('@region')) return REGION_VALUE_RE.test(v)
   if (allowed.includes('@score')) return SCORE_VALUE_RE.test(v)
+  if (allowed.includes('@species')) return SPECIES_VALUE_RE.test(v)
   return allowed.includes(v)
 }
 
@@ -113,6 +129,27 @@ function sanitize(event: string, props?: Props): Record<string, string> | undefi
 }
 
 /**
+ * 发一个请求（beacon 优先，失败静默）。text/plain 避免 CORS 预检；Worker 只按文本解析。
+ * 任何异常都吞掉——计量绝不影响功能，也绝不重试堆积。
+ */
+function send(body: string): void {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'text/plain' }))
+      return
+    }
+    void fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body,
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    /* 静默 */
+  }
+}
+
+/**
  * 上报一个事件。任何异常（未开开关/不支持/网络失败）都静默返回——
  * 计量绝不影响功能，也绝不重试堆积。
  */
@@ -126,21 +163,39 @@ export function track(event: string, props?: Props): void {
     // 省码由 Worker 从 request.cf 派生 —— 前端既拿不到也传不了省码。
     const geo = settings.metricsGeo ? { g: 1 } : {}
     const body = JSON.stringify(p ? { e: event, p, ...geo } : { e: event, ...geo })
-    if (body.length > 300) return // 与 Worker 上限一致
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      // text/plain 避免 CORS 预检；Worker 只按文本解析
-      const blob = new Blob([body], { type: 'text/plain' })
-      navigator.sendBeacon(ENDPOINT, blob)
-      return
-    }
-    void fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'content-type': 'text/plain' },
-      body,
-      keepalive: true,
-    }).catch(() => {})
+    if (body.length > 300) return // 与 Worker 单事件上限一致
+    send(body)
   } catch {
     /* 静默：计量失败不影响任何功能 */
+  }
+}
+
+/** 批量上限：一轮 10 题 + 1 条汇总 = 11，留点余量；Worker 侧同一个上限 */
+const BATCH_MAX = 16
+/** 批量体上限（字节）：Worker 侧 4096，超过整包丢弃（不拆包，避免雪崩） */
+const BATCH_MAX_BYTES = 4096
+
+/**
+ * 077：批量上报（一轮一次请求，避免 10 次 beacon 触发限流）。
+ * 每条仍走同一份白名单裁剪；非法事件直接丢掉，不影响其它条目。
+ */
+export function trackBatch(events: { e: string; p?: Props }[]): void {
+  try {
+    const settings = useSettingsStore()
+    if (!settings.metricsEnabled) return
+    const list: { e: string; p?: Record<string, string> }[] = []
+    for (const ev of events.slice(0, BATCH_MAX)) {
+      if (!(ev.e in EVENT_SPEC)) continue
+      const p = sanitize(ev.e, ev.p)
+      list.push(p ? { e: ev.e, p } : { e: ev.e })
+    }
+    if (!list.length) return
+    const geo = settings.metricsGeo ? { g: 1 } : {}
+    const body = JSON.stringify({ b: list, ...geo })
+    if (body.length > BATCH_MAX_BYTES) return
+    send(body)
+  } catch {
+    /* 静默 */
   }
 }
 

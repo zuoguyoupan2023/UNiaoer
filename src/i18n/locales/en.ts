@@ -490,6 +490,16 @@ const en: typeof zhMessages = {
     provinceMatrixNote:
       'Left = player’s province; right = question region (self-selected). Two different bases — never add or merge them. Admin shows all rows; under 10 rounds is marked “small sample”.',
     provinceStatsSmall: 'small sample',
+    // 077: species-level error rates (admin observation window)
+    speciesStatsTitle: 'Species error rate (observation, not public)',
+    speciesStatsNote:
+      'Per-question stats with no user or province dimension; error rate = wrong / answers (exposure as denominator). T+1: only up to yesterday. Admin does not filter samples; under 10 answers is marked “small sample”.',
+    speciesStatsLoad: 'Load (last 30 days)',
+    speciesStatsMeta: 'Window since {window} · updated to {until} · {answers} answers / {species} species',
+    speciesStatsEmpty: 'No per-question data yet (it starts accumulating once the new frontend is live).',
+    speciesStatsRate: 'wrong {wrong}/{answers} · {rate}%',
+    speciesPairsTitle: 'Mistaken as ({n} pairs)',
+    speciesPairsCell: '{n} times',
     regionStatsUnspecified: 'Global / unspecified: {mean}% avg · {n} rounds (not compared)',
     title: 'Report admin',
     lead: 'Enter the admin key to review and handle user reports. The key is kept only in this tab.',
@@ -943,7 +953,7 @@ const en: typeof zhMessages = {
     metricsDesc: 'Anonymous stats are only used to understand usage and accuracy per difficulty (to improve questions and UI); no ads, and never linked to a specific person.',
     metricsWhatTitle: 'What is collected',
     metricsWhat:
-      'Date; per-province (only if you enable province stats, e.g. Guangdong) answer counts; question region and difficulty; correct/total per round; earned titles/badges; page category. Never linked to “who did which round”.',
+      'Date; per-province (only if you enable province stats, e.g. Guangdong) answer counts; question region and difficulty; correct/total per round; for each question the species, right/wrong, and (when wrong) which species it was mistaken for; earned titles/badges; page category. Never linked to “who did which round”.',
     metricsWhyTitle: 'Why',
     metricsWhy:
       'To measure accuracy of regional bird questions, accuracy per level, and how many people reach each badge/title, then show players’ identification level on the public stats page (aggregates only).',
