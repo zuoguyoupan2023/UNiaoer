@@ -561,6 +561,17 @@ export const messages = {
     regionStatsUnspecifiedLabel: '全球 / 未指定（只选了「全球」）',
     regionStatsCountryOnly: '仅国家（未细分到省）',
     regionStatsCountryHint: '国家级比较（含只选到国家的轮次）；省级排行只在同一国家内部，不与其它国家混排。',
+    // 076：省际统计（管理端观察期）
+    provinceStatsTitle: '省际统计（观察期，未公开）',
+    provinceStatsNote:
+      '口径：按 IP 归属地取到省级（不存 IP、不定位到城市），只统计已同意「按省级归属地统计」的用户；港澳台归入中国省级。人数为每省每日去重后累加。',
+    provinceStatsLoad: '拉取（近 30 天）',
+    provinceStatsMeta: '窗口自 {window} 起 · {n} 个地区',
+    provinceStatsEmpty: '还没有数据：需要在设置里勾选「允许按省级归属地统计」（默认关闭）。',
+    provinceStatsCell: '去重人数 {users} · 访问 {visits} · {rounds} 轮',
+    provinceStatsAcc: '平均 {mean}%（{n} 轮）',
+    provinceMatrixTitle: '省 × 题区（{n} 条，n≥10）',
+    provinceMatrixNote: '左 = 做题者归属地；右 = 题目地区（用户自选）——两套口径，不要相加或混算。',
     regionStatsUnspecified: '全球 / 未指定：平均 {mean}% · {n} 轮（不参与比较）',
     title: '报错管理',
     lead: '输入管理密钥以查看与处理用户反馈。密钥仅保存在本标签页，关闭即失效。',
@@ -919,6 +930,9 @@ export const messages = {
     metricsDesc:
       '本站使用匿名事件计数（仅事件类型、日期与题目难度等非个人属性；无 cookie、无设备标识、不存 IP）。你的成绩与档案仍只存在本机。',
     metricsSwitch: '允许匿名统计（关掉即完全不上报）',
+    metricsGeoDesc:
+      '省际统计（可选）：按 IP 归属地只取到省级（不存 IP、不定位到城市），用于省际活跃与地区正确率。默认关闭，可随时改。',
+    metricsGeoSwitch: '允许按省级归属地统计（默认关闭）',
     reportsTitle: '本地反馈',
     reportsDesc: '已在本机记录 {n} 条题目反馈（图片/录音/答案问题）。',
     reportsPending: '其中 {n} 条待上传到云端。',

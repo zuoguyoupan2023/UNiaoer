@@ -45,6 +45,12 @@ interface Persisted {
    * 关闭后前端完全不上报（设置页披露）。
    */
   metricsEnabled?: boolean
+  /**
+   * 076 省级归属地统计（**默认关**，需用户主动勾选）：
+   * 开启后 Worker 才会按 `request.cf` 派生省级码并写入聚合（不存 IP）。
+   * 与 `metricsEnabled` 是两件事：关掉匿名统计则两项都不上报。
+   */
+  metricsGeo?: boolean
 }
 
 function load(): Partial<Persisted> {
@@ -101,6 +107,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const region = ref<string>(saved.region ?? 'ALL')
   /** 028 匿名计量开关（默认开；关闭即完全不上报） */
   const metricsEnabled = ref<boolean>(saved.metricsEnabled ?? true)
+  /** 076 省级归属地统计（**默认关**：处理 IP 归属地，必须显式同意；见 docs/076） */
+  const metricsGeo = ref<boolean>(saved.metricsGeo ?? false)
 
   // 切语言：写 store 即同步 i18n 实例与 <html lang>（UI 只改 settings.locale）
   watch(locale, (v) => {
@@ -130,6 +138,7 @@ export const useSettingsStore = defineStore('settings', () => {
       adaptiveTier,
       region,
       metricsEnabled,
+      metricsGeo,
     ],
     () => {
       try {
@@ -157,6 +166,7 @@ export const useSettingsStore = defineStore('settings', () => {
             adaptiveTier: adaptiveTier.value,
             region: region.value,
             metricsEnabled: metricsEnabled.value,
+            metricsGeo: metricsGeo.value,
           } satisfies Persisted),
         )
       } catch {
@@ -188,5 +198,6 @@ export const useSettingsStore = defineStore('settings', () => {
     adaptiveTier,
     region,
     metricsEnabled,
+    metricsGeo,
   }
 })

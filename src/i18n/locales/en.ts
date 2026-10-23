@@ -478,6 +478,17 @@ const en: typeof zhMessages = {
     regionStatsUnspecifiedLabel: 'Global / unspecified (picked "global" only)',
     regionStatsCountryOnly: 'Country only (no province picked)',
     regionStatsCountryHint: 'Country comparison (includes country-only rounds); provinces are ranked within their own country only.',
+    // 076: province-level stats (admin observation window)
+    provinceStatsTitle: 'Province stats (observation, not public)',
+    provinceStatsNote:
+      'Basis: province inferred from IP (no IP stored, no city-level location); only users who opted into province-level stats are counted. Hong Kong/Macao/Taiwan are counted as Chinese provinces. Users are deduplicated per day, then summed.',
+    provinceStatsLoad: 'Load (last 30 days)',
+    provinceStatsMeta: 'Window since {window} · {n} regions',
+    provinceStatsEmpty: 'No data yet: turn on “Allow province-level stats” in Settings (off by default).',
+    provinceStatsCell: '{users} daily users · {visits} visits · {rounds} rounds',
+    provinceStatsAcc: '{mean}% avg ({n} rounds)',
+    provinceMatrixTitle: 'Province × question region ({n} rows, n≥10)',
+    provinceMatrixNote: 'Left = player’s province; right = question region (self-selected). Two different bases — never add or merge them.',
     regionStatsUnspecified: 'Global / unspecified: {mean}% avg · {n} rounds (not compared)',
     title: 'Report admin',
     lead: 'Enter the admin key to review and handle user reports. The key is kept only in this tab.',
@@ -932,6 +943,9 @@ const en: typeof zhMessages = {
     metricsDesc:
       'This site counts anonymous events (event type, date and non-personal attributes such as quiz tier only — no cookies, no device IDs, no IP storage). Your scores and archives stay on this device.',
     metricsSwitch: 'Allow anonymous stats (turn off to send nothing)',
+    metricsGeoDesc:
+      'Province-level stats (optional): only the province inferred from IP is used (no IP stored, no city-level location), for province activity and regional accuracy. Off by default; change anytime.',
+    metricsGeoSwitch: 'Allow province-level stats (off by default)',
     reportsTitle: 'Local reports',
     reportsDesc: '{n} issue report(s) saved on this device (photo/recording/answer).',
     reportsPending: '{n} pending upload.',

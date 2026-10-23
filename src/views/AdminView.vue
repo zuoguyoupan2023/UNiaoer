@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { CheckCheck, RefreshCw, ShieldCheck, ShieldOff, Undo2, X } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName } from '@/core/bank'
 import { fetchRegionAccuracy, type RegionAccuracy } from '@/core/adminRegionStats'
+import { fetchProvinceStats, type ProvinceStats } from '@/core/adminProvinceStats'
 import { groupRegions } from '@/core/regionGroup'
 import { regionLabel } from '@/core/region'
 import { loadProvinces, provincesOf, type ProvinceData } from '@/core/provinces'
@@ -204,8 +205,32 @@ function regionLabelOf(code: string): string {
   return prov ? `${country} · ${prov.name}` : `${country} · ${code}`
 }
 
-async function setStatus(r: AdminReport, status: ReportStatus) {
-  busy.value = { ...busy.value, [r.id]: true }
+// ---- 076：省际统计（管理端观察期；口径 = IP 省级归属地，仅统计已同意用户） ----
+const provinceStats = ref<ProvinceStats | null>(null)
+const provinceLoading = ref(false)
+const provinceError = ref('')
+async function loadProvinceStats() {
+  if (!key.value || provinceLoading.value) return
+  provinceLoading.value = true
+  provinceError.value = ''
+  try {
+    await ensureProvinces()
+    provinceStats.value = await fetchProvinceStats(key.value, 30)
+  } catch (e) {
+    provinceError.value = e instanceof Error ? e.message : 'failed'
+  } finally {
+    provinceLoading.value = false
+  }
+}
+/** 归属地展示名：港澳台一律「中国香港／中国澳门／中国台湾」（铁律 6） */
+function provLabel(code: string): string {
+  if (code === 'CN-91') return regionLabel('HK', t, currentLocale())
+  if (code === 'CN-92') return regionLabel('MO', t, currentLocale())
+  if (code === 'CN-71') return regionLabel('TW', t, currentLocale())
+  return regionLabelOf(code)
+}
+
+async function setStatus(r: AdminReport, status: ReportStatus) {  busy.value = { ...busy.value, [r.id]: true }
   savedMsg.value = ''
   try {
     await patchReportStatus(r.id, status, key.value)
@@ -422,6 +447,50 @@ const count = computed(() => reports.value.length)
               </li>
             </ul>
           </template>
+        </template>
+      </details>
+
+      <!-- 076：省际统计（观察期，仅管理端可见；口径 = IP 省级归属地，非用户自选地区） -->
+      <details class="ledger">
+        <summary>{{ t('admin.provinceStatsTitle') }}</summary>
+        <p class="muted small">{{ t('admin.provinceStatsNote') }}</p>
+        <div class="toolbar" style="margin: 8px 0">
+          <button class="btn btn-secondary btn-sm" type="button" :disabled="provinceLoading" @click="loadProvinceStats">
+            <RefreshCw class="ic" :size="13" /> {{ t('admin.provinceStatsLoad') }}
+          </button>
+        </div>
+        <p v-if="provinceError" class="err" role="alert">{{ provinceError }}</p>
+        <template v-else-if="provinceStats">
+          <p class="muted small">
+            {{ t('admin.provinceStatsMeta', { window: provinceStats.since, n: provinceStats.provinces.length }) }}
+          </p>
+          <p v-if="!provinceStats.provinces.length" class="muted small">{{ t('admin.provinceStatsEmpty') }}</p>
+          <ul v-else class="ranks">
+            <li v-for="p in provinceStats.provinces" :key="p.prov">
+              <span class="rank-name">{{ provLabel(p.prov) }}</span>
+              <span class="rank-n">
+                {{ t('admin.provinceStatsCell', { users: p.users, visits: p.visits, rounds: p.rounds }) }}
+                <template v-if="p.accuracy">
+                  · {{ t('admin.provinceStatsAcc', { mean: p.accuracy.mean, n: p.accuracy.n }) }}
+                </template>
+              </span>
+            </li>
+          </ul>
+
+          <details v-if="provinceStats.matrix.length" class="ledger">
+            <summary>{{ t('admin.provinceMatrixTitle', { n: provinceStats.matrix.length }) }}</summary>
+            <p class="muted small">{{ t('admin.provinceMatrixNote') }}</p>
+            <ul class="ranks">
+              <li v-for="m in provinceStats.matrix" :key="`${m.uprov}-${m.region}-${m.tier}`">
+                <span class="rank-name">
+                  {{ provLabel(m.uprov) }} →
+                  {{ m.region === 'ALL' ? t('admin.regionAll') : provLabel(m.region) }} · L{{ m.tier }}
+                </span>
+                <span class="rank-n">{{ t('admin.regionStatsCell', { mean: m.mean, n: m.n }) }}</span>
+              </li>
+            </ul>
+          </details>
+          <p v-if="provinceStats.notes?.consent" class="muted small">{{ provinceStats.notes.consent }}</p>
         </template>
       </details>
 

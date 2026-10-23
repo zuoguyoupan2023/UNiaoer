@@ -198,5 +198,9 @@ CREATE TABLE IF NOT EXISTS metrics_daily (
 CREATE TABLE IF NOT EXISTS metrics_visitors (
   day   TEXT NOT NULL,                 -- '2026-10-09'（UTC）
   vhash TEXT NOT NULL,                 -- 当日去重哈希（16 字节 hex 截断 32 字符）
+  prov  TEXT,                          -- 076：用户**同意**时记录省级归属地（CN-32 / US-CA / JP），否则 NULL
   PRIMARY KEY (day, vhash)
 );
+-- ⚠️ 既有部署补列（一次性，2026-10-23 已执行）：
+--   ALTER TABLE metrics_visitors ADD COLUMN prov TEXT;
+--   （CREATE TABLE IF NOT EXISTS 不会补列；prov 只在用户勾选「按省级归属地统计」时写入）

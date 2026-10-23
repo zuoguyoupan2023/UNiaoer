@@ -122,7 +122,10 @@ export function track(event: string, props?: Props): void {
     const settings = useSettingsStore()
     if (!settings.metricsEnabled) return
     const p = sanitize(event, props)
-    const body = JSON.stringify(p ? { e: event, p } : { e: event })
+    // 076：省级归属地统计要用户显式同意（默认关）。只带一个布尔标记，
+    // 省码由 Worker 从 request.cf 派生 —— 前端既拿不到也传不了省码。
+    const geo = settings.metricsGeo ? { g: 1 } : {}
+    const body = JSON.stringify(p ? { e: event, p, ...geo } : { e: event, ...geo })
     if (body.length > 300) return // 与 Worker 上限一致
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
       // text/plain 避免 CORS 预检；Worker 只按文本解析

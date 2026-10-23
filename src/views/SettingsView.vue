@@ -281,6 +281,12 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
         <input v-model="settings.metricsEnabled" type="checkbox" />
         <span>{{ t('settings.metricsSwitch') }}</span>
       </label>
+      <!-- 076：省级归属地统计（默认关；只取省级、不存 IP；省际统计用） -->
+      <p class="muted" style="margin-top: 14px">{{ t('settings.metricsGeoDesc') }}</p>
+      <label class="switch">
+        <input v-model="settings.metricsGeo" type="checkbox" :disabled="!settings.metricsEnabled" />
+        <span>{{ t('settings.metricsGeoSwitch') }}</span>
+      </label>
     </div>
 
     <!-- 035 离线补传（2026-10-09）：分享创建失败时草稿入队，网络恢复后在此补传 -->

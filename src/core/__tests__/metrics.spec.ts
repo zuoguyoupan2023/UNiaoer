@@ -76,6 +76,16 @@ describe('metrics.track（匿名计量上报）', () => {
     expect(JSON.parse(sent[1]!)).toEqual({ e: 'quiz_score', p: { tier: '2' } })
   })
 
+  it('076：省级归属地需显式同意才带 g 标记（默认不带）', async () => {
+    const settings = useSettingsStore()
+    track('session_start')
+    settings.metricsGeo = true
+    track('session_start')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(JSON.parse(sent[0]!)).toEqual({ e: 'session_start' })
+    expect(JSON.parse(sent[1]!)).toEqual({ e: 'session_start', g: 1 })
+  })
+
   it('session_start 每会话只计一次', async () => {
     trackSessionStart()
     trackSessionStart()

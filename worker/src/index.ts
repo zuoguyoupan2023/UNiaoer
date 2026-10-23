@@ -11,6 +11,24 @@
  * 说明：/api/questions 的档位→常见度映射与 src/core/difficulty.ts 的 TIERS.commonness 保持一致。
  */
 
+import { clientProvince } from './geoProvinces'
+
+/** 076：需要附带 `uprov`（做题者省级归属地）的事件白名单 */
+const GEO_EVENTS = new Set(['session_start', 'quiz_score'])
+
+/** props 串 `'a=b;c=d'` → 对象（metrics_daily 的 props 规范化格式） */
+function parseProps(s: string): Record<string, string> {
+  return Object.fromEntries(
+    s
+      .split(';')
+      .filter(Boolean)
+      .map((kv) => {
+        const i = kv.indexOf('=')
+        return i > 0 ? [kv.slice(0, i), kv.slice(i + 1)] : [kv, '']
+      }),
+  )
+}
+
 interface Env {
   DB: D1Database
   MEDIA: R2Bucket
@@ -1110,16 +1128,19 @@ async function daySalt(env: Env, day: string): Promise<string | null> {
 /**
  * 记一个独立访客（当日去重）。**IP/UA 只在此处内存参与一次哈希，不落库**；
  * 落库的只有 `sha256(盐|日|IP|UA)` 的前 32 位 hex（不可逆、不可跨日关联）。
+ *
+ * 076：`prov`（省级归属地）**只在用户同意时**传入（`prov: null` = 未同意/取不到），
+ * 且随当日首行一起写入；同一人当天换出口省以**首次写入**为准。
  */
-async function recordVisitor(env: Env, request: Request, day: string): Promise<void> {
+async function recordVisitor(env: Env, request: Request, day: string, prov: string | null): Promise<void> {
   const salt = await daySalt(env, day)
   if (!salt) return
   const ua = request.headers.get('user-agent') ?? ''
   const ip = clientIp(request)
   const hash = (await sha256Hex(`${salt}|${day}|${ip}|${ua}`)).slice(0, 32)
   try {
-    const res = await env.DB.prepare('INSERT OR IGNORE INTO metrics_visitors (day, vhash) VALUES (?,?)')
-      .bind(day, hash)
+    const res = await env.DB.prepare('INSERT OR IGNORE INTO metrics_visitors (day, vhash, prov) VALUES (?,?,?)')
+      .bind(day, hash, prov)
       .run()
     // changes=1 → 当天首次见到这个（不可逆）哈希 → 独立访客 +1
     if (res.meta?.changes) {
@@ -1211,11 +1232,21 @@ async function handleMetrics(request: Request, env: Env, ctx?: ExecutionContext)
   const event = typeof body.e === 'string' ? body.e : ''
   const spec = METRIC_EVENTS[event]
   if (!spec) return new Response(null, { status: 204, headers: CORS }) // 非白名单：静默丢弃
-  const props = normalizeMetricProps(spec, body.p)
+  // 076：省码**由服务端派生**（前端只能表达「已同意」= g:1，无法伪造省码）。
+  // 兼容两种写法：数字 `1`（前端 metrics.ts 的省字节写法）与布尔 `true`。
+  const g = (body as { g?: unknown }).g
+  const geoOk = g === 1 || g === true
+  const prov = geoOk ? clientProvince((request as Request & { cf?: unknown }).cf) : null
+  const baseProps = normalizeMetricProps(spec, body.p)
+  // `uprov` 只挂在需要的两个事件上（其余事件不加维度，避免行数无谓膨胀）
+  const props =
+    prov && GEO_EVENTS.has(event)
+      ? [baseProps, `uprov=${prov}`].filter(Boolean).join(';')
+      : baseProps
   const day = new Date().toISOString().slice(0, 10)
   // 独立访客（2026-10-09）：每个上报都尝试登记（当日哈希去重；只存不可逆哈希）。
   // 与事件计数并行（waitUntil 不阻塞响应）。
-  ctx?.waitUntil(recordVisitor(env, request, day))
+  ctx?.waitUntil(recordVisitor(env, request, day, prov))
   try {
     // 原子自增（无读改写竞态）；每事件 1 行写
     await env.DB.prepare(
@@ -1345,8 +1376,122 @@ async function handleAdminStatsRegion(request: Request, env: Env, url: URL): Pro
   })
 }
 
-/** GET /api/metrics/summary?days=30（管理）：按日聚合，供人工回填 docs/028 §6 */
-async function handleMetricsSummary(request: Request, env: Env, url: URL): Promise<Response> {
+/**
+ * GET /api/admin/stats/province?days=30（**管理，不公开**）—— 076 省际统计。
+ *
+ * 口径（docs/076）：
+ *   · `uprov` = **做题者**的省级归属地，由 Worker 从 `request.cf` 派生（不存 IP），
+ *     且**只统计已同意**「按省级归属地统计」的用户（前端 `g:1`）；
+ *   · `region` = 题目地区（用户自选），两套口径分开返回，不混成一个数；
+ *   · 人数来自 `metrics_visitors.prov`（每省每日**去重**人数）；访问/轮次来自 `metrics_daily`；
+ *   · 正确率 = Σcorrect / Σtotal（精确口径），`n < 10` 一律返回 null / 不进矩阵。
+ *   · 港澳台按铁律 6 归并为 `CN-91/92/71`，展示名由前端 i18n 决定。
+ *
+ * 只给管理端观察；公开看板（/api/stats/public）不加任何省级字段。
+ */
+async function handleAdminStatsProvince(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
+  const days = clampInt(url.searchParams.get('days'), 1, 90, 30)
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const MIN_N = 10
+
+  const [visitors, rows] = await Promise.all([
+    env.DB.prepare(
+      'SELECT prov, COUNT(*) AS n FROM metrics_visitors WHERE day >= ? AND prov IS NOT NULL GROUP BY prov',
+    )
+      .bind(since)
+      .all<{ prov: string; n: number }>(),
+    env.DB.prepare(
+      "SELECT event, props, SUM(n) AS n FROM metrics_daily WHERE day >= ? AND props LIKE '%uprov=%' GROUP BY event, props",
+    )
+      .bind(since)
+      .all<{ event: string; props: string; n: number }>(),
+  ])
+
+  type ProvCell = { users: number; visits: number; rounds: number; correct: number; total: number }
+  const byProv = new Map<string, ProvCell>()
+  const cellOf = (prov: string): ProvCell => {
+    const hit = byProv.get(prov)
+    if (hit) return hit
+    const cell: ProvCell = { users: 0, visits: 0, rounds: 0, correct: 0, total: 0 }
+    byProv.set(prov, cell)
+    return cell
+  }
+  // 人数：每省每日去重（metrics_visitors 每人每天一行）
+  for (const v of visitors.results) cellOf(v.prov).users += v.n
+
+  // 访问 / 轮次 / 正确率 + 省×题区×档位矩阵
+  const matrix = new Map<string, { uprov: string; region: string; tier: string; rounds: number; correct: number; total: number }>()
+  for (const r of rows.results) {
+    const p = parseProps(r.props)
+    const uprov = p.uprov ?? ''
+    if (!uprov) continue
+    const cell = cellOf(uprov)
+    if (r.event === 'session_start') {
+      cell.visits += r.n
+      continue
+    }
+    if (r.event !== 'quiz_score') continue
+    const correct = Number(p.correct)
+    const total = Number(p.total)
+    // correct ≤ total 的跨字段校验（单属性白名单看不到彼此）
+    if (!Number.isInteger(correct) || !Number.isInteger(total) || total <= 0 || correct < 0 || correct > total) continue
+    cell.rounds += r.n
+    cell.correct += correct * r.n
+    cell.total += total * r.n
+    const region = p.region ?? 'ALL'
+    const tier = p.tier ?? ''
+    const key = `${uprov}|${region}|${tier}`
+    const m =
+      matrix.get(key) ?? { uprov, region, tier, rounds: 0, correct: 0, total: 0 }
+    m.rounds += r.n
+    m.correct += correct * r.n
+    m.total += total * r.n
+    matrix.set(key, m)
+  }
+
+  const provinces = [...byProv.entries()]
+    .map(([prov, c]) => ({
+      prov,
+      /** 该省每日去重人数合计（人日） */
+      users: c.users,
+      visits: c.visits,
+      rounds: c.rounds,
+      accuracy: c.rounds >= MIN_N ? { n: c.rounds, mean: Math.round((c.correct / c.total) * 100) } : null,
+    }))
+    .sort((a, b) => b.users - a.users || b.visits - a.visits || b.rounds - a.rounds)
+
+  const matrixOut = [...matrix.values()]
+    .filter((m) => m.rounds >= MIN_N)
+    .map((m) => ({
+      uprov: m.uprov,
+      region: m.region,
+      tier: m.tier,
+      n: m.rounds,
+      mean: Math.round((m.correct / m.total) * 100),
+    }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 300)
+
+  return json(
+    {
+      days,
+      since,
+      /** 参与口径的样本天数（含 `uprov` 的第一天；未同意者不计） */
+      provinces,
+      matrix: matrixOut,
+      notes: {
+        uprov: '按 IP 归属地（省级近似，原始 IP 不落库）；港澳台归入中国省级',
+        region: '题目地区 = 用户自选，与归属地不是同一口径',
+        threshold: `正确率需 n ≥ ${MIN_N}；人数为每省每日去重后累加`,
+        consent: '仅统计已同意「按省级归属地统计」的用户',
+      },
+    },
+    { headers: { 'cache-control': 'no-store' } },
+  )
+}
+
+/** GET /api/metrics/summary?days=30（管理）：按日聚合，供人工回填 docs/028 §6 */async function handleMetricsSummary(request: Request, env: Env, url: URL): Promise<Response> {
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, { status: 401 })
   const days = clampInt(url.searchParams.get('days'), 1, 365, 30)
   const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
@@ -1529,18 +1674,6 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
 
     const totals: Record<string, number> = {}
     for (const r of byEvent.results) totals[r.event] = r.n
-
-    /** props 串 'a=b;c=d' → 对象 */
-    const parseProps = (s: string): Record<string, string> =>
-      Object.fromEntries(
-        s
-          .split(';')
-          .filter(Boolean)
-          .map((kv) => {
-            const i = kv.indexOf('=')
-            return i > 0 ? [kv.slice(0, i), kv.slice(i + 1)] : [kv, '']
-          }),
-      )
 
     const out = {
       generatedAt: new Date().toISOString(),
@@ -1807,6 +1940,8 @@ export default {
         if (path === '/api/metrics/summary') return await handleMetricsSummary(request, env, url)
         // 073 P0：地区正确率（管理端观察期，未公开）
         if (path === '/api/stats/region') return await handleAdminStatsRegion(request, env, url)
+        // 076：省际统计（管理端观察期，未公开；公开看板不加省级字段）
+        if (path === '/api/admin/stats/province') return await handleAdminStatsProvince(request, env, url)
         // 028 公开统计看板（无需密钥；边缘缓存 1 小时）
         // 接受 `/api/stats/public` 与 `/api/stats/public/<分桶>`：分桶只用于绕开边缘缓存
         if (path === '/api/stats/public' || path.startsWith('/api/stats/public/'))
