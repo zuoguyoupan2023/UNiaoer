@@ -25,7 +25,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from '../lib/util.mjs'
-import { buildIndex, canonName, matchSubdivision, NAME_ALIASES } from './adapters/iso3166.mjs'
+import { buildIndex, canonName, matchSubdivision } from './adapters/iso3166.mjs'
 
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 const args = parseArgs(process.argv.slice(2))

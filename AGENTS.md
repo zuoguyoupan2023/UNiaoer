@@ -101,6 +101,8 @@
 | 构建季节层 / **省级层（194 国，按省×学名切法）** | `npm run region:build` / `npm run region:provinces`（旧切法 `region:provinces:legacy` 仅供交叉校验） |
 | **国家层记录数（249 个国家/地区码，零新下载）**（P0-5；产 `public/data/region-records/`） | `npm run region:records`（`-- --dry` 只看统计） |
 | **重建省级出题档位**（从省级分片算，无需 GBIF 下载；**分片只推 R2、不进 git**） | `npm run region:province-commonness -- --from-provinces` |
+| **省名别名自动建议**（低覆盖国；只收唯一最佳、领先 ≥0.15 的匹配） | `npm run region:suggest-aliases -- --write`（产 `scripts/region/aliases-auto.mjs`） |
+| **把档位分片推 R2**（云端写，先报备；wrangler 抖动会自动重试） | `node scripts/push-r2-data.mjs --dir public/data/province-commonness --concurrency 2` |
 | 构建观鸟点（XC 源；`-- --mock` 离线） | `npm run region:hotspots` |
 | 构建观鸟点（GBIF SQL 1° 源 + eBird 命名 + 网格×省补码；**当前正式产物**） | `npm run region:hotspots-gbif -- --ebird-names --cell-provinces <GBIF 下载 key，如 0017635-260928105237408>` |
 | 构建全球区系层（GBIF SQL 国家矩阵 → `species-distribution.json`；025 M1） | `npm run region:distribution`（`-- --mock --out …` 离线） |
@@ -145,7 +147,8 @@
   - `/data/model-labels-*`、`data/assets/*` 都是 cache-first，改产物后**必须**确认部署 + 用户端失效。
 - **媒体**：存在 Cloudflare **R2**（`media/<物种id>/…`），经公开域名（r2.dev 或自定义域名）访问。
 - **元数据**：`manifest.json` 仍是主索引；**D1 已启用**（`uniaoer`：species/media/questions，1299 物种 / 12938 媒体）。
-- **后端**：独立 Worker `uniaoer-api`（`worker/`），挂 `uniaoer.com/api/*`：`/api/health`、`/api/manifest`、`/api/questions`、`/api/media/:id`、`/api/reports`（提交/公开列表/投票）、`/api/reports/:id/vote`、`/api/reports/admin`（受保护）；`XC_API_KEY` 存 Worker secret，`ADMIN_KEY` 存 Worker secret（前端不接触）。
+- **后端**：独立 Worker `uniaoer-api`（`worker/`），挂 `uniaoer.com/api/*`：
+  `/api/region-tiers/<CC>[.country].json`（省级出题档位分片，读 R2 + 边缘缓存 1 天；分片不进 git）、`/api/health`、`/api/manifest`、`/api/questions`、`/api/media/:id`、`/api/reports`（提交/公开列表/投票）、`/api/reports/:id/vote`、`/api/reports/admin`（受保护）；`XC_API_KEY` 存 Worker secret，`ADMIN_KEY` 存 Worker secret（前端不接触）。
 - **报错/评审（B6）**：前端报错先存本地（`uniaoer-reports`）再上传；`reports`/`report_votes` 在 D1；大众评审页 `/reports`（**仅 `published` 公开**）；管理页 `/admin`（密钥解锁，需 Worker `ADMIN_KEY`）——提交=open 不公开，管理方发布后才公开可投票。
 - **构建期数据管道**：`scripts/build-bank.mjs` 抓 iNaturalist（图）+ Xeno-canto/iNat（音）→ 许可过滤 → 转码 → R2。
 - **许可**：`src/core/licenseGuard.ts` + `scripts/lib/license.mjs`（兼容 XC 的 URL 与 iNat 短码）；`relaxed` 含 NC/ND，`strict` 仅 CC0/BY/BY-SA。

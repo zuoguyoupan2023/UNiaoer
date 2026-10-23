@@ -99,6 +99,22 @@ describe('regionTierMap（分片读取 + 降级链）', () => {
     expect(await regionTierMap('CN-11')).toBeNull()
   })
 
+  it('静态分片不在（只在 R2）→ 回退 Worker /api/region-tiers', async () => {
+    // 静态 404，API 有：模拟"分片只推 R2、不进 git"的真实部署
+    stubFetch({ '/api/region-tiers/CN.json': CN_PROVINCE })
+    const r = await regionTierMap('CN-11')
+    expect(r?.level).toBe('province')
+    expect(r?.tiers.get('a')).toBe(1)
+  })
+
+  it('静态返回 HTML（分支预览无 API）+ API 也失败 → null（静默降级）', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('<!doctype html><html></html>', { status: 200 })),
+    )
+    expect(await regionTierMap('CN-11')).toBeNull()
+  })
+
   it('纯国家码 → 直接读国家级', async () => {
     stubFetch({ 'province-commonness/CN.country.json': CN_COUNTRY })
     const r = await regionTierMap('CN')

@@ -582,6 +582,35 @@ async function sampleByIds(
  * 媒体重定向（历史端点）。2026-10-08 起媒体直连 R2（manifest/内联字段给的是绝对地址），
  * 前端已不再调用本端点；D1 的 media 表同步移除（写入额度优化,见 schema.sql 说明）。
  */
+/**
+ * P1-4B（2026-10-23）：省级**出题档位**分片（`data/province-commonness/<CC>[.country].json`）。
+ *
+ * 为什么由 Worker 转发：档位分片随每次重建**全量变化**且体积大（194 国 / 371 片 / 18MB），
+ * 按用户 2026-10-23 的决定**只推 R2、不进 git**（Pages 静态目录里没有）。浏览器需要它来：
+ *   · 识别页「当地常见度」先验（渐进增强）；· 客户端那层地区档位二次过滤。
+ * 出题主线的地区抽样仍走 `/api/questions`（同样读 R2），不依赖本路由。
+ *
+ * 安全：只允许 `^[A-Z]{2}(\.country)?\.json$`，不做任意 key 代理；
+ * 缓存：边缘 1 天（内容更新由重新部署 + `Cache-Control` 过期自然生效）。
+ */
+async function handleRegionTiers(env: Env, ctx: ExecutionContext, file: string): Promise<Response> {
+  const cache = caches.default
+  const cacheKey = new Request(`https://uniaoer.com/api/region-tiers/${file}`)
+  const hit = await cache.match(cacheKey)
+  if (hit) return hit
+  const obj = await env.MEDIA.get(`data/province-commonness/${file}`)
+  if (!obj) return json({ error: 'not_found', file }, { status: 404 })
+  const res = new Response(await obj.text(), {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'public, max-age=86400',
+      ...CORS,
+    },
+  })
+  ctx.waitUntil(cache.put(cacheKey, res.clone()))
+  return res
+}
+
 async function handleMedia(_env: Env, id: string): Promise<Response> {
   return json({ error: 'gone', id, hint: 'media is served directly from R2' }, { status: 410 })
 }
@@ -2076,6 +2105,9 @@ export default {
         if (path === '/api/manifest-meta') return await handleManifest(env, request, 'manifest-meta.json')
         // 039 P1：粗定位（CF request.cf，四舍五入 0.05°；不落库/不进日志）
         if (path === '/api/geo') return handleGeo(request)
+        // P1-4B（2026-10-23）：省级档位分片（只推 R2、不进 git）→ 浏览器经本路由读取（边缘缓存 1 天）
+        const tiersMatch = path.match(/^\/api\/region-tiers\/([A-Z]{2}(?:\.country)?\.json)$/)
+        if (tiersMatch) return await handleRegionTiers(env, ctx, tiersMatch[1]!)
         if (path === '/api/questions') return await handleQuestionsCached(request, env, url, ctx)
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))

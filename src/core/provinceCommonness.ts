@@ -12,6 +12,13 @@
  * 降级链（**绝不出空池**，docs/036 §2.3）：
  *   省档位 → 国家档位 → 全局 commonness（调用方现有逻辑）
  * 分片按国家懒加载并缓存；加载失败静默返回 null（调用方回退全局档位）。
+ *
+ * ⚠️ 2026-10-23（P1-4B）：分片**只推 R2、不进 git**（194 国 / 371 片 / 18MB，随每次重建全量变化），
+ * 所以 `province-commonness/` 在 Pages 静态目录里**不存在**。读取顺序：
+ *   ① 先试静态（本地 dev / 老部署仍会有）；
+ *   ② 404/HTML 时回退 **Worker `/api/region-tiers/<CC>[.country].json`**（Worker 从 R2 转发，边缘缓存 1 天）；
+ *   ③ 两者都失败 → null（调用方回退全局 commonness，绝不报错）。
+ * 索引 `province-commonness.json` 仍在 git 里（只有元数据 + 分片清单），静态读即可。
  */
 import type { BankSpecies } from './bank'
 import type { Tier } from '@/types'
@@ -39,6 +46,7 @@ export interface RegionCommonnessShard {
 }
 
 const BASE = `${import.meta.env.BASE_URL}data/province-commonness`
+const API = '/api/region-tiers'
 let indexCache: Promise<RegionCommonnessIndex | null> | null = null
 const shardCache = new Map<string, Promise<RegionCommonnessShard | null>>()
 
@@ -60,7 +68,27 @@ export function loadRegionCommonnessShard(
   if (!p) {
     const file = level === 'province' ? `${cc}.json` : `${cc}.country.json`
     p = fetch(`${BASE}/${file}`)
-      .then((r) => (r.ok ? (r.json() as Promise<RegionCommonnessShard>) : null))
+      .then(async (r) => {
+        // 静态有就用（本地 dev / 老部署）；解析失败 = pages.dev 这类返回 SPA HTML 的情况
+        if (r.ok) {
+          try {
+            return (await r.json()) as RegionCommonnessShard
+          } catch {
+            /* 落到下面的 API 回退 */
+          }
+        }
+        // 分片只在 R2（不进 git）→ 走 Worker 转发 `/api/region-tiers/<file>`
+        return fetch(`${API}/${file}`)
+          .then(async (r2) => {
+            if (!r2.ok) return null
+            try {
+              return (await r2.json()) as RegionCommonnessShard
+            } catch {
+              return null
+            }
+          })
+          .catch(() => null)
+      })
       .catch(() => null)
     shardCache.set(key, p)
   }
