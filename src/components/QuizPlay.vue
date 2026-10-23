@@ -798,7 +798,6 @@ function onTouchEnd(e: TouchEvent) {
     >
       <div ref="namePanelRef" class="wizard-panel">
         <h3 class="wizard-title">{{ t('quiz.wizardWelcome') }}</h3>
-        <p class="wizard-sub">{{ t('quiz.wizardWelcomeSub') }}</p>
         <input
           v-model="wizardDraft"
           class="wizard-input"
@@ -807,6 +806,14 @@ function onTouchEnd(e: TouchEvent) {
           :placeholder="t('profile.nicknamePlaceholder')"
           @keyup.enter="wizardSaveNickname"
         />
+        <!-- 028/076：首次建身份时当场告知匿名统计（默认开，可取消；设置页同一开关） -->
+        <label class="wizard-metrics">
+          <input v-model="settings.metricsEnabled" type="checkbox" />
+          <span class="wizard-metrics-text">
+            <strong>{{ t('settings.metricsTitle') }}</strong>
+            <span class="muted">{{ t('profile.metricsHint') }}</span>
+          </span>
+        </label>
         <div class="wizard-actions">
           <button
             class="btn btn-primary"
@@ -1269,6 +1276,29 @@ function onTouchEnd(e: TouchEvent) {
   font-family: inherit;
   font-size: 0.95rem;
   margin-bottom: 16px;
+}
+/* 028/076：首次建身份时的匿名统计告知（默认勾选，可当场取消） */
+.wizard-metrics {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+.wizard-metrics input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.wizard-metrics-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .wizard-actions {
   display: flex;

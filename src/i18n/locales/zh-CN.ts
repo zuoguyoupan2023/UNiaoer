@@ -87,7 +87,6 @@ export const messages = {
     wrongPoolHint: '错题重练：本轮只出你答错过的鸟',
     wizardTitle: '开始挑战',
     wizardWelcome: '欢迎开始挑战，请设置昵称',
-    wizardWelcomeSub: '答题记录将存入你的档案（按开始时间建档）',
     wizardStart: '开始',
     wizardSkip: '直接开始',
     stepLevel: '水平',
@@ -810,8 +809,7 @@ export const messages = {
     nicknameLabel: '昵称',
     nicknameEmpty: '昵称不能为空',
     nicknameShort: '昵称至少 2 个字符',
-    metricsHint:
-      '只记录日期、事件类型与难度等非个人属性；独立访客用每日更换的盐做哈希去重（不含 cookie、设备标识，跨日不可关联）。随时可在设置里修改。',
+    metricsHint: '只记录日期、难度等非个人属性；无 cookie、无设备标识、不存 IP。可在设置里修改。',
     noNickname: '未设置昵称',
     setNickname: '设置昵称',
     statRounds: '轮次',

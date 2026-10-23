@@ -93,7 +93,6 @@ const en: typeof zhMessages = {
     wrongPoolHint: 'Wrong-answer practice: this round only uses birds you missed',
     wizardTitle: 'Start challenge',
     wizardWelcome: 'Welcome! Set a nickname to begin',
-    wizardWelcomeSub: 'Your rounds are saved to your archive (created by start time)',
     wizardStart: 'Start',
     wizardSkip: 'Skip',
     stepLevel: 'Level',
@@ -728,8 +727,7 @@ const en: typeof zhMessages = {
     nicknameLabel: 'Nickname',
     nicknameEmpty: 'Nickname cannot be empty',
     nicknameShort: 'Nickname needs at least 2 characters',
-    metricsHint:
-      'Only non-personal attributes (date, event type, difficulty) are counted; visitor dedupe uses a salt that changes daily (no cookies or device IDs, not linkable across days). You can change this in Settings anytime.',
+    metricsHint: 'Only non-personal attributes such as date and difficulty; no cookies, device IDs or stored IP. Change anytime in Settings.',
     noNickname: 'No nickname yet',
     setNickname: 'Set nickname',
     statRounds: 'Rounds',
