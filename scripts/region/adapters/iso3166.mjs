@@ -59,11 +59,17 @@ export function nameKeys(name) {
   return keys
 }
 
+import { AUTO_ALIASES } from '../aliases-auto.mjs'
+
 /**
  * 自由文本别名 → ISO code（仅收已知高频变体；不臆造）。
  * key 为 canonName 结果；日本按 GBIF 常用赫本式补 ISO 训令式拼写之缺。
+ *
+ * 2026-10-23：机器生成的候选（`npm run region:suggest-aliases -- --write` → `aliases-auto.mjs`）
+ * 会**先铺底**，下面的人工条目**后写覆盖**（同名冲突以人工为准）。
  */
 export const NAME_ALIASES = {
+  ...AUTO_ALIASES,
   // 日本：赫本式 → ISO code（ISO 本身为训令式拼写，如 Tiba/Gihu）
   aichi: 'JP-23', gifu: 'JP-21', hiroshima: 'JP-34', fukui: 'JP-18', fukuoka: 'JP-40',
   fukushima: 'JP-07', ishikawa: 'JP-17', kagoshima: 'JP-46', kochi: 'JP-39', kyoto: 'JP-26',

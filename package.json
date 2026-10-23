@@ -48,6 +48,7 @@
     "region:provinces:legacy": "node scripts/region/build-provinces.mjs",
     "region:records": "node scripts/region/build-country-records.mjs",
     "region:name-aliases": "node scripts/region/build-name-aliases.mjs",
+    "region:suggest-aliases": "node scripts/region/suggest-province-aliases.mjs",
     "region:hotspots": "node scripts/region/build-hotspots.mjs",
     "region:hotspots-sql": "node scripts/region/build-hotspots-sql.mjs",
     "region:hotspots-gbif": "node scripts/region/build-hotspots-gbif.mjs",
