@@ -67,6 +67,21 @@ const OCEANIA = [
 ]
 const ANTARCTICA = ['AQ', 'BV', 'GS', 'TF']
 
+/**
+ * 大洲 → 国家/地区码（087 P0：出题介绍页的「洲 → 国家 → 省」三级选择器用）。
+ * 就是上面那张归属表的键值视图（同一份数据，勿在此另维护一份）；
+ * 恰好覆盖 249 个 ISO 码，无遗漏。
+ */
+export const COUNTRIES_BY_CONTINENT: Record<Continent, string[]> = {
+  europe: EUROPE,
+  asia: ASIA,
+  africa: AFRICA,
+  northAmerica: NORTH_AMERICA,
+  southAmerica: SOUTH_AMERICA,
+  oceania: OCEANIA,
+  antarctica: ANTARCTICA,
+}
+
 const CONTINENT_BY_COUNTRY: Record<string, Continent> = {}
 for (const [continent, codes] of [
   ['europe', EUROPE],

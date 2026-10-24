@@ -38,7 +38,13 @@ import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
 import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
-import { REGION_LABEL_KEY } from '@/core/region'
+import {
+  CONTINENTS,
+  COUNTRIES_BY_CONTINENT,
+  REGION_LABEL_KEY,
+  continentOf,
+  type Continent,
+} from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { track } from '@/core/metrics'
@@ -217,6 +223,22 @@ const REGION_CHOICES_FALLBACK = ['CN', 'US', 'GB', 'AU', 'JP', 'BR', 'IN', 'ZA']
  */
 const provinceData = ref<ProvinceIndex | null>(null)
 const regionOptions = ref<{ code: string; label: string }[]>([{ code: 'ALL', label: '' }])
+/** 087 P0：区系种数（按国），供洲分组里的国家徽标如实标注（0 也照列，不折叠——铁律 6） */
+const distCounts = ref<Record<string, number>>({})
+/** 087 P0：展开的大洲（手风琴，一次一个；打开面板时自动展开当前所选国所属洲） */
+const openContinent = ref<Continent | null>(null)
+/** 087 P0：洲 → 国家/地区分组（全部 249 码；按区系种数降序，再按码序稳定） */
+const continentGroups = computed(() =>
+  CONTINENTS.map((key) => ({
+    key,
+    countries: COUNTRIES_BY_CONTINENT[key]
+      .map((code) => ({ code, n: distCounts.value[code] ?? 0 }))
+      .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
+  })),
+)
+function toggleContinent(c: Continent) {
+  openContinent.value = openContinent.value === c ? null : c
+}
 /** 地区选择面板是否展开（收起时只显示已选摘要） */
 const regionPickerOpen = ref(false)
 const regionChoice = computed({
@@ -224,11 +246,19 @@ const regionChoice = computed({
   set: (v: string) => { settings.region = v },
 })
 /** 固定显示名（CN/港澳台走 i18n，其余走 Intl.DisplayNames）——避免各端 CLDR 差异（见 core/region.ts） */
+const displayNamesCache = new Map<string, Intl.DisplayNames>()
 function regionLabel(code: string): string {
   const key = REGION_LABEL_KEY[code]
   if (key) return t(key)
   try {
-    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
+    const locale = currentLocale()
+    // 087 P0：洲分组一次渲染 ~250 个码，缓存 DisplayNames 实例（按 locale）
+    let dn = displayNamesCache.get(locale)
+    if (!dn) {
+      dn = new Intl.DisplayNames([locale], { type: 'region' })
+      displayNamesCache.set(locale, dn)
+    }
+    return dn.of(code) ?? code
   } catch {
     return code
   }
@@ -244,6 +274,12 @@ onMounted(async () => {
   try {
     const dist = await loadSpeciesDistribution()
     const codes = dist ? Object.keys(dist.byCountry) : []
+    // 087 P0：区系种数（洲分组国家徽标用）；0 记录的国家照列
+    if (dist) {
+      const counts: Record<string, number> = {}
+      for (const c of codes) counts[c] = (dist.byCountry[c] ?? []).length
+      distCounts.value = counts
+    }
     // 按物种数降序取前 12(含中国),再并上兜底清单;港澳台等敏感性地区名走固定表 + Intl 本地化
     const ranked = codes
       .map((c) => ({ c, n: (dist!.byCountry[c] ?? []).length }))
@@ -297,6 +333,12 @@ watch(regionChoice, (v) => {
     return
   }
   if (regionProvince.value && !regionProvince.value.startsWith(v + '-')) regionProvince.value = ''
+})
+/** 087 P0：展开选择面板时，自动展开当前所选国所属的洲（少一次寻找） */
+watch(regionPickerOpen, (open) => {
+  if (!open) return
+  const c = continentOf(selectedCountry.value)
+  if (c) openContinent.value = c
 })
 function chooseRegionProvince(code: string) {
   // 再点一次同省 = 取消省细分（回到纯国家）
@@ -946,6 +988,7 @@ function onTouchEnd(e: TouchEvent) {
         </button>
       </div>
       <div v-if="regionPickerOpen" class="region-picker">
+        <!-- 全球 + 常用（保留原快捷行：最常见场景一次点击直达） -->
         <div class="regions">
           <button
             v-for="opt in regionOptions"
@@ -957,6 +1000,33 @@ function onTouchEnd(e: TouchEvent) {
           >
             <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : opt.label }}</strong>
           </button>
+        </div>
+        <!-- 087 P0：洲 → 国家/地区 分组（全部 249 码；按区系种数排序，0 也照列不折叠） -->
+        <p class="continent-cap muted small">{{ t('region.continentsLabel') }}</p>
+        <div class="continents">
+          <div v-for="g in continentGroups" :key="g.key" class="continent">
+            <button
+              type="button"
+              class="continent-head"
+              :aria-expanded="openContinent === g.key"
+              @click="toggleContinent(g.key)"
+            >
+              <span>{{ t(`region.continents.${g.key}`) }}</span>
+              <span class="chev" aria-hidden="true">{{ openContinent === g.key ? '−' : '+' }}</span>
+            </button>
+            <div v-if="openContinent === g.key" class="regions continent-body">
+              <button
+                v-for="opt in g.countries"
+                :key="opt.code"
+                class="tier region"
+                :class="{ on: regionChoice === opt.code || (opt.code !== 'ALL' && selectedCountry === opt.code) }"
+                @click="chooseRegion(opt.code)"
+              >
+                <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : regionLabel(opt.code) }}</strong>
+                <span class="count">{{ opt.n }}</span>
+              </button>
+            </div>
+          </div>
         </div>
         <!-- 036：省级细分（可选）。选中后按**该省**的地区常见度出题 -->
         <div v-if="provinceChoices.length" class="provinces">
@@ -1428,6 +1498,63 @@ function onTouchEnd(e: TouchEvent) {
 .regions .tier.region strong {
   font-size: 0.86rem;
   font-weight: 600;
+}
+/* 087 P0：洲 → 国家/地区 手风琴分组（全部 249 码；国家徽标 = 区系种数，如实标注） */
+.continent-cap {
+  text-align: center;
+  margin: 2px auto 6px;
+}
+.continents {
+  max-width: 560px;
+  margin: 0 auto 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-align: left;
+}
+.continent + .continent {
+  border-top: 1px solid var(--border);
+}
+.continent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.continent-head:hover {
+  background: #f3fbf7;
+}
+.continent-head .chev {
+  color: var(--text-light);
+  font-weight: 600;
+}
+.continent-body {
+  padding: 0 10px 10px;
+  max-height: 264px;
+  overflow-y: auto;
+}
+.continent-body .tier.region {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.tier.region .count {
+  margin-left: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.68rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 520px) {
   .regimes {
