@@ -63,7 +63,13 @@ const quiz = useQuizStore()
 const { t } = useI18n()
 
 const hasResult = computed(() => quiz.total > 0)
-const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
+/** L6 半鸟人显示「凭名辨鸟」；经典卷显示看图/听音 */
+const modeLabel = computed(() => {
+  if (quiz.kind === 'name') {
+    return quiz.mode === 'audio' ? t('nav.nameQuizAudio') : t('nav.nameQuizImage')
+  }
+  return quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')
+})
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
 /** 科名「拉丁名+本地名」组合（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
@@ -378,6 +384,8 @@ onMounted(async () => {
           species: it.speciesId,
           ok: it.correct ? 1 : 0,
           tier: quiz.tier,
+          // 085 D-3：统计分卷——正确率按卷别（zh/en/sci）分开；旧数据无该属性=未指定
+          nameMode: quiz.nameMode,
           region: settings.region,
           // 只在上报错选（超时没有「错认成谁」，不发 chosen）
           ...(it.correct || !it.chosenId ? {} : { chosen: it.chosenId }),
@@ -386,7 +394,13 @@ onMounted(async () => {
     trackBatch([
       {
         e: 'quiz_score',
-        p: { tier: quiz.tier, correct: quiz.correctCount, total: quiz.total, region: settings.region },
+        p: {
+          tier: quiz.tier,
+          correct: quiz.correctCount,
+          total: quiz.total,
+          nameMode: quiz.nameMode,
+          region: settings.region,
+        },
       },
       ...answers,
     ])
@@ -410,6 +424,11 @@ onMounted(async () => {
 
 async function again() {
   await quiz.nextRound()
+  // L6 半鸟人的「再来一轮」回到 /quiz6/*（经典卷仍走 /quiz/*）
+  if (quiz.kind === 'name') {
+    router.push(quiz.mode === 'audio' ? '/quiz6/audio' : '/quiz6/image')
+    return
+  }
   router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
 }
 </script>

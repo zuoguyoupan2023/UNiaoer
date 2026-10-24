@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MediaType, NameMode, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
-import { buildQuestions, speciesPlayable } from '@/core/questionEngine'
+import { buildQuestions, buildNameQuestions, speciesPlayable } from '@/core/questionEngine'
 import type { BuildStats } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
@@ -64,6 +64,11 @@ export type QuizErrorCode =
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
   const tier = ref<Tier>(2)
+  /**
+   * 题型链路（docs/081 §7）：'classic' = L1–L5（媒体作题干）；'name' = L6 半鸟人
+   * （名字作题干，选项是图/音）。决定 start 的走线与「再来一轮」的重建路径。
+   */
+  const kind = ref<'classic' | 'name'>('classic')
   /** 赛制（013 §4）：介绍页选择，决定选题池；再来一轮沿用同赛制 */
   const regime = ref<QuizRegime>('standard')
   const roundId = ref<string>('')
@@ -215,6 +220,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     opts: { count?: number; tier?: Tier; keepSession?: boolean; regime?: QuizRegime } = {},
   ) {
     mode.value = type
+    kind.value = 'classic'
     if (opts.tier) tier.value = opts.tier
     if (!opts.keepSession) {
       sessionRound.value = 1
@@ -364,10 +370,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       questions.value = qs
       chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
       index.value = 0
-      roundId.value =
-        typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      roundId.value = newRoundId()
       startedAt.value = Date.now()
     } catch (e) {
       error.value = e instanceof BankError ? e.code : 'unknown'
@@ -382,6 +385,93 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   function answer(choice: string) {
     if (answered.value || !current.value) return
     chosen.value[index.value] = choice
+  }
+
+  /** 新轮次 id（crypto.randomUUID 优先，旧环境退时间戳） */
+  function newRoundId(): string {
+    return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  }
+
+  /**
+   * L6 半鸟人开轮（docs/081 §7 / docs/085 §5）：名字 → 图/音选择题。
+   * 与经典 start 的差异：无赛制池（全库随机）、无在线候选（服务端干扰项无素材，
+   * 当不了 L6 的选项）、无地区档位/新手池（L6 无档位选择，难度由题型本身承载）；
+   * 卷别由介绍页 switch 决定（085 D-2），落进每题与轮次记录供统计分卷（D-3）。
+   */
+  async function startName(
+    type: MediaType,
+    opts: { count?: number; nameMode?: NameMode; keepSession?: boolean } = {},
+  ) {
+    mode.value = type
+    kind.value = 'name'
+    tier.value = 6
+    regime.value = 'random'
+    if (!opts.keepSession) {
+      sessionRound.value = 1
+      sessionCorrect.value = 0
+      sessionTotal.value = 0
+    }
+    nameMode.value = opts.nameMode ?? (currentLocale() === 'en' ? 'en' : 'zh')
+    loading.value = true
+    error.value = ''
+    try {
+      await loadBank()
+      const count = opts.count ?? 10
+      const settings = useSettingsStore()
+      const species = (await poolData(type, tier.value)).species
+      const buildStats: { v: BuildStats | null } = { v: null }
+      const qs = await buildNameQuestions(species, {
+        type,
+        count,
+        nameMode: nameMode.value,
+        onStats: (s) => {
+          buildStats.v = s
+        },
+      })
+      // 072-a 同款观测（L6 固定走本地全量池，path 恒为 'local'）
+      lastBuild.value = {
+        type,
+        tier: 6,
+        region: settings.region,
+        regime: 'random',
+        nameMode: nameMode.value,
+        path: 'local',
+        onlineTotal: null,
+        onlineHits: null,
+        regimePool: null,
+        onlineFrom: null,
+        candidates: buildStats.v?.candidates ?? species.length,
+        afterFilter: buildStats.v?.unique ?? 0,
+        dropped: buildStats.v ? Math.max(0, buildStats.v.want - buildStats.v.enriched) : 0,
+        want: count,
+        built: qs.length,
+        starterOnly: false,
+      }
+      if (qs.length < count) {
+        console.warn('[quiz] L6 short round:', JSON.stringify(lastBuild.value))
+      }
+      if (!qs.length) {
+        error.value = type === 'image' ? 'noImageMedia' : 'noAudioMedia'
+        questions.value = []
+        chosen.value = []
+        index.value = 0
+        return
+      }
+      questions.value = qs
+      chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
+      index.value = 0
+      roundId.value = newRoundId()
+      startedAt.value = Date.now()
+    } catch (e) {
+      error.value = e instanceof BankError ? e.code : 'unknown'
+      questions.value = []
+      chosen.value = []
+      index.value = 0
+    } finally {
+      loading.value = false
+    }
   }
 
   /** 超时：标记为未作答但已结束 */
@@ -400,6 +490,11 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     sessionTotal.value += total.value
     sessionRound.value += 1
     pendingContinue.value = true
+    // L6 无档位/赛制/自适应概念：直接按同卷别重建一轮（题量按标准重新申请，同 072-a-fix-2）
+    if (kind.value === 'name') {
+      await startName(mode.value, { keepSession: true, nameMode: nameMode.value })
+      return
+    }
     if (useSettingsStore().adaptiveTier) {
       const s = await tierSuggestion(mode.value, tier.value)
       tier.value = s.tier
@@ -417,6 +512,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   function startWrongBook(type: MediaType) {
     regime.value = 'revival'
     mode.value = type
+    kind.value = 'classic'
     tier.value = 2
     sessionRound.value = 1
     sessionCorrect.value = 0
@@ -446,6 +542,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     sessionTotal.value = 0
     pendingContinue.value = false
     regime.value = 'standard'
+    kind.value = 'classic'
     source.value = 'normal'
     escapedQuit.value = false
   }
@@ -453,6 +550,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   return {
     mode,
     tier,
+    kind,
     nameMode,
     roundId,
     startedAt,
@@ -479,6 +577,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     escapedQuit,
     overallAccuracy,
     start,
+    startName,
     regimeCounts,
     tierSuggestion,
     answer,

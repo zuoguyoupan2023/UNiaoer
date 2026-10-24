@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, AudioLines, Globe2, Image as ImageIcon, Library } from 'lucide-vue-next'
+import { AlertTriangle, AudioLines, Bird, Ear, Globe2, Image as ImageIcon, Library } from 'lucide-vue-next'
 import { loadBank, BankError } from '@/core/bank'
 
 const { t } = useI18n()
@@ -71,6 +71,16 @@ onMounted(async () => {
         <AudioLines class="mode-icon" :size="30" />
         <span class="mode-title">{{ t('nav.audioQuiz') }}</span>
         <span class="mode-sub">{{ t('home.modeAudioSub') }}</span>
+      </RouterLink>
+      <RouterLink to="/quiz6/image" class="mode-card">
+        <Bird class="mode-icon" :size="30" />
+        <span class="mode-title">{{ t('nav.nameQuizImage') }}</span>
+        <span class="mode-sub">{{ t('home.modeNameSub') }}</span>
+      </RouterLink>
+      <RouterLink to="/quiz6/audio" class="mode-card">
+        <Ear class="mode-icon" :size="30" />
+        <span class="mode-title">{{ t('nav.nameQuizAudio') }}</span>
+        <span class="mode-sub">{{ t('home.modeNameAudioSub') }}</span>
       </RouterLink>
     </div>
 

@@ -1056,7 +1056,8 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   },
   quiz_complete: {
     mode: ['image', 'audio'],
-    tier: ['1', '2', '3', '4', '5'],
+    // '6' = L6 半鸟人（docs/081 §7，2026-10-24 上线）
+    tier: ['1', '2', '3', '4', '5', '6'],
   },
   /**
    * 072-k：一轮结果的正确率分桶（不是每题、不含物种/用户）。
@@ -1064,7 +1065,7 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 076 起精确口径走 `quiz_score`；本事件保留仅为历史数据兼容。
    */
   quiz_result: {
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：答题时**用户自选**的地区（不是 IP）。取值形态见 REGION_VALUE_RE
     region: ['@region'],
@@ -1074,9 +1075,12 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 取代分桶估算：正确率 = Σcorrect / Σtotal（题级加权，题量不足 10 也不失真）。
    */
   quiz_score: {
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6'],
     correct: ['@score'],
     total: ['@score'],
+    // 085 D-3（2026-10-24）：统计分卷（zh/en/sci）；旧数据无该属性 = 未指定卷。
+    // metrics_daily 是 props 串累加，新维度即新 props 组合，无 schema 变更。
+    nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],
   },
   /**
@@ -1086,7 +1090,9 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   quiz_answer: {
     species: ['@species'],
     ok: ['0', '1'],
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6'],
+    // 085 D-3：同 quiz_score，逐题对错也按卷别分
+    nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],
     chosen: ['@species'],
   },

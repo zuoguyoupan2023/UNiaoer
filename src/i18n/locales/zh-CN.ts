@@ -17,6 +17,9 @@ export const messages = {
     skipToMain: '跳到主内容',
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
+    // L6 半鸟人（docs/081 §7）：名字 → 图/音
+    nameQuizImage: '凭名辨鸟 · 看图',
+    nameQuizAudio: '凭名辨鸟 · 听音',
     // 072-b：懒加载 chunk 失败横幅（自动重试一次仍失败才出现）
     chunkError: '页面资源加载失败（网络不稳定），可以重试或刷新',
     chunkRetry: '重试',
@@ -51,11 +54,29 @@ export const messages = {
     bankStatsFull: '图片 {image} · 音频 {audio}（共 {total} 种）',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
+    modeNameSub: '半鸟人 L6：从 6 张照片里选出鸟名对应的那只',
+    modeNameAudioSub: '半鸟人 L6：从 4 段录音里选出鸟名对应的那首',
     regionSub: '按国家/地区浏览鸟种',
   },
   mode: {
     imageRound: '鸟图版',
     audioRound: '鸟声版',
+  },
+  // L6 半鸟人（docs/081 §7 / docs/085 D-1~D-3）：名字 → 图/音
+  quiz6: {
+    imageTitle: '半鸟人 · 看图版',
+    imageLead: '给出一个鸟名，从 6 张照片里选出它。选项多为同科近缘，考验你对名字的熟悉度。每题限时 10 秒。',
+    audioTitle: '半鸟人 · 听音版',
+    audioLead: '给出一个鸟名，从 4 段录音里选出它的鸣声。听音辨认更难，每题限时 25 秒。',
+    nameModeCap: '卷别',
+    nameDefault: '中文名卷',
+    nameDefaultHint: '鸟名用中文名（跟随界面语言）',
+    nameSci: '学名卷',
+    nameSciHint: '题干与选项全部使用拉丁学名',
+    stemCap: '与这个名字相配的是——',
+    mode: { zh: '中文卷', en: '英文卷', sci: '学名卷' },
+    audioHint: '点按播放录音 · 再点同一项作答',
+    audioOptionHint: '点按试听',
   },
   regime: {
     standard: { label: '标准赛', hint: '只出未练过的物种（不重复）' },
@@ -1000,6 +1021,10 @@ export const messages = {
     l5: {
       label: 'L5 地狱',
       desc: 'L4 规格 · 限时 10s · 随机鸟鸣干扰',
+    },
+    l6: {
+      label: 'L6 半鸟人',
+      desc: '名字 → 图/音 · 同科近缘 · 看图 10s / 听音 25s',
     },
   },
   badges: {

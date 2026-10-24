@@ -22,6 +22,9 @@ const en: typeof zhMessages = {
     skipToMain: 'Skip to main content',
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
+    // L6 Half-Birder (docs/081 §7): name → photo/sound
+    nameQuizImage: 'Name-to-bird · Photos',
+    nameQuizAudio: 'Name-to-bird · Sounds',
     // 072-b: lazy chunk failure banner (shown only after the single automatic retry fails)
     chunkError: 'Failed to load page resources (unstable network). Retry or reload.',
     chunkRetry: 'Retry',
@@ -57,11 +60,29 @@ const en: typeof zhMessages = {
     bankStatsFull: '{image} photos · {audio} recordings ({total} species)',
     modeImageSub: 'Openly licensed photos from iNaturalist',
     modeAudioSub: 'Real bird recordings from Xeno-canto',
+    modeNameSub: 'L6 Half-Birder: pick the photo matching the bird name',
+    modeNameAudioSub: 'L6 Half-Birder: pick the recording matching the bird name',
     regionSub: 'Browse birds by country/region',
   },
   mode: {
     imageRound: 'Photo round',
     audioRound: 'Audio round',
+  },
+  // L6 Half-Birder (docs/081 §7 / docs/085 D-1~D-3): name → photo/sound
+  quiz6: {
+    imageTitle: 'Half-Birder · Photos',
+    imageLead: 'A bird name is given — pick the right one out of 6 photos. Options are mostly close relatives. 10 seconds per question.',
+    audioTitle: 'Half-Birder · Sounds',
+    audioLead: 'A bird name is given — pick its song out of 4 recordings. Harder than photos, 25 seconds per question.',
+    nameModeCap: 'Name set',
+    nameDefault: 'Common names',
+    nameDefaultHint: 'Names follow the interface language',
+    nameSci: 'Scientific names',
+    nameSciHint: 'Stem and options all use Latin names',
+    stemCap: 'Which one matches this name?',
+    mode: { zh: 'Chinese', en: 'English', sci: 'Scientific' },
+    audioHint: 'Tap to play · tap the same option again to answer',
+    audioOptionHint: 'Tap to listen',
   },
   regime: {
     standard: { label: 'Standard', hint: 'Only species you have not played yet (no repeats)' },
@@ -1012,6 +1033,10 @@ const en: typeof zhMessages = {
     l5: {
       label: 'L5 Hell',
       desc: 'L4 rules · 10s · random interference calls',
+    },
+    l6: {
+      label: 'L6 Half-Birder',
+      desc: 'name → photo/sound · close relatives · photos 10s / sounds 25s',
     },
   },
   badges: {

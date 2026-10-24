@@ -23,6 +23,18 @@ const router = createRouter({
       component: () => import('../views/QuizAudioView.vue'),
     },
     {
+      // L6 半鸟人（docs/081 §7）：名字 → 图/音的反向辨认题；独立路由与经典卷并行
+      // （pageCategory 的 '/quiz' 前缀天然覆盖 /quiz6，计入 page_view:quiz）
+      path: '/quiz6/image',
+      name: 'quiz6-image',
+      component: () => import('../views/Quiz6ImageView.vue'),
+    },
+    {
+      path: '/quiz6/audio',
+      name: 'quiz6-audio',
+      component: () => import('../views/Quiz6AudioView.vue'),
+    },
+    {
       path: '/result',
       name: 'result',
       component: () => import('../views/ResultView.vue'),

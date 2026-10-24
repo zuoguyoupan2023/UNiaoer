@@ -34,7 +34,7 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
   page_view: {
     category: ['quiz', 'region', 'catalog', 'species', 'profile', 'faq', 'reports', 'stats', 'other'],
   },
-  quiz_complete: { mode: ['image', 'audio'], tier: ['1', '2', '3', '4', '5'] },
+  quiz_complete: { mode: ['image', 'audio'], tier: ['1', '2', '3', '4', '5', '6'] },
   /**
    * 072-k：一轮结果的**正确率分桶**（不是每题、不含物种、不含用户）。
    * 用途：「各档位正确率」公开看板（`/stats`）。分桶而非精确值，避免任何可识别性。
@@ -42,7 +42,8 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
    * 只为让历史曲线不断层（精确数据上线前的轮次只能按桶中点估算）。
    */
   quiz_result: {
-    tier: ['1', '2', '3', '4', '5'],
+    // '6' = L6 半鸟人（docs/081 §7，2026-10-24 上线）
+    tier: ['1', '2', '3', '4', '5', '6'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：**用户自选**的地区（不是 IP）；形态校验见 allowedMetricValue
     region: ['@region'],
@@ -53,9 +54,12 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
    * 不含物种、不含任何用户标识；`region` 仍是**用户自选**地区（不是 IP）。
    */
   quiz_score: {
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6'],
     correct: ['@score'],
     total: ['@score'],
+    // 085 D-3（2026-10-24）：统计分卷——按卷别（zh/en/sci）分开算正确率；
+    // 旧数据无该属性 = 「未指定」卷（metrics_daily 是 props 串累加，新维度即新 props 组合）
+    nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],
   },
   /**
@@ -66,7 +70,9 @@ const EVENT_SPEC: Record<string, Record<string, readonly string[]>> = {
   quiz_answer: {
     species: ['@species'],
     ok: ['0', '1'],
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6'],
+    // 085 D-3：同 quiz_score，逐题对错也按卷别分（L7 判分口径的分卷统计底座）
+    nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],
     chosen: ['@species'],
   },

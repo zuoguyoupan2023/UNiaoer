@@ -36,6 +36,12 @@ interface Persisted {
   /** A2 难度按图/声分别记忆（与赛制一致，013 §4 官能正交） */
   tierImage?: Tier
   tierAudio?: Tier
+  /**
+   * L6 半鸟人的卷别记忆（docs/085 D-2，图/声分离）：'default' = 跟随界面语言
+   * （中文界面→中文名卷 / 英文界面→英文名卷），'sci' = 学名卷（switch 切换）。
+   */
+  nameMode6Image?: 'default' | 'sci'
+  nameMode6Audio?: 'default' | 'sci'
   /** D5 自适应难度：按最近表现自动升降档（默认开） */
   adaptiveTier?: boolean
   /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
@@ -101,6 +107,9 @@ export const useSettingsStore = defineStore('settings', () => {
   /** A2 难度（图/声分离记忆；与赛制一致） */
   const tierImage = ref<Tier | undefined>(saved.tierImage)
   const tierAudio = ref<Tier | undefined>(saved.tierAudio)
+  /** L6 半鸟人卷别（docs/085 D-2：switch 切换，'default' 跟随界面语言 / 'sci' 学名卷） */
+  const nameMode6Image = ref<'default' | 'sci'>(saved.nameMode6Image ?? 'default')
+  const nameMode6Audio = ref<'default' | 'sci'>(saved.nameMode6Audio ?? 'default')
   /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
   /** 029 M2:出题地区偏好（默认 ALL=不过滤；L1-L3 按此过滤全球池） */
@@ -135,6 +144,8 @@ export const useSettingsStore = defineStore('settings', () => {
       regimeAudio,
       tierImage,
       tierAudio,
+      nameMode6Image,
+      nameMode6Audio,
       adaptiveTier,
       region,
       metricsEnabled,
@@ -163,6 +174,8 @@ export const useSettingsStore = defineStore('settings', () => {
             regimeAudio: regimeAudio.value,
             tierImage: tierImage.value,
             tierAudio: tierAudio.value,
+            nameMode6Image: nameMode6Image.value,
+            nameMode6Audio: nameMode6Audio.value,
             adaptiveTier: adaptiveTier.value,
             region: region.value,
             metricsEnabled: metricsEnabled.value,
@@ -195,6 +208,8 @@ export const useSettingsStore = defineStore('settings', () => {
     regimeAudio,
     tierImage,
     tierAudio,
+    nameMode6Image,
+    nameMode6Audio,
     adaptiveTier,
     region,
     metricsEnabled,

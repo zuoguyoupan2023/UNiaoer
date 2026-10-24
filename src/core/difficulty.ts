@@ -1,4 +1,4 @@
-import type { Tier } from '@/types'
+import type { MediaType, Tier } from '@/types'
 
 export type DistractorStrategy = 'cross' | 'mixed' | 'same'
 
@@ -78,6 +78,33 @@ export const TIERS: Record<Tier, TierConfig> = {
     commonness: [3, 4],
     mediaPoolSize: 5,
   },
+  /**
+   * 题型 L6 半鸟人（docs/081 §7；README「计划中的题型」）。**不出现在 TIER_LIST**——
+   * 它是独立题型而非经典卷的第 6 档，介绍页/出题走 L6_TIERS（按题型区分选项数与限时）。
+   * 本条目只用于：状态栏/结果页的档位标签（TIERS[q.tier].labelKey）与类型完备性；
+   * 其余字段是"代表值"，经典链路永远不会用它出题。
+   */
+  6: {
+    tier: 6,
+    labelKey: 'difficulty.l6.label',
+    descKey: 'difficulty.l6.desc',
+    optionCount: 6,
+    distractor: 'same',
+    timeLimitSec: 10,
+    commonness: [1, 2, 3, 4],
+    mediaPoolSize: 1,
+  },
 }
 
 export const TIER_LIST: TierConfig[] = [TIERS[1], TIERS[2], TIERS[3], TIERS[4], TIERS[5]]
+
+/**
+ * L6 半鸟人的分题型配置（docs/081 §7 + README 草案，2026-10-24）：
+ *   看图版：6 个图像选项，限时 10s；听音版：4 个声音选项，限时 25s（听音辨认更难）。
+ * 干扰项策略固定 same（同科为主，「多选项都是同科鸟」）；选项素材都取首选
+ * （媒体池大小 1：标准照/最佳录音，识别题不做姿态随机）。
+ */
+export const L6_TIERS: Record<MediaType, { optionCount: number; timeLimitSec: number; distractor: DistractorStrategy }> = {
+  image: { optionCount: 6, timeLimitSec: 10, distractor: 'same' },
+  audio: { optionCount: 4, timeLimitSec: 25, distractor: 'same' },
+}

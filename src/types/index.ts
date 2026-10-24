@@ -1,5 +1,9 @@
-/** 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 / 5 地狱（随机鸟鸣干扰，R23） */
-export type Tier = 1 | 2 | 3 | 4 | 5
+/**
+ * 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 / 5 地狱（随机鸟鸣干扰，R23）
+ * / 6 半鸟人（题型 L6「名字 → 图/音」，docs/081 §7；与 045 的称号级 L6「非人」无关，
+ * 见 docs/084 §1.3 命名陷阱）。L6 不出现在经典介绍页的档位列表（TIER_LIST 仍 1–5）。
+ */
+export type Tier = 1 | 2 | 3 | 4 | 5 | 6
 
 /** 题型 */
 export type MediaType = 'image' | 'audio'
@@ -97,6 +101,11 @@ export interface Question {
   options: string[]
   /** 与 options 平行的物种 id（错选名按 locale 解析用，015 #1） */
   optionIds: string[]
+  /**
+   * L6 半鸟人（docs/081 §7）：与 options 平行的**选项素材**——题干是名字、选项是图/音；
+   * 经典题（媒体作题干、名字作选项）不设该字段。
+   */
+  optionsMedia?: MediaAsset[]
   answerMode: AnswerMode
   timeLimitSec?: number
   /** 051 S1：本轮选项/答案使用的命名体系（供错题本、海报与 046 分区统计复现语义） */
