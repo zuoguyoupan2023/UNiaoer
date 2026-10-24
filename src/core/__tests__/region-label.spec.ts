@@ -37,3 +37,14 @@ describe('地区显示名（铁律 6）', () => {
     expect(typeof regionLabel('ZZ', fakeT, 'zh-CN')).toBe('string')
   })
 })
+describe('政治敏感显示名固定（083，2026-10-24）', () => {
+  it('FK 固定为「马尔维纳斯群岛（福克兰群岛）」（CLDR 只有英方名「福克兰群岛」）', () => {
+    expect(REGION_LABEL_KEY.FK).toBe('region.regions.FK')
+    expect(regionLabel('FK', fakeT, 'zh-CN')).toBe('«region.regions.FK»')
+  })
+
+  it('PS 固定为「巴勒斯坦」（中国与巴勒斯坦国建交；CLDR 是降格的「巴勒斯坦领土」）', () => {
+    expect(REGION_LABEL_KEY.PS).toBe('region.regions.PS')
+    expect(regionLabel('PS', fakeT, 'zh-CN')).toBe('«region.regions.PS»')
+  })
+})

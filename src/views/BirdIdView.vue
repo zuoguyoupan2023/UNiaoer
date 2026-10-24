@@ -40,7 +40,7 @@ import type { MediaAsset } from '@/types'
 import { track } from '@/core/metrics'
 import { regionLabel } from '@/core/region'
 import { useSettingsStore } from '@/stores/settings'
-import { loadProvincesIndex, provincesOf, type ProvinceIndex } from '@/core/provinces'
+import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -384,8 +384,11 @@ const REGION_COUNTRIES = ['CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 
 const regionKey = computed(() =>
   regionCountry.value === 'ALL' ? 'ALL' : regionCode.value ? `${regionCountry.value}-${regionCode.value.replace(`${regionCountry.value}-`, '')}` : regionCountry.value,
 )
+// 083：镇级/微型国（SI/LV/MK/MT/SG/NR/TV/KI/MH）收起省级选择（数据仍在，仅不提供 UI 入口）
 const provinceOptions = computed(() =>
-  regionCountry.value === 'ALL' ? [] : provincesOf(provinceData.value, regionCountry.value, String(locale.value)),
+  regionCountry.value === 'ALL' || !provinceSecondLevelEnabled(provinceData.value, regionCountry.value)
+    ? []
+    : provincesOf(provinceData.value, regionCountry.value, String(locale.value)),
 )
 const countryName = (cc: string) => (cc === 'ALL' ? t('birdId.region.all') : regionLabel(cc, t, String(locale.value)))
 

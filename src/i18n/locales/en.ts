@@ -399,6 +399,8 @@ const en: typeof zhMessages = {
       HK: 'Hong Kong, China',
       MO: 'Macao, China',
       TW: 'Taiwan, China',
+      FK: 'Falkland Islands (Malvinas)',
+      PS: 'Palestine',
     },
     continents: {
       asia: 'Asia',

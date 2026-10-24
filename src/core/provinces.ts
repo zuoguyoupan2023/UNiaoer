@@ -146,6 +146,31 @@ export function loadSpeciesProvinces(speciesId: string): Promise<SpeciesProvince
   return p
 }
 
+/**
+ * 083（2026-10-24 用户定）：**收起二级（省级）浏览/出题入口**的国家——数据不删、物种页省份
+ * 热力条照常，仅 `/birding` 的省级目录与出题/识别页的省选择器不再提供（数据层可随时恢复）：
+ *  - 镇级：ISO 一级区划本身就是市镇且数量巨大（SI 211 / LV 119 / MK 84 / MT 68），二级浏览
+ *    与出题没有实际价值 → 「合并为国家级」（docs/083 §3.1 方案乙）；
+ *  - SG：二级覆盖率仅 4.1%（GBIF 把国名当省名，我们不把国名当省名 → 只剩 2 个有记录的 CDC）；
+ *  - 微型国：省级明细物种 < 100（NR 23 / TV 26 / KI 52 / MH 56），二级没有信息量。
+ * 领地（UM/SH/BQ/GL）按 docs/083 §5-3 **保持现状**。
+ */
+export const PROVINCE_HIDDEN_COUNTRIES: ReadonlySet<string> = new Set([
+  'SI', 'LV', 'MK', 'MT', // 镇级（ISO 一级=市镇且 >50 个）
+  'SG', // 二级覆盖率 4.1%，只剩 2 个 CDC
+  'NR', 'TV', 'KI', 'MH', // 微型：省级明细物种 <100
+])
+
+/**
+ * 该国是否提供二级（省级）浏览/出题入口：收起名单内（083）或索引里没有该国的 → false。
+ * 仅约束 UI 入口——物种页热力条（SpeciesProvinces）与管理端名字查表**不经过这里**。
+ */
+export function provinceSecondLevelEnabled(index: ProvinceIndex | null, country: string): boolean {
+  const cc = String(country || '').toUpperCase()
+  if (!cc || PROVINCE_HIDDEN_COUNTRIES.has(cc)) return false
+  return !!index?.byCountry?.[cc]
+}
+
 /** 该国省级列表（按展示名排序）；无数据返回 []。en 优先取 byCountryAlt（如 CN 的港澳台标注名） */
 /** 该国的省级明细覆盖率（0–1）；无数据 → null（未知，别乱标） */
 export function provinceCoverage(index: ProvinceIndex | null, country: string): number | null {

@@ -92,6 +92,11 @@ export const REGION_LABEL_KEY: Record<string, string> = {
   HK: 'region.regions.HK',
   MO: 'region.regions.MO',
   TW: 'region.regions.TW',
+  // 083（2026-10-24）：政治敏感显示名固定，不交给运行时 CLDR——
+  // FK：中国官方标准名是「马尔维纳斯群岛」（阿英争议；CLDR 只给英方名「福克兰群岛」）；
+  // PS：中国与巴勒斯坦国建交，CLDR 的「巴勒斯坦领土 / Palestinian Territories」是降格。
+  FK: 'region.regions.FK',
+  PS: 'region.regions.PS',
 }
 /** 国家/地区码 → 所属大洲（未收录返回 undefined） */
 export function continentOf(code: string): Continent | undefined {

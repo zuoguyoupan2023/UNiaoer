@@ -395,6 +395,8 @@ export const messages = {
       HK: '中国香港',
       MO: '中国澳门',
       TW: '中国台湾',
+      FK: '马尔维纳斯群岛（福克兰群岛）',
+      PS: '巴勒斯坦',
     },
     continents: {
       asia: '亚洲',

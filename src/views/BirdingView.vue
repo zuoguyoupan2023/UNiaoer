@@ -29,6 +29,7 @@ import {
   loadCountryProvinces,
   loadProvincesIndex,
   provinceCoverage,
+  provinceSecondLevelEnabled,
   provinceStats,
   speciesInProvince,
   type CountryProvinceShard,
@@ -271,7 +272,13 @@ const filtered = computed(() => {
 /** 合并索引(国家 → 短码)与 bank 索引(降级路径与省级过滤用) */
 const mergedIndex = computed(() => (mergedBySpecies.value ? buildCountryIndex(mergedBySpecies.value) : {}))
 const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
+/**
+ * 该国是否提供二级（省级）浏览入口（083）：镇级国家（SI/LV/MK/MT/SG）与微型国（NR/TV/KI/MH）
+ * 收起——数据仍在（物种页热力条照常），只是不提供浏览与出题的省选择。
+ */
+const provinceEnabled = computed(() => provinceSecondLevelEnabled(provinceIndex.value, selected.value))
 const provinces = computed(() => {
+  if (!provinceEnabled.value) return []
   const list = provinceStats(provinceIndex.value, countryProvince.value, selected.value, locale.value)
   if (sortMode.value === 'count') return [...list].sort((a, b) => b.count - a.count)
   return [...list].sort((a, b) => collator.value.compare(a.name, b.name))
@@ -529,6 +536,12 @@ watch(selected, () => {
   expandedHotspot.value = ''
   void loadSpotsFor(selected.value)
   void loadRegionLayers(selected.value)
+})
+
+// 083：二级入口被收起的国家，清掉可能来自深链（?cc=SI&sub=…）的省份选择；
+// provinceEnabled 会在省份索引异步到达后才变 false，所以单独 watch 而不是并入上面的切国重置
+watch(provinceEnabled, (on) => {
+  if (!on && province.value) province.value = ''
 })
 
 /**

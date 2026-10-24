@@ -37,7 +37,7 @@ import { submitReport as uploadReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
-import { loadProvincesIndex, provincesOf, type ProvinceIndex } from '@/core/provinces'
+import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
 import { REGION_LABEL_KEY } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
@@ -260,8 +260,12 @@ function chooseRegion(v: string) {
   regionChoice.value = v
   // 换国家时清掉省选择（省码属于原国家）
   regionProvince.value = ''
-  // 有省级细分的国家**保持展开**，让用户能接着选省；无细分的直接收起（本次选择已完成）
-  const hasProvinces = v !== 'ALL' && provincesOf(provinceData.value, v, currentLocale()).length > 0
+  // 有省级细分的国家**保持展开**，让用户能接着选省；无细分的直接收起（本次选择已完成）。
+  // 083：镇级/微型国（SI/LV/MK/MT/SG/NR/TV/KI/MH）收起省级出题选择
+  const hasProvinces =
+    v !== 'ALL' &&
+    provinceSecondLevelEnabled(provinceData.value, v) &&
+    provincesOf(provinceData.value, v, currentLocale()).length > 0
   regionPickerOpen.value = hasProvinces
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
@@ -276,6 +280,8 @@ const provinceChoices = computed(() => {
   const data = provinceData.value
   const cc = selectedCountry.value
   if (!data || !cc || cc === 'ALL') return []
+  // 083：镇级/微型国收起省级出题选择（与 hasProvinces 同口径）
+  if (!provinceSecondLevelEnabled(data, cc)) return []
   return provincesOf(data, cc, currentLocale())
 })
 /**

@@ -6,8 +6,10 @@ import {
   loadSpeciesProvinces,
   provinceCount,
   provinceCoverage,
+  provinceSecondLevelEnabled,
   provinceStats,
   provincesOf,
+  PROVINCE_HIDDEN_COUNTRIES,
   speciesInProvince,
   type CountryProvinceShard,
   type ProvinceIndex,
@@ -159,5 +161,34 @@ describe('P1-6 分片加载', () => {
     expect(await loadProvincesIndex()).toBeNull()
     expect(await loadCountryProvinces('CN')).toBeNull()
     expect(await loadSpeciesProvinces('passer-montanus')).toBeNull()
+  })
+})
+
+describe('provinceSecondLevelEnabled（083：镇级/微型国收起二级入口）', () => {
+  const idxWithSI: ProvinceIndex = {
+    ...index,
+    countries: ['CN', 'SI'],
+    byCountry: { ...index.byCountry, SI: { 'SI-01': 'Občina Ajdovščina' } },
+  }
+
+  it('收起名单内的国家返回 false（数据不删，仅不提供 UI 入口）', () => {
+    for (const cc of ['SI', 'LV', 'MK', 'MT', 'SG', 'NR', 'TV', 'KI', 'MH']) {
+      expect(provinceSecondLevelEnabled(idxWithSI, cc)).toBe(false)
+    }
+  })
+
+  it('名单外且有索引的国家返回 true；无索引返回 false', () => {
+    expect(provinceSecondLevelEnabled(idxWithSI, 'CN')).toBe(true)
+    expect(provinceSecondLevelEnabled(idxWithSI, 'US')).toBe(false)
+    expect(provinceSecondLevelEnabled(null, 'CN')).toBe(false)
+  })
+
+  it('大小写与空白宽容；PROVINCE_HIDDEN_COUNTRIES 是 9 国（防手滑增删）', () => {
+    expect(provinceSecondLevelEnabled(idxWithSI, ' si ')).toBe(false)
+    expect([...PROVINCE_HIDDEN_COUNTRIES].sort()).toEqual(['KI', 'LV', 'MH', 'MK', 'MT', 'NR', 'SG', 'SI', 'TV'])
+  })
+
+  it('收起国家不改变 provincesOf（名字查表仍可用——物种页热力条依赖它）', () => {
+    expect(provincesOf(idxWithSI, 'SI').length).toBe(1)
   })
 })
