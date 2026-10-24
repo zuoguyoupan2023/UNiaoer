@@ -7,8 +7,8 @@
  *      a) { countrycode, stateprovince, specieskey, n } —— 用 **GBIF backbone id** 匹配骨架（覆盖更全）
  *      b) { countrycode, stateprovince, scientificname, n } —— 用**学名**匹配（回退路径）
  *      默认按 key 自动找 data-cache/region/gbif-sql 下最新的一份（`0008688` / `0016494`）。
- *   2. `--from-provinces`：直接用现有 `public/data/region-provinces.json`（仅核心库 1,186 种；
- *      `--mock` 离线自检用）。
+ *   2. `--from-provinces`：直接用省级分片 `public/data/region-provinces/`（索引 + 按国分片，
+ *      P1-6 之后无单文件；194 国全量）。
  *
  * 处理链（详见 docs/036 §2.2 与 lib 注释）：
  *   ISO 省名消化 → 骨架物种匹配 → 份额归一 → 异常守卫 → 分位分档 → 人工覆盖 → 产物
@@ -21,7 +21,7 @@
  * CLI：
  *   npm run region:province-commonness                 # 用最新的 SQL 缓存
  *   npm run region:province-commonness -- --sql <f>    # 指定 SQL 结果
- *   npm run region:province-commonness -- --from-provinces   # 用 region-provinces.json（1,186 种）
+ *   npm run region:province-commonness -- --from-provinces   # 用 region-provinces/ 分片（194 国）
  *   npm run region:province-commonness -- --out <f>    # 指定输出（默认写 public/data/）
  */
 import fs from 'node:fs/promises'

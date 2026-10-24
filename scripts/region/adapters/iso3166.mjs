@@ -60,6 +60,10 @@ export function nameKeys(name) {
 }
 
 import { AUTO_ALIASES } from '../aliases-auto.mjs'
+import { PROVINCE_TO_L1 } from './province-to-region.mjs'
+
+// 转出口：供测试与外部脚本引用（真实定义在 ./province-to-region.mjs）
+export { PROVINCE_TO_L1 }
 
 /**
  * 自由文本别名 → ISO code（仅收已知高频变体；不臆造）。
@@ -169,6 +173,14 @@ export function buildIndex(dataset, countryCodes = null) {
       list.push({ code, name })
       for (const k of nameKeys(name)) if (!byKey.has(k)) byKey.set(k, code)
     }
+    // 「省/县 → 一级区划」映射的 value 必须是该区划数据集里真实存在的 code；
+    // 数据集过时（如 NP 旧 5 大区）/拼错 → 构建期硬失败，不让错码进产物。
+    const toL1 = PROVINCE_TO_L1[cc]
+    if (toL1) {
+      const codes = new Set(list.map((d) => d.code))
+      const bad = [...new Set(Object.values(toL1).filter((c) => !codes.has(c)))]
+      if (bad.length) throw new Error(`province-to-region[${cc}] 指向不存在的区划码: ${bad.join(', ')}（区划数据集过时或映射拼错）`)
+    }
     index[cc] = { byKey, divisions: list }
   }
   return index
@@ -190,10 +202,14 @@ export function displayName(name) {
 export function matchSubdivision(index, country, rawName) {
   const entry = index[country]
   if (!entry) return null
+  // 「省/县 → 一级区划」二次映射（081 §6.1）：GBIF 写省级、ISO 一级是大区/省的国家（PH/NP/LK）
+  const toL1 = PROVINCE_TO_L1[country]
   for (const k of nameKeys(rawName)) {
     const alias = NAME_ALIASES[k]
     if (alias && alias.startsWith(country + '-')) return alias
     if (entry.byKey.has(k)) return entry.byKey.get(k)
+    // 兜底：直接命中失败后再查省→区映射（保证 "Quezon City"→PH-00 这类保护键先于裸名生效）
+    if (toL1 && toL1[k]) return toL1[k]
   }
   // 英国：郡级文本归入所属构成国（ISO 一级区）
   if (country === 'GB') {

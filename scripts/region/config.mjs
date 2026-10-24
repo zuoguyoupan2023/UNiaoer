@@ -6,9 +6,12 @@
 export const SUPPORTED_COUNTRIES = [
   'CN', 'US', 'CA', 'AU', 'NZ', 'GB', 'IE', 'JP', 'DE', 'FR', 'ES', 'IT', 'NL', 'IN', 'VN',
   // ── 2026-10-23 扩国第 1 批（亚洲）：先过 `region:coverage` 覆盖率干跑（≥90%）才纳入。
-  //    排除 PH/NP/LK：数据集的一级区划与 GBIF 的 stateProvince 不同级（大区 vs 省/区），需要额外映射表，见 docs/074 P1-4。
   //    港澳台（HK/MO/TW）**不作为国家加入**——按铁律 6 它们是 CN 的省级（CN-91/92/71）。
   'TH', 'MY', 'ID', 'TR', 'MN', 'LA', 'MM', 'AE', 'BD', 'IL', 'SA', 'PK', 'KZ', 'KH',
+  // ── 2026-10-24（081 §6.1）：PH/NP/LK 原因「数据集一级区划与 GBIF 不同级」被排除；
+  //    已建「省/县 → 一级区划」二次映射（adapters/province-to-region.mjs）+ NP 数据集补丁，
+  //    覆盖率干跑 ≥90% 后纳入。
+  'PH', 'NP', 'LK',
 ]
 
 /** 省级 code/名称基准数据集（用户 2026-10-02 决定：先 ISO 3166-2，eBird 后补） */

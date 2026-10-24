@@ -58,22 +58,27 @@
      用「账号：xxx」或转义 `{'@'}`；报错栈常落在共享 chunk，易误判成图标/组件问题（见 `docs/010` §9）。
    - 画布类渲染（`poster.ts`）沿用**函数式注入**模式（如 `PosterStrings.mistakenAs: (name) => string`）。
 
-8. **推送（`git push`）由用户执行，AI 只提交到本地。**
+8. **推送（`git push`）由用户执行；`git commit` 也须先经用户同意（2026-10-24 起，见铁律 9）。**
    - 原因：`https://github.com` 在本机常年超时/被网络拦截，且沙箱进程读不到 macOS 钥匙串凭据
      （报错形态：`could not read Username for 'https://github.com'` 或 `Failed to connect to github.com port 443`）。
-   - 做法：AI 完成改动后 `git commit`（消息里写清自检结论），并把**待推提交清单**报告给用户；
+   - 做法：AI 完成改动后**报告改动清单与自检结论**，由用户决定是否 commit；push 清单一并报告，
      用户手动 `git push origin main`（会触发 CI + Pages 重建）。
    - **不要**反复重试推送、不要改用 SSH/代理等旁路；推送受阻时把剩余工作继续做完（Worker 部署走
      `wrangler`，不经 GitHub，可正常执行）。
    - Worker 用 `npm run worker:deploy`，前端靠 Pages——**两者发布节奏不同步**：Worker 侧改动推前就已生效，
      前端改动要等用户推送 + Pages 重建。报告时须显式区分（哪些已生效、哪些等推送）。
 
-9. **云端资源与发布操作必须先经用户确认（2026-10-21 用户明确要求）。**
+9. **云端资源、发布与提交操作必须先经用户确认（2026-10-21 用户要求；2026-10-24 强化：一律先停下来问）。**
+   - **（2026-10-24 总则，覆盖下面一切情形）凡是「修改 D1 / R2 / Worker 的数据、结构、代码或配置」、
+     「部署 Worker / 写 R2 / 写 D1」（`worker:deploy`、`r2:push`、`r2:manifest`、`wrangler d1 execute --remote`、
+     `sync:prod` 等）、「`git commit`」、「`git push`」——AI 必须**先停下来**，把要执行的命令、影响范围、
+     回滚方式列成清单，等用户逐项决定后再执行；**不允许默认直接执行，也不允许「先做了再报告」**。
+     本地文件/产物改动、只读排查不受限。
    - **R2 / D1 / Worker / Pages** 的数据、结构、代码、配置，以及**任何会写云端或发布产物的脚本**
      （`r2:push`、`r2:manifest`、`sync:prod`、`d1:execute`、`worker:deploy`、`bank:r2`、
      会重建并提交 `public/data/*` 的构建脚本等），**执行前必须说明：要改什么、影响范围、回滚方式**，
      并取得用户明确同意后才可运行。
-   - 同理，**代码 / 数据产物的 `git commit`**：用户说「先不要 commit / 我先看看」时，一律不提交；
+   - **`git commit` 不再是默认动作**：改动完成后先报告「已改哪些文件、自检结果」，commit 与否由用户决定；
      `git push` 永远由用户执行（铁律 8）。
    - 只读排查（`curl`、`SELECT`、`wrangler r2 object get`、`git status`）不受限；
      **任何写操作**（含删除、覆盖、批量导入、purge）都要先问。
