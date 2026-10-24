@@ -175,13 +175,13 @@ export function buildIndex(dataset, countryCodes = null) {
     }
     // 「省/县 → 一级区划」映射的 value 必须是该区划数据集里真实存在的 code；
     // 数据集过时（如 NP 旧 5 大区）/拼错 → 构建期硬失败，不让错码进产物。
+    const codes = new Set(list.map((d) => d.code))
     const toL1 = PROVINCE_TO_L1[cc]
     if (toL1) {
-      const codes = new Set(list.map((d) => d.code))
       const bad = [...new Set(Object.values(toL1).filter((c) => !codes.has(c)))]
       if (bad.length) throw new Error(`province-to-region[${cc}] 指向不存在的区划码: ${bad.join(', ')}（区划数据集过时或映射拼错）`)
     }
-    index[cc] = { byKey, divisions: list }
+    index[cc] = { byKey, divisions: list, codes }
   }
   return index
 }
@@ -206,7 +206,9 @@ export function matchSubdivision(index, country, rawName) {
   const toL1 = PROVINCE_TO_L1[country]
   for (const k of nameKeys(rawName)) {
     const alias = NAME_ALIASES[k]
-    if (alias && alias.startsWith(country + '-')) return alias
+    // 别名只在目标码仍存在于当前数据集时生效（aliases-auto 按旧数据集生成，数据集
+    // 经 DATASET_OVERRIDES 更新后旧码别名自动失效，交由 province-to-region 重新归并）
+    if (alias && alias.startsWith(country + '-') && entry.codes.has(alias)) return alias
     if (entry.byKey.has(k)) return entry.byKey.get(k)
     // 兜底：直接命中失败后再查省→区映射（保证 "Quezon City"→PH-00 这类保护键先于裸名生效）
     if (toL1 && toL1[k]) return toL1[k]

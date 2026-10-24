@@ -40,10 +40,13 @@ const client = createClient({
 const merged = {}
 const failed = []
 /**
- * 数据集补丁（2026-10-24，081 §6.1）：上游 alexander-schranz/iso-3166-2@master 的 NP 仍是
- * 2015 年前的 5 个发展大区（Madhyamanchal…），而现行 ISO 3166-2:NP 与 GBIF 记录早已是
- * **7 个省**（NP-P1..P7，宪法顺序；P1 已由「Province No. 1」改名 Koshi）。本地覆盖为现行口径，
- * 上游修复后可移除。`buildIndex` 会校验 province-to-region 的目标码存在，数据集过时会硬失败。
+ * 数据集补丁（2026-10-24，081 §6.1/082 §2）：上游 alexander-schranz/iso-3166-2@master 停留在
+ * 旧行政区划，与现行 ISO 3166-2 不符的两国，本地覆盖为**现行 ISO 口径**（用户 2026-10-24 拍板）：
+ *  - NP：上游还是 2015 年前的 5 个发展大区 → 现行 7 省（NP-P1..P7，宪法顺序；P1 已改名 Koshi）；
+ *  - NO：上游还是 **2020 合并前的 19 旧县** → 现行 ISO 是 2020 合并后的 11 县（+Svalbard/Jan Mayen）。
+ *    注意：ISO 3166-2:NO 截至 2026-01 也**未反映 2024 年的县制回退**（现实已拆回 15 县），
+ *    我们按用户决定跟 ISO 走（显示 Viken 等合并县名）；旧县名经 province-to-region 归并到现行码。
+ * 上游修复后可移除对应条目。`buildIndex` 会校验 province-to-region 的目标码存在，数据集过时会硬失败。
  */
 const DATASET_OVERRIDES = {
   NP: {
@@ -54,6 +57,21 @@ const DATASET_OVERRIDES = {
     'NP-P5': 'Lumbini',
     'NP-P6': 'Karnali',
     'NP-P7': 'Sudurpashchim',
+  },
+  NO: {
+    'NO-03': 'Oslo',
+    'NO-11': 'Rogaland',
+    'NO-15': 'Møre og Romsdal',
+    'NO-18': 'Nordland',
+    'NO-30': 'Viken',
+    'NO-34': 'Innlandet',
+    'NO-38': 'Vestfold og Telemark',
+    'NO-42': 'Agder',
+    'NO-46': 'Vestland',
+    'NO-50': 'Trøndelag',
+    'NO-54': 'Troms og Finnmark',
+    'NO-21': 'Svalbard',
+    'NO-22': 'Jan Mayen',
   },
 }
 // 合并基础 = 现有 subs.json（部分国家重跑不清掉其他国；踩坑：--countries CN 曾覆盖成只剩 CN，

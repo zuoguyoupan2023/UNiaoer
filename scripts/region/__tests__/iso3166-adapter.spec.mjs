@@ -9,9 +9,12 @@ import {
 } from '../adapters/iso3166.mjs'
 
 const dataset = {
-  US: { 'US-CA': 'California', 'US-WA': 'Washington', 'US-DC': 'District of Columbia' },
+  // 夹具需包含「别名表指向的码」：2026-10-24 起 matchSubdivision 的别名只在目标码存在于
+  // 数据集时生效（退役码别名自动失效，见 province-to-region.spec 的专测）——
+  // 所以 US 补 US-NY、JP 补 JP-32（ISO 训令式拼写，赫本式 'shimane' 仍走别名路径）。
+  US: { 'US-CA': 'California', 'US-WA': 'Washington', 'US-DC': 'District of Columbia', 'US-NY': 'New York' },
   GB: { 'GB-ENG': 'England', 'GB-SCT': 'Scotland', 'GB-NIR': 'Northern Ireland' },
-  JP: { 'JP-13': 'Tōkyō [Tokyo]', 'JP-23': 'Aiti', 'JP-04': 'Miyagi' },
+  JP: { 'JP-13': 'Tōkyō [Tokyo]', 'JP-23': 'Aiti', 'JP-04': 'Miyagi', 'JP-32': 'Simane' },
   CN: { 'CN-15': 'Nei Mongol (mn)\n(Inner Mongolia)', 'CN-54': 'Xizang\n(Tibet)', 'CN-65': 'Xinjiang' },
   ES: { 'ES-CT': 'Catalunya', 'ES-MD': 'Madrid' },
   NL: { 'NL-FR': 'Fryslân' },

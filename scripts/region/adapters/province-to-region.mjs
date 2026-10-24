@@ -1,15 +1,19 @@
 /**
- * 081 §6.1（2026-10-24）：「省/县 → ISO 3166-2 一级区划」二次映射表。
+ * 081 §6.1 / 082 §2、§7（2026-10-24）：「历史/旧称/异语/异级名称 → ISO 3166-2 现行一级区划」映射表。
  *
  * ## 为什么需要
- * 有些国家 ISO 的一级区划与 GBIF `stateProvince` 写的**不同级**：
- *  - PH 菲律宾：ISO 一级是 **17 个大区**（Region/CALABARZON/BARMM…），GBIF 写的是 **81 个省**；
- *  - NP 尼泊尔：数据集曾是 2015 年前的 5 个发展大区，GBIF 已大量使用 **2015 年后的 7 个省**
- *    （数据集本身用 `fetch-subdivisions.mjs` 里的 DATASET_OVERRIDES 补丁修正）；
- *  - LK 斯里兰卡：ISO 一级是 **9 个省**，GBIF 写的是 **25 个县**。
- * 只收「该省/县**完整落在恰好一个一级区划内**」的从属关系（标准行政区划），1:N 的一律**不映射**
- * （如 NP 的 Eastern/Western/Central 发展大区、PH 的 Luzon/Mindanao/Negros 岛、LK 的 North Eastern
- * 旧省）——宁缺勿错，同 NAME_ALIASES 里 "Manchuria" 的先例。
+ * 有些国家 ISO 的一级区划与 GBIF `stateProvince` 写的**不同级或不同名**：
+ *  - PH 菲律宾：ISO 一级是 **17 个大区**，GBIF 写的是 **81 个省**（异级）；
+ *  - NP 尼泊尔：数据集曾是 2015 年前的 5 个发展大区，GBIF 用 **2015 年后的 7 个省**（数据集用
+ *    `fetch-subdivisions.mjs` 的 DATASET_OVERRIDES 修正）；
+ *  - LK 斯里兰卡：ISO 一级是 **9 个省**，GBIF 写 **25 个县**（异级）；
+ *  - SE 瑞典：GBIF 大量写**历史地理省（landskap）**，ISO 是 21 个现代县（异级/历史）；
+ *  - NO 挪威：数据集曾是 2020 合并前旧县，**现行 ISO 是 2020 合并后的 11 县**（数据集已用
+ *    DATASET_OVERRIDES 修正，用户 2026-10-24 拍板「用现行 ISO」）；GBIF 新旧县名并存，旧县
+ *    都是**整县并入单一新县**（N:1），全部可安全归并；
+ *  - FI 芬兰：数据集用英文区名，GBIF 大量写**芬兰语区名**（同区异语）。
+ * 只收「该名称**完整落在恰好一个一级区划内**」的关系，1:N 的一律**不映射**（宁缺勿错，同
+ * NAME_ALIASES 里 "Manchuria" 的先例），被拒的高频名在各节注释里显式列出。
  *
  * ## 使用方式
  * `matchSubdivision` 在「别名 → ISO 直接命中」都失败后，按 key 查 `PROVINCE_TO_L1[国家]`。
@@ -17,12 +21,13 @@
  * 数据集过时/拼错会在构建时硬失败）。
  *
  * ## 消歧原则（都写进条目注释）
- *  - 裸岛名若横跨多区不映射（Luzon / Mindanao / Negros）；岛=单省或岛群全在同一大区才收
+ *  - 裸岛名若横跨多区不映射（Luzon / Mindanao / Negros / Lappland）；岛=单省或岛群全在同一大区才收
  *    （Panay 4 省同属 PH-06、Samar 3 省同属 PH-08、Sibuyan 属 Romblon→PH-41）；
- *  - 城市名只在「同省同名会撞」时作为**保护键**收（Quezon City→PH-00 必须先于 Quezon→PH-40 命中，
- *    Isabela City→PH-14 必须先于 Isabela→PH-02）；键序由 nameKeys 保证（原文名先于去后缀名）；
- *  - 国名当省名不映射（LK 的 "Sri Lanka"，同 SG 新加坡先例）；拼写存疑不映射（LK 的裸 "Nuwara"
- *    ——Sinhala 里 nuwara=城市，可能是 Nuwara Eliya 也可能指 Kandy/Maha Nuwara）。
+ *  - 城市名只在「同省同名会撞」时作为**保护键**收（Quezon City→PH-00 必须先于 Quezon→PH-40 命中）；
+ *  - 国名当省名不映射（LK 的 "Sri Lanka"，同 SG 新加坡先例）；拼写存疑不映射（LK 裸 "Nuwara"）；
+ *  - 旧大区/旧省跨 ≥2 现行区的不映射（NP 发展大区、FI 旧 lääni、SE 的 Uppland 等）；
+ *  - SE「字母, landskap」组合：字母=县字母码且与 landskap 归属**一致**才收
+ *    （"H, Öland"→H=Kalmar ✓；"B, Södermanland"→B≠D 不一致，不收）。
  */
 
 export const PROVINCE_TO_L1 = {
@@ -180,5 +185,85 @@ export const PROVINCE_TO_L1 = {
     // 不映射（宁缺勿错）：裸 "Nuwara"（Sinhala=城市，可能指 Nuwara Eliya 或 Kandy/Maha Nuwara）、
     // "Sri Lanka"/"Ceylon"（国名当省名，同 SG 先例）、"North Eastern Province"（1988–2006 旧省，
     // 横跨 Northern+Eastern）。
+  },
+
+  // ── SE：历史地理省（landskap）→ 现代县（län）；只收 N:1/≈1:1，1:N 的显式列出（082 §7）──
+  SE: {
+    // ≈1:1（省界≈县界）
+    skane: 'SE-M', gotland: 'SE-I', jamtland: 'SE-Z', harjedalen: 'SE-Z', // Härjedalen ⊂ Jämtlands län
+    // N:1（整省落在单一县内）
+    oland: 'SE-H', // Öland 岛全境属 Kalmar län
+    bohuslan: 'SE-O', dalsland: 'SE-O', // 两省全在 Västra Götaland
+    gastrikland: 'SE-X', medelpad: 'SE-Y',
+    // 县名/市名（GBIF 直书现代县或县城，走省码）
+    stockholm: 'SE-AB', 'stockholm county': 'SE-AB', kalmar: 'SE-H', uppsala: 'SE-C',
+    'uppsala county': 'SE-C', gavleborg: 'SE-X', 'vastra gotaland': 'SE-O',
+    // 拼写/简写变体（"V. Götalands län" 缺 ä；BD/AC 为县字母码）
+    'v gotalands lan': 'SE-O', 'bd lan': 'SE-BD', 'ac lan': 'SE-AC',
+    // 历史 lappmark（萨米管区，1810 年后各属一县）
+    'lycksele lappmark': 'SE-AC', 'asele lappmark': 'SE-AC', // → Västerbotten
+    'torne lappmark': 'SE-BD', 'lule lappmark': 'SE-BD', 'pite lappmark': 'SE-BD', // → Norrbotten
+    // 「字母, landskap」组合：字母=县字母码且与 landskap 归属一致才收（数据为标本馆口径）。
+    // 不一致的不收：'b sodermanland'/'b uppland'（B≠D/C）、't varmland'/'t vastmanland'（T≠S/U）、'e smaland'（存疑）。
+    'h oland': 'SE-H', 'n halland': 'SE-N', 'i gotland': 'SE-I', 's varmland': 'SE-S',
+    't narke': 'SE-T', 'k blekinge': 'SE-K', 'd sodermanland': 'SE-D', 'e ostergotland': 'SE-E',
+    'x gastrikland': 'SE-X', 'x halsingland': 'SE-X', // Hälsingland 主体在 Gävleborg（X），组合已自证
+    'g smaland': 'SE-G', 'h smaland': 'SE-H', 'f smaland': 'SE-F', // Småland 跨 F/G/H，字母消歧
+    'c uppland': 'SE-C', 'u vastmanland': 'SE-U', 'z jamtland': 'SE-Z', 'w dalarna': 'SE-W',
+    'y medelpad': 'SE-Y', 'y angermanland': 'SE-Y',
+    // 不映射（1:N，占 SE 未映射大头，宁缺勿错）：Uppland（11.8M，跨 Uppsala/Stockholm/Västmanland）、
+    // Västergötland（9.0M）、Småland（7.1M，跨 F/G/H）、Närke 裸名（2.1M）、Ångermanland（1.2M）、
+    // Hälsingland 裸名（0.9M）、Västmanland 裸名（2.6M）、Lappland（跨 AC/BD）、Norrland/Svealand/Götaland。
+  },
+
+  // ── NO：2020 合并前旧县 → 现行 ISO 合并县（数据集已换现行 11 县；旧县整县并入 → 全部 N:1）──
+  // 用户 2026-10-24 拍板「用现行 ISO」：显示名随 ISO（Viken 等在 2024 现实中已拆回，页面口径说明标注）。
+  NO: {
+    // → NO-30 Viken（Østfold + Akershus + Buskerud）
+    ostfold: 'NO-30', akershus: 'NO-30', buskerud: 'NO-30', astfold: 'NO-30', // astfold = mojibake "Ãstfold"（17.5K）
+    // → NO-34 Innlandet（Hedmark + Oppland）
+    hedmark: 'NO-34', oppland: 'NO-34',
+    // → NO-38 Vestfold og Telemark
+    vestfold: 'NO-38', telemark: 'NO-38',
+    // → NO-42 Agder（Vest- + Aust-Agder）
+    'vest agder': 'NO-42', 'aust agder': 'NO-42',
+    // → NO-46 Vestland（Hordaland + Sogn og Fjordane）
+    hordaland: 'NO-46', 'sogn og fjordane': 'NO-46',
+    // → NO-50 Trøndelag（Sør- + Nord-Trøndelag）
+    'sor trondelag': 'NO-50', 'nord trondelag': 'NO-50',
+    'sor trondelag fylke': 'NO-50', 'nord trondelag fylke': 'NO-50', // GBIF "… Fylke" 变体
+    // → NO-54 Troms og Finnmark
+    troms: 'NO-54', 'troms romsa': 'NO-54', finnmark: 'NO-54', finmark: 'NO-54',
+    'finnmark finnmarku': 'NO-54', 'troms og finnmark fylke': 'NO-54', 'finnmark fylke': 'NO-54',
+    // 旧数据集拼写（Finnmark / Finnmárku、Troms / Romsa）
+    // 其它
+    spitsbergen: 'NO-21', // Spitsbergen 是 Svalbard 主岛
+    'nordland fylke': 'NO-18',
+    // 不映射：海域（Norskekysten hav *）、市镇名（Bergen/Trysil/Voss…GBIF 混入一级字段）、
+    // 碎片段（Nord/Sør/Aust）、municipality 白名单另做。
+  },
+
+  // ── FI：芬兰语/瑞典语区名 → 现行 19 区（数据集是英文名；同区异语 1:1，全部可安全归一）──
+  FI: {
+    // 芬兰语 → 数据集英文名（一一对应现行区划）
+    'varsinais suomi': 'FI-19', 'south western finland': 'FI-19', // Southwest Finland 变体
+    'pohjois pohjanmaa': 'FI-14', 'north ostrobothnia': 'FI-14',
+    lappi: 'FI-10', lappland: 'FI-10', laponia: 'FI-10', 'finska lappland': 'FI-10', // Lapland 异语
+    'kanta hame': 'FI-06', // Tavastia Proper（裸 "Häme"/"Tavastia" 跨 4+ 区不收）
+    'pohjois karjala': 'FI-13',
+    'pohjois savo': 'FI-15',
+    pohjanmaa: 'FI-12', osterbotten: 'FI-12', // Ostrobothnia（裸键与含前缀键互不冲突）
+    'etela pohjanmaa': 'FI-03',
+    'paijat hame': 'FI-16', // Päijänne Tavastia
+    'keski suomi': 'FI-08',
+    'etela karjala': 'FI-02',
+    'keski pohjanmaa': 'FI-07',
+    'etela savo': 'FI-04',
+    ahvenanmaa: 'FI-01', // = Åland
+    // 拼写变体/瑞典语旧称
+    uuisimaa: 'FI-18', uusima: 'FI-18', nyland: 'FI-18', // = Uusimaa
+    // 不映射（1:N 旧 lääni，留国家层）：Vaasa、TURKU-PORI、Häme、Kymi、Oulu、Kuopio、Mikkeli、
+    // Southern/Western/Eastern Finland（1997–2010 大区划）、AVI 管理区（Regional State Administrative
+    // Agency for *，另一套 5 大区划）、两字母旧省码（Eh/Es/Ep…语义不定）。
   },
 }
