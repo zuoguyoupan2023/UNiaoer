@@ -30,7 +30,7 @@ import {
   Timer,
   X,
 } from 'lucide-vue-next'
-import type { MediaAsset, MediaType, NameMode, QuizRegime, Tier } from '@/types'
+import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
 import { loadBank, speciesNoteById, loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
 import { submitReport as uploadReport } from '@/core/reportsApi'
@@ -85,35 +85,6 @@ const savedTier = computed<Tier | undefined>(() =>
 function persistTier(v: Tier) {
   if (props.type === 'audio') settings.tierAudio = v
   else settings.tierImage = v
-}
-
-// ---- 087 P0：题型（经典 L1–L5 / 凭名辨鸟 L6）。L6 并入本介绍页（用户 2026-10-24 定），无独立入口 ----
-const kindChoice = computed<'classic' | 'name'>({
-  get: () => (props.type === 'audio' ? (settings.kindAudio ?? 'classic') : (settings.kindImage ?? 'classic')),
-  set: (v) => {
-    if (props.type === 'audio') settings.kindAudio = v
-    else settings.kindImage = v
-  },
-})
-function chooseKind(v: 'classic' | 'name') {
-  kindChoice.value = v
-}
-/** L6 卷别（085 D-2）：'default' = 界面语言决定中/英文名；'sci' = 学名卷。按图/声分别记忆 */
-const nameChoice = computed<'default' | 'sci'>({
-  get: () =>
-    props.type === 'audio' ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode6Image ?? 'default'),
-  set: (v) => {
-    if (props.type === 'audio') settings.nameMode6Audio = v
-    else settings.nameMode6Image = v
-  },
-})
-function chooseNameMode(v: 'default' | 'sci') {
-  nameChoice.value = v
-}
-/** 开轮用的 L6 卷别：default → 按界面语言（D-1）；sci → 学名卷（D-2） */
-function resolvedNameMode(): NameMode {
-  if (nameChoice.value === 'sci') return 'sci'
-  return currentLocale() === 'en' ? 'en' : 'zh'
 }
 
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
@@ -707,16 +678,12 @@ async function begin() {
   started.value = true
   // 环境鸟鸣是全局功能，但测试开始后不播放（选难度阶段不算开始，见 R23）
   ambiencePlayer.stop()
-  // 087 P0：题型分流——L6 走 startName（本地全量池、卷别由介绍页 switch 决定），
-  // 计时/预载/作答交互由嵌入的 QuizPlayName 自己管，经典链路零改动。
-  if (kindChoice.value === 'name') {
-    await quiz.startName(props.type, { nameMode: resolvedNameMode() })
-    if (quiz.error || !quiz.questions.length) return // 错误区接管
-    preloadQuestions(quiz.questions, 0, 2)
-    return
-  }
+  // 087 §4.8：L6（tier=6）也是普通开轮——store 内按档位分支到 buildNameQuestions；
+  // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。
   await quiz.start(props.type, { tier: tier.value })
-  preloadQuestions(quiz.questions, 0, 4) // 当前题 + 后 3 题
+  if (quiz.error || !quiz.questions.length) return // 错误区接管
+  preloadQuestions(quiz.questions, 0, quiz.tier === 6 ? 2 : 4)
+  if (quiz.tier === 6) return // L6 的计时起点由 QuizPlayName 挂载时启动
   beginQuestionTiming()
   updateInterference()
 }
@@ -756,8 +723,8 @@ onMounted(() => {
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
-  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.kind === 'name') {
-    // 087 P0：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
+  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.tier === 6) {
+    // 087 §4.8：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
     // QuizPlayName 消费（计时/预载由它做），经典链路不碰。
     started.value = true
     return
@@ -787,7 +754,7 @@ onUnmounted(() => {
 watch(
   () => quiz.index,
   (i) => {
-    if (quiz.kind === 'name') return // 087 P0：L6 由 QuizPlayName 自管（计时/预载）
+    if (quiz.tier === 6) return // 087 §4.8：L6 由 QuizPlayName 自管（计时/预载）
     clearAutoNext()
     cancelledThisQuestion.value = false
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
@@ -798,7 +765,7 @@ watch(
 watch(
   () => quiz.answered,
   (a) => {
-    if (quiz.kind === 'name') return // 087 P0：L6 的作答反馈/自动切题由 QuizPlayName 管
+    if (quiz.tier === 6) return // 087 §4.8：L6 的作答反馈/自动切题由 QuizPlayName 管
     if (a) {
       stopTimer()
       scheduleAutoNext()
@@ -816,14 +783,14 @@ watch(
 watch(
   () => quiz.finished,
   (f) => {
-    // 087 P0：L6 的完成跳转由 QuizPlayName 自己做（避免双跳）
-    if (f && quiz.kind !== 'name') router.push('/result')
+    // 087 §4.8：L6 的完成跳转由 QuizPlayName 自己做（避免双跳）
+    if (f && quiz.tier !== 6) router.push('/result')
   },
 )
 
 function onKey(e: KeyboardEvent) {
-  // 087 P0：L6 答题中快捷键由 QuizPlayName 处理（它的选项是媒体，键位语义不同）
-  if (quiz.kind === 'name') return
+  // 087 §4.8：L6 答题中快捷键由 QuizPlayName 处理（它的选项是媒体，键位语义不同）
+  if (quiz.current?.tier === 6) return
   // 弹层打开时答题快捷键让位；带修饰键的组合（如 Cmd/Ctrl+A）不是答题意图
   if (showNameModal.value || showReport.value) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -975,7 +942,7 @@ function onTouchEnd(e: TouchEvent) {
     </div>
   </Teleport>
 
-  <!-- 介绍页：第 1 步 题型 → 第 2 步 水平/卷别 → 第 3 步 地区 → 第 4 步 形式（087 P0） -->
+  <!-- 介绍页：第 2 步 水平（L1–L6）→ 第 3 步 地区 → 第 4 步 形式（087 §4.8：L6 是第六档） -->
   <section v-if="!started" class="card intro">
     <div class="intro-head">
       <div class="intro-icon">
@@ -986,25 +953,11 @@ function onTouchEnd(e: TouchEvent) {
     </div>
     <p class="lead muted">{{ intro.lead }}</p>
 
-    <p v-if="quiz.regime === 'revival' && kindChoice === 'classic'" class="wrong-hint">
+    <p v-if="quiz.regime === 'revival'" class="wrong-hint">
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
 
-    <!-- 第 1 步 题型（087 P0）：经典 L1–L5 / 凭名辨鸟 L6 并入本页，无独立入口 -->
-    <p class="step-cap"><i class="step-no">1</i>{{ t('quiz.stepKind') }}</p>
-    <div class="tiers">
-      <button type="button" class="tier" :class="{ on: kindChoice === 'classic' }" @click="chooseKind('classic')">
-        <strong>{{ type === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz') }}</strong>
-        <span>{{ t('quiz.kindClassicHint') }}</span>
-      </button>
-      <button type="button" class="tier" :class="{ on: kindChoice === 'name' }" @click="chooseKind('name')">
-        <strong>{{ type === 'audio' ? t('nav.nameQuizAudio') : t('nav.nameQuizImage') }}</strong>
-        <span>{{ t('quiz.kindNameHint') }}</span>
-      </button>
-    </div>
-
-    <template v-if="kindChoice === 'classic'">
-    <!-- 第 2 步 水平 -->
+    <!-- 第 2 步 水平（087 §4.8：L1–L6，L6 就是第六档，不做独立题型） -->
     <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepLevel') }}</p>
     <div class="tiers">
       <button
@@ -1126,22 +1079,6 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(r.hintKey) }}</span>
       </button>
     </div>
-    </template>
-
-    <!-- L6 凭名辨鸟：卷别（085 D-2）。无水平/地区/赛制步骤——难度由题型本身承载 -->
-    <template v-else>
-      <p class="step-cap"><i class="step-no">2</i>{{ t('quiz6.nameModeCap') }}</p>
-      <div class="tiers">
-        <button type="button" class="tier" :class="{ on: nameChoice === 'default' }" @click="chooseNameMode('default')">
-          <strong>{{ t('quiz6.nameDefault') }}</strong>
-          <span>{{ t('quiz6.nameDefaultHint') }}</span>
-        </button>
-        <button type="button" class="tier" :class="{ on: nameChoice === 'sci' }" @click="chooseNameMode('sci')">
-          <strong>{{ t('quiz6.nameSci') }}</strong>
-          <span>{{ t('quiz6.nameSciHint') }}</span>
-        </button>
-      </div>
-    </template>
 
     <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
@@ -1163,8 +1100,8 @@ function onTouchEnd(e: TouchEvent) {
     </p>
   </section>
 
-  <!-- 087 P0：L6 答题区——嵌入组件自管计时/预载/作答/自动切题/退出 -->
-  <QuizPlayName v-else-if="quiz.kind === 'name'" :type="type" />
+  <!-- 087 §4.8：L6 答题区——嵌入组件自管计时/预载/作答/自动切题/退出 -->
+  <QuizPlayName v-else-if="quiz.tier === 6" :type="type" />
 
   <!-- 答题 -->
   <template v-else-if="quiz.current">

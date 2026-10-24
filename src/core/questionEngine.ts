@@ -359,11 +359,16 @@ export interface BuildNameOptions {
   type: MediaType
   count?: number
   /**
-   * 卷别（docs/085 D-1/D-2）：缺省 'zh'（调用方按界面语言决定传 zh/en）；L6 介绍页的
-   * switch 可切到 'sci'（学名卷，085 D-2 转正）。判分体系锁定（D-8）：题干与全部选项
-   * 都来自同一卷别的名字体系，不做跨语言回退。
+   * 卷别（docs/085 D-1/D-2）：缺省 'zh'（调用方按界面语言决定传 zh/en）；学名卷
+   * （D-2 的 switch）暂未在 UI 露出（087 §4.8 回退为纯难度档后挂起），引擎能力保留。
+   * 判分体系锁定（D-8）：题干与全部选项都来自同一卷别的名字体系，不做跨语言回退。
    */
   nameMode?: NameMode
+  /**
+   * 赛制选题池（013 §4；087 §4.8：L6 与 L1–L5 同为难度档，介绍页的赛制选择对它生效）——
+   * 答案物种只从这个集合取；干扰项仍取全池（与经典卷同语义）。
+   */
+  speciesPool?: ReadonlySet<string>
   /** 072-a 观测：组题计数回调（与经典卷同语义） */
   onStats?: (s: BuildStats) => void
 }
@@ -397,21 +402,32 @@ export async function buildNameQuestions(
   bank: BankSpecies[],
   opts: BuildNameOptions,
 ): Promise<Question[]> {
-  const { type, count = 10, nameMode = 'zh', onStats } = opts
+  const { type, count = 10, nameMode = 'zh', speciesPool, onStats } = opts
   const cfg = L6_TIERS[type]
   const pool = filterByNameMode(mediaPool(bank, type), nameMode)
-  const want = pool.length >= cfg.optionCount ? Math.min(count, pool.length) : 0
-  onStats?.({ candidates: bank.length, unique: pool.length, enriched: 0, want })
+  // 013 §4 语义：**答案只出赛制池，干扰项仍取全池**（与经典 buildQuestions 同构）。
+  // 门槛：池子（答案∪全量）要能拼出至少一个整题（optionCount 个选项），答案池非空即可
+  // ——复活赛等小池也能出题（答案 1 种 + 干扰项从全池补，072-a 短轮说明兜底）。
+  const scoped = speciesPool ? pool.filter((s) => speciesPool.has(s.id)) : pool
+  const buildable = scoped.length >= 1 && pool.length >= cfg.optionCount
+  const want = buildable ? Math.min(count, scoped.length) : 0
+  onStats?.({ candidates: bank.length, unique: scoped.length, enriched: 0, want })
 
-  // 轮内按物种 id 去重（meta 名单理论上唯一，这里与经典卷同则保险）
-  const seenIds = new Set<string>()
-  const ordered = shuffle(pool.filter((s) => (seenIds.has(s.id) ? false : (seenIds.add(s.id), true))))
+  // 轮内按物种 id 去重（meta 名单理论上唯一，这里与经典卷同则保险）；
+  // 两个列表各自独立去重——干扰项池含答案物种是预期（见下 others 过滤）
+  const dedup = (list: BankSpecies[]) => {
+    const seen = new Set<string>()
+    return list.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)))
+  }
+  const answerList = shuffle(dedup(scoped))
+  /** 干扰项候选池 = 全量（不受赛制池收窄；经典卷 dPool 同语义） */
+  const distractorList = shuffle(dedup(pool))
   const questions: Question[] = []
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
   /** 已用作答案的物种（轮内去重：同一轮每只鸟最多当一次答案，与经典卷同则） */
   const usedAnswers = new Set<string>()
 
-  for (const answerSp of ordered) {
+  for (const answerSp of answerList) {
     if (questions.length >= want) break
     if (usedAnswers.has(answerSp.id)) continue
     // ensureMedia 可能返回带素材的新对象（分片懒加载），必须用它而不是原 species
@@ -420,7 +436,7 @@ export async function buildNameQuestions(
     if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 跳过该候选
 
     // 干扰项候选：同科优先（same），轮内已当过答案的种排后面但不排除（经典卷同语义）
-    const others = ordered.filter((s) => s.id !== answerSp.id)
+    const others = distractorList.filter((s) => s.id !== answerSp.id)
     const same = shuffle(others.filter((s) => s.family && s.family === answerSp.family))
     const diff = shuffle(others.filter((s) => !(s.family && s.family === answerSp.family)))
     const candidates = [...same, ...diff]
@@ -467,7 +483,7 @@ export async function buildNameQuestions(
       nameMode,
       timeLimitSec: cfg.timeLimitSec,
     })
-    onStats?.({ candidates: bank.length, unique: pool.length, enriched: questions.length, want })
+    onStats?.({ candidates: bank.length, unique: scoped.length, enriched: questions.length, want })
   }
   return questions
 }

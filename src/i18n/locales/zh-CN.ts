@@ -17,9 +17,6 @@ export const messages = {
     skipToMain: '跳到主内容',
     imageQuiz: '看图认鸟',
     audioQuiz: '听音认鸟',
-    // L6 半鸟人（docs/081 §7）：名字 → 图/音
-    nameQuizImage: '凭名辨鸟 · 看图',
-    nameQuizAudio: '凭名辨鸟 · 听音',
     // 072-b：懒加载 chunk 失败横幅（自动重试一次仍失败才出现）
     chunkError: '页面资源加载失败（网络不稳定），可以重试或刷新',
     chunkRetry: '重试',
@@ -60,17 +57,8 @@ export const messages = {
     imageRound: '鸟图版',
     audioRound: '鸟声版',
   },
-  // L6 半鸟人（docs/081 §7 / docs/085 D-1~D-3）：名字 → 图/音
+  // L6 半鸟人（docs/081 §7）：名字 → 图/音；答题区文案（介绍页无专属步骤，L6 是第六档）
   quiz6: {
-    imageTitle: '半鸟人 · 看图版',
-    imageLead: '给出一个鸟名，从 6 张照片里选出它。选项多为同科近缘，考验你对名字的熟悉度。每题限时 10 秒。',
-    audioTitle: '半鸟人 · 听音版',
-    audioLead: '给出一个鸟名，从 4 段录音里选出它的鸣声。听音辨认更难，每题限时 25 秒。',
-    nameModeCap: '卷别',
-    nameDefault: '中文名卷',
-    nameDefaultHint: '鸟名用中文名（跟随界面语言）',
-    nameSci: '学名卷',
-    nameSciHint: '题干与选项全部使用拉丁学名',
     stemCap: '与这个名字相配的是——',
     mode: { zh: '中文卷', en: '英文卷', sci: '学名卷' },
     audioHint: '点按播放录音 · 再点同一项作答',
@@ -109,10 +97,7 @@ export const messages = {
     wizardStart: '开始',
     wizardSkip: '直接开始',
     stepLevel: '水平',
-    // 087 P0：题型步骤（L6 并入本介绍页）与地区提问句
-    stepKind: '题型',
-    kindClassicHint: '看图选名 / 听音选名 · 共五档难度',
-    kindNameHint: '给鸟名选图/选音 · 半鸟人题型',
+    // 087 P0-4：地区步骤的提问句
     regionAsk: '你准备挑战识别哪个区域的鸟？',
     adaptiveUp: '已按最近 {n} 轮表现（正确率 {acc}%）把难度升到「{tier}」',
     adaptiveDown: '最近 {n} 轮正确率 {acc}%，已把难度降到「{tier}」',
@@ -1027,7 +1012,7 @@ export const messages = {
     },
     l6: {
       label: 'L6 半鸟人',
-      desc: '名字 → 图/音 · 同科近缘 · 看图 10s / 听音 25s',
+      desc: '看鸟名选图/选音 · 同科近缘 · 图 10s / 音 25s',
     },
   },
   badges: {

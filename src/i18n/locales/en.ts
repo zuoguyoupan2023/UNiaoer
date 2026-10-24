@@ -22,9 +22,6 @@ const en: typeof zhMessages = {
     skipToMain: 'Skip to main content',
     imageQuiz: 'Photo quiz',
     audioQuiz: 'Sound quiz',
-    // L6 Half-Birder (docs/081 §7): name → photo/sound
-    nameQuizImage: 'Name-to-bird · Photos',
-    nameQuizAudio: 'Name-to-bird · Sounds',
     // 072-b: lazy chunk failure banner (shown only after the single automatic retry fails)
     chunkError: 'Failed to load page resources (unstable network). Retry or reload.',
     chunkRetry: 'Retry',
@@ -66,17 +63,8 @@ const en: typeof zhMessages = {
     imageRound: 'Photo round',
     audioRound: 'Audio round',
   },
-  // L6 Half-Birder (docs/081 §7 / docs/085 D-1~D-3): name → photo/sound
+  // L6 Half-Birder (docs/081 §7): name → photo/sound; play-area copy (L6 is tier 6, no intro of its own)
   quiz6: {
-    imageTitle: 'Half-Birder · Photos',
-    imageLead: 'A bird name is given — pick the right one out of 6 photos. Options are mostly close relatives. 10 seconds per question.',
-    audioTitle: 'Half-Birder · Sounds',
-    audioLead: 'A bird name is given — pick its song out of 4 recordings. Harder than photos, 25 seconds per question.',
-    nameModeCap: 'Name set',
-    nameDefault: 'Common names',
-    nameDefaultHint: 'Names follow the interface language',
-    nameSci: 'Scientific names',
-    nameSciHint: 'Stem and options all use Latin names',
     stemCap: 'Which one matches this name?',
     mode: { zh: 'Chinese', en: 'English', sci: 'Scientific' },
     audioHint: 'Tap to play · tap the same option again to answer',
@@ -115,10 +103,7 @@ const en: typeof zhMessages = {
     wizardStart: 'Start',
     wizardSkip: 'Skip',
     stepLevel: 'Level',
-    // 087 P0: kind step (L6 merged into this intro) and the region prompt line
-    stepKind: 'Quiz type',
-    kindClassicHint: 'See a photo, pick the name / hear a song, pick it · 5 levels',
-    kindNameHint: 'Given a name, pick the photo/song · Half-Birder',
+    // 087 P0-4: the region prompt line
     regionAsk: 'Which region’s birds do you want to challenge?',
     adaptiveUp: 'Raised to “{tier}” based on your last {n} rounds ({acc}% correct)',
     adaptiveDown: 'Lowered to “{tier}” — {acc}% correct across your last {n} rounds',
@@ -1039,7 +1024,7 @@ const en: typeof zhMessages = {
     },
     l6: {
       label: 'L6 Half-Birder',
-      desc: 'name → photo/sound · close relatives · photos 10s / sounds 25s',
+      desc: 'name → photo/sound · close relatives · 10s / 25s',
     },
   },
   badges: {

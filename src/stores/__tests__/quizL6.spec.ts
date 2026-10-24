@@ -60,18 +60,21 @@ vi.mock('@/core/historyDb', async (importOriginal) => ({
 
 import { useQuizStore } from '../quiz'
 
-describe('quiz store · L6 半鸟人（startName）', () => {
+/**
+ * L6 = 难度第六档（087 §4.8，用户定）：与 L1–L5 走同一个 start()，
+ * 仅 tier=6 时引擎分支到 buildNameQuestions（名字 → 图/音）。
+ */
+describe('quiz store · L6 第六档（start tier=6）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     listRoundsMock.mockResolvedValue([])
     wrongBookMock.mockResolvedValue([])
   })
 
-  it('startName：tier=6、kind=name、题干是名字、选项带素材', async () => {
+  it('start tier=6：题干是名字、选项带素材、限时/选项数按题型（图 6 选项 10s）', async () => {
     const quiz = useQuizStore()
-    await quiz.startName('image', { nameMode: 'zh' })
+    await quiz.start('image', { tier: 6 })
     expect(quiz.error).toBe('')
-    expect(quiz.kind).toBe('name')
     expect(quiz.tier).toBe(6)
     expect(quiz.nameMode).toBe('zh')
     expect(quiz.total).toBe(10)
@@ -80,24 +83,32 @@ describe('quiz store · L6 半鸟人（startName）', () => {
       expect(q.answerMode).toBe('choice')
       expect(q.timeLimitSec).toBe(10)
       expect(q.optionsMedia?.length).toBe(q.options.length)
+      expect(q.options.length).toBe(6)
       expect(q.options).toContain(q.answer)
     }
   })
 
-  it('学名卷 nameMode 落进题目（D-2/D-8）', async () => {
+  it('听音版 L6：4 选项、25s', async () => {
     const quiz = useQuizStore()
-    await quiz.startName('image', { nameMode: 'sci' })
-    expect(quiz.nameMode).toBe('sci')
+    await quiz.start('audio', { tier: 6 })
+    expect(quiz.error).toBe('')
     for (const q of quiz.questions) {
-      expect(q.nameMode).toBe('sci')
-      for (const name of q.options) expect(name).toMatch(/ sci/)
+      expect(q.timeLimitSec).toBe(25)
+      expect(q.options.length).toBe(4)
+      for (const m of q.optionsMedia ?? []) expect(m.type).toBe('audio')
     }
   })
 
-  it('nextRound 保持 kind=name 与 session 累计（再来一轮沿用 L6）', async () => {
+  it('nameMode 跟随界面语言（D-1；学名卷 switch 已挂起，引擎仍支持 nameMode 入参）', async () => {
     const quiz = useQuizStore()
-    await quiz.startName('image', { nameMode: 'zh' })
-    // 答满本轮全部答对
+    await quiz.start('image', { tier: 6 })
+    expect(quiz.nameMode).toBe('zh') // 测试环境 locale 为 zh
+    for (const q of quiz.questions) expect(q.nameMode).toBe('zh')
+  })
+
+  it('nextRound 保持 tier=6（再来一轮沿用第六档）', async () => {
+    const quiz = useQuizStore()
+    await quiz.start('image', { tier: 6 })
     for (let i = 0; i < quiz.total; i++) {
       quiz.index = i
       quiz.answer(quiz.questions[i]!.answer)
@@ -105,26 +116,35 @@ describe('quiz store · L6 半鸟人（startName）', () => {
     expect(quiz.correctCount).toBe(quiz.total)
     const prevRound = quiz.sessionRound
     await quiz.nextRound()
-    expect(quiz.kind).toBe('name')
     expect(quiz.tier).toBe(6)
     expect(quiz.sessionRound).toBe(prevRound + 1)
     expect(quiz.pendingContinue).toBe(true)
     expect(quiz.total).toBe(10)
   })
 
-  it('classic 的 start 不受 L6 影响（回归保护）', async () => {
+  it('classic 档位回归保护：tier=2 仍是媒体作题干（无 optionsMedia）', async () => {
     const quiz = useQuizStore()
-    await quiz.startName('image', { nameMode: 'zh' })
     await quiz.start('image', { tier: 2 })
-    expect(quiz.kind).toBe('classic')
     expect(quiz.tier).toBe(2)
+    expect(quiz.total).toBeGreaterThan(0)
     for (const q of quiz.questions) expect(q.optionsMedia).toBeUndefined()
   })
 
-  it('reset 归位 kind=classic', async () => {
+  it('赛制池对 L6 生效：revival 只出错题本物种', async () => {
     const quiz = useQuizStore()
-    await quiz.startName('audio', { nameMode: 'en' })
-    quiz.reset()
-    expect(quiz.kind).toBe('classic')
+    // 错题本里有 s1 → 复活赛池 = {s1}（revival 池来自 wrong store，非轮次史）
+    wrongBookMock.mockResolvedValue([
+      {
+        speciesId: 's1', answer: '鸟1', sci: 's1 sci', family: '科1', type: 'image',
+        mediaUrl: 'https://img.test/s1.jpg', source: 'iNaturalist', author: 'tester',
+        license: 'CC-BY', wrongCount: 1, lastChosen: null, lastAt: Date.now(),
+      },
+    ])
+    await quiz.start('image', { tier: 6, regime: 'revival' })
+    expect(quiz.error).toBe('')
+    for (const q of quiz.questions) {
+      const answerId = q.optionIds[q.options.indexOf(q.answer)]
+      expect(answerId).toBe('s1')
+    }
   })
 })

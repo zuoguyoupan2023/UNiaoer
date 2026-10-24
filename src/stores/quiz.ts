@@ -64,11 +64,6 @@ export type QuizErrorCode =
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
   const tier = ref<Tier>(2)
-  /**
-   * 题型链路（docs/081 §7）：'classic' = L1–L5（媒体作题干）；'name' = L6 半鸟人
-   * （名字作题干，选项是图/音）。决定 start 的走线与「再来一轮」的重建路径。
-   */
-  const kind = ref<'classic' | 'name'>('classic')
   /** 赛制（013 §4）：介绍页选择，决定选题池；再来一轮沿用同赛制 */
   const regime = ref<QuizRegime>('standard')
   const roundId = ref<string>('')
@@ -220,7 +215,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     opts: { count?: number; tier?: Tier; keepSession?: boolean; regime?: QuizRegime } = {},
   ) {
     mode.value = type
-    kind.value = 'classic'
     if (opts.tier) tier.value = opts.tier
     if (!opts.keepSession) {
       sessionRound.value = 1
@@ -266,7 +260,9 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       }
       // 新手轮**跳过在线池**：服务端 30 条随机候选里新手鸟可能只有个位数，会误触发"不足一轮"回退。
       // 本地全量池（核心 1299 + 全球池）才能让新手池完整参与筛选（也顺带省一次 D1 读）。
-      const online = opts.keepSession || starterOnly
+      // 087 §4.8：L6 也跳过在线池——服务端干扰项无素材当不了选项，且 tier=6 不在 Worker 白名单。
+      const isL6 = tier.value === 6
+      const online = opts.keepSession || starterOnly || isL6
         ? null
         : await fetchOnlinePool(type, tier.value, settings.region)
 
@@ -318,21 +314,34 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         const rm = await regionTierMap(settingsForRegion.region).catch(() => null)
         regionTiers = rm?.tiers ?? null
       }
-      const qs = await buildQuestions(speciesForBuild, {
-        type,
-        count,
-        tier: tier.value,
-        speciesPool,
-        locale: currentLocale(),
-        // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷；L6 学名卷另设）
-        nameMode: nameMode.value,
-        distractorPool,
-        regionTiers,
-        starterOnly,
-        onStats: (s) => {
-          buildStats.v = s
-        },
-      })
+      // 087 §4.8（用户定：L6 就是难度第六档）：同一介绍页/赛制/池子语义，仅玩法换成
+      // 「名字 → 图/音」（buildNameQuestions，选项数/限时按题型取 L6_TIERS）。
+      // 赛制池对 L6 照常生效（speciesPool）；regionTiers 只在 L1–L3（上面 tier<=3 已限定）。
+      const qs = isL6
+        ? await buildNameQuestions(speciesForBuild, {
+            type,
+            count,
+            nameMode: nameMode.value,
+            speciesPool,
+            onStats: (s) => {
+              buildStats.v = s
+            },
+          })
+        : await buildQuestions(speciesForBuild, {
+            type,
+            count,
+            tier: tier.value,
+            speciesPool,
+            locale: currentLocale(),
+            // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷）
+            nameMode: nameMode.value,
+            distractorPool,
+            regionTiers,
+            starterOnly,
+            onStats: (s) => {
+              buildStats.v = s
+            },
+          })
       // 072-a 观测：把本轮链路与池子大小留痕（不改任何出题行为）。
       // 短轮用 warn（默认就能在控制台看到）；诊断模式下每轮都打一行 info。
       const diag: QuizBuildDiag = {
@@ -394,86 +403,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
   }
 
-  /**
-   * L6 半鸟人开轮（docs/081 §7 / docs/085 §5）：名字 → 图/音选择题。
-   * 与经典 start 的差异：无赛制池（全库随机）、无在线候选（服务端干扰项无素材，
-   * 当不了 L6 的选项）、无地区档位/新手池（L6 无档位选择，难度由题型本身承载）；
-   * 卷别由介绍页 switch 决定（085 D-2），落进每题与轮次记录供统计分卷（D-3）。
-   */
-  async function startName(
-    type: MediaType,
-    opts: { count?: number; nameMode?: NameMode; keepSession?: boolean } = {},
-  ) {
-    mode.value = type
-    kind.value = 'name'
-    tier.value = 6
-    regime.value = 'random'
-    if (!opts.keepSession) {
-      sessionRound.value = 1
-      sessionCorrect.value = 0
-      sessionTotal.value = 0
-    }
-    nameMode.value = opts.nameMode ?? (currentLocale() === 'en' ? 'en' : 'zh')
-    loading.value = true
-    error.value = ''
-    try {
-      await loadBank()
-      const count = opts.count ?? 10
-      const settings = useSettingsStore()
-      const species = (await poolData(type, tier.value)).species
-      const buildStats: { v: BuildStats | null } = { v: null }
-      const qs = await buildNameQuestions(species, {
-        type,
-        count,
-        nameMode: nameMode.value,
-        onStats: (s) => {
-          buildStats.v = s
-        },
-      })
-      // 072-a 同款观测（L6 固定走本地全量池，path 恒为 'local'）
-      lastBuild.value = {
-        type,
-        tier: 6,
-        region: settings.region,
-        regime: 'random',
-        nameMode: nameMode.value,
-        path: 'local',
-        onlineTotal: null,
-        onlineHits: null,
-        regimePool: null,
-        onlineFrom: null,
-        candidates: buildStats.v?.candidates ?? species.length,
-        afterFilter: buildStats.v?.unique ?? 0,
-        dropped: buildStats.v ? Math.max(0, buildStats.v.want - buildStats.v.enriched) : 0,
-        want: count,
-        built: qs.length,
-        starterOnly: false,
-      }
-      if (qs.length < count) {
-        console.warn('[quiz] L6 short round:', JSON.stringify(lastBuild.value))
-      }
-      if (!qs.length) {
-        error.value = type === 'image' ? 'noImageMedia' : 'noAudioMedia'
-        questions.value = []
-        chosen.value = []
-        index.value = 0
-        return
-      }
-      questions.value = qs
-      chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
-      index.value = 0
-      roundId.value = newRoundId()
-      startedAt.value = Date.now()
-    } catch (e) {
-      error.value = e instanceof BankError ? e.code : 'unknown'
-      questions.value = []
-      chosen.value = []
-      index.value = 0
-    } finally {
-      loading.value = false
-    }
-  }
-
   /** 超时：标记为未作答但已结束 */
   function timeUp() {
     if (answered.value || !current.value) return
@@ -490,11 +419,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     sessionTotal.value += total.value
     sessionRound.value += 1
     pendingContinue.value = true
-    // L6 无档位/赛制/自适应概念：直接按同卷别重建一轮（题量按标准重新申请，同 072-a-fix-2）
-    if (kind.value === 'name') {
-      await startName(mode.value, { keepSession: true, nameMode: nameMode.value })
-      return
-    }
     if (useSettingsStore().adaptiveTier) {
       const s = await tierSuggestion(mode.value, tier.value)
       tier.value = s.tier
@@ -512,7 +436,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   function startWrongBook(type: MediaType) {
     regime.value = 'revival'
     mode.value = type
-    kind.value = 'classic'
     tier.value = 2
     sessionRound.value = 1
     sessionCorrect.value = 0
@@ -542,7 +465,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     sessionTotal.value = 0
     pendingContinue.value = false
     regime.value = 'standard'
-    kind.value = 'classic'
     source.value = 'normal'
     escapedQuit.value = false
   }
@@ -550,7 +472,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   return {
     mode,
     tier,
-    kind,
     nameMode,
     roundId,
     startedAt,
@@ -577,7 +498,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     escapedQuit,
     overallAccuracy,
     start,
-    startName,
     regimeCounts,
     tierSuggestion,
     answer,

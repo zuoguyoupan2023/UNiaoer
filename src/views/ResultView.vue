@@ -63,13 +63,7 @@ const quiz = useQuizStore()
 const { t } = useI18n()
 
 const hasResult = computed(() => quiz.total > 0)
-/** L6 半鸟人显示「凭名辨鸟」；经典卷显示看图/听音 */
-const modeLabel = computed(() => {
-  if (quiz.kind === 'name') {
-    return quiz.mode === 'audio' ? t('nav.nameQuizAudio') : t('nav.nameQuizImage')
-  }
-  return quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')
-})
+const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
 /** 科名「拉丁名+本地名」组合（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())

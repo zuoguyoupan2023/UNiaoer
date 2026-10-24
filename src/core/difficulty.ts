@@ -79,10 +79,10 @@ export const TIERS: Record<Tier, TierConfig> = {
     mediaPoolSize: 5,
   },
   /**
-   * 题型 L6 半鸟人（docs/081 §7；README「计划中的题型」）。**不出现在 TIER_LIST**——
-   * 它是独立题型而非经典卷的第 6 档，介绍页/出题走 L6_TIERS（按题型区分选项数与限时）。
-   * 本条目只用于：状态栏/结果页的档位标签（TIERS[q.tier].labelKey）与类型完备性；
-   * 其余字段是"代表值"，经典链路永远不会用它出题。
+   * L6 半鸟人（docs/081 §7；README「计划中的题型」；2026-10-24 用户定：**就是难度第六档**，
+   * 与 L1–L5 同列，不做独立题型）。玩法是「名字 → 图/音」（引擎走 buildNameQuestions，
+   * 选项数/限时按题型取 L6_TIERS），本条目供档位按钮/状态栏/结果页标签与类型完备；
+   * 其余字段是"代表值"。
    */
   6: {
     tier: 6,
@@ -96,7 +96,15 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
 }
 
-export const TIER_LIST: TierConfig[] = [TIERS[1], TIERS[2], TIERS[3], TIERS[4], TIERS[5]]
+/** 介绍页难度按钮（L6 是第六档，与 L1–L5 同列；087 §4.8 用户定） */
+export const TIER_LIST: TierConfig[] = [
+  TIERS[1],
+  TIERS[2],
+  TIERS[3],
+  TIERS[4],
+  TIERS[5],
+  TIERS[6],
+]
 
 /**
  * L6 半鸟人的分题型配置（docs/081 §7 + README 草案，2026-10-24）：

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * L6 半鸟人答题区（docs/081 §7 / docs/085 / 087 P0）——**纯答题组件**。
+ * L6 半鸟人答题区（docs/081 §7 / 085 / 087 §4.8）——**纯答题组件**。
  *
- * 087 P0（2026-10-24 用户定）：L6 并入 看图识鸟/听音识鸟 的介绍页（第 1 步「题型」），
- * 不再有独立入口。本组件只负责答题态——计时/选项/反馈/自动切题/退出/署名——
- * 由 QuizPlay 在 `quiz.kind === 'name'` 时挂载；介绍页（题型 + 卷别 switch）与
- * 开轮（quiz.startName）都在 QuizPlay。「再来一轮」经 ResultView → nextRound
- * 重建题目后回到同一页面，本组件挂载时消费 pendingContinue。
+ * 087 §4.8（用户定）：L6 就是难度第六档，与 L1–L5 同一个介绍页/开轮链路（quiz.start，
+ * tier=6 时引擎分支到 buildNameQuestions）。本组件只负责答题态——计时/选项/反馈/自动切题/退出/署名——
+ * 由 QuizPlay 在 `quiz.tier === 6` 时挂载；介绍页与开轮（quiz.start，第六档）都在
+ * QuizPlay。「再来一轮」经 ResultView → nextRound 重建题目后回到同一页面，
+ * 本组件挂载时消费 pendingContinue。
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -297,7 +297,7 @@ onMounted(() => {
     .then(() => (bankReady.value = true))
     .catch(() => {})
   // 「再来一轮」续轮（ResultView → nextRound 重建题目后回到本页）
-  if (quiz.pendingContinue && quiz.kind === 'name') {
+  if (quiz.pendingContinue) {
     quiz.pendingContinue = false
     ambiencePlayer.stop()
   }
