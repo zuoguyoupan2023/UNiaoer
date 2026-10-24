@@ -54,8 +54,6 @@ export const messages = {
     bankStatsFull: '图片 {image} · 音频 {audio}（共 {total} 种）',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
-    modeNameSub: '半鸟人 L6：从 6 张照片里选出鸟名对应的那只',
-    modeNameAudioSub: '半鸟人 L6：从 4 段录音里选出鸟名对应的那首',
     regionSub: '按国家/地区浏览鸟种',
   },
   mode: {
@@ -111,6 +109,11 @@ export const messages = {
     wizardStart: '开始',
     wizardSkip: '直接开始',
     stepLevel: '水平',
+    // 087 P0：题型步骤（L6 并入本介绍页）与地区提问句
+    stepKind: '题型',
+    kindClassicHint: '看图选名 / 听音选名 · 共五档难度',
+    kindNameHint: '给鸟名选图/选音 · 半鸟人题型',
+    regionAsk: '你准备挑战识别哪个区域的鸟？',
     adaptiveUp: '已按最近 {n} 轮表现（正确率 {acc}%）把难度升到「{tier}」',
     adaptiveDown: '最近 {n} 轮正确率 {acc}%，已把难度降到「{tier}」',
     stepRegion: '地区',

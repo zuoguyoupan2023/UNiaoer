@@ -60,8 +60,6 @@ const en: typeof zhMessages = {
     bankStatsFull: '{image} photos · {audio} recordings ({total} species)',
     modeImageSub: 'Openly licensed photos from iNaturalist',
     modeAudioSub: 'Real bird recordings from Xeno-canto',
-    modeNameSub: 'L6 Half-Birder: pick the photo matching the bird name',
-    modeNameAudioSub: 'L6 Half-Birder: pick the recording matching the bird name',
     regionSub: 'Browse birds by country/region',
   },
   mode: {
@@ -117,6 +115,11 @@ const en: typeof zhMessages = {
     wizardStart: 'Start',
     wizardSkip: 'Skip',
     stepLevel: 'Level',
+    // 087 P0: kind step (L6 merged into this intro) and the region prompt line
+    stepKind: 'Quiz type',
+    kindClassicHint: 'See a photo, pick the name / hear a song, pick it · 5 levels',
+    kindNameHint: 'Given a name, pick the photo/song · Half-Birder',
+    regionAsk: 'Which region’s birds do you want to challenge?',
     adaptiveUp: 'Raised to “{tier}” based on your last {n} rounds ({acc}% correct)',
     adaptiveDown: 'Lowered to “{tier}” — {acc}% correct across your last {n} rounds',
     stepRegion: 'Region',

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 /**
- * L6 半鸟人（docs/081 §7 / docs/085 D-1~D-3）：名字作题干、图/音作选项的选择题。
+ * L6 半鸟人答题区（docs/081 §7 / docs/085 / 087 P0）——**纯答题组件**。
  *
- * 与经典 QuizPlay 的关系：交互骨架（计时/自动切题/反馈/报错/退出/快捷键/左滑）同款复刻，
- * 但独立成组件——L6 无档位/赛制/地区/新手池/自适应，选项区换成媒体网格，
- * 经典链路（L1–L5）一行不动（084 §3.2：nameMode 过滤顺序等 D1 决策都承载在原文件里）。
- *
- * 卷别（085 D-2）：介绍页 switch「默认卷 ↔ 学名卷」；默认卷 = 界面语言决定中/英文名；
- * 学名卷的题干与全部选项都是学名（D-8 体系锁定）。落库/上报带 nameMode（D-3）。
+ * 087 P0（2026-10-24 用户定）：L6 并入 看图识鸟/听音识鸟 的介绍页（第 1 步「题型」），
+ * 不再有独立入口。本组件只负责答题态——计时/选项/反馈/自动切题/退出/署名——
+ * 由 QuizPlay 在 `quiz.kind === 'name'` 时挂载；介绍页（题型 + 卷别 switch）与
+ * 开轮（quiz.startName）都在 QuizPlay。「再来一轮」经 ResultView → nextRound
+ * 重建题目后回到同一页面，本组件挂载时消费 pendingContinue。
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -15,7 +14,6 @@ import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
-import { setProfileNickname } from '@/core/historyDb'
 import { ambiencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
@@ -32,12 +30,10 @@ import { track } from '@/core/metrics'
 import {
   AlarmClock,
   ArrowRight,
-  AudioLines,
   CircleCheck,
   CircleX,
   Flag,
   Hourglass,
-  Image as ImageIcon,
   Keyboard,
   LogOut,
   Play,
@@ -45,7 +41,7 @@ import {
   Timer,
   X,
 } from 'lucide-vue-next'
-import type { MediaType, NameMode } from '@/types'
+import type { MediaType } from '@/types'
 import AttributionLine from './AttributionLine.vue'
 import OptionMediaList from './OptionMediaList.vue'
 import ProgressBar from './ProgressBar.vue'
@@ -55,32 +51,6 @@ const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
-
-// ---- 第 1 步：昵称浮窗（与经典卷同款；首次建身份时告知匿名统计） ----
-const showNameModal = ref(false)
-const { panelRef: namePanelRef } = useDialogA11y(() => showNameModal.value)
-const wizardDraft = ref('')
-const wizardStartEnabled = computed(() => {
-  const v = wizardDraft.value.trim()
-  return v.length >= 2 && v.length <= 12
-})
-
-async function wizardSaveNickname() {
-  if (!wizardStartEnabled.value) return
-  const v = wizardDraft.value.trim()
-  settings.nickname = v
-  try {
-    await setProfileNickname(v)
-  } catch {
-    /* IndexedDB 不可用时仍保留设备级昵称 */
-  }
-  showNameModal.value = false
-}
-
-function wizardSkip() {
-  settings.nicknameGuideDismissed = true
-  showNameModal.value = false
-}
 
 // ---- G1 报错按钮（与经典卷同款） ----
 const REPORT_REASONS: { id: ReportReason; labelKey: string }[] = [
@@ -139,33 +109,6 @@ async function submitReport() {
 
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
-
-// ---- 介绍页 ----
-const started = ref(false)
-/** 卷别（085 D-2）：'default' = 界面语言决定中/英文名；'sci' = 学名卷。按图/声分别记忆 */
-const nameChoice = ref<'default' | 'sci'>(
-  props.type === 'audio' ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode6Image ?? 'default'),
-)
-function chooseNameMode(v: 'default' | 'sci') {
-  nameChoice.value = v
-  if (props.type === 'audio') settings.nameMode6Audio = v
-  else settings.nameMode6Image = v
-}
-/** 开轮用的卷别：default → 按界面语言（D-1）；sci → 学名卷（D-2） */
-function resolvedNameMode(): NameMode {
-  if (nameChoice.value === 'sci') return 'sci'
-  return currentLocale() === 'en' ? 'en' : 'zh'
-}
-/** 卷别标签（状态栏/反馈用） */
-const nameModeTag = computed<NameMode | null>(() =>
-  started.value ? quiz.nameMode : null,
-)
-
-const intro = computed(() =>
-  props.type === 'audio'
-    ? { title: t('quiz6.audioTitle'), lead: t('quiz6.audioLead') }
-    : { title: t('quiz6.imageTitle'), lead: t('quiz6.imageLead') },
-)
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
@@ -344,15 +287,6 @@ function quitRound() {
   router.push('/result')
 }
 
-async function begin() {
-  started.value = true
-  // 环境鸟鸣是全局功能，但测试开始后不播放（与经典卷同则）
-  ambiencePlayer.stop()
-  await quiz.startName(props.type, { nameMode: resolvedNameMode() })
-  preloadQuestions(quiz.questions, 0, 2) // 当前题 + 下一题（L6 每题 6/4 个素材，少预几题）
-  startTimer()
-}
-
 // ---- L6 选项试听（听音版）：作答后停播 ----
 const optionListRef = ref<InstanceType<typeof OptionMediaList> | null>(null)
 
@@ -362,23 +296,13 @@ onMounted(() => {
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
-  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.kind === 'name') {
+  // 「再来一轮」续轮（ResultView → nextRound 重建题目后回到本页）
+  if (quiz.pendingContinue && quiz.kind === 'name') {
     quiz.pendingContinue = false
-    started.value = true
     ambiencePlayer.stop()
-    preloadQuestions(quiz.questions, 0, 2)
-    startTimer()
-  } else if (quiz.kind === 'name' && quiz.questions.length > 0 && !quiz.finished) {
-    // 同题型再进入（如刷新后回到答题页）：直接续答当前进度
-    started.value = true
-    startTimer()
-  } else {
-    // 清掉上一轮残留（结果页/切模式后再进入时），让介绍页回到"非答题中"状态
-    quiz.questions = []
-    quiz.chosen = []
-    quiz.index = 0
-    if (!settings.nickname && !settings.nicknameGuideDismissed) showNameModal.value = true
   }
+  preloadQuestions(quiz.questions, quiz.index, 2) // 当前题 + 下 1 题（每题素材多，少预）
+  startTimer()
 })
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
@@ -420,7 +344,7 @@ watch(
 
 function onKey(e: KeyboardEvent) {
   // 弹层打开时答题快捷键让位；带修饰键的组合不是答题意图
-  if (showNameModal.value || showReport.value) return
+  if (showReport.value) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
   const el = e.target
   if (
@@ -490,46 +414,6 @@ const optionAttributions = computed(() => {
 </script>
 
 <template>
-  <!-- 第 1 步：昵称浮窗（与经典卷同款） -->
-  <Teleport to="body">
-    <div
-      v-if="showNameModal"
-      class="wizard-overlay"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('quiz.wizardTitle')"
-    >
-      <div ref="namePanelRef" class="wizard-panel">
-        <h3 class="wizard-title">{{ t('quiz.wizardWelcome') }}</h3>
-        <input
-          v-model="wizardDraft"
-          class="wizard-input"
-          maxlength="12"
-          :aria-label="t('profile.nicknameLabel')"
-          :placeholder="t('profile.nicknamePlaceholder')"
-          @keyup.enter="wizardSaveNickname"
-        />
-        <label class="wizard-metrics">
-          <input v-model="settings.metricsEnabled" type="checkbox" />
-          <span class="wizard-metrics-text">
-            <strong>{{ t('settings.metricsTitle') }}</strong>
-            <span class="muted">{{ t('profile.metricsHint') }}</span>
-          </span>
-        </label>
-        <div class="wizard-actions">
-          <button
-            class="btn btn-primary"
-            :disabled="!wizardStartEnabled"
-            @click="wizardSaveNickname"
-          >
-            {{ t('quiz.wizardStart') }}
-          </button>
-          <button class="btn btn-secondary" @click="wizardSkip">{{ t('quiz.wizardSkip') }}</button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-
   <!-- G1 报错浮窗（本地记录） -->
   <Teleport to="body">
     <div
@@ -591,61 +475,8 @@ const optionAttributions = computed(() => {
     </div>
   </Teleport>
 
-  <!-- 介绍页：卷别 switch → 开始 -->
-  <section v-if="!started" class="card intro">
-    <div class="intro-head">
-      <div class="intro-icon">
-        <AudioLines v-if="type === 'audio'" :size="30" />
-        <ImageIcon v-else :size="30" />
-      </div>
-      <h2>{{ intro.title }}</h2>
-    </div>
-    <p class="lead muted">{{ intro.lead }}</p>
-
-    <p class="step-cap"><i class="step-no">1</i>{{ t('quiz6.nameModeCap') }}</p>
-    <div class="name-modes">
-      <button
-        type="button"
-        class="tier"
-        :class="{ on: nameChoice === 'default' }"
-        @click="chooseNameMode('default')"
-      >
-        <strong>{{ t('quiz6.nameDefault') }}</strong>
-        <span>{{ t('quiz6.nameDefaultHint') }}</span>
-      </button>
-      <button
-        type="button"
-        class="tier"
-        :class="{ on: nameChoice === 'sci' }"
-        @click="chooseNameMode('sci')"
-      >
-        <strong>{{ t('quiz6.nameSci') }}</strong>
-        <span>{{ t('quiz6.nameSciHint') }}</span>
-      </button>
-    </div>
-
-    <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
-  </section>
-
-  <!-- 加载中 -->
-  <section v-else-if="quiz.loading" class="card center placeholder">
-    <div class="spinner"></div>
-    <h2>{{ t('quiz.preparing') }}</h2>
-    <p class="muted">{{ t('quiz.preparingSub') }}</p>
-  </section>
-
-  <!-- 出错 -->
-  <section v-else-if="quiz.error" class="card center placeholder">
-    <div class="emoji">🗂️</div>
-    <h2>{{ t('quiz.cannotStart') }}</h2>
-    <p class="muted">{{ t(`errors.${quiz.error}`) }}</p>
-    <p style="margin-top: 18px">
-      <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
-    </p>
-  </section>
-
   <!-- 答题 -->
-  <template v-else-if="quiz.current">
+  <template v-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
@@ -655,7 +486,7 @@ const optionAttributions = computed(() => {
     <div class="status-bar">
       <span class="sb-left">
         <span class="tier-tag">{{ t(TIERS[quiz.current.tier].labelKey) }}</span>
-        <span v-if="nameModeTag" class="tier-tag mode">{{ t(`quiz6.mode.${nameModeTag}`) }}</span>
+        <span class="tier-tag mode">{{ t(`quiz6.mode.${quiz.nameMode}`) }}</span>
       </span>
       <span class="sb-mid">{{ t('quiz.progress', { n: quiz.index + 1, total: quiz.total }) }}</span>
       <span class="sb-right">
@@ -701,7 +532,7 @@ const optionAttributions = computed(() => {
 
       <!-- 答疑专栏入口（仅作答后显示，避免泄露答案） -->
       <RouterLink v-if="faqId" class="faq-link" :to="`/faq/${faqId}`">
-        {{ type === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
+        {{ props.type === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
       </RouterLink>
 
       <!-- 自动切换中：浮窗（与经典卷同款） -->
@@ -796,91 +627,30 @@ const optionAttributions = computed(() => {
 </template>
 
 <style scoped>
-.intro {
-  text-align: center;
-}
-.intro-head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.intro-head h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-.intro-icon {
-  display: flex;
-  color: var(--primary);
-  animation: float 3s ease-in-out infinite;
-}
-.intro .lead {
-  margin-bottom: 18px;
-}
-.step-cap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 8px 0 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
+/* 072-a 观测：诊断行（默认不渲染；?diag=1 才出现）。小字、弱色、允许换行，不干扰答题。 */
+.diag-line {
+  font-size: 0.7rem;
+  line-height: 1.45;
   color: var(--text-light);
-}
-.step-no {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.72rem;
-  font-style: normal;
-}
-.name-modes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  max-width: 520px;
-  margin: 0 auto 22px;
-}
-@media (max-width: 520px) {
-  .name-modes {
-    grid-template-columns: 1fr;
-  }
-}
-.tier {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 12px 16px;
-  border: 2px solid var(--border);
+  background: #f3f4f2;
+  border: 1px dashed #d8dcd4;
   border-radius: var(--radius-sm);
-  background: #fff;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.18s ease;
+  padding: 4px 8px;
+  margin: 0 0 8px;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
 }
-.tier:hover {
-  border-color: var(--primary-light);
+.short-round-note {
+  font-size: 0.75rem;
+  color: #8a6d00;
+  background: #fdf3d8;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin: 0 0 8px;
 }
-.tier.on {
-  border-color: var(--primary);
-  background: #f3fbf7;
-}
-.tier strong {
-  font-size: 0.9rem;
-}
-.tier span {
-  font-size: 0.74rem;
+.diag-body {
   color: var(--text-light);
-}
-.intro .btn {
-  min-width: 180px;
+  opacity: 0.92;
 }
 .wizard-overlay {
   position: fixed;
@@ -913,37 +683,6 @@ const optionAttributions = computed(() => {
   text-align: center;
   margin-bottom: 14px;
 }
-.wizard-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 2px solid var(--primary-light);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 0.95rem;
-  margin-bottom: 16px;
-}
-.wizard-metrics {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 9px 11px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.74rem;
-  line-height: 1.45;
-  text-align: left;
-  cursor: pointer;
-}
-.wizard-metrics input {
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-.wizard-metrics-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
 .wizard-actions {
   display: flex;
   gap: 10px;
@@ -952,35 +691,6 @@ const optionAttributions = computed(() => {
 }
 .wizard-actions .btn {
   flex: 1;
-}
-.wizard-actions .btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-.diag-line {
-  font-size: 0.7rem;
-  line-height: 1.45;
-  color: var(--text-light);
-  background: #f3f4f2;
-  border: 1px dashed #d8dcd4;
-  border-radius: var(--radius-sm);
-  padding: 4px 8px;
-  margin: 0 0 8px;
-  word-break: break-word;
-  font-variant-numeric: tabular-nums;
-}
-.diag-body {
-  color: var(--text-light);
-  opacity: 0.92;
-}
-.short-round-note {
-  font-size: 0.75rem;
-  color: #8a6d00;
-  background: #fdf3d8;
-  border-radius: var(--radius-sm);
-  padding: 5px 10px;
-  margin: 0 0 8px;
 }
 .status-bar {
   display: grid;
@@ -1380,20 +1090,6 @@ const optionAttributions = computed(() => {
   color: var(--primary);
   font-weight: 700;
 }
-.spinner {
-  width: 46px;
-  height: 46px;
-  border: 5px solid #dceee4;
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-  margin: 0 auto 16px;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 @keyframes pop {
   0% {
     transform: scale(0.96);
@@ -1402,15 +1098,6 @@ const optionAttributions = computed(() => {
   100% {
     transform: scale(1);
     opacity: 1;
-  }
-}
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
   }
 }
 </style>

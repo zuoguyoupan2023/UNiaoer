@@ -424,11 +424,7 @@ onMounted(async () => {
 
 async function again() {
   await quiz.nextRound()
-  // L6 半鸟人的「再来一轮」回到 /quiz6/*（经典卷仍走 /quiz/*）
-  if (quiz.kind === 'name') {
-    router.push(quiz.mode === 'audio' ? '/quiz6/audio' : '/quiz6/image')
-    return
-  }
+  // 087 P0：L6 并入 /quiz/*（介绍页题型步骤），两种题型回到同一路由
   router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
 }
 </script>
