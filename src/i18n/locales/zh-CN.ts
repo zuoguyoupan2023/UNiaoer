@@ -69,6 +69,16 @@ export const messages = {
     audioHint: '点按播放录音 · 再点同一项作答',
     audioOptionHint: '点按试听',
   },
+  // L7 鸟娲·造鸟者（输入题；docs/089 §6.1）
+  quiz7: {
+    placeholder: '输入鸟名后回车提交',
+    submit: '提交',
+    switchLabel: '换一份素材',
+    switchHint: '重新计时，本题限时减 {n} 秒',
+    switchDisabled: '再切换限时将减尽，不能再换',
+    noAltAsset: '该题暂无备用素材',
+    yourAnswer: '你的答案：{input} ',
+  },
   regime: {
     standard: { label: '标准赛', hint: '只出未练过的物种（不重复）' },
     review: { label: '复习赛', hint: '只出练过的物种（对错都算）' },
@@ -1020,6 +1030,10 @@ export const messages = {
     l6: {
       label: 'L6 半鸟人',
       desc: '看鸟名选图/选音 · 同科近缘 · 图 15s / 音 25s',
+    },
+    l7: {
+      label: 'L7 鸟娲·造鸟者',
+      desc: '看图/听音 · 输入鸟名 · 图 15s / 音 18s',
     },
   },
   badges: {

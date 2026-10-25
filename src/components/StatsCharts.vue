@@ -53,7 +53,7 @@ function agg(list: RoundRecord[]) {
 }
 
 const byTier = computed(() =>
-  ([1, 2, 3, 4, 5, 6] as Tier[])
+  ([1, 2, 3, 4, 5, 6, 7] as Tier[])
     .map((tier) => ({ key: tier, label: t(TIERS[tier].labelKey), ...agg(props.rounds.filter((r) => r.tier === tier)) }))
     .filter((x) => x.rounds > 0),
 )

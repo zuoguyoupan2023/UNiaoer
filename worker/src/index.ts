@@ -1087,8 +1087,8 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   },
   quiz_complete: {
     mode: ['image', 'audio'],
-    // '6' = L6 半鸟人（docs/081 §7，2026-10-24 上线）
-    tier: ['1', '2', '3', '4', '5', '6'],
+    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
   },
   /**
    * 072-k：一轮结果的正确率分桶（不是每题、不含物种/用户）。
@@ -1106,7 +1106,7 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 取代分桶估算：正确率 = Σcorrect / Σtotal（题级加权，题量不足 10 也不失真）。
    */
   quiz_score: {
-    tier: ['1', '2', '3', '4', '5', '6'],
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
     correct: ['@score'],
     total: ['@score'],
     // 085 D-3（2026-10-24）：统计分卷（zh/en/sci）；旧数据无该属性 = 未指定卷。
@@ -1121,7 +1121,7 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   quiz_answer: {
     species: ['@species'],
     ok: ['0', '1'],
-    tier: ['1', '2', '3', '4', '5', '6'],
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
     // 085 D-3：同 quiz_score，逐题对错也按卷别分
     nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],

@@ -1,6 +1,6 @@
 import type { MediaAsset, MediaType, NameMode, Question, Tier } from '@/types'
 import { speciesName, loadSpeciesAssets, type BankSpecies } from './bank'
-import { TIERS, L6_TIERS, type DistractorStrategy } from './difficulty'
+import { TIERS, L6_TIERS, L7_TIERS, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
 
 /** 072-a 观测：组题过程的计数（只用于诊断，不参与判定） */
@@ -508,4 +508,46 @@ function fillDistractorsInMode(
     picked.push({ id: s.id, name, media: assets[0]! })
   }
   return picked
+}
+
+// ---------------------------------------------------------------------------
+// L7 鸟娲·造鸟者（docs/089 §6.1）：媒体作题干 → 输入鸟名（answerMode 'input'）。
+// ---------------------------------------------------------------------------
+
+export interface BuildInputOptions {
+  type: MediaType
+  count?: number
+  tier?: Tier
+  speciesPool?: ReadonlySet<string>
+  locale?: string
+  /** 卷别（语言名 zh/en 或学名 sci——介绍页模式选择，089 §6.2） */
+  nameMode?: NameMode
+  regionTiers?: Map<string, number> | null
+  distractorPool?: BankSpecies[]
+  starterOnly?: boolean
+  onStats?: (s: BuildStats) => void
+}
+
+/**
+ * 构建一轮 L7 题：**复用经典 buildQuestions 的全部池子语义**（nameMode 过滤在最前、
+ * 档位/地区档位、赛制池、轮内去重、ensureMedia 补素材），差异只有：
+ *  - 无选项/干扰项（answerMode 'input'，options/optionIds 为空数组——错题 chosenId 天然 undefined）；
+ *  - 限时取 L7_TIERS（图 15s / 音 18s；素材切换递减由组件管）；
+ *  - answer = 该卷显示名（判分在 nameMatch，接受集合含港台名/繁体字形）。
+ */
+export async function buildInputQuestions(
+  bank: BankSpecies[],
+  opts: BuildInputOptions,
+): Promise<Question[]> {
+  const classic = await buildQuestions(bank, { ...opts, tier: opts.tier ?? 7 })
+  const limit = L7_TIERS[opts.type].timeLimitSec
+  return classic.map((q, i) => ({
+    ...q,
+    id: `${q.id}-input-${i}`,
+    tier: 7,
+    answerMode: 'input' as const,
+    options: [],
+    optionIds: [],
+    timeLimitSec: limit,
+  }))
 }

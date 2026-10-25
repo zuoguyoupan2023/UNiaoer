@@ -75,6 +75,16 @@ const en: typeof zhMessages = {
     audioHint: 'Tap to play · tap the same option again to answer',
     audioOptionHint: 'Tap to listen',
   },
+  // L7 input quiz (docs/089 §6.1)
+  quiz7: {
+    placeholder: 'Type the bird name and press Enter',
+    submit: 'Submit',
+    switchLabel: 'Swap material',
+    switchHint: 'Timer restarts, this question loses {n}s',
+    switchDisabled: 'No time left to trade for another swap',
+    noAltAsset: 'No alternative material for this one',
+    yourAnswer: 'Your answer: {input} ',
+  },
   regime: {
     standard: { label: 'Standard', hint: 'Only species you have not played yet (no repeats)' },
     review: { label: 'Review', hint: 'Only species you have played (right or wrong)' },
@@ -1032,6 +1042,10 @@ const en: typeof zhMessages = {
     l6: {
       label: 'L6 Half-Birder',
       desc: 'name → photo/sound · close relatives · 15s / 25s',
+    },
+    l7: {
+      label: 'L7 Bird-Maker',
+      desc: 'photo/sound → type the name · 15s / 18s',
     },
   },
   badges: {

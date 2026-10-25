@@ -12,6 +12,7 @@ import {
 import { evaluateBadges, type BadgeDef } from './badges'
 import { evaluateTitles, titleTextAt, TITLE_TRACKS, type EarnedTitle } from './titles'
 import { track } from './metrics'
+import { isCorrectAnswer } from './nameMatch'
 
 type QuizStore = ReturnType<typeof useQuizStore>
 
@@ -49,7 +50,8 @@ export function buildRoundRecord(quiz: QuizStore): RoundRecord | null {
       type: q.type,
       chosen: timedOut ? null : raw,
       chosenId,
-      correct: raw === q.answer,
+      // 089 P0-3：中心判分（与答题页 correctCount 同一语义；choice 题等价旧行为）
+      correct: isCorrectAnswer(q, raw),
       timedOut,
       mediaUrl: q.media.url,
       source: q.media.source,

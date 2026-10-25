@@ -94,9 +94,24 @@ export const TIERS: Record<Tier, TierConfig> = {
     commonness: [1, 2, 3, 4],
     mediaPoolSize: 1,
   },
+  /**
+   * L7 鸟娲·造鸟者（docs/089；2026-10-24 定稿）：图/音 → **输入**鸟名（第七档）。
+   * 判分见 core/nameMatch.ts（085 §4.1）；限时按题型取 L7_TIERS（图 15s / 音 18s，
+   * 音从正式开播起计；素材切换可续命但限时递减 −n s）。
+   */
+  7: {
+    tier: 7,
+    labelKey: 'difficulty.l7.label',
+    descKey: 'difficulty.l7.desc',
+    optionCount: 1, // 输入题无选项；代表值（类型完备）
+    distractor: 'same',
+    timeLimitSec: 15,
+    commonness: [3, 4], // 与 L4/L5 同档的常见度口径（高难=少见鸟）
+    mediaPoolSize: 5,
+  },
 }
 
-/** 介绍页难度按钮（L6 是第六档，与 L1–L5 同列；087 §4.8 用户定） */
+/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6） */
 export const TIER_LIST: TierConfig[] = [
   TIERS[1],
   TIERS[2],
@@ -104,6 +119,7 @@ export const TIER_LIST: TierConfig[] = [
   TIERS[4],
   TIERS[5],
   TIERS[6],
+  TIERS[7],
 ]
 
 /**
@@ -115,4 +131,13 @@ export const TIER_LIST: TierConfig[] = [
 export const L6_TIERS: Record<MediaType, { optionCount: number; timeLimitSec: number; distractor: DistractorStrategy }> = {
   image: { optionCount: 6, timeLimitSec: 15, distractor: 'same' },
   audio: { optionCount: 4, timeLimitSec: 25, distractor: 'same' },
+}
+
+/**
+ * L7 分题型限时（089 §6.1 定稿）：看图 15s（暂定）；听音 18s 且**从正式开播起计**。
+ * 素材切换由组件层实现（每次切换重新计时、限时 −n s、减尽禁用）。
+ */
+export const L7_TIERS: Record<MediaType, { timeLimitSec: number }> = {
+  image: { timeLimitSec: 15 },
+  audio: { timeLimitSec: 18 },
 }

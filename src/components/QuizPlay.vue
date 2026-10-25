@@ -56,6 +56,7 @@ import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
 import QuizPlayName from './QuizPlayName.vue'
+import QuizPlayInput from './QuizPlayInput.vue'
 import ProgressBar from './ProgressBar.vue'
 import SpeciesGallery from './SpeciesGallery.vue'
 
@@ -91,18 +92,28 @@ function persistTier(v: Tier) {
   else settings.tierImage = v
 }
 
-// ---- 089 §6.2：L6 作答模式（语言名 ↔ 学名，图/声分别记忆；L7 上线沿用同一形态） ----
-const nameMode6 = computed<'default' | 'sci'>({
-  get: () =>
-    props.type === 'audio' ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode6Image ?? 'default'),
+// ---- 089 §6.1/6.2：L6/L7 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
+const nameMode67 = computed<'default' | 'sci'>({
+  get: () => {
+    const t = tier.value
+    if (props.type === 'audio')
+      return t === 6 ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode7Audio ?? 'default')
+    return t === 6 ? (settings.nameMode6Image ?? 'default') : (settings.nameMode7Image ?? 'default')
+  },
   set: (v) => {
-    if (props.type === 'audio') settings.nameMode6Audio = v
-    else settings.nameMode6Image = v
+    const t = tier.value
+    if (props.type === 'audio') {
+      if (t === 6) settings.nameMode6Audio = v
+      else settings.nameMode7Audio = v
+    } else {
+      if (t === 6) settings.nameMode6Image = v
+      else settings.nameMode7Image = v
+    }
   },
 })
-/** 开轮用的 L6 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
-function resolvedNameMode6(): NameMode {
-  if (nameMode6.value === 'sci') return 'sci'
+/** 开轮用的 L6/L7 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
+function resolvedNameMode67(): NameMode {
+  if (nameMode67.value === 'sci') return 'sci'
   return currentLocale() === 'en' ? 'en' : 'zh'
 }
 
@@ -735,11 +746,11 @@ async function begin() {
   // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。卷别按模式选择传入。
   await quiz.start(props.type, {
     tier: tier.value,
-    ...(tier.value === 6 ? { nameMode: resolvedNameMode6() } : {}),
+    ...(tier.value >= 6 ? { nameMode: resolvedNameMode67() } : {}),
   })
   if (quiz.error || !quiz.questions.length) return // 错误区接管
-  preloadQuestions(quiz.questions, 0, quiz.tier === 6 ? 2 : 4)
-  if (quiz.tier === 6) return // L6 的计时起点由 QuizPlayName 挂载时启动
+  preloadQuestions(quiz.questions, 0, quiz.tier >= 6 ? 2 : 4)
+  if (quiz.tier >= 6) return // L6/L7 的计时起点由各自答题组件挂载时启动
   beginQuestionTiming()
   updateInterference()
 }
@@ -779,7 +790,7 @@ onMounted(() => {
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
-  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.tier === 6) {
+  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.tier >= 6) {
     // 087 §4.8：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
     // QuizPlayName 消费（计时/预载由它做），经典链路不碰。
     started.value = true
@@ -810,7 +821,7 @@ onUnmounted(() => {
 watch(
   () => quiz.index,
   (i) => {
-    if (quiz.tier === 6) return // 087 §4.8：L6 由 QuizPlayName 自管（计时/预载）
+    if (quiz.tier >= 6) return // 087 §4.8/089：L6/L7 由各自答题组件自管（计时/预载）
     clearAutoNext()
     cancelledThisQuestion.value = false
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
@@ -821,7 +832,7 @@ watch(
 watch(
   () => quiz.answered,
   (a) => {
-    if (quiz.tier === 6) return // 087 §4.8：L6 的作答反馈/自动切题由 QuizPlayName 管
+    if (quiz.tier >= 6) return // 089：L6/L7 的作答反馈/自动切题由各自答题组件管
     if (a) {
       stopTimer()
       scheduleAutoNext()
@@ -840,13 +851,13 @@ watch(
   () => quiz.finished,
   (f) => {
     // 087 §4.8：L6 的完成跳转由 QuizPlayName 自己做（避免双跳）
-    if (f && quiz.tier !== 6) router.push('/result')
+    if (f && quiz.tier < 6) router.push('/result')
   },
 )
 
 function onKey(e: KeyboardEvent) {
   // 087 §4.8：L6 答题中快捷键由 QuizPlayName 处理（它的选项是媒体，键位语义不同）
-  if (quiz.current?.tier === 6) return
+  if (quiz.current && quiz.current.tier >= 6) return
   // 弹层打开时答题快捷键让位；带修饰键的组合（如 Cmd/Ctrl+A）不是答题意图
   if (showNameModal.value || showReport.value) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -1027,15 +1038,15 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(cfg.descKey) }}</span>
       </button>
     </div>
-    <!-- 089 §6.2：L6 作答模式（语言名/学名）——仅第六档显示，不计步骤号 -->
-    <template v-if="tier === 6">
+    <!-- 089 §6.1/6.2：L6/L7 作答模式（语言名/学名）——高两档显示，不计步骤号 -->
+    <template v-if="tier >= 6">
       <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
       <div class="tiers l6-mode">
-        <button type="button" class="tier" :class="{ on: nameMode6 === 'default' }" @click="nameMode6 = 'default'">
+        <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">
           <strong>{{ t('quiz6.modeLang') }}</strong>
           <span>{{ t('quiz6.modeLangHint') }}</span>
         </button>
-        <button type="button" class="tier" :class="{ on: nameMode6 === 'sci' }" @click="nameMode6 = 'sci'">
+        <button type="button" class="tier" :class="{ on: nameMode67 === 'sci' }" @click="nameMode67 = 'sci'">
           <strong>{{ t('quiz6.modeSci') }}</strong>
           <span>{{ t('quiz6.modeSciHint') }}</span>
         </button>
@@ -1197,6 +1208,8 @@ function onTouchEnd(e: TouchEvent) {
 
   <!-- 087 §4.8：L6 答题区——嵌入组件自管计时/预载/作答/自动切题/退出 -->
   <QuizPlayName v-else-if="quiz.tier === 6" :type="type" />
+  <!-- 089：L7 答题区（输入题）——自管计时（音从开播起）/素材切换/IME/判分反馈 -->
+  <QuizPlayInput v-else-if="quiz.tier === 7" :type="type" />
 
   <!-- 答题 -->
   <template v-else-if="quiz.current">
