@@ -502,17 +502,6 @@ export function drawPoster(
 
   // 本轮测试内容（成绩/正确率/错题）：取消勾选时整块不画（只留品牌面）
   if (opts.includeResults !== false) {
-    // 2026-10-25：题目范围（地区）——「中国上海看图版 L7」与「全球版」必须可区分
-    if (data.regionLabel) {
-      drawSegments(
-        ctx,
-        [{ text: data.regionLabel, color: P.accent, weight: 700, size: 34 }],
-        W / 2,
-        500,
-        'center',
-        box,
-      )
-    }
     // 正文
     drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
     const perfect = data.total > 0 && data.correct === data.total
@@ -536,9 +525,16 @@ export function drawPoster(
       box,
     )
     const accText = strings.accuracyLine
+    // 2026-10-25 用户定：题目范围接在「正确率 … · L6 半鸟人」**后面**（同一行，换色区分），
+    // 不再单独占上方一行——「中国上海看图版 L7」与「全球版」在此即可区分。
     drawSegments(
       ctx,
-      [{ text: accText, color: P.muted, weight: 500, size: 28 }],
+      [
+        { text: accText, color: P.muted, weight: 500, size: 28 },
+        ...(data.regionLabel
+          ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+          : []),
+      ],
       W / 2,
       950,
       'center',
@@ -587,16 +583,6 @@ export function drawPoster(
   } else {
     // 2026-10-25 用户定：取消「包含本组测试内容」= 隐藏**详情**（错题回顾等），
     // 但**分数与题目范围照常显示**——成绩本身是分享主体，隐藏它反而失去海报意义。
-    if (data.regionLabel) {
-      drawSegments(
-        ctx,
-        [{ text: data.regionLabel, color: P.accent, weight: 700, size: 34 }],
-        W / 2,
-        540,
-        'center',
-        box,
-      )
-    }
     drawSegments(
       ctx,
       [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }],
@@ -627,7 +613,12 @@ export function drawPoster(
     )
     drawSegments(
       ctx,
-      [{ text: strings.accuracyLine, color: P.muted, weight: 500, size: 28 }],
+      [
+        { text: strings.accuracyLine, color: P.muted, weight: 500, size: 28 },
+        ...(data.regionLabel
+          ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+          : []),
+      ],
       W / 2,
       960,
       'center',

@@ -20,8 +20,10 @@ function wrong(answer: string): PosterWrong {
  * 最小 canvas 2d 上下文替身（jsdom 不带 canvas 实现）。
  * 记录 fillText 文本，供"海报实际画了什么"的断言使用。
  */
-function stubCanvas(): { canvas: HTMLCanvasElement; texts: string[] } {
+function stubCanvas(): { canvas: HTMLCanvasElement; texts: string[]; drawn: { text: string; y: number }[] } {
   const texts: string[] = []
+  /** 记录每次 fillText 的 y（布局断言用：同一行 = 同一 baseline） */
+  const drawn: { text: string; y: number }[] = []
   const ctx = {
     canvas: null as unknown as HTMLCanvasElement,
     // 属性（画布代码会读写）
@@ -53,8 +55,9 @@ function stubCanvas(): { canvas: HTMLCanvasElement; texts: string[] } {
     drawImage() {},
     createLinearGradient: () => ({ addColorStop() {} }),
     measureText: (t: string) => ({ width: String(t).length * 12 }),
-    fillText: (t: string) => {
+    fillText: (t: string, _x?: number, y?: number) => {
       texts.push(String(t))
+      drawn.push({ text: String(t), y: Number(y ?? 0) })
     },
   }
   const canvas = {
@@ -63,7 +66,7 @@ function stubCanvas(): { canvas: HTMLCanvasElement; texts: string[] } {
     getContext: () => ctx,
   } as unknown as HTMLCanvasElement
   ctx.canvas = canvas
-  return { canvas, texts }
+  return { canvas, texts, drawn }
 }
 
 /** 由 Vue 侧注入的 PosterStrings 等价物（用真实 i18n 语言包构造，含满屏文案） */
@@ -233,6 +236,23 @@ describe('海报 · 是否包含测试内容（2026-10-09）', () => {
     expect(joined).not.toContain('1. 家燕')
     expect(joined).not.toContain('认成了「金腰燕」')
     expect(joined).not.toContain(strings.wrongHeading)
+  })
+
+  it('题目范围与正确率**同一行**（接在「正确率 … · L6 半鸟人」后面，2026-10-25 用户定）', () => {
+    const { canvas, drawn } = stubCanvas()
+    const strings = posterStrings()
+    drawPoster(
+      canvas,
+      { ...data, correct: 6, accuracy: 60, regionLabel: '中国 · 上海' },
+      { themeId: 'white' },
+      strings,
+    )
+    const acc = drawn.find((d) => d.text === strings.accuracyLine)
+    const region = drawn.find((d) => d.text.includes('中国 · 上海'))
+    expect(acc).toBeTruthy()
+    expect(region).toBeTruthy()
+    expect(region!.y).toBe(acc!.y) // 同一 baseline
+    expect(region!.text.startsWith('· ')).toBe(true) // 以分隔符接在后面
   })
 
   it('题目范围（regionLabel）在海报上显示——含全球', () => {
