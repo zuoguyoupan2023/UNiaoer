@@ -12,6 +12,7 @@
 import type { BankSpecies } from './bank'
 import { loadMeta, _resetMetaCache } from './meta'
 import { loadSpeciesDistribution, shortCodeOf } from './speciesIndex'
+import { countriesOfContinent, isContinentCode } from './region'
 
 let poolCache: BankSpecies[] | null = null
 let poolPromise: Promise<BankSpecies[] | null> | null = null
@@ -67,8 +68,17 @@ export async function loadRegionalPool(region: string): Promise<BankSpecies[] | 
   if (hit) return hit
   const dist = await loadSpeciesDistribution()
   if (!dist?.byCountry) return null // 区系层不可用:降级为不过滤
-  const codes = dist.byCountry[countryOfRegion(region)]
-  const set = new Set(Array.isArray(codes) ? codes : [])
+  // 088 方案 B：洲码 → 成员国区系**求并集**（L5+ 的出题地区是大洲）
+  const set = new Set<string>()
+  if (isContinentCode(region)) {
+    for (const cc of countriesOfContinent(region)) {
+      const list = dist.byCountry[cc]
+      if (Array.isArray(list)) for (const c of list) set.add(c)
+    }
+  } else {
+    const codes = dist.byCountry[countryOfRegion(region)]
+    if (Array.isArray(codes)) for (const c of codes) set.add(c)
+  }
   const subset = pool.filter((sp) => sp.taxonKey && set.has(shortCodeOf(sp.taxonKey)))
   regionalCache.set(region, subset)
   return subset

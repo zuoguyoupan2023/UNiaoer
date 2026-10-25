@@ -66,6 +66,8 @@ export function buildRoundRecord(quiz: QuizStore): RoundRecord | null {
     tier: quiz.tier,
     // 051 S1：落库命名体系 —— 046 的称号/徽章分区分账依赖它
     nameMode: quiz.nameMode,
+    // 087 §6.5：本轮实际生效地区（角标显示 + 计量上报共用该口径）
+    region: quiz.region,
     total: quiz.total,
     correct: quiz.correctCount,
     accuracy: quiz.accuracy,

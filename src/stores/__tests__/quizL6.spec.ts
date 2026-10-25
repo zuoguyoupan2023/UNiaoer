@@ -59,6 +59,7 @@ vi.mock('@/core/historyDb', async (importOriginal) => ({
 }))
 
 import { useQuizStore } from '../quiz'
+import { useSettingsStore } from '../settings'
 
 /**
  * L6 = 难度第六档（087 §4.8，用户定）：与 L1–L5 走同一个 start()，
@@ -120,6 +121,27 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     expect(quiz.sessionRound).toBe(prevRound + 1)
     expect(quiz.pendingContinue).toBe(true)
     expect(quiz.total).toBe(10)
+  })
+
+  it('region 快照（087 §6.5）：L1–L4 记用户所选，L5+ 恒 ALL', async () => {
+    const quiz = useQuizStore()
+    const settings = useSettingsStore()
+    settings.region = 'CN-11'
+    await quiz.start('image', { tier: 2 })
+    expect(quiz.region).toBe('CN-11')
+    await quiz.start('image', { tier: 5 })
+    expect(quiz.region).toBe('ALL')
+    await quiz.start('image', { tier: 6 })
+    expect(quiz.region).toBe('ALL')
+    // 088 方案 B：L5+ 选洲 → 生效洲码；L1–L4 选洲（跨档残留）→ 全球
+    settings.region = 'ASIA'
+    await quiz.start('image', { tier: 5 })
+    expect(quiz.region).toBe('ASIA')
+    await quiz.start('image', { tier: 6 })
+    expect(quiz.region).toBe('ASIA')
+    await quiz.start('image', { tier: 2 })
+    expect(quiz.region).toBe('ALL')
+    settings.region = 'ALL'
   })
 
   it('classic 档位回归保护：tier=2 仍是媒体作题干（无 optionsMedia）', async () => {

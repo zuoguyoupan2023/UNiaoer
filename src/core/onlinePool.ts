@@ -19,6 +19,7 @@
 import type { BankSpecies } from './bank'
 import type { MediaType, Tier } from '@/types'
 import { diagApiBase } from './diag'
+import { effectiveRegion } from './region'
 
 export interface OnlinePoolResult {
   /** 目标候选（带完整素材,已按档位/题型/地区/可玩过滤） */
@@ -70,7 +71,8 @@ let seqCounter = 0
 
 /** 缓存键：档位 × 题型 × 地区（不含题量——count 已归一） */
 function cacheKeyOf(type: MediaType, tier: Tier, region: string): string {
-  const r = region && region !== 'ALL' && tier <= 4 ? region : 'ALL' // L5+ 全球（029 修订 2026-10-24）
+  // 088 方案 B：L1–L4=国家/省、L5+=洲（effectiveRegion 统一生效口径）
+  const r = effectiveRegion(tier, region)
   return `${CLIENT_PREFIX}${tier}:${type}:${r}`
 }
 
@@ -150,7 +152,8 @@ function writeClientCache(key: string, value: CachedPool): void {
  */
 function questionsUrl(type: MediaType, tier: Tier, region: string): string {
   const q = new URLSearchParams({ tier: String(tier), type, count: String(FETCH_COUNT) })
-  if (region && region !== 'ALL' && tier <= 4) q.set('region', region)
+  const eff = effectiveRegion(tier, region)
+  if (eff !== 'ALL') q.set('region', eff)
   return `${diagApiBase()}/api/questions?${q.toString()}`
 }
 

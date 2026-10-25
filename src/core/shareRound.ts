@@ -38,6 +38,8 @@ export interface ShareDraft {
   locale: string
   /** null = 用户勾选了「隐藏昵称」（D-035-4 默认带上，可勾选隐藏） */
   nickname: string | null
+  /** 087 §6.5：该轮实际生效地区（旧分享无此字段 = 未指定，展示端可选隐藏） */
+  region?: string | null
   items: ShareItem[]
 }
 
@@ -51,6 +53,8 @@ export interface SharePayload {
   accuracy: number
   durationMs?: number | null
   locale: string
+  /** 087 §6.5：该轮实际生效地区（旧分享缺省） */
+  region?: string | null
   items: ShareItem[]
 }
 
@@ -121,6 +125,7 @@ export function buildShareDraft(
     durationMs: round.durationMs ?? null,
     locale: opts.locale,
     nickname: opts.nickname,
+    region: round.region ?? null,
     items,
   }
 }

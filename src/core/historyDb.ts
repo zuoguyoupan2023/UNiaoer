@@ -39,6 +39,12 @@ export interface RoundRecord {
    * 046 的称号/徽章分区分账按它统计。
    */
   nameMode?: NameMode
+  /**
+   * 087 §6.5（2026-10-24 用户定）：本轮**实际生效**的出题地区（'ALL' | 'CN' | 'CN-11'）。
+   * 注意是生效值——L5+ 全球出题时恒 'ALL'，与介绍页"用户选了什么"区分；
+   * 旧记录无该字段 = 未指定（不显示角标）。历史列表/结果页角标与计量上报都用它。
+   */
+  region?: string
   total: number
   correct: number
   accuracy: number

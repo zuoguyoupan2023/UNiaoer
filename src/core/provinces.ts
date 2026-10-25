@@ -12,11 +12,14 @@
  *  前端不再保留回退分支——索引/分片缺失时整层静默隐藏。）
  *
  * 数据由 GBIF stateProvince + ISO 3166-2 归一化构建（见 scripts/region/build-provinces.mjs）。
+
  * CN：内地 31 省=GBIF 记录数；港澳台（CN-71/91/92）按铁律 6 并入并标注
  * 「中国香港／中国澳门／中国台湾」，记录数取该国国家码（TW/HK/MO）的国家层真值。
  *
  * 全部加载失败静默为 null（调用方隐藏整块，不阻塞页面）。
  */
+
+import { CONTINENT_LABEL_KEY, REGION_LABEL_KEY, isContinentCode } from './region'
 export interface ProvinceSource {
   key: string
   name: string
@@ -227,4 +230,44 @@ export function speciesInProvince(shard: CountryProvinceShard | null, code: stri
 /** 该国「物种 id → 各省记录数」（视图做记录数排序时一次取用） */
 export function countsBySpecies(shard: CountryProvinceShard | null): Map<string, Record<string, number>> {
   return new Map(Object.entries(shard?.bySpecies || {}))
+}
+
+/**
+ * 087 §6.5：地区码 → 展示名（轮次角标/结果页用）。
+ * - 'ALL' → t('quiz.regionAll')；
+ * - 省码（CN-11）→ 「国家 · 省名」（省名查省级索引；索引缺失退省码原文）；
+ * - 国家码 → 敏感码走 i18n 固定名（REGION_LABEL_KEY），其余 Intl.DisplayNames（按 locale 缓存实例）。
+ * 政治合规与介绍页同一张表（region.ts / 铁律 6），不另维护显示名。
+ */
+export function regionDisplayName(
+  code: string | null | undefined,
+  locale: string,
+  t: (key: string) => string,
+  index: ProvinceIndex | null,
+): string {
+  const v = String(code || '').trim().toUpperCase()
+  if (!v || v === 'ALL') return t('quiz.regionAll')
+  // 088 方案 B：洲码（L5+ 的出题地区）→ 大洲名
+  if (isContinentCode(v)) return t(CONTINENT_LABEL_KEY[v])
+  const cc = v.split('-')[0]!
+  const country =
+    cc in REGION_LABEL_KEY ? t(REGION_LABEL_KEY[cc]!) : displayRegionName(cc, locale)
+  if (!v.includes('-')) return country
+  const prov =
+    provincesOf(index, cc, locale).find((p) => p.code === v)?.name ?? v
+  return `${country} · ${prov}`
+}
+
+const _displayNamesCache = new Map<string, Intl.DisplayNames>()
+function displayRegionName(cc: string, locale: string): string {
+  try {
+    let dn = _displayNamesCache.get(locale)
+    if (!dn) {
+      dn = new Intl.DisplayNames([locale], { type: 'region' })
+      _displayNamesCache.set(locale, dn)
+    }
+    return dn.of(cc) ?? cc
+  } catch {
+    return cc
+  }
 }

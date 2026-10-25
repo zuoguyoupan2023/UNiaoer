@@ -80,6 +80,15 @@ describe('fetchOnlinePool', () => {
     calls.length = 0
     await fetchOnlinePool('image', 5, 'CN')
     expect(calls[0]).not.toContain('region=')
+    clearClientPoolCache()
+    calls.length = 0
+    // 088 方案 B：L5+ 传洲码 → 带上；L1–L4 传洲码（跨档残留）→ 归一为全球
+    await fetchOnlinePool('image', 5, 'ASIA')
+    expect(calls[0]).toContain('region=ASIA')
+    clearClientPoolCache()
+    calls.length = 0
+    await fetchOnlinePool('image', 2, 'ASIA')
+    expect(calls[0]).not.toContain('region=')
   })
 
   it('措施 3：同键第二次调用命中客户端缓存（零网络）', async () => {

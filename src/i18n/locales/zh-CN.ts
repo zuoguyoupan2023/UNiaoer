@@ -100,7 +100,7 @@ export const messages = {
     // 087 P0-4：地区步骤的提问句
     regionAsk: '你准备挑战识别哪个区域的鸟？',
     // 087 §4.9：高难度下地区选择仍可见（出题侧仅 L1–L3 生效，如实说明）
-    regionHigherTiers: '地区偏好仅 L1–L4 生效；当前难度全球出题',
+    regionHigherTiers: '当前难度按大洲出题：选一个大洲，或保持全球（前四档按国家/省）',
     adaptiveUp: '已按最近 {n} 轮表现（正确率 {acc}%）把难度升到「{tier}」',
     adaptiveDown: '最近 {n} 轮正确率 {acc}%，已把难度降到「{tier}」',
     stepRegion: '地区',

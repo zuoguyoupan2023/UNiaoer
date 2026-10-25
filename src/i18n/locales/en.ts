@@ -106,7 +106,7 @@ const en: typeof zhMessages = {
     // 087 P0-4: the region prompt line
     regionAsk: 'Which region’s birds do you want to challenge?',
     // 087 §4.9: region stays visible at high tiers (only L1–L3 apply it — say so)
-    regionHigherTiers: 'Region preference applies to L1–L4; this level draws worldwide',
+    regionHigherTiers: 'This level draws by continent: pick one or stay worldwide (first four levels use country/province)',
     adaptiveUp: 'Raised to “{tier}” based on your last {n} rounds ({acc}% correct)',
     adaptiveDown: 'Lowered to “{tier}” — {acc}% correct across your last {n} rounds',
     stepRegion: 'Region',

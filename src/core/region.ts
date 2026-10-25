@@ -68,6 +68,60 @@ const OCEANIA = [
 const ANTARCTICA = ['AQ', 'BV', 'GS', 'TF']
 
 /**
+ * 088 方案 B（2026-10-24 拍板）：**洲作为地区**——L5/L6/L7 的出题地区固定为「大洲」
+ * （可在七大洲间切换），L1–L4 仍是 国家/省。洲码用全大写含下划线的形式
+ * （'NORTH_AMERICA' 等），与两位国家码/省码形态天然不冲突。
+ * 与 Worker 的 CONTINENT_COUNTRIES 镜像表同步维护（那边不能 import 前端代码）。
+ */
+export type ContinentCode =
+  | 'ASIA'
+  | 'EUROPE'
+  | 'AFRICA'
+  | 'NORTH_AMERICA'
+  | 'SOUTH_AMERICA'
+  | 'OCEANIA'
+  | 'ANTARCTICA'
+
+/** 洲码 → i18n 显示名 key（复用现有 region.continents.*，无新文案） */
+export const CONTINENT_LABEL_KEY: Record<ContinentCode, string> = {
+  ASIA: 'region.continents.asia',
+  EUROPE: 'region.continents.europe',
+  AFRICA: 'region.continents.africa',
+  NORTH_AMERICA: 'region.continents.northAmerica',
+  SOUTH_AMERICA: 'region.continents.southAmerica',
+  OCEANIA: 'region.continents.oceania',
+  ANTARCTICA: 'region.continents.antarctica',
+}
+
+const CONTINENT_CODE_LIST: ContinentCode[] = [
+  'ASIA',
+  'EUROPE',
+  'AFRICA',
+  'NORTH_AMERICA',
+  'SOUTH_AMERICA',
+  'OCEANIA',
+  'ANTARCTICA',
+]
+const CONTINENT_CODE_SET = new Set<string>(CONTINENT_CODE_LIST)
+
+export function isContinentCode(v: string | null | undefined): v is ContinentCode {
+  return !!v && CONTINENT_CODE_SET.has(v)
+}
+
+/**
+ * 地区「生效值」（088 方案 B 的统一口径，store/在线池/上报共用）：
+ *   L1–L4 → 国家/省原样；选了洲（跨档残留）→ 'ALL'；
+ *   L5+   → 洲码原样；选了国家/省（跨档残留）→ 'ALL'。
+ */
+export function effectiveRegion(tier: number, chosen: string): string {
+  const v = String(chosen || '').toUpperCase()
+  if (!v || v === 'ALL') return 'ALL'
+  const continent = isContinentCode(v)
+  if (tier <= 4) return continent ? 'ALL' : v
+  return continent ? v : 'ALL'
+}
+
+/**
  * 大洲 → 国家/地区码（087 P0：出题介绍页的「洲 → 国家 → 省」三级选择器用）。
  * 就是上面那张归属表的键值视图（同一份数据，勿在此另维护一份）；
  * 恰好覆盖 249 个 ISO 码，无遗漏。
@@ -80,6 +134,17 @@ export const COUNTRIES_BY_CONTINENT: Record<Continent, string[]> = {
   southAmerica: SOUTH_AMERICA,
   oceania: OCEANIA,
   antarctica: ANTARCTICA,
+}
+
+/** 洲码 → 成员国/地区码（区系求并集用；数据同上表，零重复） */
+export function countriesOfContinent(code: ContinentCode): string[] {
+  const camel: Continent =
+    code === 'NORTH_AMERICA'
+      ? 'northAmerica'
+      : code === 'SOUTH_AMERICA'
+        ? 'southAmerica'
+        : (code.toLowerCase() as Continent)
+  return COUNTRIES_BY_CONTINENT[camel]
 }
 
 const CONTINENT_BY_COUNTRY: Record<string, Continent> = {}

@@ -12,6 +12,7 @@ import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
+import { effectiveRegion } from '@/core/region'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
@@ -71,6 +72,11 @@ export const useQuizStore = defineStore('quiz', () => {
   const questions = ref<Question[]>([])
   /** 051 S1：本轮命名体系（出题时确定，落进每道题与轮次记录，供 046 分区统计） */
   const nameMode = ref<NameMode>(currentLocale() === 'en' ? 'en' : 'zh')
+  /**
+   * 087 §6.5：本轮**实际生效**的出题地区（用户所选 ∧ 档位允许）。L1–L4 = settings.region，
+   * L5+ 恒 'ALL'（029 D-029-2 修订）。落进轮次记录（角标显示 + 计量上报口径对齐）。
+   */
+  const region = ref<string>('ALL')
   const chosen = ref<(string | null)[]>([])
   const index = ref(0)
   const loading = ref(false)
@@ -150,8 +156,8 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
 async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
   const bank = await loadBank()
   const settings = useSettingsStore()
-  // 029 D-029-2（2026-10-24 修订）：L1–L4 按地区偏好过滤；L5+ 全球开放
-  const region = tier <= 4 ? settings.region : 'ALL'
+  // 029 D-029-2 + 088 方案 B：L1–L4 按国家/省；L5+ 按洲（effectiveRegion 统一生效口径）
+  const region = effectiveRegion(tier, settings.region)
   const regional = await loadRegionalPool(region).catch(() => null)
   const list = regional ?? bank.species
   return list.filter((sp) => !sp.quizExcluded && speciesPlayable(sp, type))
@@ -225,6 +231,8 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     if (opts.regime) regime.value = opts.regime
     // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）
     nameMode.value = currentLocale() === 'en' ? 'en' : 'zh'
+    // 087 §6.5 + 088 方案 B：快照"实际生效"地区（L1–L4=国家/省，L5+=洲或全球）
+    region.value = effectiveRegion(tier.value, useSettingsStore().region)
     loading.value = true
     error.value = ''
     try {
@@ -468,12 +476,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     regime.value = 'standard'
     source.value = 'normal'
     escapedQuit.value = false
+    region.value = 'ALL'
   }
 
   return {
     mode,
     tier,
     nameMode,
+    region,
     roundId,
     startedAt,
     questions,

@@ -104,7 +104,7 @@ const SESSION_KEY = 'uniaoer.sess'
  * 073 P0：`region` 不穷举（330 省码 + 249 个国家/地区码），改形态校验：`ALL` | `CN` | `CN-11`。
  * 与 Worker 的 `REGION_VALUE_RE` 保持一致（两侧都校验）。
  */
-const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
+const REGION_VALUE_RE = /^(ALL|(?:ASIA|EUROPE|AFRICA|NORTH_AMERICA|SOUTH_AMERICA|OCEANIA|ANTARCTICA)|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
 
 /**
  * 076：精确得分属性（`correct`/`total`）只接受 **0–99 的整数**。

@@ -25,6 +25,7 @@ import {
   shareUrlOf,
   type ShareLedgerEntry,
 } from '@/core/shareRound'
+import { loadProvincesIndex, regionDisplayName, type ProvinceIndex } from '@/core/provinces'
 import type { MediaAsset } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
@@ -32,6 +33,12 @@ import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
 
 const { t } = useI18n()
+/** 087 §6.5：轮次角标的省名索引（懒加载，失败退省码） */
+const provinceIndex = ref<ProvinceIndex | null>(null)
+function regionBadgeOf(code?: string): string {
+  if (!code || code === 'ALL') return ''
+  return regionDisplayName(code, currentLocale(), (k) => t(k), provinceIndex.value)
+}
 
 const rounds = ref<RoundRecord[]>([])
 const loading = ref(true)
@@ -41,6 +48,11 @@ const openedId = ref<string | null>(null)
 const visibleCount = ref(20)
 
 onMounted(async () => {
+  try {
+  void loadProvincesIndex().then((d) => (provinceIndex.value = d)).catch(() => {})
+  } catch {
+  /* 索引不可用：省名退省码显示，不阻塞页面 */
+  }
   // 名字按 016 机制解析：先建题库索引（失败不阻塞，回退存储名）
   try {
     await loadBank()
@@ -175,6 +187,7 @@ async function onCopy(round: RoundRecord) {
               <Eye v-if="r.mode === 'image'" class="ic" :size="14" />
               <Headphones v-else class="ic" :size="14" />
               {{ r.mode === 'audio' ? t('history.modeAudio') : t('history.modeImage') }} · L{{ r.tier }}
+              <span v-if="regionBadgeOf(r.region)" class="tag region-tag">{{ regionBadgeOf(r.region) }}</span>
               <span v-if="r.source === 'wrong-practice'" class="tag">
                 <Swords class="ic" :size="11" /> {{ t('history.wrongPracticeTag') }}
               </span>
