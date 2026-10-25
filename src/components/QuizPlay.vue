@@ -388,7 +388,6 @@ watch(regionChoice, (v) => {
 /** 087 P0：展开选择面板时，自动展开当前所选国所属的洲（少一次寻找） */
 watch(regionPickerOpen, (open) => {
   if (!open) return
-  if (tier.value > 4) return // 088 方案 B：L5+ 面板是洲 chips，无国家手风琴
   const c = continentOf(selectedCountry.value)
   if (c) openContinent.value = c
 })
@@ -411,8 +410,7 @@ const selectedCountry = computed(() => {
 const regionSummary = computed(() => {
   const r = regionChoice.value
   if (!r || r === 'ALL') return t('quiz.regionAll')
-  // 088 方案 B：洲码 → L5+ 显示大洲名；L1–L4（跨档残留）→ 显示全球（生效口径，见 effectiveRegion）
-  if (isContinentCode(r)) return tier.value > 4 ? t(CONTINENT_LABEL_KEY[r]) : t('quiz.regionAll')
+  if (isContinentCode(r)) return t(CONTINENT_LABEL_KEY[r])
   const cc = selectedCountry.value
   const country = regionLabel(cc)
   const provName = regionProvince.value
@@ -1052,11 +1050,10 @@ function onTouchEnd(e: TouchEvent) {
         </button>
       </div>
     </template>
-    <!-- 第 2 步 区域（087 §4.9 常显；088 方案 B：L1–L4 = 国家/省，L5+ = 大洲 chips） -->
+    <!-- 第 2 步 区域（2026-10-25 全档统一：任何档位任选 省/国家/洲/全球） -->
     <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepRegion') }}</p>
       <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
       <p class="region-ask">{{ t('quiz.regionAsk') }}</p>
-      <p v-if="tier > 4" class="region-note muted small">{{ t('quiz.regionHigherTiers') }}</p>
       <p v-if="tier === 1 && firstRoundEver" class="beginner-hint">
         <Sparkles class="ic" :size="14" /> {{ t('quiz.beginnerHint') }}
       </p>
@@ -1076,41 +1073,28 @@ function onTouchEnd(e: TouchEvent) {
         </button>
       </div>
       <div v-if="regionPickerOpen" class="region-picker">
-        <!-- 088 方案 B：L5+ 的地区面板 = 大洲 chips（全球兜底）；L1–L4 仍是 洲分组 → 国家/省 -->
-        <template v-if="tier > 4">
-          <div class="regions continent-quick">
-            <button
-              type="button"
-              class="tier region"
-              :class="{ on: !chosenContinent }"
-              @click="chooseRegionContinent('ALL')"
-            >
-              <strong>{{ t('quiz.regionAll') }}</strong>
-            </button>
-            <button
-              v-for="opt in continentRegionOptions"
-              :key="opt.code"
-              type="button"
-              class="tier region"
-              :class="{ on: chosenContinent === opt.code }"
-              @click="chooseRegionContinent(opt.code)"
-            >
-              <strong>{{ opt.label }}</strong>
-              <span class="count">{{ opt.n }}</span>
-            </button>
-          </div>
-        </template>
-        <template v-else>
-        <!-- 全球（087 P0-2：原 14 国快捷行删除，统一走 洲 → 国家/地区 → 省） -->
-        <div class="regions">
+        <!-- 2026-10-25 全档统一：任何档位任选 省/国家/洲/全球。
+             第一行 = 全球 + 七大洲直选；下面 = 洲分组 → 国家 → 省（内联） -->
+        <div class="regions continent-quick">
           <button
             type="button"
             class="tier region"
             :class="{ on: regionChoice === 'ALL' }"
             :title="t('quiz.regionHint')"
-            @click="chooseRegion('ALL')"
+            @click="chooseRegionContinent('ALL')"
           >
             <strong>{{ t('quiz.regionAll') }}</strong>
+          </button>
+          <button
+            v-for="opt in continentRegionOptions"
+            :key="opt.code"
+            type="button"
+            class="tier region"
+            :class="{ on: chosenContinent === opt.code }"
+            @click="chooseRegionContinent(opt.code)"
+          >
+            <strong>{{ opt.label }}</strong>
+            <span class="count">{{ opt.n }}</span>
           </button>
         </div>
         <!-- 087 P0：洲 → 国家/地区 分组（全部 249 码；按区系种数排序，0 也照列不折叠） -->
@@ -1156,7 +1140,6 @@ function onTouchEnd(e: TouchEvent) {
             </div>
           </div>
         </div>
-        </template>
       </div>
     <p v-if="adaptiveHint" class="adaptive-hint">
       {{

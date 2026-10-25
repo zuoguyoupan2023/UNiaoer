@@ -381,10 +381,9 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
 
   let rows: SpeciesRow[] = []
   let byTiers = false
-  // 088 方案 B（2026-10-24）：L1–L4 = 国家/省（档位分片）；L5+ = 大洲（区系并集，全局 commonness）。
-  // 洲码与国家/省码形态不冲突（全大写下划线）；跨档残留由前端 effectiveRegion 归一，服务端再防一道。
-  const useRegion =
-    region !== 'ALL' && (isContinentCode(region) ? tier > 4 : tier <= 4)
+  // 2026-10-25 用户定：全档位统一自选地区（1–7 任选 省/国家/洲/全球）——
+  // 只要带 region 就按其形态过滤：国家/省→地区档位分片；洲→区系并集（全局 commonness）。
+  const useRegion = region !== 'ALL'
   if (useRegion && !isContinentCode(region)) {
     // ① 地区档位（036）：省/国家分片 → 严格档位；不足则放宽到表内任意档位
     const tiers = await regionTiers(env, region)

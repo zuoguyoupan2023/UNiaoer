@@ -71,7 +71,7 @@ let seqCounter = 0
 
 /** 缓存键：档位 × 题型 × 地区（不含题量——count 已归一） */
 function cacheKeyOf(type: MediaType, tier: Tier, region: string): string {
-  // 088 方案 B：L1–L4=国家/省、L5+=洲（effectiveRegion 统一生效口径）
+  // 2026-10-25 全档统一：所选即生效（省/国家/洲/全球任选，effectiveRegion 只做归一）
   const r = effectiveRegion(tier, region)
   return `${CLIENT_PREFIX}${tier}:${type}:${r}`
 }

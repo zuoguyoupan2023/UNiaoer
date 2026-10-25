@@ -12,7 +12,7 @@ import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
-import { effectiveRegion } from '@/core/region'
+import { effectiveRegion, isContinentCode } from '@/core/region'
 import { isCorrectAnswer, loadNameVariants } from '@/core/nameMatch'
 
 /** 超时未作答的标记（区别于 null=未作答） */
@@ -158,7 +158,7 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
 async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
   const bank = await loadBank()
   const settings = useSettingsStore()
-  // 029 D-029-2 + 088 方案 B：L1–L4 按国家/省；L5+ 按洲（effectiveRegion 统一生效口径）
+  // 2026-10-25 用户定：全档位统一自选地区（省/国家/洲/全球任选，1–7 档同规则）
   const region = effectiveRegion(tier, settings.region)
   const regional = await loadRegionalPool(region).catch(() => null)
   const list = regional ?? bank.species
@@ -243,7 +243,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     nameMode.value =
       opts.nameMode ??
       (opts.keepSession ? nameMode.value : currentLocale() === 'en' ? 'en' : 'zh')
-    // 087 §6.5 + 088 方案 B：快照"实际生效"地区（L1–L4=国家/省，L5+=洲或全球）
+    // 087 §6.5 + 2026-10-25 全档统一：快照"实际生效"地区（用户所选，任何档位）
     region.value = effectiveRegion(tier.value, useSettingsStore().region)
     loading.value = true
     error.value = ''
@@ -330,12 +330,12 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         speciesForBuild = (await poolData(type, tier.value)).species
       }
 
-      // 036：L1–L4 用「该省/该国档位」出题（与 D-029-2 的地区策略一致，2026-10-24 修订扩到 L4）；
-      // L5+ 保持全球口径（"省里稀有=高手题"是语义错位）。取不到档位表 → null → 回退全局 commonness。
+      // 036（2026-10-25 全档统一）：选了 国家/省 就用「该地区档位表」出题（任何档位）；
+      // 洲码无省级分片 → 不取表（区系并集已过滤，难度走全局 commonness）。
+      // 取不到档位表 → null → 回退全局 commonness。
       let regionTiers: Map<string, number> | null = null
-      if (tier.value <= 4) {
-        const settingsForRegion = useSettingsStore()
-        const rm = await regionTierMap(settingsForRegion.region).catch(() => null)
+      if (region.value !== 'ALL' && !isContinentCode(region.value)) {
+        const rm = await regionTierMap(region.value).catch(() => null)
         regionTiers = rm?.tiers ?? null
       }
       // 087 §4.8 + 089 §6：L6=名字→图/音；L7=图/音→输入。同一介绍页/赛制/池子语义，

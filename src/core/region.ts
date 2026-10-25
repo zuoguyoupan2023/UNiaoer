@@ -109,16 +109,13 @@ export function isContinentCode(v: string | null | undefined): v is ContinentCod
 }
 
 /**
- * 地区「生效值」（088 方案 B 的统一口径，store/在线池/上报共用）：
- *   L1–L4 → 国家/省原样；选了洲（跨档残留）→ 'ALL'；
- *   L5+   → 洲码原样；选了国家/省（跨档残留）→ 'ALL'。
+ * 地区「生效值」（2026-10-25 用户定：**全档位统一自选**——1–7 档任选 省/国家/洲/全球，
+ * 推翻此前按档位分流的两版设计）。本函数退化为纯归一化（大写、空→ALL）；
+ * tier 形参保留以兼容既有调用点，不再参与逻辑。
  */
-export function effectiveRegion(tier: number, chosen: string): string {
-  const v = String(chosen || '').toUpperCase()
-  if (!v || v === 'ALL') return 'ALL'
-  const continent = isContinentCode(v)
-  if (tier <= 4) return continent ? 'ALL' : v
-  return continent ? v : 'ALL'
+export function effectiveRegion(_tier: number, chosen: string): string {
+  const v = String(chosen || '').trim().toUpperCase()
+  return v || 'ALL'
 }
 
 /**

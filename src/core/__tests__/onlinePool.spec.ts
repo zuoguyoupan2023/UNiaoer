@@ -68,26 +68,23 @@ describe('fetchOnlinePool', () => {
     expect(calls[0]).not.toContain('region=') // ALL 不带 region
   })
 
-  it('地区：L1-L4 带 region，L5+ 不带（与 D-029-2 修订版一致，2026-10-24）', async () => {
+  it('地区：全档统一——任何档位带 省/国家/洲 都生效（2026-10-25 用户定）', async () => {
     const calls = stubFetch((u) => okResponse(u))
     await fetchOnlinePool('image', 2, 'CN')
     expect(calls[0]).toContain('region=CN')
+    for (const t of [4, 5, 6, 7] as const) {
+      clearClientPoolCache()
+      calls.length = 0
+      await fetchOnlinePool('image', t, 'CN-11')
+      expect(calls[0]).toContain('region=CN-11')
+    }
     clearClientPoolCache()
     calls.length = 0
-    await fetchOnlinePool('image', 4, 'CN')
-    expect(calls[0]).toContain('region=CN')
-    clearClientPoolCache()
-    calls.length = 0
-    await fetchOnlinePool('image', 5, 'CN')
-    expect(calls[0]).not.toContain('region=')
-    clearClientPoolCache()
-    calls.length = 0
-    // 088 方案 B：L5+ 传洲码 → 带上；L1–L4 传洲码（跨档残留）→ 归一为全球
-    await fetchOnlinePool('image', 5, 'ASIA')
+    await fetchOnlinePool('image', 3, 'ASIA')
     expect(calls[0]).toContain('region=ASIA')
     clearClientPoolCache()
     calls.length = 0
-    await fetchOnlinePool('image', 2, 'ASIA')
+    await fetchOnlinePool('image', 5, 'ALL')
     expect(calls[0]).not.toContain('region=')
   })
 
