@@ -90,7 +90,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     descKey: 'difficulty.l6.desc',
     optionCount: 6,
     distractor: 'same',
-    timeLimitSec: 10,
+    timeLimitSec: 15,
     commonness: [1, 2, 3, 4],
     mediaPoolSize: 1,
   },
@@ -107,12 +107,12 @@ export const TIER_LIST: TierConfig[] = [
 ]
 
 /**
- * L6 半鸟人的分题型配置（docs/081 §7 + README 草案，2026-10-24）：
- *   看图版：6 个图像选项，限时 10s；听音版：4 个声音选项，限时 25s（听音辨认更难）。
+ * L6 半鸟人的分题型配置（docs/081 §7 + README，2026-10-24 修订）：
+ *   看图版：6 个图像选项，限时 15s（10→15，用户 2026-10-24 定）；听音版：4 个声音选项，限时 25s。
  * 干扰项策略固定 same（同科为主，「多选项都是同科鸟」）；选项素材都取首选
  * （媒体池大小 1：标准照/最佳录音，识别题不做姿态随机）。
  */
 export const L6_TIERS: Record<MediaType, { optionCount: number; timeLimitSec: number; distractor: DistractorStrategy }> = {
-  image: { optionCount: 6, timeLimitSec: 10, distractor: 'same' },
+  image: { optionCount: 6, timeLimitSec: 15, distractor: 'same' },
   audio: { optionCount: 4, timeLimitSec: 25, distractor: 'same' },
 }

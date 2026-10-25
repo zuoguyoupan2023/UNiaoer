@@ -150,7 +150,8 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
 async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
   const bank = await loadBank()
   const settings = useSettingsStore()
-  const region = tier <= 3 ? settings.region : 'ALL'
+  // 029 D-029-2（2026-10-24 修订）：L1–L4 按地区偏好过滤；L5+ 全球开放
+  const region = tier <= 4 ? settings.region : 'ALL'
   const regional = await loadRegionalPool(region).catch(() => null)
   const list = regional ?? bank.species
   return list.filter((sp) => !sp.quizExcluded && speciesPlayable(sp, type))
@@ -306,17 +307,17 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         speciesForBuild = (await poolData(type, tier.value)).species
       }
 
-      // 036：L1–L3 用「该省/该国档位」出题（与 D-029-2 的地区策略一致）；
-      // L4–L5 保持全球口径（"省里稀有=高手题"是语义错位）。取不到档位表 → null → 回退全局 commonness。
+      // 036：L1–L4 用「该省/该国档位」出题（与 D-029-2 的地区策略一致，2026-10-24 修订扩到 L4）；
+      // L5+ 保持全球口径（"省里稀有=高手题"是语义错位）。取不到档位表 → null → 回退全局 commonness。
       let regionTiers: Map<string, number> | null = null
-      if (tier.value <= 3) {
+      if (tier.value <= 4) {
         const settingsForRegion = useSettingsStore()
         const rm = await regionTierMap(settingsForRegion.region).catch(() => null)
         regionTiers = rm?.tiers ?? null
       }
       // 087 §4.8（用户定：L6 就是难度第六档）：同一介绍页/赛制/池子语义，仅玩法换成
       // 「名字 → 图/音」（buildNameQuestions，选项数/限时按题型取 L6_TIERS）。
-      // 赛制池对 L6 照常生效（speciesPool）；regionTiers 只在 L1–L3（上面 tier<=3 已限定）。
+      // 赛制池对 L6 照常生效（speciesPool）；regionTiers 只在 L1–L4（上面 tier<=4 已限定，L6 全球）。
       const qs = isL6
         ? await buildNameQuestions(speciesForBuild, {
             type,

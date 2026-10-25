@@ -59,7 +59,7 @@ describe('buildNameQuestions（L6 半鸟人）', () => {
     for (const q of qs) {
       expect(q.tier).toBe(6)
       expect(q.answerMode).toBe('choice')
-      expect(q.timeLimitSec).toBe(L6_TIERS.image.timeLimitSec)
+      expect(q.timeLimitSec).toBe(15)
       expect(q.options.length).toBe(L6_TIERS.image.optionCount)
       expect(q.optionsMedia?.length).toBe(q.options.length)
       expect(q.options).toContain(q.answer)

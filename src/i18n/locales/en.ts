@@ -105,6 +105,8 @@ const en: typeof zhMessages = {
     stepLevel: 'Level',
     // 087 P0-4: the region prompt line
     regionAsk: 'Which region’s birds do you want to challenge?',
+    // 087 §4.9: region stays visible at high tiers (only L1–L3 apply it — say so)
+    regionHigherTiers: 'Region preference applies to L1–L4; this level draws worldwide',
     adaptiveUp: 'Raised to “{tier}” based on your last {n} rounds ({acc}% correct)',
     adaptiveDown: 'Lowered to “{tier}” — {acc}% correct across your last {n} rounds',
     stepRegion: 'Region',
@@ -1024,7 +1026,7 @@ const en: typeof zhMessages = {
     },
     l6: {
       label: 'L6 Half-Birder',
-      desc: 'name → photo/sound · close relatives · 10s / 25s',
+      desc: 'name → photo/sound · close relatives · 15s / 25s',
     },
   },
   badges: {

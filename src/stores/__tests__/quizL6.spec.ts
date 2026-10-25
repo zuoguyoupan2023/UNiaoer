@@ -71,7 +71,7 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     wrongBookMock.mockResolvedValue([])
   })
 
-  it('start tier=6：题干是名字、选项带素材、限时/选项数按题型（图 6 选项 10s）', async () => {
+  it('start tier=6：题干是名字、选项带素材、限时/选项数按题型（图 6 选项 15s）', async () => {
     const quiz = useQuizStore()
     await quiz.start('image', { tier: 6 })
     expect(quiz.error).toBe('')
@@ -81,7 +81,7 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     for (const q of quiz.questions) {
       expect(q.tier).toBe(6)
       expect(q.answerMode).toBe('choice')
-      expect(q.timeLimitSec).toBe(10)
+      expect(q.timeLimitSec).toBe(15)
       expect(q.optionsMedia?.length).toBe(q.options.length)
       expect(q.options.length).toBe(6)
       expect(q.options).toContain(q.answer)

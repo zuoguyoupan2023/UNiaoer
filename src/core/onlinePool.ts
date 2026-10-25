@@ -70,7 +70,7 @@ let seqCounter = 0
 
 /** 缓存键：档位 × 题型 × 地区（不含题量——count 已归一） */
 function cacheKeyOf(type: MediaType, tier: Tier, region: string): string {
-  const r = region && region !== 'ALL' && tier <= 3 ? region : 'ALL'
+  const r = region && region !== 'ALL' && tier <= 4 ? region : 'ALL' // L5+ 全球（029 修订 2026-10-24）
   return `${CLIENT_PREFIX}${tier}:${type}:${r}`
 }
 
@@ -150,7 +150,7 @@ function writeClientCache(key: string, value: CachedPool): void {
  */
 function questionsUrl(type: MediaType, tier: Tier, region: string): string {
   const q = new URLSearchParams({ tier: String(tier), type, count: String(FETCH_COUNT) })
-  if (region && region !== 'ALL' && tier <= 3) q.set('region', region)
+  if (region && region !== 'ALL' && tier <= 4) q.set('region', region)
   return `${diagApiBase()}/api/questions?${q.toString()}`
 }
 

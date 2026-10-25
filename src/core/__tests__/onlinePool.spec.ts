@@ -68,13 +68,17 @@ describe('fetchOnlinePool', () => {
     expect(calls[0]).not.toContain('region=') // ALL 不带 region
   })
 
-  it('地区：L1-L3 带 region，L4/L5 不带（与 D-029-2 一致）', async () => {
+  it('地区：L1-L4 带 region，L5+ 不带（与 D-029-2 修订版一致，2026-10-24）', async () => {
     const calls = stubFetch((u) => okResponse(u))
     await fetchOnlinePool('image', 2, 'CN')
     expect(calls[0]).toContain('region=CN')
     clearClientPoolCache()
     calls.length = 0
     await fetchOnlinePool('image', 4, 'CN')
+    expect(calls[0]).toContain('region=CN')
+    clearClientPoolCache()
+    calls.length = 0
+    await fetchOnlinePool('image', 5, 'CN')
     expect(calls[0]).not.toContain('region=')
   })
 

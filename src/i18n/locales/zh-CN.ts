@@ -99,6 +99,8 @@ export const messages = {
     stepLevel: '水平',
     // 087 P0-4：地区步骤的提问句
     regionAsk: '你准备挑战识别哪个区域的鸟？',
+    // 087 §4.9：高难度下地区选择仍可见（出题侧仅 L1–L3 生效，如实说明）
+    regionHigherTiers: '地区偏好仅 L1–L4 生效；当前难度全球出题',
     adaptiveUp: '已按最近 {n} 轮表现（正确率 {acc}%）把难度升到「{tier}」',
     adaptiveDown: '最近 {n} 轮正确率 {acc}%，已把难度降到「{tier}」',
     stepRegion: '地区',
@@ -1012,7 +1014,7 @@ export const messages = {
     },
     l6: {
       label: 'L6 半鸟人',
-      desc: '看鸟名选图/选音 · 同科近缘 · 图 10s / 音 25s',
+      desc: '看鸟名选图/选音 · 同科近缘 · 图 15s / 音 25s',
     },
   },
   badges: {

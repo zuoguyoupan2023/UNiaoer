@@ -381,7 +381,7 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
 
   let rows: SpeciesRow[] = []
   let byTiers = false
-  if (region !== 'ALL' && tier <= 3) {
+  if (region !== 'ALL' && tier <= 4) { // L5+ 全球（docs/029 D-029-2 修订 2026-10-24）
     // ① 地区档位（036）：省/国家分片 → 严格档位；不足则放宽到表内任意档位
     const tiers = await regionTiers(env, region)
     if (tiers?.size) {
@@ -394,7 +394,7 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
   }
   if (!byTiers) {
     // ② 旧路径：区系短码（分片缺失时降级）；L4/L5 或 ALL 则不做地区过滤
-    const shortCodes = region !== 'ALL' && tier <= 3 ? await regionShortCodes(env, region) : null
+    const shortCodes = region !== 'ALL' && tier <= 4 ? await regionShortCodes(env, region) : null
 
     // 措施二：索引区间扫描替代 ORDER BY RANDOM()（后者扫完候选集再排序：L3 每轮 ~10,000 行）。
     // 做法：以随机 rnd 起点沿 idx_species_sample(commonness, rnd) 取一段，

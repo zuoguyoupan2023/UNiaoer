@@ -214,7 +214,7 @@ function chooseTier(v: Tier) {
   }).catch(() => {})
 }
 
-/** 029 M2:地区偏好(仅 L1-L3 生效;L4/L5 全球开放)。
+/** 029 M2:地区偏好(L1-L4 生效;L5+ 全球开放;2026-10-24 修订)。
  * 087 P0：候选 = 「全球」+ 七大洲分组（全部 249 码），不再有 14 国快捷行。 */
 /**
  * 036 省级细分数据（懒加载；失败静默 → 只显示国家级）
@@ -957,8 +957,8 @@ function onTouchEnd(e: TouchEvent) {
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
 
-    <!-- 第 2 步 水平（087 §4.8：L1–L6，L6 就是第六档，不做独立题型） -->
-    <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepLevel') }}</p>
+    <!-- 第 1 步 水平（087 §4.8：L1–L6，L6 就是第六档，不做独立题型） -->
+    <p class="step-cap"><i class="step-no">1</i>{{ t('quiz.stepLevel') }}</p>
     <div class="tiers">
       <button
         v-for="cfg in TIER_LIST"
@@ -971,11 +971,12 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(cfg.descKey) }}</span>
       </button>
     </div>
-    <!-- 029 M2:地区偏好(L1-L3 生效;L4/L5 全球开放,不显示) -->
-    <template v-if="tier <= 3">
-      <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepRegion') }}</p>
+    <!-- 第 2 步 区域（087 §4.9 用户定：**始终可见可选**——不再按档位隐藏；
+         出题侧语义不变：地区过滤/档位表仅 L1–L3 生效，L4+ 全球开放（docs/029），高难度下说明） -->
+    <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepRegion') }}</p>
       <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
       <p class="region-ask">{{ t('quiz.regionAsk') }}</p>
+      <p v-if="tier > 4" class="region-note muted small">{{ t('quiz.regionHigherTiers') }}</p>
       <p v-if="tier === 1 && firstRoundEver" class="beginner-hint">
         <Sparkles class="ic" :size="14" /> {{ t('quiz.beginnerHint') }}
       </p>
@@ -1051,7 +1052,6 @@ function onTouchEnd(e: TouchEvent) {
           </div>
         </div>
       </div>
-    </template>
     <p v-if="adaptiveHint" class="adaptive-hint">
       {{
         t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
@@ -1063,7 +1063,7 @@ function onTouchEnd(e: TouchEvent) {
     </p>
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
-    <p class="step-cap"><i class="step-no">{{ tier <= 3 ? 4 : 3 }}</i>{{ t('quiz.stepForm') }}</p>
+    <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
     <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
       {{ t('quiz.regimePool', { regime: t(`regime.${quiz.regime}.label`), n: currentRegimeCount }) }}
     </p>
