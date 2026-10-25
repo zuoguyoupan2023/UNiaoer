@@ -226,8 +226,13 @@ function chooseTier(v: Tier) {
  * 改为「**已选摘要**（中国·北京）+ 更改」两步流程——默认收起，点「更改」才展开。
  */
 const provinceData = ref<ProvinceIndex | null>(null)
-/** 087 P0：区系种数（按国），供洲分组里的国家徽标如实标注（0 也照列，不折叠——铁律 6） */
-const distCounts = ref<Record<string, number>>({})
+/** 087 P0：区系层原始数据（国家 → 物种短码表）。国家徽标=长度；洲徽标=成员国**去重并集**（物种跨国重复，不能直接相加） */
+const distByCountry = ref<Record<string, string[]>>({})
+const distCounts = computed<Record<string, number>>(() => {
+  const out: Record<string, number> = {}
+  for (const [cc, list] of Object.entries(distByCountry.value)) out[cc] = list.length
+  return out
+})
 /** 087 P0：展开的大洲（手风琴，一次一个；打开面板时自动展开当前所选国所属洲） */
 const openContinent = ref<Continent | null>(null)
 /** 087 P0：洲 → 国家/地区分组（全部 249 码；按区系种数降序，再按码序稳定） */
@@ -259,7 +264,8 @@ const continentRegionOptions = computed(() =>
   CONTINENT_CODE_ORDER.map((code) => ({
     code,
     label: t(CONTINENT_LABEL_KEY[code]),
-    n: countriesOfContinent(code).reduce((sum, cc) => sum + (distCounts.value[cc] ?? 0), 0),
+    // 去重并集：一只鸟在亚洲 30 国都有记录也只计 1 次（简单相加会得出超过全球总数的荒谬值）
+    n: new Set(countriesOfContinent(code).flatMap((cc) => distByCountry.value[cc] ?? [])).size,
   })),
 )
 /** L5+ 已选洲（settings.region 存洲码；非洲值=视为全球） */
@@ -305,12 +311,8 @@ onMounted(async () => {
   void loadProvincesIndex().then((d) => (provinceData.value = d))
   try {
     const dist = await loadSpeciesDistribution()
-    // 087 P0：区系种数（洲分组国家徽标用）；0 记录的国家照列
-    if (dist) {
-      const counts: Record<string, number> = {}
-      for (const c of Object.keys(dist.byCountry)) counts[c] = (dist.byCountry[c] ?? []).length
-      distCounts.value = counts
-    }
+    // 087 P0 / 088 方案 B：区系层原始表（国家徽标与洲并集徽标共用）
+    if (dist) distByCountry.value = dist.byCountry as Record<string, string[]>
   } catch {
     /* 区系层不可用:洲分组徽标显示 0（列表仍完整），全球/选择不受影响 */
   }
@@ -383,8 +385,8 @@ const selectedCountry = computed(() => {
 const regionSummary = computed(() => {
   const r = regionChoice.value
   if (!r || r === 'ALL') return t('quiz.regionAll')
-  // 088 方案 B：L1–L4 时选过洲（跨档残留）→ 显示全球（生效口径如此，见 effectiveRegion）
-  if (tier.value <= 4 && isContinentCode(r)) return t('quiz.regionAll')
+  // 088 方案 B：洲码 → L5+ 显示大洲名；L1–L4（跨档残留）→ 显示全球（生效口径，见 effectiveRegion）
+  if (isContinentCode(r)) return tier.value > 4 ? t(CONTINENT_LABEL_KEY[r]) : t('quiz.regionAll')
   const cc = selectedCountry.value
   const country = regionLabel(cc)
   const provName = regionProvince.value
