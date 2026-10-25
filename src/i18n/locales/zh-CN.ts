@@ -892,6 +892,7 @@ export const messages = {
     hiddenBadge: '隐藏徽章 · 继续探索',
   },
   history: {
+    poster: '分享海报',
     title: '历史轮次',
     hint: '共 {n} 轮 · 点开某轮查看逐题明细',
     empty: '还没有答题记录，去答一轮吧',

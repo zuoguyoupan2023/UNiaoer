@@ -20,7 +20,7 @@ import { preloadQuestions } from '@/core/mediaLoader'
 import { ambiencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
-import { isDiag } from '@/core/diag'
+import { diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIERS } from '@/core/difficulty'
 import { loadBank, speciesNoteById } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
@@ -201,6 +201,14 @@ function submitAnswer() {
   if (quiz.answered || !quiz.current) return
   const v = draft.value.trim()
   if (!v) return
+  // 诊断（?diag=1）：记录输入来源与距切题的毫秒数（观察输入框焦点/自动提交类异常）
+  diagMarkAnswer({
+    questionIndex: quiz.index,
+    questionId: quiz.current.id,
+    value: v,
+    source: 'key',
+    autoPending: autoPending.value,
+  })
   quiz.answer(v)
 }
 
@@ -345,6 +353,7 @@ onMounted(() => {
     quiz.pendingContinue = false
     ambiencePlayer.stop()
   }
+  diagMarkAdvance()
   preloadQuestions(quiz.questions, quiz.index, 2)
   beginTiming()
   void nextTick(() => inputRef.value?.focus())
@@ -375,6 +384,7 @@ watch(
     switches.value = 0
     assetIdx.value = 0
     draft.value = ''
+    diagMarkAdvance()
     preloadQuestions(quiz.questions, i + 1, 1)
     beginTiming()
     void nextTick(() => inputRef.value?.focus())

@@ -809,6 +809,7 @@ const en: typeof zhMessages = {
     hiddenBadge: 'Hidden badge · keep exploring',
   },
   history: {
+    poster: 'Share poster',
     title: 'Round history',
     hint: '{n} rounds in total · tap one to review every question',
     empty: 'No rounds yet — go play one!',

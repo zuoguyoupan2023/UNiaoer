@@ -8,6 +8,7 @@ import {
   Eye,
   Headphones,
   History,
+  Images,
   Share2,
   Swords,
 } from 'lucide-vue-next'
@@ -16,6 +17,10 @@ import {
   type RoundItem,
   type RoundRecord,
 } from '@/core/historyDb'
+import { TIERS } from '@/core/difficulty'
+import { posterDataFromRound, posterImagesFromRound, type RoundPosterDeps } from '@/core/roundPoster'
+import type { PosterData, PosterImage } from '@/core/poster'
+import PosterEditor from '@/components/PosterEditor.vue'
 import { loadBank, speciesById, speciesNameById, speciesNameByStoredName } from '@/core/bank'
 import { assetsOf } from '@/core/questionEngine'
 import {
@@ -136,6 +141,42 @@ function refreshShares() {
   shareMap.value = map
 }
 
+// ── 2026-10-25（问题 2）：历史轮次**再次生成海报** ──
+/** 当前正在出海报的轮次（null = 弹层关闭）；同一套 PosterEditor，与结果页口径一致 */
+const posterRound = ref<RoundRecord | null>(null)
+const showPoster = computed({
+  get: () => posterRound.value !== null,
+  set: (v: boolean) => {
+    if (!v) posterRound.value = null
+  },
+})
+
+/** 历史轮次的海报文案依赖（档案昵称取当前设备昵称；称号/徽章历史未存 → 不画） */
+function posterDepsOf(r: RoundRecord): RoundPosterDeps {
+  return {
+    nameOf: (it: RoundItem) => nameOf(it),
+    choiceOf: (it: RoundItem) => choiceOf(it),
+    modeLabel: r.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
+    tierLabel: t(TIERS[r.tier]?.labelKey ?? 'difficulty.l2.label'),
+    // 旧数据兼容：无 region 记录 → 空串 → 海报不画题目范围
+    regionLabel: r.region ?? '',
+    nickname: undefined, // 历史页不自动带昵称（用户可自行决定是否发布；如需带上可传 settings.nickname）
+  }
+}
+
+const posterData = computed<PosterData>(() =>
+  posterRound.value
+    ? posterDataFromRound(posterRound.value, posterDepsOf(posterRound.value))
+    : { modeLabel: '', tierLabel: '', correct: 0, total: 0, accuracy: 0, date: '', wrong: [] },
+)
+const posterImages = computed<PosterImage[]>(() =>
+  posterRound.value ? posterImagesFromRound(posterRound.value) : [],
+)
+
+function openPoster(r: RoundRecord) {
+  posterRound.value = r
+}
+
 const shareOf = (roundId: string) => shareMap.value[roundId]
 const shareUrlFor = (roundId: string) => {
   const s = shareMap.value[roundId]
@@ -204,12 +245,18 @@ async function onCopy(round: RoundRecord) {
             </span>
           </button>
 
-          <div v-if="openedId === r.id && shareOf(r.id)" class="share-row">
-            <span class="muted small">{{ shareUrlFor(r.id) }}</span>
-            <button class="btn-link" type="button" @click="onCopy(r)">{{ t('share.copy') }}</button>
-            <button class="btn-link" type="button" :disabled="revoking === r.id" @click="onRevoke(r)">
-              {{ t('share.revoke') }}
+          <!-- 2026-10-25（问题 2）：无论是否已分享，都能再次生成海报（标准海报弹层） -->
+          <div v-if="openedId === r.id" class="share-row">
+            <button class="btn-link" type="button" @click="openPoster(r)">
+              <Images class="ic" :size="13" /> {{ t('history.poster') }}
             </button>
+            <template v-if="shareOf(r.id)">
+              <span class="muted small">{{ shareUrlFor(r.id) }}</span>
+              <button class="btn-link" type="button" @click="onCopy(r)">{{ t('share.copy') }}</button>
+              <button class="btn-link" type="button" :disabled="revoking === r.id" @click="onRevoke(r)">
+                {{ t('share.revoke') }}
+              </button>
+            </template>
           </div>
 
           <ol v-if="openedId === r.id" class="items">
@@ -262,6 +309,9 @@ async function onCopy(round: RoundRecord) {
       </RouterLink>
     </p>
   </section>
+
+  <!-- 2026-10-25（问题 2）：历史轮次的海报弹层（复用结果页同一组件） -->
+  <PosterEditor :open="showPoster" :data="posterData" :images="posterImages" @close="showPoster = false" />
 </template>
 
 <style scoped>

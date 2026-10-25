@@ -9,7 +9,7 @@ import { listRounds, setActiveArchiveNickname, setProfileNickname } from '@/core
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
-import { isDiag } from '@/core/diag'
+import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
@@ -43,6 +43,7 @@ import {
   CONTINENT_LABEL_KEY,
   COUNTRIES_BY_CONTINENT,
   REGION_LABEL_KEY,
+  continentCodeOf,
   continentOf,
   countriesOfContinent,
   isContinentCode,
@@ -270,36 +271,34 @@ const continentGroups = computed(() =>
       .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
   })),
 )
-function toggleContinent(c: Continent) {
-  openContinent.value = openContinent.value === c ? null : c
-}
 /**
- * 088 方案 B：L5+ 的出题地区 = 大洲（含全球兜底）。洲的物种数 = 成员国区系数之和
- * （distCounts 缺失时如实显示 0，铁律 6：列出、不折叠）。
+ * 2026-10-25 用户定（问题 1）：**洲标题本身就是选择器**——点洲 = 选中该洲为出题范围
+ * 并展开它下面的国家（与「点中国 → 下面展开省」同构）；再点一次收起（收起不改变已选洲）。
+ * 原先「上面一行洲直选 + 下面又一组洲手风琴」是重复冗余，已删除。
  */
-const CONTINENT_CODE_ORDER: ContinentCode[] = [
-  'ASIA',
-  'EUROPE',
-  'AFRICA',
-  'NORTH_AMERICA',
-  'SOUTH_AMERICA',
-  'OCEANIA',
-  'ANTARCTICA',
-]
-const continentRegionOptions = computed(() =>
-  CONTINENT_CODE_ORDER.map((code) => ({
-    code,
-    label: t(CONTINENT_LABEL_KEY[code]),
-    // 去重并集：一只鸟在亚洲 30 国都有记录也只计 1 次（简单相加会得出超过全球总数的荒谬值）
-    n: new Set(countriesOfContinent(code).flatMap((cc) => distByCountry.value[cc] ?? [])).size,
-  })),
-)
-/** L5+ 已选洲（settings.region 存洲码；非洲值=视为全球） */
+function toggleContinent(c: Continent) {
+  const code = continentCodeOf(c)
+  const opening = openContinent.value !== c
+  openContinent.value = opening ? c : null
+  if (!opening) return
+  if (!isContinentCode(regionChoice.value)) {
+    // 从国家/省切到洲：选中该洲（出题范围变洲）
+    regionChoice.value = code
+    void quiz.regimeCounts(props.type, tier.value).then((c2) => (regimeCountsData.value = c2)).catch(() => {})
+  }
+}
+/** 洲的物种数徽标 = 成员国区系**去重并集**种数（简单相加会超过全球总数，见 docs/088 §6.1） */
+function continentSpeciesCount(c: Continent): number {
+  const code = continentCodeOf(c)
+  return new Set(countriesOfContinent(code).flatMap((cc) => distByCountry.value[cc] ?? [])).size
+}
+/** 当前选中的洲（与 openContinent 解耦：收起后高亮仍在） */
 const chosenContinent = computed<ContinentCode | null>(() =>
   isContinentCode(regionChoice.value) ? regionChoice.value : null,
 )
-function chooseRegionContinent(code: ContinentCode | 'ALL') {
-  regionChoice.value = code
+/** 「全球」快捷项（清空地区选择） */
+function chooseGlobal() {
+  regionChoice.value = 'ALL'
   regionPickerOpen.value = false
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
@@ -478,6 +477,13 @@ const diagHead = computed(() => {
     region: d.region && d.region !== 'ALL' ? ` · ${d.region}` : '',
     regime: t(`regime.${d.regime}.label`),
   })
+})
+/** 选项残留观测摘要（切题/作答后重算；非 diag 恒空） */
+const diagInput = computed(() => {
+  // 依赖：题号与已答数量变化 → 重算
+  void quiz.index
+  void quiz.answeredCount
+  return diagOn ? diagInputSummary() : ''
 })
 const diagBody = computed(() => {
   const d = quiz.lastBuild
@@ -753,6 +759,55 @@ async function begin() {
   updateInterference()
 }
 
+/**
+ * 2026-10-25（问题 3）：选项作答的唯一入口——写答案前先留一条诊断轨迹（仅 ?diag=1 生效）。
+ * 观测目标：手机上「下一题第一个选项莫名已被选中」；来源 click/key 且距切题 <600ms 视为可疑
+ * （幽灵点击/DOM 复用残留），console.warn 里带 UA 与毫秒数，便于复现定位。
+ */
+/**
+ * 2026-10-25（问题 3）：移动端「幽灵点击」防护。
+ *
+ * 成因：切题瞬间手指仍在屏幕上的那次触摸，其 `click`（或部分 WebKit 的延迟 click）
+ * 可能补发到**新题的按钮**上 → 下一题第一个选项莫名被选中（桌面无此路径）。
+ *
+ * 判定（精确，不误伤手快用户）：只有在**切题之前**按下的指针（pointerdown 落在旧题），
+ * 其后续 click 落到新题才算幽灵点击。人手正常作答必然是「先 pointerdown、再 click」，
+ * 且 pointerdown 一定发生在当前题显示之后，故不会被拦。
+ */
+let advancedAt = 0
+const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+/** 最近一次 pointerdown 是否发生在**上一次切题之前**（true = 该指针跨题，其 click 应忽略） */
+let pointerBeforeAdvance = false
+
+function onPointerDownCapture() {
+  pointerBeforeAdvance = nowMs() < advancedAt
+}
+
+function onSelectOption(value: string, source: 'click' | 'key' = 'click') {
+  const q = quiz.current
+  if (!q) return
+  // 幽灵点击：该次交互的 pointerdown 发生在切题之前（跨题残留）→ 忽略这次 click
+  if (source === 'click' && pointerBeforeAdvance) {
+    diagMarkAnswer({
+      questionIndex: quiz.index,
+      questionId: q.id,
+      value,
+      source,
+      autoPending: autoPending.value,
+    })
+    pointerBeforeAdvance = false
+    return
+  }
+  diagMarkAnswer({
+    questionIndex: quiz.index,
+    questionId: q.id,
+    value,
+    source,
+    autoPending: autoPending.value,
+  })
+  quiz.answer(value)
+}
+
 /** 每题计时/干扰的启动点：看图=切题即开始；听音=考题音频开播后（R24） */
 function beginQuestionTiming() {
   timerBegun.value = false
@@ -822,6 +877,8 @@ watch(
     if (quiz.tier >= 6) return // 087 §4.8/089：L6/L7 由各自答题组件自管（计时/预载）
     clearAutoNext()
     cancelledThisQuestion.value = false
+    advancedAt = nowMs() // 幽灵点击静默期起点
+    diagMarkAdvance() // 诊断：记录切题时刻（?diag=1 才生效）
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
     beginQuestionTiming() // 计时起点：看图立即 / 听音等音频开播（R24）
     updateInterference()
@@ -883,7 +940,7 @@ function onKey(e: KeyboardEvent) {
   const idx = map[e.key.toLowerCase()]
   if (idx !== undefined) {
     const opt = q.options[idx]
-    if (opt) quiz.answer(opt)
+    if (opt) onSelectOption(opt, 'key')
   }
 }
 
@@ -1073,41 +1130,32 @@ function onTouchEnd(e: TouchEvent) {
         </button>
       </div>
       <div v-if="regionPickerOpen" class="region-picker">
-        <!-- 2026-10-25 全档统一：任何档位任选 省/国家/洲/全球。
-             第一行 = 全球 + 七大洲直选；下面 = 洲分组 → 国家 → 省（内联） -->
-        <div class="regions continent-quick">
+        <!-- 2026-10-25（问题 1 修正）：任何档位任选 洲/国家/省/全球。
+             洲标题**本身即选择器**：点洲 = 选中该洲 + 在其下展开国家（点国家再展开省）——
+             与「点中国 → 下面展开省」同构；不再有「上面一行洲直选 + 下面又一组洲」的重复。 -->
+        <div class="regions">
           <button
             type="button"
             class="tier region"
             :class="{ on: regionChoice === 'ALL' }"
             :title="t('quiz.regionHint')"
-            @click="chooseRegionContinent('ALL')"
+            @click="chooseGlobal"
           >
             <strong>{{ t('quiz.regionAll') }}</strong>
           </button>
-          <button
-            v-for="opt in continentRegionOptions"
-            :key="opt.code"
-            type="button"
-            class="tier region"
-            :class="{ on: chosenContinent === opt.code }"
-            @click="chooseRegionContinent(opt.code)"
-          >
-            <strong>{{ opt.label }}</strong>
-            <span class="count">{{ opt.n }}</span>
-          </button>
         </div>
-        <!-- 087 P0：洲 → 国家/地区 分组（全部 249 码；按区系种数排序，0 也照列不折叠） -->
         <p class="continent-cap muted small">{{ t('region.continentsLabel') }}</p>
         <div class="continents">
           <div v-for="g in continentGroups" :key="g.key" class="continent">
             <button
               type="button"
               class="continent-head"
+              :class="{ on: chosenContinent === continentCodeOf(g.key) }"
               :aria-expanded="openContinent === g.key"
               @click="toggleContinent(g.key)"
             >
               <span>{{ t(`region.continents.${g.key}`) }}</span>
+              <span class="count">{{ continentSpeciesCount(g.key) }}</span>
               <span class="chev" aria-hidden="true">{{ openContinent === g.key ? '−' : '+' }}</span>
             </button>
             <div v-if="openContinent === g.key" class="regions continent-body">
@@ -1199,9 +1247,10 @@ function onTouchEnd(e: TouchEvent) {
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <!-- 072-a：题量不足时明确说明原因（不再是"静默少几题"） -->
     <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
-    <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts） -->
+    <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts）+ 选项残留观测（2026-10-25） -->
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
+      <template v-if="diagInput"><br /><span class="diag-input">{{ diagInput }}</span></template>
     </p>
     <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
@@ -1221,7 +1270,12 @@ function onTouchEnd(e: TouchEvent) {
       </span>
     </div>
 
-    <div class="card" @touchstart.passive="onTouchStart" @touchend="onTouchEnd">
+    <div
+      class="card"
+      @touchstart.passive="onTouchStart"
+      @touchend="onTouchEnd"
+      @pointerdown.capture="onPointerDownCapture"
+    >
       <MediaCard
         :key="quiz.current.id"
         :type="displayType"
@@ -1267,7 +1321,7 @@ function onTouchEnd(e: TouchEvent) {
         :hidden="optionsHidden"
         :reveal-in-sec="revealInSec"
         :mode="quiz.current.type"
-        @select="quiz.answer($event)"
+        @select="onSelectOption"
       />
 
       <!-- 自动切换中：浮窗（答对 3s / 都自动的错题 4s），可「取消切换」（R43） -->
@@ -1378,6 +1432,9 @@ function onTouchEnd(e: TouchEvent) {
 .diag-body {
   color: var(--text-light);
   opacity: 0.92;
+}
+.diag-input {
+  color: #8a5a00;
 }
 .intro {
   text-align: center;
@@ -1636,6 +1693,26 @@ function onTouchEnd(e: TouchEvent) {
 .continent-head .chev {
   color: var(--text-light);
   font-weight: 600;
+}
+/* 2026-10-25：洲标题即选择器——选中态与展开态都要能看出来 */
+.continent-head.on {
+  background: #eaf4ef;
+  color: var(--primary-dark);
+}
+.continent-head .count {
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.7;
+  font-variant-numeric: tabular-nums;
+}
+.continent-head.on .count {
+  background: #d7ece2;
 }
 .continent-body {
   padding: 0 10px 10px;

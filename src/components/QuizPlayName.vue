@@ -17,7 +17,7 @@ import { preloadQuestions } from '@/core/mediaLoader'
 import { ambiencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
-import { isDiag } from '@/core/diag'
+import { diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIERS } from '@/core/difficulty'
 import { loadBank, speciesNoteById } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
@@ -287,6 +287,34 @@ function quitRound() {
   router.push('/result')
 }
 
+/**
+ * 2026-10-25（问题 3）：幽灵点击防护（与经典卷同则）——
+ * 只有「pointerdown 发生在切题之前」的那次 click 才可能是跨题残留，其余照常作答。
+ */
+let advancedAt = 0
+const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+let pointerBeforeAdvance = false
+function onPointerDownCapture() {
+  pointerBeforeAdvance = nowMs() < advancedAt
+}
+
+/** 选项作答唯一入口：先记诊断轨迹（?diag=1 才生效），再写答案；切题 250ms 内的点击视为幽灵点击 */
+function onSelectOption(value: string) {
+  const q = quiz.current
+  if (!q) return
+  const stale = pointerBeforeAdvance
+  diagMarkAnswer({
+    questionIndex: quiz.index,
+    questionId: q.id,
+    value,
+    source: 'click',
+    autoPending: autoPending.value,
+  })
+  pointerBeforeAdvance = false
+  if (stale) return
+  quiz.answer(value)
+}
+
 // ---- L6 选项试听（听音版）：作答后停播 ----
 const optionListRef = ref<InstanceType<typeof OptionMediaList> | null>(null)
 
@@ -301,6 +329,7 @@ onMounted(() => {
     quiz.pendingContinue = false
     ambiencePlayer.stop()
   }
+  advancedAt = nowMs() // 首题的静默期起点
   preloadQuestions(quiz.questions, quiz.index, 2) // 当前题 + 下 1 题（每题素材多，少预）
   startTimer()
 })
@@ -315,6 +344,8 @@ watch(
   (i) => {
     clearAutoNext()
     cancelledThisQuestion.value = false
+    advancedAt = nowMs()
+    diagMarkAdvance()
     preloadQuestions(quiz.questions, i + 1, 1) // 之后 1 题（每题素材多，少预）
     startTimer()
   },
@@ -501,7 +532,12 @@ const optionAttributions = computed(() => {
       </span>
     </div>
 
-    <div class="card" @touchstart.passive="onTouchStart" @touchend="onTouchEnd">
+    <div
+      class="card"
+      @touchstart.passive="onTouchStart"
+      @touchend="onTouchEnd"
+      @pointerdown.capture="onPointerDownCapture"
+    >
       <!-- 题干：鸟名（学名卷为斜体拉丁名） -->
       <div class="stem">
         <p class="stem-cap muted">{{ t('quiz6.stemCap') }}</p>
@@ -522,7 +558,7 @@ const optionAttributions = computed(() => {
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"
         :type="quiz.current.type"
-        @select="quiz.answer($event)"
+        @select="onSelectOption"
       />
 
       <!-- G1 报错按钮 -->

@@ -133,6 +133,18 @@ export const COUNTRIES_BY_CONTINENT: Record<Continent, string[]> = {
   antarctica: ANTARCTICA,
 }
 
+/** Continent（camel，展示顺序表用）→ 洲码（地区选择/记录用） */
+export function continentCodeOf(c: Continent): ContinentCode {
+  switch (c) {
+    case 'northAmerica':
+      return 'NORTH_AMERICA'
+    case 'southAmerica':
+      return 'SOUTH_AMERICA'
+    default:
+      return c.toUpperCase() as ContinentCode
+  }
+}
+
 /** 洲码 → 成员国/地区码（区系求并集用；数据同上表，零重复） */
 export function countriesOfContinent(code: ContinentCode): string[] {
   const camel: Continent =
