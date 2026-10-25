@@ -100,11 +100,22 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     }
   })
 
-  it('nameMode 跟随界面语言（D-1；学名卷 switch 已挂起，引擎仍支持 nameMode 入参）', async () => {
+  it('nameMode 跟随界面语言（D-1）；显式学名卷（089 §6.2 恢复）题干/选项全为学名', async () => {
     const quiz = useQuizStore()
     await quiz.start('image', { tier: 6 })
     expect(quiz.nameMode).toBe('zh') // 测试环境 locale 为 zh
     for (const q of quiz.questions) expect(q.nameMode).toBe('zh')
+
+    await quiz.start('image', { tier: 6, nameMode: 'sci' })
+    expect(quiz.nameMode).toBe('sci')
+    for (const q of quiz.questions) {
+      expect(q.nameMode).toBe('sci')
+      for (const name of q.options) expect(name).toMatch(/ sci$/)
+    }
+    // 「再来一轮」无显式值时沿用当前卷别（学名卷不回退）
+    await quiz.nextRound()
+    expect(quiz.nameMode).toBe('sci')
+    for (const q of quiz.questions) expect(q.nameMode).toBe('sci')
   })
 
   it('nextRound 保持 tier=6（再来一轮沿用第六档）', async () => {

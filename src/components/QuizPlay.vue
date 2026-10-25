@@ -30,7 +30,7 @@ import {
   Timer,
   X,
 } from 'lucide-vue-next'
-import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
+import type { MediaAsset, MediaType, NameMode, QuizRegime, Tier } from '@/types'
 import { loadBank, speciesNoteById, loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
 import { submitReport as uploadReport } from '@/core/reportsApi'
@@ -89,6 +89,21 @@ const savedTier = computed<Tier | undefined>(() =>
 function persistTier(v: Tier) {
   if (props.type === 'audio') settings.tierAudio = v
   else settings.tierImage = v
+}
+
+// ---- 089 §6.2：L6 作答模式（语言名 ↔ 学名，图/声分别记忆；L7 上线沿用同一形态） ----
+const nameMode6 = computed<'default' | 'sci'>({
+  get: () =>
+    props.type === 'audio' ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode6Image ?? 'default'),
+  set: (v) => {
+    if (props.type === 'audio') settings.nameMode6Audio = v
+    else settings.nameMode6Image = v
+  },
+})
+/** 开轮用的 L6 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
+function resolvedNameMode6(): NameMode {
+  if (nameMode6.value === 'sci') return 'sci'
+  return currentLocale() === 'en' ? 'en' : 'zh'
 }
 
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
@@ -716,9 +731,12 @@ async function begin() {
   started.value = true
   // 环境鸟鸣是全局功能，但测试开始后不播放（选难度阶段不算开始，见 R23）
   ambiencePlayer.stop()
-  // 087 §4.8：L6（tier=6）也是普通开轮——store 内按档位分支到 buildNameQuestions；
-  // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。
-  await quiz.start(props.type, { tier: tier.value })
+  // 087 §4.8 + 089 §6.2：L6（tier=6）也是普通开轮——store 内按档位分支到 buildNameQuestions；
+  // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。卷别按模式选择传入。
+  await quiz.start(props.type, {
+    tier: tier.value,
+    ...(tier.value === 6 ? { nameMode: resolvedNameMode6() } : {}),
+  })
   if (quiz.error || !quiz.questions.length) return // 错误区接管
   preloadQuestions(quiz.questions, 0, quiz.tier === 6 ? 2 : 4)
   if (quiz.tier === 6) return // L6 的计时起点由 QuizPlayName 挂载时启动
@@ -1009,6 +1027,20 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(cfg.descKey) }}</span>
       </button>
     </div>
+    <!-- 089 §6.2：L6 作答模式（语言名/学名）——仅第六档显示，不计步骤号 -->
+    <template v-if="tier === 6">
+      <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
+      <div class="tiers l6-mode">
+        <button type="button" class="tier" :class="{ on: nameMode6 === 'default' }" @click="nameMode6 = 'default'">
+          <strong>{{ t('quiz6.modeLang') }}</strong>
+          <span>{{ t('quiz6.modeLangHint') }}</span>
+        </button>
+        <button type="button" class="tier" :class="{ on: nameMode6 === 'sci' }" @click="nameMode6 = 'sci'">
+          <strong>{{ t('quiz6.modeSci') }}</strong>
+          <span>{{ t('quiz6.modeSciHint') }}</span>
+        </button>
+      </div>
+    </template>
     <!-- 第 2 步 区域（087 §4.9 常显；088 方案 B：L1–L4 = 国家/省，L5+ = 大洲 chips） -->
     <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepRegion') }}</p>
       <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
@@ -1633,6 +1665,17 @@ function onTouchEnd(e: TouchEvent) {
   .regimes {
     grid-template-columns: 1fr;
   }
+}
+/* 089 §6.2：L6 作答模式行（紧凑两枚，不带步骤号） */
+.l6-mode-cap {
+  margin-top: -10px;
+}
+.l6-mode {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+.l6-mode .tier {
+  padding: 8px 14px;
 }
 /* 087 P0-4：地区步骤的提问句（替代干巴巴的步骤名） */
 .region-ask {

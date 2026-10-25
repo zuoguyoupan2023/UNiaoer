@@ -65,6 +65,11 @@ const en: typeof zhMessages = {
   },
   // L6 Half-Birder (docs/081 §7): name → photo/sound; play-area copy (L6 is tier 6, no intro of its own)
   quiz6: {
+    modeCap: 'Answer with',
+    modeLang: 'Common names',
+    modeLangHint: 'Follows the interface language (Chinese / English)',
+    modeSci: 'Scientific names',
+    modeSciHint: 'Stem and options all use Latin names',
     stemCap: 'Which one matches this name?',
     mode: { zh: 'Chinese', en: 'English', sci: 'Scientific' },
     audioHint: 'Tap to play · tap the same option again to answer',

@@ -59,6 +59,11 @@ export const messages = {
   },
   // L6 半鸟人（docs/081 §7）：名字 → 图/音；答题区文案（介绍页无专属步骤，L6 是第六档）
   quiz6: {
+    modeCap: '作答模式',
+    modeLang: '语言名',
+    modeLangHint: '跟随界面语言（中文名 / 英文名）',
+    modeSci: '学名',
+    modeSciHint: '题干与选项均为拉丁学名',
     stemCap: '与这个名字相配的是——',
     mode: { zh: '中文卷', en: '英文卷', sci: '学名卷' },
     audioHint: '点按播放录音 · 再点同一项作答',

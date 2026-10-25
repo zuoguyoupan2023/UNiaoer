@@ -219,7 +219,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
 
   async function start(
     type: MediaType,
-    opts: { count?: number; tier?: Tier; keepSession?: boolean; regime?: QuizRegime } = {},
+    opts: {
+      count?: number
+      tier?: Tier
+      keepSession?: boolean
+      regime?: QuizRegime
+      /** L6 作答模式（089 §6.2）：显式传入时优先生效（'zh'/'en'/'sci'） */
+      nameMode?: NameMode
+    } = {},
   ) {
     mode.value = type
     if (opts.tier) tier.value = opts.tier
@@ -229,8 +236,11 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       sessionTotal.value = 0
     }
     if (opts.regime) regime.value = opts.regime
-    // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）
-    nameMode.value = currentLocale() === 'en' ? 'en' : 'zh'
+    // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）。
+    // 089 §6.2：L6 显式传模式（语言名/学名）；「再来一轮」无显式值时沿用当前卷别。
+    nameMode.value =
+      opts.nameMode ??
+      (opts.keepSession ? nameMode.value : currentLocale() === 'en' ? 'en' : 'zh')
     // 087 §6.5 + 088 方案 B：快照"实际生效"地区（L1–L4=国家/省，L5+=洲或全球）
     region.value = effectiveRegion(tier.value, useSettingsStore().region)
     loading.value = true
