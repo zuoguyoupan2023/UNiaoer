@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCountryIndex,
+  continentClickAction,
   continentOf,
   countriesInContinent,
   countryStats,
@@ -94,5 +95,18 @@ describe('countriesInContinent / presentContinents（七大洲筛选）', () => 
       'southAmerica',
       'oceania',
     ])
+  })
+})
+
+describe('continentClickAction（2026-10-25：点洲一次即选中）', () => {
+  it('当前选国家/全球/另一洲 → 点洲 = 选中并展开（一次点击生效）', () => {
+    expect(continentClickAction('ASIA', null, false)).toEqual({ select: true, open: true })
+    expect(continentClickAction('ASIA', null, true)).toEqual({ select: true, open: true })
+    expect(continentClickAction('ASIA', 'EUROPE', false)).toEqual({ select: true, open: true })
+  })
+
+  it('已选中该洲 → 点击只切换展开/收起（选中态保持）', () => {
+    expect(continentClickAction('ASIA', 'ASIA', true)).toEqual({ select: false, open: false })
+    expect(continentClickAction('ASIA', 'ASIA', false)).toEqual({ select: false, open: true })
   })
 })

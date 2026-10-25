@@ -275,3 +275,19 @@ export function presentContinents(stats: CountryStat[]): Continent[] {
   }
   return CONTINENTS.filter((c) => (counts.get(c) ?? 0) > 0)
 }
+
+/**
+ * 2026-10-25（用户反馈"亚洲要点两次才选中"）：洲标题点击的**纯判定**。
+ * 规则：
+ *   · 当前选中的不是该洲（选国家/省/全球，或另一个洲）→ **选中并展开**（一次点击即生效）；
+ *   · 当前已选中该洲 → 仅切换展开/收起（选中态保持）。
+ * 抽成纯函数以便单测（组件里只做赋值与副作用）。
+ */
+export function continentClickAction(
+  clicked: ContinentCode,
+  selected: ContinentCode | null,
+  isOpen: boolean,
+): { select: boolean; open: boolean } {
+  if (selected !== clicked) return { select: true, open: true }
+  return { select: false, open: !isOpen }
+}

@@ -41,6 +41,7 @@ import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type Provi
 import {
   CONTINENTS,
   CONTINENT_LABEL_KEY,
+  continentClickAction,
   COUNTRIES_BY_CONTINENT,
   REGION_LABEL_KEY,
   continentCodeOf,
@@ -278,14 +279,14 @@ const continentGroups = computed(() =>
  */
 function toggleContinent(c: Continent) {
   const code = continentCodeOf(c)
-  const opening = openContinent.value !== c
-  openContinent.value = opening ? c : null
-  if (!opening) return
-  if (!isContinentCode(regionChoice.value)) {
-    // 从国家/省切到洲：选中该洲（出题范围变洲）
+  // 判定抽到 core/region.continentClickAction（可单测）：未选中 → 一次点击即选中并展开；
+  // 已选中 → 只切换展开/收起（2026-10-25 修复"亚洲要点两次"）
+  const act = continentClickAction(code, chosenContinent.value, openContinent.value === c)
+  if (act.select) {
     regionChoice.value = code
     void quiz.regimeCounts(props.type, tier.value).then((c2) => (regimeCountsData.value = c2)).catch(() => {})
   }
+  openContinent.value = act.open ? c : null
 }
 /** 洲的物种数徽标 = 成员国区系**去重并集**种数（简单相加会超过全球总数，见 docs/088 §6.1） */
 function continentSpeciesCount(c: Continent): number {
@@ -346,13 +347,10 @@ function chooseRegion(v: string) {
   regionChoice.value = v
   // 换国家时清掉省选择（省码属于原国家）
   regionProvince.value = ''
-  // 有省级细分的国家**保持展开**，让用户能接着选省；无细分的直接收起（本次选择已完成）。
-  // 083：镇级/微型国（SI/LV/MK/MT/SG/NR/TV/KI/MH）收起省级出题选择
-  const hasProvinces =
-    v !== 'ALL' &&
-    provinceSecondLevelEnabled(provinceData.value, v) &&
-    provincesOf(provinceData.value, v, currentLocale()).length > 0
-  regionPickerOpen.value = hasProvinces
+  // 2026-10-25 用户反馈：原先"无省级细分的国家直接收起面板"，导致选完菲律宾后没法接着点亚洲。
+  // 现在**面板保持展开**（选择结果已在「已选摘要」实时更新），用户可继续换国家/改选洲。
+  // 083 的收起名单仍生效：只是不显示省 chips，不影响面板本身。
+  regionPickerOpen.value = true
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
 
