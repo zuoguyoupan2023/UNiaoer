@@ -73,6 +73,13 @@ const regionBadge = computed(() =>
     : '',
 )
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
+/**
+ * 2026-10-25：海报「题目范围」——**全球也要显示**（与界面角标不同：角标为降噪隐藏全球，
+ * 海报必须声明范围，否则「中国上海看图版 L7」与「全球版」无法区分）。
+ */
+const posterRegionLabel = computed(() =>
+  regionDisplayName(quiz.region, currentLocale(), (k) => t(k), provinceIndex.value),
+)
 /** 科名「拉丁名+本地名」组合（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 /** 题目答案名按当前语言解析（015 #1）：speciesId 回查题库，回退作答时存储名 */
@@ -288,6 +295,7 @@ const posterData = computed<PosterData>(() => {
   return {
     modeLabel: quiz.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
     tierLabel: tierLabel.value,
+    regionLabel: posterRegionLabel.value,
     correct: quiz.correctCount,
     total: quiz.total,
     accuracy: quiz.accuracy,
