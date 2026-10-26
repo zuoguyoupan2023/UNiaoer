@@ -15,22 +15,25 @@ Project description: learn to recognise birds from real photos and recordings, a
 > UNiaoer is a **non-commercial open-source project**: free to use, no ads, no paid features, no data resale.
 > **Code** is released under [MIT](./LICENSE); **images, audio and identification models are not covered by the code licence** and follow their own licences (see below). Any commercial use (including commercial integration, mirrors, or ad/subscription-funded redistribution) requires separate permission.
 
-## Planned modes
+## Modes
 
-> Design drafts only: **no code, question bank or UI has been written**; existing L1–L5 are unaffected.
-> Common rules: 10 questions per round; **both Chinese and English UI are supported** — prompts and answers follow the current UI language (Chinese or English name); only species with a stable name are used; scoring and pool details are TBD.
+> Common rules: 10 questions per round; **both Chinese and English UI are supported** — prompts and answers follow the current UI language.
+> Since 2026-10-24, **new gameplay = extra difficulty levels** (L6/L7), with no separate entry point or extra wizard step.
 
-### L6 · Half-birder (name → image / sound)
+### L6 · Half-birder (name → photo / sound) — ✅ live (difficulty level 6)
 
-- **Photo version**: the prompt shows a bird's common name (Chinese or English, following the UI language, e.g. 「白鹡鸰」/ “White Wagtail”), with **6 image options** and a **10-second** limit.
-- **Audio version**: same name prompt (Chinese or English), **4 sound options**, **25-second** limit (audio ID is harder, so more time).
-- Goal: connect a name to its look/call — the reverse direction of the photo and audio quizzes.
+- Entered from the **L6** level in the same intro page as L1–L5 (level → region → format); scoring, regimes, wrong-answer book and stats are the same chain.
+- **Two name systems, user-selected** (remembered per photo/audio, recorded and counted separately): **common names** (Chinese UI: Chinese name / English UI: English name) or **scientific names** — in scientific mode the *name shown in the prompt* is the Latin name (the photo/recording itself, of course, does not change).
+- **Photo version**: a bird name (in the selected name system), **6 closely-related photo options**, **15-second** limit.
+- **Audio version**: same name prompt, **4 closely-related sound options**, **25-second** limit (audio ID is harder, so more time).
 
-### L7 · Bird Creator (image / sound → name, typed answer)
+### L7 · Bird Creator (photo / sound → typed name) — ✅ live (difficulty level 7)
 
-- **Photo version**: a bird photo on top, a text input below; type the bird's name and submit within **10 seconds** (Chinese or English, following the UI language).
-- **Audio version**: a recording; type the name and submit within **12 seconds** (Chinese or English).
-- Goal: move from multiple choice to **active recall (production)**, the hardest level. Start with exact matching in the current language plus common aliases / scientific names; pinyin and simplified/traditional tolerance are TBD.
+- Entered from **L7** in the same intro page; two name systems, user-selected: **common names** (answer with the Chinese/English name) or **scientific names** (answer with the Latin name). Traditional Chinese input is accepted (mainland simplified ∪ HK/TW official names ∪ traditional glyph variants).
+- **Photo version**: a bird photo → text input; type the name and submit within **15 seconds**.
+- **Audio version**: **one recording** → text input; **18-second** limit, and the **timer starts when the audio actually begins playing**.
+- **Material swap**: if the photo is unclear or the recording is poor, swap to another asset of the same species — the timer restarts but the limit shrinks (1st swap −1s, 2nd −2s, … until it is used up).
+- Scoring: right or wrong, no fuzzy tolerance (hardest level); see docs/085 (D-1–D-10).
 
 ## Tech stack
 

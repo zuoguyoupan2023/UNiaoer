@@ -65,11 +65,13 @@ const en: typeof zhMessages = {
   },
   // L6 Half-Birder (docs/081 §7): name → photo/sound; play-area copy (L6 is tier 6, no intro of its own)
   quiz6: {
-    modeCap: 'Answer with',
+    modeCap: 'Name system',
     modeLang: 'Common names',
-    modeLangHint: 'Follows the interface language (Chinese / English)',
+    modeLangHintL6: 'The prompt shows the Chinese name (English UI: English name); options are photos/recordings',
+    modeLangHintL7: 'Answer with the common name (English in the English UI)',
     modeSci: 'Scientific names',
-    modeSciHint: 'Stem and options all use Latin names',
+    modeSciHintL6: 'The prompt shows the Latin name (options are still photos/recordings)',
+    modeSciHintL7: 'Answer with the Latin name (e.g. Turdus merula)',
     stemCap: 'Which one matches this name?',
     mode: { zh: 'Chinese', en: 'English', sci: 'Scientific' },
     audioHint: 'Tap to play · tap the same option again to answer',
@@ -1040,11 +1042,13 @@ const en: typeof zhMessages = {
     },
     l6: {
       label: 'L6 Half-Birder',
-      desc: 'name → photo/sound · close relatives · 15s / 25s',
+      desc: 'Photo given the name · 6 close-relative options · 15s',
+      descAudio: 'Sound given the name · 4 close-relative options · 25s',
     },
     l7: {
       label: 'L7 Bird-Maker',
-      desc: 'photo/sound → type the name · 15s / 18s',
+      desc: 'Type the bird name from a photo · 15s',
+      descAudio: 'Type the bird name from a recording · 18s (timer starts on playback)',
     },
   },
   badges: {

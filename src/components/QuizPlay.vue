@@ -94,6 +94,19 @@ function persistTier(v: Tier) {
   else settings.tierImage = v
 }
 
+/**
+ * 2026-10-25 用户要求：L6/L7 的说明**只写当前模式**（看图版就只写图、听音版只写音），
+ * 与 L1–L5 同规格，不要「图 15s / 音 25s」并列。L6/L7 因此提供 `descKey + 'Audio'` 变体。
+ */
+function tierDescOf(cfg: (typeof TIER_LIST)[number]): string {
+  if (props.type === 'audio') {
+    const audioKey = `${cfg.descKey}Audio`
+    const text = t(audioKey)
+    if (text && text !== audioKey) return text
+  }
+  return t(cfg.descKey)
+}
+
 // ---- 089 §6.1/6.2：L6/L7 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
 const nameMode67 = computed<'default' | 'sci'>({
   get: () => {
@@ -1088,7 +1101,7 @@ function onTouchEnd(e: TouchEvent) {
         @click="chooseTier(cfg.tier)"
       >
         <strong>{{ t(cfg.labelKey) }}</strong>
-        <span>{{ t(cfg.descKey) }}</span>
+        <span>{{ tierDescOf(cfg) }}</span>
       </button>
     </div>
     <!-- 089 §6.1/6.2：L6/L7 作答模式（语言名/学名）——高两档显示，不计步骤号 -->
@@ -1097,11 +1110,11 @@ function onTouchEnd(e: TouchEvent) {
       <div class="tiers l6-mode">
         <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">
           <strong>{{ t('quiz6.modeLang') }}</strong>
-          <span>{{ t('quiz6.modeLangHint') }}</span>
+          <span>{{ t(tier === 7 ? 'quiz6.modeLangHintL7' : 'quiz6.modeLangHintL6') }}</span>
         </button>
         <button type="button" class="tier" :class="{ on: nameMode67 === 'sci' }" @click="nameMode67 = 'sci'">
           <strong>{{ t('quiz6.modeSci') }}</strong>
-          <span>{{ t('quiz6.modeSciHint') }}</span>
+          <span>{{ t(tier === 7 ? 'quiz6.modeSciHintL7' : 'quiz6.modeSciHintL6') }}</span>
         </button>
       </div>
     </template>
