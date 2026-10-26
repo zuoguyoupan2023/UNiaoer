@@ -69,6 +69,17 @@ function useQuizFakeTimers() {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
 }
 
+/**
+ * 触发题面图片的 load 事件。
+ * 2026-10-26 起看图题要等图片真正显示才开始计时（网络等待不计时），
+ * 而 jsdom 不会自动派发 img 的 load——测试里必须手动补这一下。
+ */
+async function settleQuestionImage(wrapper: VueWrapper) {
+  const img = wrapper.find('.media img:not(.ph)')
+  if (img.exists()) await img.trigger('load')
+  await flushPromises()
+}
+
 async function startWithTier(wrapper: VueWrapper, label: string) {
   await flushPromises()
   const tierBtn = wrapper.findAll('.tier').find((b) => b.text().includes(label))
@@ -85,6 +96,7 @@ async function startWithTier(wrapper: VueWrapper, label: string) {
   expect(startBtn).toBeTruthy()
   await startBtn!.trigger('click')
   await flushPromises()
+  await settleQuestionImage(wrapper)
 }
 
 /** 开始答题并推进到选项显示的时点 */
@@ -371,6 +383,7 @@ describe('QuizPlay', () => {
       settings.autoNext = 'manual'
       store.index = store.total - 1
       await wrapper.vm.$nextTick()
+      await settleQuestionImage(wrapper)
       vi.advanceTimersByTime(5000)
       await flushPromises()
 

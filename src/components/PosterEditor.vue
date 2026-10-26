@@ -386,7 +386,7 @@ function dropResults() {
 
           <!-- 导出：生成即下载（顶部画布就是预览；2026-10-09 去掉冗余预览块） -->
           <div class="group export">
-            <!-- 「海报包含本组测试内容」默认勾选；取消 → 海报与二维码都不含本轮成绩（隐私取向） -->
+            <!-- 2026-10-25：勾选=含错题详情；取消=**隐藏详情但保留分数与题目范围**（用户定） -->
             <label class="inc-opt">
               <input v-model="includeResults" type="checkbox" />
               <span>{{ t('poster.includeResults') }}</span>
@@ -399,7 +399,7 @@ function dropResults() {
               }}
             </p>
 
-            <!-- 二维码可选（默认勾选）：取消 → 生成不含二维码的图，品牌名放大 + 显示域名 -->
+            <!-- 二维码可选（默认勾选）：取消 → 二维码位置**完全留白**（不画域名，避免社媒判为导流） -->
             <label class="inc-opt qr-opt">
               <input v-model="includeQr" type="checkbox" />
               <span>{{ t('poster.includeQr') }}</span>

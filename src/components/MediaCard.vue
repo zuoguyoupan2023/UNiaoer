@@ -19,8 +19,8 @@ const props = defineProps<{
   showAttribution?: boolean
 }>()
 
-/** audio-play：考题音频真正开始播放时触发（听音版计时/干扰以此为起点，R24） */
-const emit = defineEmits<{ 'audio-play': [] }>()
+/** audio-play：考题音频真正开始播放时触发（听音版计时/计时起点，R24） */
+const emit = defineEmits<{ 'audio-play': []; 'image-settled': [ok: boolean] }>()
 
 const audioEl = ref<HTMLAudioElement | null>(null)
 const imageLoaded = ref(false)
@@ -86,6 +86,17 @@ function openZoom() {
   zoomed.value = true
 }
 
+/** 图片加载结束（成功/失败）都要通知调用方：题面图是计时的起点 */
+function onImageLoad() {
+  imageLoaded.value = true
+  emit('image-settled', true)
+}
+
+function onImageError() {
+  imageFailed.value = true
+  emit('image-settled', false)
+}
+
 function closeZoom() {
   zoomed.value = false
 }
@@ -103,8 +114,8 @@ function closeZoom() {
         decoding="async"
         fetchpriority="high"
         :class="{ loaded: imageLoaded }"
-        @load="imageLoaded = true"
-        @error="imageFailed = true"
+        @load="onImageLoad"
+        @error="onImageError"
       />
       <button
         v-if="media.xlUrl && imageLoaded && !imageFailed"

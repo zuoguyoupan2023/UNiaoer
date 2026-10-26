@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCountryIndex,
+  continentClickAction,
   continentOf,
   countriesInContinent,
   countryStats,
@@ -94,5 +95,46 @@ describe('countriesInContinent / presentContinents（七大洲筛选）', () => 
       'southAmerica',
       'oceania',
     ])
+  })
+})
+
+describe('continentClickAction（2026-10-25：点洲一次即选中）', () => {
+  it('当前选国家/全球/另一洲 → 点洲 = 选中并展开（一次点击生效）', () => {
+    expect(continentClickAction('ASIA', null, false)).toEqual({ select: true, open: true })
+    expect(continentClickAction('ASIA', null, true)).toEqual({ select: true, open: true })
+    expect(continentClickAction('ASIA', 'EUROPE', false)).toEqual({ select: true, open: true })
+  })
+
+  it('已选中该洲 → 点击只切换展开/收起（选中态保持）', () => {
+    expect(continentClickAction('ASIA', 'ASIA', true)).toEqual({ select: false, open: false })
+    expect(continentClickAction('ASIA', 'ASIA', false)).toEqual({ select: false, open: true })
+  })
+})
+
+describe('SUBREGION_OF_CN（2026-10-26：港澳台归入中国，不和国家并列）', () => {
+  it('香港/澳门/台湾在排除集合里，中国本身不在', async () => {
+    const { SUBREGION_OF_CN } = await import('../region')
+    expect(SUBREGION_OF_CN.has('HK')).toBe(true)
+    expect(SUBREGION_OF_CN.has('MO')).toBe(true)
+    expect(SUBREGION_OF_CN.has('TW')).toBe(true)
+    expect(SUBREGION_OF_CN.has('CN')).toBe(false)
+  })
+
+  it('每个洲去掉港澳台后不再包含这三个码，但中国仍在亚洲', async () => {
+    const { COUNTRIES_BY_CONTINENT, SUBREGION_OF_CN, CONTINENTS } = await import('../region')
+    for (const key of CONTINENTS) {
+      const kept = COUNTRIES_BY_CONTINENT[key].filter((c) => !SUBREGION_OF_CN.has(c))
+      expect(kept).not.toContain('HK')
+      expect(kept).not.toContain('MO')
+      expect(kept).not.toContain('TW')
+    }
+    expect(COUNTRIES_BY_CONTINENT.asia).toContain('CN')
+  })
+
+  it('洲并集口径不受影响（区系/出题仍按各自码取数）', async () => {
+    const { countriesOfContinent } = await import('../region')
+    const asia = countriesOfContinent('ASIA')
+    expect(asia).toContain('HK')
+    expect(asia).toContain('TW')
   })
 })

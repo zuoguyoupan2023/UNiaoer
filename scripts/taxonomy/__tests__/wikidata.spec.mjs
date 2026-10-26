@@ -125,3 +125,24 @@ describe('parseEntitiesResults(wbgetentities/specieswiki)', () => {
     expect(parseEntitiesResults(j)).toEqual({})
   })
 })
+
+describe('pickLabel · zhTw（089 前置：同条目带出港台体系名）', () => {
+  it('胜出条目有 zh-tw 时返回 zhTw（zh 主名不受影响）', () => {
+    const cands = [
+      { zh: '黑脸琵鹭', lang: 'zh-cn', item: 'http://www.wikidata.org/entity/Q494544', rank: null, parentName: 'Platalea' },
+      { zh: '黑面琵鷺', lang: 'zh-tw', item: 'http://www.wikidata.org/entity/Q494544', rank: null, parentName: 'Platalea' },
+      { zh: '黑面琵鷺', lang: 'zh-hk', item: 'http://www.wikidata.org/entity/Q494544', rank: null, parentName: 'Platalea' },
+    ]
+    expect(pickLabel(cands, 'Platalea minor')).toMatchObject({ zh: '黑脸琵鹭', zhTw: '黑面琵鷺', zhTwLang: 'zh-tw' })
+  })
+
+  it('港台名只在胜出条目上取（跨条目不混配）；无港台标签时缺省', () => {
+    const cands = [
+      { zh: '甲', lang: 'zh-cn', item: 'http://www.wikidata.org/entity/Q1', rank: null, parentName: 'Genus' },
+      { zh: '乙繁', lang: 'zh-tw', item: 'http://www.wikidata.org/entity/Q2', rank: null, parentName: 'Genus' },
+    ]
+    const pick = pickLabel(cands, 'Genus alpha')
+    expect(pick.zh).toBe('甲')
+    expect(pick.zhTw).toBeUndefined()
+  })
+})

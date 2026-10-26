@@ -9,8 +9,9 @@ import { listRounds, setActiveArchiveNickname, setProfileNickname } from '@/core
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
-import { isDiag } from '@/core/diag'
+import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
+import { useMediaGate } from '@/composables/useMediaGate'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
   AlarmClock,
@@ -30,7 +31,7 @@ import {
   Timer,
   X,
 } from 'lucide-vue-next'
-import type { MediaAsset, MediaType, QuizRegime, Tier } from '@/types'
+import type { MediaAsset, MediaType, NameMode, QuizRegime, Tier } from '@/types'
 import { loadBank, speciesNoteById, loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
 import { submitReport as uploadReport } from '@/core/reportsApi'
@@ -38,13 +39,28 @@ import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
 import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
-import { REGION_LABEL_KEY } from '@/core/region'
+import {
+  CONTINENTS,
+  CONTINENT_LABEL_KEY,
+  continentClickAction,
+  COUNTRIES_BY_CONTINENT,
+  REGION_LABEL_KEY,
+  SUBREGION_OF_CN,
+  continentCodeOf,
+  continentOf,
+  countriesOfContinent,
+  isContinentCode,
+  type Continent,
+  type ContinentCode,
+} from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { track } from '@/core/metrics'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
+import QuizPlayName from './QuizPlayName.vue'
+import QuizPlayInput from './QuizPlayInput.vue'
 import ProgressBar from './ProgressBar.vue'
 import SpeciesGallery from './SpeciesGallery.vue'
 
@@ -78,6 +94,44 @@ const savedTier = computed<Tier | undefined>(() =>
 function persistTier(v: Tier) {
   if (props.type === 'audio') settings.tierAudio = v
   else settings.tierImage = v
+}
+
+/**
+ * 2026-10-25 用户要求：L6/L7 的说明**只写当前模式**（看图版就只写图、听音版只写音），
+ * 与 L1–L5 同规格，不要「图 15s / 音 20s」并列。L6/L7 因此提供 `descKey + 'Audio'` 变体。
+ */
+function tierDescOf(cfg: (typeof TIER_LIST)[number]): string {
+  if (props.type === 'audio') {
+    const audioKey = `${cfg.descKey}Audio`
+    const text = t(audioKey)
+    if (text && text !== audioKey) return text
+  }
+  return t(cfg.descKey)
+}
+
+// ---- 089 §6.1/6.2：L6/L7 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
+const nameMode67 = computed<'default' | 'sci'>({
+  get: () => {
+    const t = tier.value
+    if (props.type === 'audio')
+      return t === 6 ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode7Audio ?? 'default')
+    return t === 6 ? (settings.nameMode6Image ?? 'default') : (settings.nameMode7Image ?? 'default')
+  },
+  set: (v) => {
+    const t = tier.value
+    if (props.type === 'audio') {
+      if (t === 6) settings.nameMode6Audio = v
+      else settings.nameMode7Audio = v
+    } else {
+      if (t === 6) settings.nameMode6Image = v
+      else settings.nameMode7Image = v
+    }
+  },
+})
+/** 开轮用的 L6/L7 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
+function resolvedNameMode67(): NameMode {
+  if (nameMode67.value === 'sci') return 'sci'
+  return currentLocale() === 'en' ? 'en' : 'zh'
 }
 
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
@@ -207,16 +261,65 @@ function chooseTier(v: Tier) {
   }).catch(() => {})
 }
 
-/** 029 M2:地区偏好(仅 L1-L3 生效;L4/L5 全球开放)。
- * 候选项 = 「全球」+ 观鸟热区(按物种数排名靠前的国家,数据来自区系层;加载失败只显示「全球」)。 */
-const REGION_CHOICES_FALLBACK = ['CN', 'US', 'GB', 'AU', 'JP', 'BR', 'IN', 'ZA']
+/** 029 M2:地区偏好(L1-L4 生效;L5+ 全球开放;2026-10-24 修订)。
+ * 087 P0：候选 = 「全球」+ 七大洲分组（全部 249 码），不再有 14 国快捷行。 */
 /**
  * 036 省级细分数据（懒加载；失败静默 → 只显示国家级）
  * 2026-10-09 UI 重做（用户反馈）：选择器不再直接铺 14 国按钮（选完看不出选了哪儿），
  * 改为「**已选摘要**（中国·北京）+ 更改」两步流程——默认收起，点「更改」才展开。
  */
 const provinceData = ref<ProvinceIndex | null>(null)
-const regionOptions = ref<{ code: string; label: string }[]>([{ code: 'ALL', label: '' }])
+/** 087 P0：区系层原始数据（国家 → 物种短码表）。国家徽标=长度；洲徽标=成员国**去重并集**（物种跨国重复，不能直接相加） */
+const distByCountry = ref<Record<string, string[]>>({})
+const distCounts = computed<Record<string, number>>(() => {
+  const out: Record<string, number> = {}
+  for (const [cc, list] of Object.entries(distByCountry.value)) out[cc] = list.length
+  return out
+})
+/** 087 P0：展开的大洲（手风琴，一次一个；打开面板时自动展开当前所选国所属洲） */
+const openContinent = ref<Continent | null>(null)
+/** 087 P0：洲 → 国家/地区分组（全部 249 码；按区系种数降序，再按码序稳定） */
+const continentGroups = computed(() =>
+  CONTINENTS.map((key) => ({
+    key,
+    countries: COUNTRIES_BY_CONTINENT[key]
+      // 港澳台不再是并列的国家条目：它们的省级条目（CN-71/91/92）已在中国下面
+      .filter((code) => !SUBREGION_OF_CN.has(code))
+      .map((code) => ({ code, n: distCounts.value[code] ?? 0 }))
+      .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
+  })),
+)
+/**
+ * 2026-10-25 用户定（问题 1）：**洲标题本身就是选择器**——点洲 = 选中该洲为出题范围
+ * 并展开它下面的国家（与「点中国 → 下面展开省」同构）；再点一次收起（收起不改变已选洲）。
+ * 原先「上面一行洲直选 + 下面又一组洲手风琴」是重复冗余，已删除。
+ */
+function toggleContinent(c: Continent) {
+  const code = continentCodeOf(c)
+  // 判定抽到 core/region.continentClickAction（可单测）：未选中 → 一次点击即选中并展开；
+  // 已选中 → 只切换展开/收起（2026-10-25 修复"亚洲要点两次"）
+  const act = continentClickAction(code, chosenContinent.value, openContinent.value === c)
+  if (act.select) {
+    regionChoice.value = code
+    void quiz.regimeCounts(props.type, tier.value).then((c2) => (regimeCountsData.value = c2)).catch(() => {})
+  }
+  openContinent.value = act.open ? c : null
+}
+/** 洲的物种数徽标 = 成员国区系**去重并集**种数（简单相加会超过全球总数，见 docs/088 §6.1） */
+function continentSpeciesCount(c: Continent): number {
+  const code = continentCodeOf(c)
+  return new Set(countriesOfContinent(code).flatMap((cc) => distByCountry.value[cc] ?? [])).size
+}
+/** 当前选中的洲（与 openContinent 解耦：收起后高亮仍在） */
+const chosenContinent = computed<ContinentCode | null>(() =>
+  isContinentCode(regionChoice.value) ? regionChoice.value : null,
+)
+/** 「全球」快捷项（清空地区选择） */
+function chooseGlobal() {
+  regionChoice.value = 'ALL'
+  regionPickerOpen.value = false
+  void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
+}
 /** 地区选择面板是否展开（收起时只显示已选摘要） */
 const regionPickerOpen = ref(false)
 const regionChoice = computed({
@@ -224,11 +327,19 @@ const regionChoice = computed({
   set: (v: string) => { settings.region = v },
 })
 /** 固定显示名（CN/港澳台走 i18n，其余走 Intl.DisplayNames）——避免各端 CLDR 差异（见 core/region.ts） */
+const displayNamesCache = new Map<string, Intl.DisplayNames>()
 function regionLabel(code: string): string {
   const key = REGION_LABEL_KEY[code]
   if (key) return t(key)
   try {
-    return new Intl.DisplayNames([currentLocale()], { type: 'region' }).of(code) ?? code
+    const locale = currentLocale()
+    // 087 P0：洲分组一次渲染 ~250 个码，缓存 DisplayNames 实例（按 locale）
+    let dn = displayNamesCache.get(locale)
+    if (!dn) {
+      dn = new Intl.DisplayNames([locale], { type: 'region' })
+      displayNamesCache.set(locale, dn)
+    }
+    return dn.of(code) ?? code
   } catch {
     return code
   }
@@ -243,30 +354,20 @@ onMounted(async () => {
   void loadProvincesIndex().then((d) => (provinceData.value = d))
   try {
     const dist = await loadSpeciesDistribution()
-    const codes = dist ? Object.keys(dist.byCountry) : []
-    // 按物种数降序取前 12(含中国),再并上兜底清单;港澳台等敏感性地区名走固定表 + Intl 本地化
-    const ranked = codes
-      .map((c) => ({ c, n: (dist!.byCountry[c] ?? []).length }))
-      .sort((a, b) => b.n - a.n)
-      .slice(0, 12)
-      .map((x) => x.c)
-    const merged = [...new Set(['CN', ...ranked, ...REGION_CHOICES_FALLBACK])].slice(0, 14)
-    regionOptions.value = merged.map((c) => ({ code: c, label: regionLabel(c) }))
+    // 087 P0 / 088 方案 B：区系层原始表（国家徽标与洲并集徽标共用）
+    if (dist) distByCountry.value = dist.byCountry as Record<string, string[]>
   } catch {
-    /* 区系层不可用:只留「全球」 */
+    /* 区系层不可用:洲分组徽标显示 0（列表仍完整），全球/选择不受影响 */
   }
 })
 function chooseRegion(v: string) {
   regionChoice.value = v
   // 换国家时清掉省选择（省码属于原国家）
   regionProvince.value = ''
-  // 有省级细分的国家**保持展开**，让用户能接着选省；无细分的直接收起（本次选择已完成）。
-  // 083：镇级/微型国（SI/LV/MK/MT/SG/NR/TV/KI/MH）收起省级出题选择
-  const hasProvinces =
-    v !== 'ALL' &&
-    provinceSecondLevelEnabled(provinceData.value, v) &&
-    provincesOf(provinceData.value, v, currentLocale()).length > 0
-  regionPickerOpen.value = hasProvinces
+  // 2026-10-25 用户反馈：原先"无省级细分的国家直接收起面板"，导致选完菲律宾后没法接着点亚洲。
+  // 现在**面板保持展开**（选择结果已在「已选摘要」实时更新），用户可继续换国家/改选洲。
+  // 083 的收起名单仍生效：只是不显示省 chips，不影响面板本身。
+  regionPickerOpen.value = true
   void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
 }
 
@@ -298,6 +399,12 @@ watch(regionChoice, (v) => {
   }
   if (regionProvince.value && !regionProvince.value.startsWith(v + '-')) regionProvince.value = ''
 })
+/** 087 P0：展开选择面板时，自动展开当前所选国所属的洲（少一次寻找） */
+watch(regionPickerOpen, (open) => {
+  if (!open) return
+  const c = continentOf(selectedCountry.value)
+  if (c) openContinent.value = c
+})
 function chooseRegionProvince(code: string) {
   // 再点一次同省 = 取消省细分（回到纯国家）
   const next = regionProvince.value === code ? '' : code
@@ -308,6 +415,7 @@ function chooseRegionProvince(code: string) {
 /** 当前所选国家（省选择被清空时回退到它） */
 const selectedCountry = computed(() => {
   const r = regionChoice.value
+  if (SUBREGION_OF_CN.has(r)) return 'CN' // 旧存档里的 HK/MO/TW → 归到中国下面
   return r.includes('-') ? r.split('-')[0]! : r
 })
 /**
@@ -317,6 +425,7 @@ const selectedCountry = computed(() => {
 const regionSummary = computed(() => {
   const r = regionChoice.value
   if (!r || r === 'ALL') return t('quiz.regionAll')
+  if (isContinentCode(r)) return t(CONTINENT_LABEL_KEY[r])
   const cc = selectedCountry.value
   const country = regionLabel(cc)
   const provName = regionProvince.value
@@ -384,6 +493,13 @@ const diagHead = computed(() => {
     region: d.region && d.region !== 'ALL' ? ` · ${d.region}` : '',
     regime: t(`regime.${d.regime}.label`),
   })
+})
+/** 选项残留观测摘要（切题/作答后重算；非 diag 恒空） */
+const diagInput = computed(() => {
+  // 依赖：题号与已答数量变化 → 重算
+  void quiz.index
+  void quiz.answeredCount
+  return diagOn ? diagInputSummary() : ''
 })
 const diagBody = computed(() => {
   const d = quiz.lastBuild
@@ -483,9 +599,15 @@ const nextLabel = computed(() =>
 
 // ---- 计时 ----
 const timeLeft = ref<number | null>(null)
-/** 本题计时是否已真正开始（听音版等考题音频开播，R24） */
+/** 本题计时是否已真正开始（媒体就绪后才开始，2026-10-26） */
 const timerBegun = ref(false)
 let tick: number | undefined
+
+/**
+ * 媒体就绪门：图等 `<img>` load（慢则 1s 兜底），音等真正开播。
+ * 网络造成的等待不计入答题时间。
+ */
+const gate = useMediaGate()
 
 /** D1：限时题前段隐藏选项（缺省 1/3；L1 固定前 5s），revealInSec 为出现前倒计时秒数 */
 const revealInSec = computed(() => {
@@ -646,30 +768,114 @@ async function begin() {
   started.value = true
   // 环境鸟鸣是全局功能，但测试开始后不播放（选难度阶段不算开始，见 R23）
   ambiencePlayer.stop()
-  await quiz.start(props.type, { tier: tier.value })
-  preloadQuestions(quiz.questions, 0, 4) // 当前题 + 后 3 题
+  // 087 §4.8 + 089 §6.2：L6（tier=6）也是普通开轮——store 内按档位分支到 buildNameQuestions；
+  // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。卷别按模式选择传入。
+  await quiz.start(props.type, {
+    tier: tier.value,
+    ...(tier.value >= 6 ? { nameMode: resolvedNameMode67() } : {}),
+  })
+  if (quiz.error || !quiz.questions.length) return // 错误区接管
+  preloadQuestions(quiz.questions, 0, quiz.tier >= 6 ? 2 : 4)
+  if (quiz.tier >= 6) return // L6/L7 的计时起点由各自答题组件挂载时启动
   beginQuestionTiming()
   updateInterference()
 }
 
-/** 每题计时/干扰的启动点：看图=切题即开始；听音=考题音频开播后（R24） */
-function beginQuestionTiming() {
-  timerBegun.value = false
-  if (props.type === 'image') {
-    timerBegun.value = true
-    startTimer()
-  } else {
-    resetTimer() // 冻结在满值，等 MediaCard 的 audio-play
-  }
+/**
+ * 2026-10-25（问题 3）：选项作答的唯一入口——写答案前先留一条诊断轨迹（仅 ?diag=1 生效）。
+ * 观测目标：手机上「下一题第一个选项莫名已被选中」；来源 click/key 且距切题 <600ms 视为可疑
+ * （幽灵点击/DOM 复用残留），console.warn 里带 UA 与毫秒数，便于复现定位。
+ */
+/**
+ * 2026-10-25（问题 3）：移动端「幽灵点击」防护。
+ *
+ * 成因：切题瞬间手指仍在屏幕上的那次触摸，其 `click`（或部分 WebKit 的延迟 click）
+ * 可能补发到**新题的按钮**上 → 下一题第一个选项莫名被选中（桌面无此路径）。
+ *
+ * 判定（精确，不误伤手快用户）：只有在**切题之前**按下的指针（pointerdown 落在旧题），
+ * 其后续 click 落到新题才算幽灵点击。人手正常作答必然是「先 pointerdown、再 click」，
+ * 且 pointerdown 一定发生在当前题显示之后，故不会被拦。
+ */
+let advancedAt = 0
+const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+/** 最近一次 pointerdown 是否发生在**上一次切题之前**（true = 该指针跨题，其 click 应忽略） */
+let pointerBeforeAdvance = false
+
+function onPointerDownCapture() {
+  pointerBeforeAdvance = nowMs() < advancedAt
 }
 
-/** 听音版考题音频开播：计时开始；L5 地狱此时才启动干扰音 */
-function onQuestionAudioPlay() {
+function onSelectOption(value: string, source: 'click' | 'key' = 'click') {
+  const q = quiz.current
+  if (!q) return
+  // 幽灵点击：该次交互的 pointerdown 发生在切题之前（跨题残留）→ 忽略这次 click
+  if (source === 'click' && pointerBeforeAdvance) {
+    diagMarkAnswer({
+      questionIndex: quiz.index,
+      questionId: q.id,
+      value,
+      source,
+      autoPending: autoPending.value,
+    })
+    pointerBeforeAdvance = false
+    return
+  }
+  diagMarkAnswer({
+    questionIndex: quiz.index,
+    questionId: q.id,
+    value,
+    source,
+    autoPending: autoPending.value,
+  })
+  quiz.answer(value)
+}
+
+/** 媒体加载失败过多时的提示（带实时网速，帮助判断是不是网络问题） */
+const networkNote = computed(() => {
+  const speed = gate.speedMbps.value
+  return speed === null
+    ? t('quiz.networkPoorUnknown')
+    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
+})
+
+/** 每题计时/干扰的启动点：等题面媒体就绪（图 load / 音开播），网络等待不计时 */
+function beginQuestionTiming() {
+  timerBegun.value = false
+  // 图：等 image-settled（1s 兜底）；音：等 audio-play，缓冲多久等多久（不设兜底）
+  gate.reset(1, props.type === 'image', quiz.current?.media?.url)
+  // 听音：音频可能永远播不出来（文件坏/解码失败），10s 后放行并记为失败
+  if (props.type === 'audio') gate.armStall()
+  resetTimer() // 冻结在满值，等就绪信号
+  // reset 可能已同步放行（ready 从 false→true 在同一 tick，watch 看不到）；这里补一次
+  if (gate.ready.value) onGateReady()
+}
+
+/** 题面媒体就绪（图片 load / 1s 兜底 / 音频开播）：开始倒数 */
+function onGateReady() {
   if (quiz.answered || timerBegun.value) return
   timerBegun.value = true
   startTimer()
   updateInterference()
 }
+
+/** 听音版考题音频开播：计时开始；L5 地狱此时才启动干扰音 */
+function onQuestionAudioPlay() {
+  gate.release()
+}
+
+/** 图片加载成功/失败：交给门禁计数（失败达 1/3 时门禁自行测速） */
+function onImageSettled(ok: boolean) {
+  if (ok) gate.markLoaded()
+  else gate.markFailed()
+}
+
+// 门禁放行即开始计时（图片慢/失败兜底、音频开播都在这里汇合）
+watch(
+  () => gate.ready.value,
+  (ok) => {
+    if (ok) onGateReady()
+  },
+)
 
 /** L5 地狱干扰：看图 2 条切题即启；听音 1 条等考题音频开播；作答即停 */
 function updateInterference() {
@@ -687,6 +893,12 @@ onMounted(() => {
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
+  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.tier >= 6) {
+    // 087 §4.8：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
+    // QuizPlayName 消费（计时/预载由它做），经典链路不碰。
+    started.value = true
+    return
+  }
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
     // 从结果页续轮也是"测试开始"：环境鸟鸣停播
@@ -712,8 +924,11 @@ onUnmounted(() => {
 watch(
   () => quiz.index,
   (i) => {
+    if (quiz.tier >= 6) return // 087 §4.8/089：L6/L7 由各自答题组件自管（计时/预载）
     clearAutoNext()
     cancelledThisQuestion.value = false
+    advancedAt = nowMs() // 幽灵点击静默期起点
+    diagMarkAdvance() // 诊断：记录切题时刻（?diag=1 才生效）
     preloadQuestions(quiz.questions, i + 1, 3) // 之后 3 题
     beginQuestionTiming() // 计时起点：看图立即 / 听音等音频开播（R24）
     updateInterference()
@@ -722,6 +937,7 @@ watch(
 watch(
   () => quiz.answered,
   (a) => {
+    if (quiz.tier >= 6) return // 089：L6/L7 的作答反馈/自动切题由各自答题组件管
     if (a) {
       stopTimer()
       scheduleAutoNext()
@@ -739,11 +955,14 @@ watch(
 watch(
   () => quiz.finished,
   (f) => {
-    if (f) router.push('/result')
+    // 087 §4.8：L6 的完成跳转由 QuizPlayName 自己做（避免双跳）
+    if (f && quiz.tier < 6) router.push('/result')
   },
 )
 
 function onKey(e: KeyboardEvent) {
+  // 087 §4.8：L6 答题中快捷键由 QuizPlayName 处理（它的选项是媒体，键位语义不同）
+  if (quiz.current && quiz.current.tier >= 6) return
   // 弹层打开时答题快捷键让位；带修饰键的组合（如 Cmd/Ctrl+A）不是答题意图
   if (showNameModal.value || showReport.value) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -771,7 +990,7 @@ function onKey(e: KeyboardEvent) {
   const idx = map[e.key.toLowerCase()]
   if (idx !== undefined) {
     const opt = q.options[idx]
-    if (opt) quiz.answer(opt)
+    if (opt) onSelectOption(opt, 'key')
   }
 }
 
@@ -895,7 +1114,7 @@ function onTouchEnd(e: TouchEvent) {
     </div>
   </Teleport>
 
-  <!-- 介绍页：第 2 步 水平 → 第 3 步 形式（主界面；老档显示已选摘要） -->
+  <!-- 介绍页：第 2 步 水平（L1–L6）→ 第 3 步 地区 → 第 4 步 形式（087 §4.8：L6 是第六档） -->
   <section v-if="!started" class="card intro">
     <div class="intro-head">
       <div class="intro-icon">
@@ -910,8 +1129,8 @@ function onTouchEnd(e: TouchEvent) {
       <CircleX class="ic" :size="15" /> {{ t('quiz.wrongPoolHint') }}
     </p>
 
-    <!-- 第 2 步 水平 -->
-    <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepLevel') }}</p>
+    <!-- 第 1 步 水平（087 §4.8：L1–L6，L6 就是第六档，不做独立题型） -->
+    <p class="step-cap"><i class="step-no">1</i>{{ t('quiz.stepLevel') }}</p>
     <div class="tiers">
       <button
         v-for="cfg in TIER_LIST"
@@ -921,12 +1140,27 @@ function onTouchEnd(e: TouchEvent) {
         @click="chooseTier(cfg.tier)"
       >
         <strong>{{ t(cfg.labelKey) }}</strong>
-        <span>{{ t(cfg.descKey) }}</span>
+        <span>{{ tierDescOf(cfg) }}</span>
       </button>
     </div>
-    <!-- 029 M2:地区偏好(L1-L3 生效;L4/L5 全球开放,不显示) -->
-    <template v-if="tier <= 3">
-      <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepRegion') }}</p>
+    <!-- 089 §6.1/6.2：L6/L7 作答模式（语言名/学名）——高两档显示，不计步骤号 -->
+    <template v-if="tier >= 6">
+      <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
+      <div class="tiers l6-mode">
+        <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">
+          <strong>{{ t('quiz6.modeLang') }}</strong>
+          <span>{{ t(tier === 7 ? 'quiz6.modeLangHintL7' : 'quiz6.modeLangHintL6') }}</span>
+        </button>
+        <button type="button" class="tier" :class="{ on: nameMode67 === 'sci' }" @click="nameMode67 = 'sci'">
+          <strong>{{ t('quiz6.modeSci') }}</strong>
+          <span>{{ t(tier === 7 ? 'quiz6.modeSciHintL7' : 'quiz6.modeSciHintL6') }}</span>
+        </button>
+      </div>
+    </template>
+    <!-- 第 2 步 区域（2026-10-25 全档统一：任何档位任选 省/国家/洲/全球） -->
+    <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepRegion') }}</p>
+      <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
+      <p class="region-ask">{{ t('quiz.regionAsk') }}</p>
       <p v-if="tier === 1 && firstRoundEver" class="beginner-hint">
         <Sparkles class="ic" :size="14" /> {{ t('quiz.beginnerHint') }}
       </p>
@@ -942,39 +1176,69 @@ function onTouchEnd(e: TouchEvent) {
           :aria-expanded="regionPickerOpen"
           @click="regionPickerOpen = !regionPickerOpen"
         >
-          {{ regionPickerOpen ? t('common.cancel') : t('quiz.regionChange') }}
+          {{ regionPickerOpen ? t('quiz.regionDone') : t('quiz.regionChange') }}
         </button>
       </div>
       <div v-if="regionPickerOpen" class="region-picker">
+        <!-- 2026-10-25（问题 1 修正）：任何档位任选 洲/国家/省/全球。
+             洲标题**本身即选择器**：点洲 = 选中该洲 + 在其下展开国家（点国家再展开省）——
+             与「点中国 → 下面展开省」同构；不再有「上面一行洲直选 + 下面又一组洲」的重复。 -->
         <div class="regions">
           <button
-            v-for="opt in regionOptions"
-            :key="opt.code"
+            type="button"
             class="tier region"
-            :class="{ on: regionChoice === opt.code || (opt.code !== 'ALL' && selectedCountry === opt.code) }"
+            :class="{ on: regionChoice === 'ALL' }"
             :title="t('quiz.regionHint')"
-            @click="chooseRegion(opt.code)"
+            @click="chooseGlobal"
           >
-            <strong>{{ opt.code === 'ALL' ? t('quiz.regionAll') : opt.label }}</strong>
+            <strong>{{ t('quiz.regionAll') }}</strong>
           </button>
         </div>
-        <!-- 036：省级细分（可选）。选中后按**该省**的地区常见度出题 -->
-        <div v-if="provinceChoices.length" class="provinces">
-          <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
-          <div class="prov-wrap">
+        <p class="continent-cap muted small">{{ t('region.continentsLabel') }}</p>
+        <div class="continents">
+          <div v-for="g in continentGroups" :key="g.key" class="continent">
             <button
-              v-for="p in provinceChoices"
-              :key="p.code"
-              class="prov-pill"
-              :class="{ on: regionProvince === p.code }"
-              @click="chooseRegionProvince(p.code)"
+              type="button"
+              class="continent-head"
+              :class="{ on: chosenContinent === continentCodeOf(g.key) }"
+              :aria-expanded="openContinent === g.key"
+              @click="toggleContinent(g.key)"
             >
-              {{ p.name }}
+              <span>{{ t(`region.continents.${g.key}`) }}</span>
+              <span class="count">{{ continentSpeciesCount(g.key) }}</span>
+              <span class="chev" aria-hidden="true">{{ openContinent === g.key ? '−' : '+' }}</span>
             </button>
+            <div v-if="openContinent === g.key" class="regions continent-body">
+              <template v-for="opt in g.countries" :key="opt.code">
+                <button
+                  type="button"
+                  class="tier region"
+                  :class="{ on: regionChoice === opt.code || selectedCountry === opt.code }"
+                  @click="chooseRegion(opt.code)"
+                >
+                  <strong>{{ regionLabel(opt.code) }}</strong>
+                  <span class="count">{{ opt.n }}</span>
+                </button>
+                <!-- 087 P0-3：省级 chips 内联在所选国家正下方（层级即所见；083 收起名单照旧生效） -->
+                <div v-if="opt.code === selectedCountry && provinceChoices.length" class="provinces inline">
+                  <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
+                  <div class="prov-wrap">
+                    <button
+                      v-for="p in provinceChoices"
+                      :key="p.code"
+                      class="prov-pill"
+                      :class="{ on: regionProvince === p.code }"
+                      @click="chooseRegionProvince(p.code)"
+                    >
+                      {{ p.name }}
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </div>
-    </template>
     <p v-if="adaptiveHint" class="adaptive-hint">
       {{
         t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
@@ -986,7 +1250,7 @@ function onTouchEnd(e: TouchEvent) {
     </p>
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
-    <p class="step-cap"><i class="step-no">{{ tier <= 3 ? 4 : 3 }}</i>{{ t('quiz.stepForm') }}</p>
+    <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
     <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
       {{ t('quiz.regimePool', { regime: t(`regime.${quiz.regime}.label`), n: currentRegimeCount }) }}
     </p>
@@ -1023,14 +1287,24 @@ function onTouchEnd(e: TouchEvent) {
     </p>
   </section>
 
+  <!-- 087 §4.8：L6 答题区——嵌入组件自管计时/预载/作答/自动切题/退出 -->
+  <QuizPlayName v-else-if="quiz.tier === 6" :type="type" />
+  <!-- 089：L7 答题区（输入题）——自管计时（音从开播起）/素材切换/IME/判分反馈 -->
+  <QuizPlayInput v-else-if="quiz.tier === 7" :type="type" />
+
   <!-- 答题 -->
   <template v-else-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <!-- 072-a：题量不足时明确说明原因（不再是"静默少几题"） -->
     <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
-    <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts） -->
+    <!-- 媒体加载失败过多：明确提示换网络重开（不静默扣时间） -->
+    <p v-if="gate.shouldPromptRetry.value" class="network-note" role="alert">
+      {{ networkNote }}
+    </p>
+    <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts）+ 选项残留观测（2026-10-25） -->
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
+      <template v-if="diagInput"><br /><span class="diag-input">{{ diagInput }}</span></template>
     </p>
     <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
@@ -1039,7 +1313,11 @@ function onTouchEnd(e: TouchEvent) {
       </span>
       <span class="sb-mid">{{ t('quiz.progress', { n: quiz.index + 1, total: quiz.total }) }}</span>
       <span class="sb-right">
-        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
+        <!-- 媒体未就绪：加载期占住计时位，明确告诉用户"还没开始算时间" -->
+        <span v-if="!gate.ready.value && !quiz.answered" class="timer loading">
+          <span class="spin" aria-hidden="true"></span> {{ t('quiz.loadingMedia') }}
+        </span>
+        <span v-else-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
         <span v-else>{{
@@ -1050,7 +1328,12 @@ function onTouchEnd(e: TouchEvent) {
       </span>
     </div>
 
-    <div class="card" @touchstart.passive="onTouchStart" @touchend="onTouchEnd">
+    <div
+      class="card"
+      @touchstart.passive="onTouchStart"
+      @touchend="onTouchEnd"
+      @pointerdown.capture="onPointerDownCapture"
+    >
       <MediaCard
         :key="quiz.current.id"
         :type="displayType"
@@ -1059,6 +1342,7 @@ function onTouchEnd(e: TouchEvent) {
         :autoplay-delay="settings.autoplayDelayMs"
         :show-attribution="false"
         @audio-play="onQuestionAudioPlay"
+        @image-settled="onImageSettled"
       >
         <template #media-corner>
           <button class="quit-corner" type="button" @click="quitRound">
@@ -1096,7 +1380,7 @@ function onTouchEnd(e: TouchEvent) {
         :hidden="optionsHidden"
         :reveal-in-sec="revealInSec"
         :mode="quiz.current.type"
-        @select="quiz.answer($event)"
+        @select="onSelectOption"
       />
 
       <!-- 自动切换中：浮窗（答对 3s / 都自动的错题 4s），可「取消切换」（R43） -->
@@ -1204,9 +1488,39 @@ function onTouchEnd(e: TouchEvent) {
   padding: 5px 10px;
   margin: 0 0 8px;
 }
+.network-note {
+  font-size: 0.75rem;
+  color: #8a3b2e;
+  background: #fdeae6;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin: 0 0 8px;
+}
+.timer.loading .spin {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: gate-spin 0.8s linear infinite;
+}
+@keyframes gate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer.loading .spin {
+    animation: none;
+  }
+}
 .diag-body {
   color: var(--text-light);
   opacity: 0.92;
+}
+.diag-input {
+  color: #8a5a00;
 }
 .intro {
   text-align: center;
@@ -1395,8 +1709,6 @@ function onTouchEnd(e: TouchEvent) {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  max-height: 132px;
-  overflow-y: auto;
 }
 .prov-pill {
   padding: 3px 9px;
@@ -1429,10 +1741,109 @@ function onTouchEnd(e: TouchEvent) {
   font-size: 0.86rem;
   font-weight: 600;
 }
+/* 087 P0：洲 → 国家/地区 手风琴分组（全部 249 码；国家徽标 = 区系种数，如实标注） */
+.continent-cap {
+  text-align: center;
+  margin: 2px auto 6px;
+}
+.continents {
+  max-width: 560px;
+  margin: 0 auto 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-align: left;
+}
+.continent + .continent {
+  border-top: 1px solid var(--border);
+}
+.continent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.continent-head:hover {
+  background: #f3fbf7;
+}
+.continent-head .chev {
+  color: var(--text-light);
+  font-weight: 600;
+}
+/* 2026-10-25：洲标题即选择器——选中态与展开态都要能看出来 */
+.continent-head.on {
+  background: #eaf4ef;
+  color: var(--primary-dark);
+}
+.continent-head .count {
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.7;
+  font-variant-numeric: tabular-nums;
+}
+.continent-head.on .count {
+  background: #d7ece2;
+}
+/* 洲/国家/省三层都内联展开，靠页面整体滚动查看（不做嵌套滚动条） */
+.continent-body {
+  padding: 0 10px 10px;
+}
+.continent-body .tier.region {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.tier.region .count {
+  margin-left: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #eaf4ef;
+  color: var(--primary);
+  font-size: 0.68rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
 @media (max-width: 520px) {
   .regimes {
     grid-template-columns: 1fr;
   }
+}
+/* 089 §6.2：L6 作答模式行（紧凑两枚，不带步骤号） */
+.l6-mode-cap {
+  margin-top: -10px;
+}
+.l6-mode {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+.l6-mode .tier {
+  padding: 8px 14px;
+}
+/* 087 P0-4：地区步骤的提问句（替代干巴巴的步骤名） */
+.region-ask {
+  margin: 0 auto 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+/* 087 P0-3：省级 chips 内联在所选国家正下方 */
+.provinces.inline {
+  flex-basis: 100%;
+  margin: 2px 0 6px;
 }
 /* 区域标题：2 · 水平 / 3 · 形式 */
 .step-cap {

@@ -381,7 +381,10 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
 
   let rows: SpeciesRow[] = []
   let byTiers = false
-  if (region !== 'ALL' && tier <= 3) {
+  // 2026-10-25 用户定：全档位统一自选地区（1–7 任选 省/国家/洲/全球）——
+  // 只要带 region 就按其形态过滤：国家/省→地区档位分片；洲→区系并集（全局 commonness）。
+  const useRegion = region !== 'ALL'
+  if (useRegion && !isContinentCode(region)) {
     // ① 地区档位（036）：省/国家分片 → 严格档位；不足则放宽到表内任意档位
     const tiers = await regionTiers(env, region)
     if (tiers?.size) {
@@ -394,7 +397,7 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
   }
   if (!byTiers) {
     // ② 旧路径：区系短码（分片缺失时降级）；L4/L5 或 ALL 则不做地区过滤
-    const shortCodes = region !== 'ALL' && tier <= 3 ? await regionShortCodes(env, region) : null
+    const shortCodes = useRegion ? await regionShortCodes(env, region) : null
 
     // 措施二：索引区间扫描替代 ORDER BY RANDOM()（后者扫完候选集再排序：L3 每轮 ~10,000 行）。
     // 做法：以随机 rnd 起点沿 idx_species_sample(commonness, rnd) 取一段，
@@ -482,6 +485,23 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
  * 表示"区系不可用"→ 调用方降级为不过滤。结果按 region 缓存 10 分钟（Worker 实例内）。
  */
 const regionCodesCache = new Map<string, { at: number; codes: string[] | null }>()
+/**
+ * 088 方案 B：洲码 → 成员国/地区码。**与 src/core/region.ts 的洲表镜像同步维护**
+ * （Worker 不能 import 前端代码；改那张表时同步这里）。形态用全大写下划线，与 ISO 码不冲突。
+ */
+const CONTINENT_COUNTRIES: Record<string, string[]> = {
+  ASIA: ['AE','AF','AM','AZ','BD','BH','BN','BT','CN','GE','HK','ID','IL','IN','IQ','IR','JO','JP','KG','KH','KP','KR','KW','KZ','LA','LB','LK','MM','MN','MO','MV','MY','NP','OM','PH','PK','PS','QA','SA','SG','SY','TH','TJ','TL','TM','TR','TW','UZ','VN','YE'],
+  EUROPE: ['AD','AL','AT','AX','BA','BE','BG','BY','CH','CY','CZ','DE','DK','EE','ES','FI','FO','FR','GB','GG','GI','GR','HR','HU','IE','IM','IS','IT','JE','LI','LT','LU','LV','MC','MD','ME','MK','MT','NL','NO','PL','PT','RO','RS','RU','SE','SI','SJ','SK','SM','UA','VA'],
+  AFRICA: ['AO','BF','BI','BJ','BW','CD','CF','CG','CI','CM','CV','DJ','DZ','EG','EH','ER','ET','GA','GH','GM','GN','GQ','GW','IO','KE','KM','LR','LS','LY','MA','MG','ML','MR','MU','MW','MZ','NA','NE','NG','RE','RW','SC','SD','SH','SL','SN','SO','SS','ST','SZ','TD','TG','TN','TZ','UG','YT','ZA','ZM','ZW'],
+  NORTH_AMERICA: ['AG','AI','AW','BB','BL','BM','BQ','BS','BZ','CA','CR','CU','CW','DM','DO','GD','GL','GP','GT','HN','HT','JM','KN','KY','LC','MF','MQ','MS','MX','NI','PA','PM','PR','SV','SX','TC','TT','US','VC','VG','VI'],
+  SOUTH_AMERICA: ['AR','BO','BR','CL','CO','EC','FK','GF','GY','PE','PY','SR','UY','VE'],
+  OCEANIA: ['AS','AU','CC','CK','CX','FJ','FM','GU','HM','KI','MH','MP','NC','NF','NR','NU','NZ','PF','PG','PN','PW','SB','TK','TO','TV','UM','VU','WF','WS'],
+  ANTARCTICA: ['AQ','BV','GS','TF'],
+}
+function isContinentCode(v: string): boolean {
+  return Object.prototype.hasOwnProperty.call(CONTINENT_COUNTRIES, v)
+}
+
 async function regionShortCodes(env: Env, region: string): Promise<string[] | null> {
   const hit = regionCodesCache.get(region)
   if (hit && Date.now() - hit.at < 600_000) return hit.codes
@@ -491,9 +511,19 @@ async function regionShortCodes(env: Env, region: string): Promise<string[] | nu
     if (obj) {
       const doc = JSON.parse(await obj.text()) as { byCountry?: Record<string, string[]> }
       // 省码（CN-11）→ 所属国：区系层是国家级的；与前端 countryOfRegion 同语义。缓存键仍用原 region。
-      const cc = region.includes('-') ? (region.split('-')[0] ?? region) : region
-      const list = doc.byCountry?.[cc]
-      codes = Array.isArray(list) ? list : []
+      // 088 方案 B：洲码 → 成员国区系求并集。
+      if (isContinentCode(region)) {
+        const merged: string[] = []
+        for (const cc of CONTINENT_COUNTRIES[region]!) {
+          const list = doc.byCountry?.[cc]
+          if (Array.isArray(list)) merged.push(...list)
+        }
+        codes = merged
+      } else {
+        const cc = region.includes('-') ? (region.split('-')[0] ?? region) : region
+        const list = doc.byCountry?.[cc]
+        codes = Array.isArray(list) ? list : []
+      }
     }
   } catch {
     codes = null
@@ -1056,7 +1086,8 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   },
   quiz_complete: {
     mode: ['image', 'audio'],
-    tier: ['1', '2', '3', '4', '5'],
+    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
   },
   /**
    * 072-k：一轮结果的正确率分桶（不是每题、不含物种/用户）。
@@ -1064,7 +1095,7 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 076 起精确口径走 `quiz_score`；本事件保留仅为历史数据兼容。
    */
   quiz_result: {
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：答题时**用户自选**的地区（不是 IP）。取值形态见 REGION_VALUE_RE
     region: ['@region'],
@@ -1074,9 +1105,12 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 取代分桶估算：正确率 = Σcorrect / Σtotal（题级加权，题量不足 10 也不失真）。
    */
   quiz_score: {
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
     correct: ['@score'],
     total: ['@score'],
+    // 085 D-3（2026-10-24）：统计分卷（zh/en/sci）；旧数据无该属性 = 未指定卷。
+    // metrics_daily 是 props 串累加，新维度即新 props 组合，无 schema 变更。
+    nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],
   },
   /**
@@ -1086,7 +1120,9 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   quiz_answer: {
     species: ['@species'],
     ok: ['0', '1'],
-    tier: ['1', '2', '3', '4', '5'],
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
+    // 085 D-3：同 quiz_score，逐题对错也按卷别分
+    nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],
     chosen: ['@species'],
   },
@@ -1103,7 +1139,7 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
  * 073 P0：`region` 不用枚举（330 个省码 + 249 国，穷举不现实），改用形态校验：
  * `ALL` | 两位国家码 `CN` | 省码 `CN-11`。非法值直接丢弃（该属性不进 props）。
  */
-const REGION_VALUE_RE = /^(ALL|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
+const REGION_VALUE_RE = /^(ALL|(?:ASIA|EUROPE|AFRICA|NORTH_AMERICA|SOUTH_AMERICA|OCEANIA|ANTARCTICA)|[A-Z]{2}(?:-[A-Z0-9]{1,3})?)$/
 
 /** 076：精确得分属性只接受 0–99 的整数（与前端 metrics.ts 的 SCORE_VALUE_RE 一致） */
 const SCORE_VALUE_RE = /^\d{1,2}$/
@@ -1718,7 +1754,7 @@ async function handleSharePage(request: Request, env: Env, id: string): Promise<
     .first<{ nickname: string | null; payload: string; hidden: number; view_count: number }>()
 
   let title = 'UNiaoer'
-  let description = 'UNiaoer · 鸟语识别：看图认鸟 / 听音认鸟'
+  let description = 'UNiaoer：看图认鸟 / 听音认鸟'
   let image: string | null = null
   if (row && row.hidden !== 1) {
     try {

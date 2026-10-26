@@ -56,6 +56,12 @@ export async function preloadQuestions(questions: Question[], from: number, n = 
     if (!q) continue
     const url = q.type === 'image' ? await preferredImageUrl(q.media) : q.media.url
     preloadAsset(q.type, url)
+    // L6（docs/081 §7）：选项即媒体——把选项素材也预热（图优先缩略图，音取全量）
+    for (const m of q.optionsMedia ?? []) {
+      if (m.url === url) continue
+      const u = m.type === 'image' ? (m.thumbUrl ?? (await preferredImageUrl(m))) : m.url
+      preloadAsset(m.type, u)
+    }
   }
 }
 

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MediaType, NameMode, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
-import { buildQuestions, speciesPlayable } from '@/core/questionEngine'
+import { buildQuestions, buildInputQuestions, buildNameQuestions, speciesPlayable } from '@/core/questionEngine'
 import type { BuildStats } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
@@ -12,6 +12,8 @@ import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
+import { effectiveRegion, isContinentCode } from '@/core/region'
+import { isCorrectAnswer, loadNameVariants } from '@/core/nameMatch'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
@@ -71,6 +73,11 @@ export const useQuizStore = defineStore('quiz', () => {
   const questions = ref<Question[]>([])
   /** 051 S1：本轮命名体系（出题时确定，落进每道题与轮次记录，供 046 分区统计） */
   const nameMode = ref<NameMode>(currentLocale() === 'en' ? 'en' : 'zh')
+  /**
+   * 087 §6.5：本轮**实际生效**的出题地区（用户所选 ∧ 档位允许）。L1–L4 = settings.region，
+   * L5+ 恒 'ALL'（029 D-029-2 修订）。落进轮次记录（角标显示 + 计量上报口径对齐）。
+   */
+  const region = ref<string>('ALL')
   const chosen = ref<(string | null)[]>([])
   const index = ref(0)
   const loading = ref(false)
@@ -94,8 +101,9 @@ export const useQuizStore = defineStore('quiz', () => {
   const currentChoice = computed<string | null>(() => chosen.value[index.value] ?? null)
   const answered = computed(() => currentChoice.value !== null)
   const total = computed(() => questions.value.length)
+  // 089 P0-3：中心判分（输入题归一化+变体集合；choice 题等价于旧 === 行为）
   const correctCount = computed(
-    () => questions.value.reduce((n, q, i) => n + (chosen.value[i] === q.answer ? 1 : 0), 0),
+    () => questions.value.reduce((n, q, i) => n + (isCorrectAnswer(q, chosen.value[i]) ? 1 : 0), 0),
   )
   const accuracy = computed(() =>
     total.value ? Math.round((correctCount.value / total.value) * 100) : 0,
@@ -150,7 +158,8 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
 async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
   const bank = await loadBank()
   const settings = useSettingsStore()
-  const region = tier <= 3 ? settings.region : 'ALL'
+  // 2026-10-25 用户定：全档位统一自选地区（省/国家/洲/全球任选，1–7 档同规则）
+  const region = effectiveRegion(tier, settings.region)
   const regional = await loadRegionalPool(region).catch(() => null)
   const list = regional ?? bank.species
   return list.filter((sp) => !sp.quizExcluded && speciesPlayable(sp, type))
@@ -212,7 +221,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
 
   async function start(
     type: MediaType,
-    opts: { count?: number; tier?: Tier; keepSession?: boolean; regime?: QuizRegime } = {},
+    opts: {
+      count?: number
+      tier?: Tier
+      keepSession?: boolean
+      regime?: QuizRegime
+      /** L6 作答模式（089 §6.2）：显式传入时优先生效（'zh'/'en'/'sci'） */
+      nameMode?: NameMode
+    } = {},
   ) {
     mode.value = type
     if (opts.tier) tier.value = opts.tier
@@ -222,12 +238,19 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       sessionTotal.value = 0
     }
     if (opts.regime) regime.value = opts.regime
-    // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）
-    nameMode.value = currentLocale() === 'en' ? 'en' : 'zh'
+    // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）。
+    // 089 §6.2：L6 显式传模式（语言名/学名）；「再来一轮」无显式值时沿用当前卷别。
+    nameMode.value =
+      opts.nameMode ??
+      (opts.keepSession ? nameMode.value : currentLocale() === 'en' ? 'en' : 'zh')
+    // 087 §6.5 + 2026-10-25 全档统一：快照"实际生效"地区（用户所选，任何档位）
+    region.value = effectiveRegion(tier.value, useSettingsStore().region)
     loading.value = true
     error.value = ''
     try {
       await loadBank()
+      // 089 P0-2：中文卷判分需变体字典（港台名/繁体字形）；预载失败退化为仅简体名（安全子集）
+      void loadNameVariants()
       // A2 赛制选题池（013 §4）：standard=未练过 / review=练过 / reinforce=练对过 /
       // revival=错题本 / random=全库；按「物种 × 媒体类型」记练过（013 P2 粒度）
       // 029 M2：池含全球种（L1–L3 按地区偏好过滤，L4–L5 全球开放），出题用合并后的物种表
@@ -260,7 +283,10 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       }
       // 新手轮**跳过在线池**：服务端 30 条随机候选里新手鸟可能只有个位数，会误触发"不足一轮"回退。
       // 本地全量池（核心 1299 + 全球池）才能让新手池完整参与筛选（也顺带省一次 D1 读）。
-      const online = opts.keepSession || starterOnly
+      // 087 §4.8：L6 也跳过在线池——服务端干扰项无素材当不了选项，且 tier=6 不在 Worker 白名单。
+      // 089：L6/L7 都跳过在线池（服务端干扰项无素材；tier 6/7 也不在 Worker 候选白名单）
+      const skipOnline = tier.value >= 6
+      const online = opts.keepSession || starterOnly || skipOnline
         ? null
         : await fetchOnlinePool(type, tier.value, settings.region)
 
@@ -304,29 +330,54 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         speciesForBuild = (await poolData(type, tier.value)).species
       }
 
-      // 036：L1–L3 用「该省/该国档位」出题（与 D-029-2 的地区策略一致）；
-      // L4–L5 保持全球口径（"省里稀有=高手题"是语义错位）。取不到档位表 → null → 回退全局 commonness。
+      // 036（2026-10-25 全档统一）：选了 国家/省 就用「该地区档位表」出题（任何档位）；
+      // 洲码无省级分片 → 不取表（区系并集已过滤，难度走全局 commonness）。
+      // 取不到档位表 → null → 回退全局 commonness。
       let regionTiers: Map<string, number> | null = null
-      if (tier.value <= 3) {
-        const settingsForRegion = useSettingsStore()
-        const rm = await regionTierMap(settingsForRegion.region).catch(() => null)
+      if (region.value !== 'ALL' && !isContinentCode(region.value)) {
+        const rm = await regionTierMap(region.value).catch(() => null)
         regionTiers = rm?.tiers ?? null
       }
-      const qs = await buildQuestions(speciesForBuild, {
-        type,
-        count,
-        tier: tier.value,
-        speciesPool,
-        locale: currentLocale(),
-        // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷；L6 学名卷另设）
-        nameMode: nameMode.value,
-        distractorPool,
-        regionTiers,
-        starterOnly,
-        onStats: (s) => {
-          buildStats.v = s
-        },
-      })
+      // 087 §4.8 + 089 §6：L6=名字→图/音；L7=图/音→输入。同一介绍页/赛制/池子语义，
+      // 仅玩法分支；regionTiers 只在 L1–L4（tier<=4 已限定，L6/L7 全球/洲）。
+      const qs =
+        tier.value === 6
+          ? await buildNameQuestions(speciesForBuild, {
+              type,
+              count,
+              nameMode: nameMode.value,
+              speciesPool,
+              onStats: (s) => {
+                buildStats.v = s
+              },
+            })
+          : tier.value === 7
+            ? await buildInputQuestions(speciesForBuild, {
+                type,
+                count,
+                speciesPool,
+                locale: currentLocale(),
+                nameMode: nameMode.value,
+                regionTiers,
+                onStats: (s) => {
+                  buildStats.v = s
+                },
+              })
+            : await buildQuestions(speciesForBuild, {
+            type,
+            count,
+            tier: tier.value,
+            speciesPool,
+            locale: currentLocale(),
+            // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷）
+            nameMode: nameMode.value,
+            distractorPool,
+            regionTiers,
+            starterOnly,
+            onStats: (s) => {
+              buildStats.v = s
+            },
+          })
       // 072-a 观测：把本轮链路与池子大小留痕（不改任何出题行为）。
       // 短轮用 warn（默认就能在控制台看到）；诊断模式下每轮都打一行 info。
       const diag: QuizBuildDiag = {
@@ -364,10 +415,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       questions.value = qs
       chosen.value = Array.from<string | null>({ length: qs.length }).fill(null)
       index.value = 0
-      roundId.value =
-        typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      roundId.value = newRoundId()
       startedAt.value = Date.now()
     } catch (e) {
       error.value = e instanceof BankError ? e.code : 'unknown'
@@ -382,6 +430,13 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
   function answer(choice: string) {
     if (answered.value || !current.value) return
     chosen.value[index.value] = choice
+  }
+
+  /** 新轮次 id（crypto.randomUUID 优先，旧环境退时间戳） */
+  function newRoundId(): string {
+    return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`
   }
 
   /** 超时：标记为未作答但已结束 */
@@ -448,12 +503,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     regime.value = 'standard'
     source.value = 'normal'
     escapedQuit.value = false
+    region.value = 'ALL'
   }
 
   return {
     mode,
     tier,
     nameMode,
+    region,
     roundId,
     startedAt,
     questions,

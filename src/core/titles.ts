@@ -39,7 +39,8 @@ export interface EarnedTitle {
 
 // ---- T0 段位：水平分（008 §3） ----
 
-const TIER_FACTOR: Record<number, number> = { 1: 0.6, 2: 1.0, 3: 1.4, 4: 1.8, 5: 2.0 }
+// 档位权重：答对高档位的题在水平分里更值钱。L6=2.4 · L7=2.6（2026-10-24 用户定）
+const TIER_FACTOR: Record<number, number> = { 1: 0.6, 2: 1.0, 3: 1.4, 4: 1.8, 5: 2.0, 6: 2.4, 7: 2.6 }
 const MODE_FACTOR: Record<string, number> = { image: 1.0, audio: 1.2 }
 
 /** 水平分 0–100：答对题的加权正确率，近 30 天权重高（反映"当前"水平） */

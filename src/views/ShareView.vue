@@ -21,6 +21,7 @@ import {
 import { loadBank, speciesNameById } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
+import { loadProvincesIndex, regionDisplayName, type ProvinceIndex } from '@/core/provinces'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -30,6 +31,11 @@ const notFound = ref(false)
 const loading = ref(true)
 
 onMounted(async () => {
+  try {
+    void loadProvincesIndex().then((d) => (provinceIndex.value = d)).catch(() => {})
+  } catch {
+    /* 索引不可用：角标退省码 */
+  }
   const id = String(route.params.id ?? '')
   // 题库并行加载（用于跨语言名字解析；失败不阻塞——回退载荷里的快照名）
   const bankReady = loadBank().catch(() => null)
@@ -73,6 +79,12 @@ const dateText = computed(() => {
 const tierLabel = computed(() =>
   share.value ? t(`difficulty.l${share.value.tier}.label`) : '',
 )
+/** 087 §6.5：该轮生效地区角标（全球/旧分享不显示） */
+const provinceIndex = ref<ProvinceIndex | null>(null)
+const regionBadge = computed(() => {
+  const r = share.value?.payload?.region
+  return r && r !== 'ALL' ? regionDisplayName(r, currentLocale(), (k) => t(k), provinceIndex.value) : ''
+})
 const modeLabel = computed(() =>
   share.value ? (share.value.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')) : '',
 )
@@ -96,7 +108,7 @@ const modeLabel = computed(() =>
           <span v-if="share.nickname">@{{ share.nickname }} · </span>{{ dateText }}
         </p>
         <p class="meta">
-          {{ modeLabel }} · {{ tierLabel }}
+          {{ modeLabel }} · {{ tierLabel }}<template v-if="regionBadge"> · {{ regionBadge }}</template>
           <span v-if="(share.views ?? 0) > 0" class="views" :title="t('share.viewsTitle')">
             · <Eye class="ic" :size="13" /> {{ t('share.views', { n: share.views ?? 0 }) }}
           </span>

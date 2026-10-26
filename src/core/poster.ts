@@ -12,6 +12,12 @@ export interface PosterWrong {
 export interface PosterData {
   modeLabel: string
   tierLabel: string
+  /**
+   * 2026-10-25 用户定：**题目范围**（地区），如「中国 · 上海」「全球」。
+   * 「中国上海看图版 L7」与「全球版」是不同难度体验，海报必须体现。
+   * 缺省（旧调用方）不画该行。
+   */
+  regionLabel?: string
   correct: number
   total: number
   accuracy: number
@@ -284,16 +290,10 @@ function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptio
   const x = W - QR_MARGIN - size
   const y = H - QR_MARGIN - size
 
-  // 用户取消勾选「包含二维码」→ 不画二维码、不画扫码提示；
-  // 改为在二维码位置画站点域名（非二维码），配合放大的品牌名，方便平台分享时被人搜到。
-  if (opts.includeQr === false) {
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'alphabetic'
-    ctx.fillStyle = P.muted
-    ctx.font = `700 36px ${FONT}`
-    ctx.fillText('uniaoer.com', x + size / 2, y + size / 2 + 12)
-    return
-  }
+  // 用户取消勾选「包含二维码」→ **完全留白**（2026-10-25 用户定）：
+  // 原先在二维码位置画 uniaoer.com 域名，但社媒多会因图中出现网址而限流/屏蔽，
+  // 故不画任何内容（品牌名也不放大，避免形成"变相导流"观感）。
+  if (opts.includeQr === false) return
 
   if (opts.qrImage) {
     ctx.drawImage(opts.qrImage, x, y, size, size)
@@ -430,9 +430,9 @@ export function drawPoster(
   ctx.textBaseline = 'alphabetic'
 
   // 顶部标题（无 emoji、无“鸟语识别”）；昵称前缀 + 佩戴称号/徽章胶囊（R30–R33）
-  // 不含二维码的版本（平台分享）把品牌名放大，便于他人搜索。
+  // 2026-10-25：不含二维码的版本不再放大品牌名（避免社媒判为导流）
   const dateLine = [data.nickname ? `@${data.nickname}` : '', data.date].filter(Boolean).join(' · ')
-  const brandSize = opts.includeQr === false ? 88 : 56
+  const brandSize = 56
   drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: brandSize }], W / 2, 118, 'center', box)
   drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
 
@@ -525,9 +525,16 @@ export function drawPoster(
       box,
     )
     const accText = strings.accuracyLine
+    // 2026-10-25 用户定：题目范围接在「正确率 … · L6 半鸟人」**后面**（同一行，换色区分），
+    // 不再单独占上方一行——「中国上海看图版 L7」与「全球版」在此即可区分。
     drawSegments(
       ctx,
-      [{ text: accText, color: P.muted, weight: 500, size: 28 }],
+      [
+        { text: accText, color: P.muted, weight: 500, size: 28 },
+        ...(data.regionLabel
+          ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+          : []),
+      ],
       W / 2,
       950,
       'center',
@@ -574,12 +581,46 @@ export function drawPoster(
       })
     }
   } else {
-    // 不含测试内容：居中一句品牌语，避免大片空白
+    // 2026-10-25 用户定：取消「包含本组测试内容」= 隐藏**详情**（错题回顾等），
+    // 但**分数与题目范围照常显示**——成绩本身是分享主体，隐藏它反而失去海报意义。
     drawSegments(
       ctx,
-      [{ text: strings.intro, color: P.muted, weight: 400, size: 44 }],
+      [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }],
       W / 2,
-      H / 2,
+      600,
+      'center',
+      box,
+    )
+    const perfect = data.total > 0 && data.correct === data.total
+    drawSegments(
+      ctx,
+      [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
+      W / 2,
+      700,
+      'center',
+      box,
+    )
+    drawSegments(
+      ctx,
+      [
+        { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
+        { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
+      ],
+      W / 2,
+      890,
+      'center',
+      box,
+    )
+    drawSegments(
+      ctx,
+      [
+        { text: strings.accuracyLine, color: P.muted, weight: 500, size: 28 },
+        ...(data.regionLabel
+          ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+          : []),
+      ],
+      W / 2,
+      960,
       'center',
       box,
     )

@@ -36,6 +36,15 @@ interface Persisted {
   /** A2 难度按图/声分别记忆（与赛制一致，013 §4 官能正交） */
   tierImage?: Tier
   tierAudio?: Tier
+  /**
+   * L6 半鸟人作答模式（089 §6.2 恢复，图/声分离）：'default' = 语言名（跟随界面语言），
+   * 'sci' = 学名卷。L7 上线时沿用同一形态。
+   */
+  nameMode6Image?: 'default' | 'sci'
+  nameMode6Audio?: 'default' | 'sci'
+  /** L7 作答模式（同 L6 形态，图/声分离；089 §6.1/6.2） */
+  nameMode7Image?: 'default' | 'sci'
+  nameMode7Audio?: 'default' | 'sci'
   /** D5 自适应难度：按最近表现自动升降档（默认开） */
   adaptiveTier?: boolean
   /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
@@ -101,6 +110,12 @@ export const useSettingsStore = defineStore('settings', () => {
   /** A2 难度（图/声分离记忆；与赛制一致） */
   const tierImage = ref<Tier | undefined>(saved.tierImage)
   const tierAudio = ref<Tier | undefined>(saved.tierAudio)
+  /** L6 作答模式（089 §6.2：语言名/学名，图/声分别记忆） */
+  const nameMode6Image = ref<'default' | 'sci'>(saved.nameMode6Image ?? 'default')
+  const nameMode6Audio = ref<'default' | 'sci'>(saved.nameMode6Audio ?? 'default')
+  const nameMode7Image = ref<'default' | 'sci'>(saved.nameMode7Image ?? 'default')
+  const nameMode7Audio = ref<'default' | 'sci'>(saved.nameMode7Audio ?? 'default')
+  /** L6 半鸟人卷别（docs/085 D-2：switch 切换，'default' 跟随界面语言 / 'sci' 学名卷） */
   /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
   /** 029 M2:出题地区偏好（默认 ALL=不过滤；L1-L3 按此过滤全球池） */
@@ -135,6 +150,10 @@ export const useSettingsStore = defineStore('settings', () => {
       regimeAudio,
       tierImage,
       tierAudio,
+      nameMode6Image,
+      nameMode6Audio,
+      nameMode7Image,
+      nameMode7Audio,
       adaptiveTier,
       region,
       metricsEnabled,
@@ -163,6 +182,10 @@ export const useSettingsStore = defineStore('settings', () => {
             regimeAudio: regimeAudio.value,
             tierImage: tierImage.value,
             tierAudio: tierAudio.value,
+            nameMode6Image: nameMode6Image.value,
+            nameMode6Audio: nameMode6Audio.value,
+            nameMode7Image: nameMode7Image.value,
+            nameMode7Audio: nameMode7Audio.value,
             adaptiveTier: adaptiveTier.value,
             region: region.value,
             metricsEnabled: metricsEnabled.value,
@@ -195,6 +218,10 @@ export const useSettingsStore = defineStore('settings', () => {
     regimeAudio,
     tierImage,
     tierAudio,
+    nameMode6Image,
+    nameMode6Audio,
+    nameMode7Image,
+    nameMode7Audio,
     adaptiveTier,
     region,
     metricsEnabled,

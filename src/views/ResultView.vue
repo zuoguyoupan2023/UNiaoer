@@ -43,6 +43,7 @@ import type { MediaAsset, Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
+import { loadProvincesIndex, regionDisplayName, type ProvinceIndex } from '@/core/provinces'
 import {
   loadBank,
   speciesNameById,
@@ -64,7 +65,21 @@ const { t } = useI18n()
 
 const hasResult = computed(() => quiz.total > 0)
 const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
+/** 087 §6.5：本轮生效地区角标（全球不显示，避免噪音）；省名要省级索引，懒加载不阻塞 */
+const provinceIndex = ref<ProvinceIndex | null>(null)
+const regionBadge = computed(() =>
+  quiz.region && quiz.region !== 'ALL'
+    ? regionDisplayName(quiz.region, currentLocale(), (k) => t(k), provinceIndex.value)
+    : '',
+)
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
+/**
+ * 2026-10-25：海报「题目范围」——**全球也要显示**（与界面角标不同：角标为降噪隐藏全球，
+ * 海报必须声明范围，否则「中国上海看图版 L7」与「全球版」无法区分）。
+ */
+const posterRegionLabel = computed(() =>
+  regionDisplayName(quiz.region, currentLocale(), (k) => t(k), provinceIndex.value),
+)
 /** 科名「拉丁名+本地名」组合（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 /** 题目答案名按当前语言解析（015 #1）：speciesId 回查题库，回退作答时存储名 */
@@ -280,6 +295,7 @@ const posterData = computed<PosterData>(() => {
   return {
     modeLabel: quiz.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
     tierLabel: tierLabel.value,
+    regionLabel: posterRegionLabel.value,
     correct: quiz.correctCount,
     total: quiz.total,
     accuracy: quiz.accuracy,
@@ -340,6 +356,12 @@ onMounted(async () => {
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
+  // 087 §6.5：地区角标的省名（失败退省码，不阻塞结果展示）
+  try {
+    void loadProvincesIndex().then((d) => (provinceIndex.value = d)).catch(() => {})
+  } catch {
+    /* 同上 */
+  }
   // 029 M1:core 只带首图首音;回顾画廊的完整素材按需加载(按桶合并,一轮题通常落在少数几个桶)
   void Promise.all(
     quiz.questions.map((q) => {
@@ -363,12 +385,14 @@ onMounted(async () => {
     track('quiz_result', {
       tier: quiz.tier,
       band: accuracyBand(quiz.accuracy),
-      // 073 P0：答题时用户自选的地区（不是 IP）；`ALL` = 未指定，公开统计时单列
-      region: settings.region,
+      // 073 P0 + 087 §6.5：**实际生效**地区（L5+ 恒 ALL，与出题口径一致；旧记录回退用户所选）
+      region: res.record.region ?? settings.region,
     })
     // 076 + 077：精确得分（correct/total）+ 逐题物种级对错，**一轮一次批量请求**
     //  - quiz_score 可能带省码（用户同意时由 Worker 注入），供省际统计；
     //  - quiz_answer 不带省码（Worker 的 GEO_EVENTS 不含它），供 admin 的鸟种错误率。
+    // 087 §6.5：本轮实际生效地区（闭包内复用；TS 无法在嵌套箭头函数里保持窄化，先取值）
+    const recordRegion = res.record.region ?? settings.region
     const answers = res.record.items
       // 旧题库兜底：没有 speciesId 时记录里塞的是媒体 URL，不能当物种 id 上报
       .filter((it) => it.speciesId && it.speciesId !== it.mediaUrl)
@@ -378,7 +402,9 @@ onMounted(async () => {
           species: it.speciesId,
           ok: it.correct ? 1 : 0,
           tier: quiz.tier,
-          region: settings.region,
+          // 085 D-3：统计分卷——正确率按卷别（zh/en/sci）分开；旧数据无该属性=未指定
+          nameMode: quiz.nameMode,
+          region: recordRegion,
           // 只在上报错选（超时没有「错认成谁」，不发 chosen）
           ...(it.correct || !it.chosenId ? {} : { chosen: it.chosenId }),
         },
@@ -386,7 +412,13 @@ onMounted(async () => {
     trackBatch([
       {
         e: 'quiz_score',
-        p: { tier: quiz.tier, correct: quiz.correctCount, total: quiz.total, region: settings.region },
+        p: {
+          tier: quiz.tier,
+          correct: quiz.correctCount,
+          total: quiz.total,
+          nameMode: quiz.nameMode,
+          region: recordRegion,
+        },
       },
       ...answers,
     ])
@@ -410,6 +442,7 @@ onMounted(async () => {
 
 async function again() {
   await quiz.nextRound()
+  // 087 P0：L6 并入 /quiz/*（介绍页题型步骤），两种题型回到同一路由
   router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
 }
 </script>
@@ -417,7 +450,7 @@ async function again() {
 <template>
   <section v-if="hasResult" class="card result">
     <h2><PartyPopper class="ic" :size="22" /> {{ t('result.doneTitle') }}</h2>
-    <p class="muted">{{ modeLabel }} · {{ tierLabel }}</p>
+    <p class="muted">{{ modeLabel }} · {{ tierLabel }}<template v-if="regionBadge"> · {{ regionBadge }}</template></p>
     <div class="score">
       <span class="num">{{ quiz.correctCount }}</span>
       <span class="den">/ {{ quiz.total }}</span>

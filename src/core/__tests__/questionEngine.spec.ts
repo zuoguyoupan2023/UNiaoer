@@ -239,9 +239,9 @@ describe('难度梯度', () => {
     expect(qs[0]!.tier).toBe(1)
   })
 
-  it('L4 限时 10s，且选项数多于 L1', async () => {
+  it('L4 限时 12s，且选项数多于 L1', async () => {
     const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
-    expect(qs[0]!.timeLimitSec).toBe(10)
+    expect(qs[0]!.timeLimitSec).toBe(12)
     expect(qs[0]!.options.length).toBeGreaterThan(3)
     expect(qs[0]!.options.length).toBeLessThanOrEqual(TIERS[4].optionCount)
   })
@@ -252,7 +252,7 @@ describe('难度梯度', () => {
     expect(qs.length).toBeGreaterThan(0)
   })
 
-  it('L5 地狱：L4 规格（6 选项、8s 限时），题目正常生成', async () => {
+  it('L5 地狱：6 选项、10s 限时，题目正常生成', async () => {
     const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 5 })
     expect(qs.length).toBeGreaterThan(0)
     expect(qs[0]!.tier).toBe(5)
@@ -261,6 +261,21 @@ describe('难度梯度', () => {
       expect(q.options.length).toBeLessThanOrEqual(TIERS[5].optionCount)
       expect(q.options).toContain(q.answer)
     }
+  })
+
+  it('听音限时一律长于同档看图（L1–L5 全部）', async () => {
+    for (const tier of [1, 2, 3, 4, 5] as const) {
+      const img = await buildQuestions(bank, { type: 'image', count: 1, tier })
+      const aud = await buildQuestions(bank, { type: 'audio', count: 1, tier })
+      expect(aud[0]!.timeLimitSec!).toBeGreaterThan(img[0]!.timeLimitSec!)
+    }
+  })
+
+  it('L5 听音 20s，仍比 L4 听音少 2s', async () => {
+    const l4 = await buildQuestions(bank, { type: 'audio', count: 1, tier: 4 })
+    const l5 = await buildQuestions(bank, { type: 'audio', count: 1, tier: 5 })
+    expect(l5[0]!.timeLimitSec).toBe(20)
+    expect(l5[0]!.timeLimitSec).toBe(l4[0]!.timeLimitSec! - 2)
   })
 })
 

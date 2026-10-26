@@ -14,7 +14,7 @@ const props = defineProps<{
   mode?: MediaType
 }>()
 
-const emit = defineEmits<{ select: [value: string] }>()
+const emit = defineEmits<{ select: [value: string, source?: 'click'] }>()
 
 const { t } = useI18n()
 
@@ -46,7 +46,7 @@ function state(opt: string): string {
       class="option"
       :class="state(opt)"
       :disabled="!!chosen"
-      @click="emit('select', opt)"
+      @click="emit('select', opt, 'click')"
     >
       <span class="key">{{ letters[i] }}</span>
       <span>{{ opt }}</span>

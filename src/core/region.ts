@@ -67,6 +67,95 @@ const OCEANIA = [
 ]
 const ANTARCTICA = ['AQ', 'BV', 'GS', 'TF']
 
+/**
+ * 088 方案 B（2026-10-24 拍板）：**洲作为地区**——L5/L6/L7 的出题地区固定为「大洲」
+ * （可在七大洲间切换），L1–L4 仍是 国家/省。洲码用全大写含下划线的形式
+ * （'NORTH_AMERICA' 等），与两位国家码/省码形态天然不冲突。
+ * 与 Worker 的 CONTINENT_COUNTRIES 镜像表同步维护（那边不能 import 前端代码）。
+ */
+export type ContinentCode =
+  | 'ASIA'
+  | 'EUROPE'
+  | 'AFRICA'
+  | 'NORTH_AMERICA'
+  | 'SOUTH_AMERICA'
+  | 'OCEANIA'
+  | 'ANTARCTICA'
+
+/** 洲码 → i18n 显示名 key（复用现有 region.continents.*，无新文案） */
+export const CONTINENT_LABEL_KEY: Record<ContinentCode, string> = {
+  ASIA: 'region.continents.asia',
+  EUROPE: 'region.continents.europe',
+  AFRICA: 'region.continents.africa',
+  NORTH_AMERICA: 'region.continents.northAmerica',
+  SOUTH_AMERICA: 'region.continents.southAmerica',
+  OCEANIA: 'region.continents.oceania',
+  ANTARCTICA: 'region.continents.antarctica',
+}
+
+const CONTINENT_CODE_LIST: ContinentCode[] = [
+  'ASIA',
+  'EUROPE',
+  'AFRICA',
+  'NORTH_AMERICA',
+  'SOUTH_AMERICA',
+  'OCEANIA',
+  'ANTARCTICA',
+]
+const CONTINENT_CODE_SET = new Set<string>(CONTINENT_CODE_LIST)
+
+export function isContinentCode(v: string | null | undefined): v is ContinentCode {
+  return !!v && CONTINENT_CODE_SET.has(v)
+}
+
+/**
+ * 地区「生效值」（2026-10-25 用户定：**全档位统一自选**——1–7 档任选 省/国家/洲/全球，
+ * 推翻此前按档位分流的两版设计）。本函数退化为纯归一化（大写、空→ALL）；
+ * tier 形参保留以兼容既有调用点，不再参与逻辑。
+ */
+export function effectiveRegion(_tier: number, chosen: string): string {
+  const v = String(chosen || '').trim().toUpperCase()
+  return v || 'ALL'
+}
+
+/**
+ * 大洲 → 国家/地区码（087 P0：出题介绍页的「洲 → 国家 → 省」三级选择器用）。
+ * 就是上面那张归属表的键值视图（同一份数据，勿在此另维护一份）；
+ * 恰好覆盖 249 个 ISO 码，无遗漏。
+ */
+export const COUNTRIES_BY_CONTINENT: Record<Continent, string[]> = {
+  europe: EUROPE,
+  asia: ASIA,
+  africa: AFRICA,
+  northAmerica: NORTH_AMERICA,
+  southAmerica: SOUTH_AMERICA,
+  oceania: OCEANIA,
+  antarctica: ANTARCTICA,
+}
+
+/** Continent（camel，展示顺序表用）→ 洲码（地区选择/记录用） */
+export function continentCodeOf(c: Continent): ContinentCode {
+  switch (c) {
+    case 'northAmerica':
+      return 'NORTH_AMERICA'
+    case 'southAmerica':
+      return 'SOUTH_AMERICA'
+    default:
+      return c.toUpperCase() as ContinentCode
+  }
+}
+
+/** 洲码 → 成员国/地区码（区系求并集用；数据同上表，零重复） */
+export function countriesOfContinent(code: ContinentCode): string[] {
+  const camel: Continent =
+    code === 'NORTH_AMERICA'
+      ? 'northAmerica'
+      : code === 'SOUTH_AMERICA'
+        ? 'southAmerica'
+        : (code.toLowerCase() as Continent)
+  return COUNTRIES_BY_CONTINENT[camel]
+}
+
 const CONTINENT_BY_COUNTRY: Record<string, Continent> = {}
 for (const [continent, codes] of [
   ['europe', EUROPE],
@@ -102,6 +191,16 @@ export const REGION_LABEL_KEY: Record<string, string> = {
 export function continentOf(code: string): Continent | undefined {
   return CONTINENT_BY_COUNTRY[code]
 }
+
+/**
+ * 在「洲 → 国家」列表里不再单独成条的地区码（2026-10-26 用户定）。
+ *
+ * 港澳台是中国的特别行政区/地区，**不作为国家与中国并列**；它们作为省级条目
+ * （`CN-71` 中国台湾 / `CN-91` 中国香港 / `CN-92` 中国澳门）列在「中国」下面。
+ * 注意：这只是**选择器展示层**的归类——区系/出题/统计仍按这些码各自取数
+ * （GBIF 记录本就分码），所以 `COUNTRIES_BY_CONTINENT` 与洲并集口径不变。
+ */
+export const SUBREGION_OF_CN: ReadonlySet<string> = new Set(['HK', 'MO', 'TW'])
 
 /**
  * 国家/地区码 → 显示名。**这是唯一的取名入口**，别在各组件里另写一份 ——
@@ -185,4 +284,20 @@ export function presentContinents(stats: CountryStat[]): Continent[] {
     if (c) counts.set(c, (counts.get(c) ?? 0) + 1)
   }
   return CONTINENTS.filter((c) => (counts.get(c) ?? 0) > 0)
+}
+
+/**
+ * 2026-10-25（用户反馈"亚洲要点两次才选中"）：洲标题点击的**纯判定**。
+ * 规则：
+ *   · 当前选中的不是该洲（选国家/省/全球，或另一个洲）→ **选中并展开**（一次点击即生效）；
+ *   · 当前已选中该洲 → 仅切换展开/收起（选中态保持）。
+ * 抽成纯函数以便单测（组件里只做赋值与副作用）。
+ */
+export function continentClickAction(
+  clicked: ContinentCode,
+  selected: ContinentCode | null,
+  isOpen: boolean,
+): { select: boolean; open: boolean } {
+  if (selected !== clicked) return { select: true, open: true }
+  return { select: false, open: !isOpen }
 }

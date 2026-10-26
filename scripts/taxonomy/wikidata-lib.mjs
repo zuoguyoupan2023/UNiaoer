@@ -13,6 +13,12 @@ export function escapeSparqlString(s) {
 
 /** zh 变体语言标签 → 取值优先级(zh-CN 项目:简体优先,繁体兜底) */
 export const ZH_LANG_PRIORITY = ['zh-cn', 'zh-hans', 'zh', 'zh-sg', 'zh-my', 'zh-tw', 'zh-hk', 'zh-mo', 'zh-hant']
+
+/**
+ * 089 前置（085 §2.2）：港台体系名优先级——zh-tw → zh-hk → zh-mo → zh-hant。
+ * 取自与主名**同一条目**的标签（避免跨条目混配）；主体系优先级保持不变。
+ */
+export const ZH_TW_PRIORITY = ['zh-tw', 'zh-hk', 'zh-mo', 'zh-hant']
 const LANG_IN = ZH_LANG_PRIORITY.map((l) => `"${l}"`).join(',')
 
 /** 按学名列表构造 WDQS 查询(一次一批,VALUES 精确匹配;P171 取父级学名用于属名校验) */
@@ -37,7 +43,8 @@ function qidNum(item) {
 
 const genusOf = (sci) => String(sci || '').trim().split(/\s+/)[0]?.toLowerCase() || ''
 
-/** 单学名多候选 → 取一个标签:属名匹配优先 → species rank 优先 → QID 小者优先,再按语言优先级 */
+/** 单学名多候选 → 取一个标签:属名匹配优先 → species rank 优先 → QID 小者优先,再按语言优先级。
+ * 089 前置：胜出条目同时带出港台体系名（zhTw，按 ZH_TW_PRIORITY），未命中则缺省。 */
 export function pickLabel(candidates, sci, priority = ZH_LANG_PRIORITY) {
   if (!candidates || !candidates.length) return null
   const genus = genusOf(sci)
@@ -58,7 +65,19 @@ export function pickLabel(candidates, sci, priority = ZH_LANG_PRIORITY) {
   for (const lang of priority) {
     for (const labels of ordered) {
       const hit = labels.find((c) => c.lang === lang)
-      if (hit) return { zh: hit.zh, lang: hit.lang, item: hit.item }
+      if (!hit) continue
+      // 同条目港台名（zh-tw/zh-hk/zh-mo/zh-hant 首个）
+      let zhTw = null
+      let zhTwLang = null
+      for (const tl of ZH_TW_PRIORITY) {
+        const t = labels.find((c) => c.lang === tl)
+        if (t) {
+          zhTw = t.zh
+          zhTwLang = t.lang
+          break
+        }
+      }
+      return zhTw ? { zh: hit.zh, lang: hit.lang, item: hit.item, zhTw, zhTwLang } : { zh: hit.zh, lang: hit.lang, item: hit.item }
     }
   }
   return null

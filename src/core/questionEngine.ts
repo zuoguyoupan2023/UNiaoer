@@ -1,6 +1,6 @@
 import type { MediaAsset, MediaType, NameMode, Question, Tier } from '@/types'
 import { speciesName, loadSpeciesAssets, type BankSpecies } from './bank'
-import { TIERS, type DistractorStrategy } from './difficulty'
+import { TIERS, L6_TIERS, L7_TIERS, timeLimitFor, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
 
 /** 072-a 观测：组题过程的计数（只用于诊断，不参与判定） */
@@ -346,7 +346,208 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
       options: optionPairs.map((p) => p.name),
       optionIds: optionPairs.map((p) => p.id),
       answerMode: 'choice',
-      timeLimitSec: cfg.timeLimitSec,
+      timeLimitSec: timeLimitFor(cfg, type),
     }
   })
+}
+
+// ---------------------------------------------------------------------------
+// L6 半鸟人（docs/081 §7 / docs/085 §5）：名字作题干、媒体作选项的反向辨认题。
+// ---------------------------------------------------------------------------
+
+export interface BuildNameOptions {
+  type: MediaType
+  count?: number
+  /**
+   * 卷别（docs/085 D-1/D-2）：缺省 'zh'（调用方按界面语言决定传 zh/en）；学名卷
+   * （D-2 的 switch）暂未在 UI 露出（087 §4.8 回退为纯难度档后挂起），引擎能力保留。
+   * 判分体系锁定（D-8）：题干与全部选项都来自同一卷别的名字体系，不做跨语言回退。
+   */
+  nameMode?: NameMode
+  /**
+   * 赛制选题池（013 §4；087 §4.8：L6 与 L1–L5 同为难度档，介绍页的赛制选择对它生效）——
+   * 答案物种只从这个集合取；干扰项仍取全池（与经典卷同语义）。
+   */
+  speciesPool?: ReadonlySet<string>
+  /** 072-a 观测：组题计数回调（与经典卷同语义） */
+  onStats?: (s: BuildStats) => void
+}
+
+/**
+ * 卷别 → 该卷显示名（**卷别权威**，与 speciesName 的 locale 链无关——
+ * D-8 判分体系锁定：en 卷必须出英文名，即使调用方传了 zh locale；
+ * 回退链与 bank.speciesName 同构，`usableInNameMode` 已保证主字段非空）。
+ */
+function nameByMode(s: BankSpecies, mode: NameMode): string {
+  if (mode === 'sci') return s.nameSci
+  if (mode === 'en') return s.nameEn || s.nameSci || s.nameZh
+  return s.nameZh || s.nameEn || s.nameSci
+}
+
+/**
+ * 构建一轮 L6 题（名字 → 6 图 / 4 音）。
+ *
+ * 与经典卷 buildQuestions 的关键差异：
+ *  - **全部选项都要有真实素材**（选项即媒体）：干扰项也从「可播 ∧ 有本卷名字」的池里出，
+ *    取不到素材的候选直接跳过、从后续候选补位——宁可少一题，绝不出空选项；
+ *  - 干扰项策略固定 same（同科为主，docs/081 §7「多选项都是同科鸟」），素材不够时自然
+ *    回落到跨科（与 pickDistractorPairs 的 same 语义一致）；
+ *  - 不走在线候选（服务端干扰项无素材，当不了选项）、无地区档位/赛制池（L6 无档位选择）；
+ *  - 每题选项数/限时按题型取 L6_TIERS（图 6 选项 15s / 音 4 选项 20s）。
+ *
+ * 池子语义与经典卷共用：先 mediaPool 再 filterByNameMode（051 S1 的 D1 决策顺序不变，
+ * docs/084 §4-3）；`usableInNameMode` 已保证卷内名字非空，选项名/答案名不会是空串。
+ */
+export async function buildNameQuestions(
+  bank: BankSpecies[],
+  opts: BuildNameOptions,
+): Promise<Question[]> {
+  const { type, count = 10, nameMode = 'zh', speciesPool, onStats } = opts
+  const cfg = L6_TIERS[type]
+  const pool = filterByNameMode(mediaPool(bank, type), nameMode)
+  // 013 §4 语义：**答案只出赛制池，干扰项仍取全池**（与经典 buildQuestions 同构）。
+  // 门槛：池子（答案∪全量）要能拼出至少一个整题（optionCount 个选项），答案池非空即可
+  // ——复活赛等小池也能出题（答案 1 种 + 干扰项从全池补，072-a 短轮说明兜底）。
+  const scoped = speciesPool ? pool.filter((s) => speciesPool.has(s.id)) : pool
+  const buildable = scoped.length >= 1 && pool.length >= cfg.optionCount
+  const want = buildable ? Math.min(count, scoped.length) : 0
+  onStats?.({ candidates: bank.length, unique: scoped.length, enriched: 0, want })
+
+  // 轮内按物种 id 去重（meta 名单理论上唯一，这里与经典卷同则保险）；
+  // 两个列表各自独立去重——干扰项池含答案物种是预期（见下 others 过滤）
+  const dedup = (list: BankSpecies[]) => {
+    const seen = new Set<string>()
+    return list.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)))
+  }
+  const answerList = shuffle(dedup(scoped))
+  /** 干扰项候选池 = 全量（不受赛制池收窄；经典卷 dPool 同语义） */
+  const distractorList = shuffle(dedup(pool))
+  const questions: Question[] = []
+  const otherType: MediaType = type === 'image' ? 'audio' : 'image'
+  /** 已用作答案的物种（轮内去重：同一轮每只鸟最多当一次答案，与经典卷同则） */
+  const usedAnswers = new Set<string>()
+
+  for (const answerSp of answerList) {
+    if (questions.length >= want) break
+    if (usedAnswers.has(answerSp.id)) continue
+    // ensureMedia 可能返回带素材的新对象（分片懒加载），必须用它而不是原 species
+    const answerResolved = await ensureMedia(answerSp, type)
+    const answerAssets = assetsOf(answerResolved, type)
+    if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 跳过该候选
+
+    // 干扰项候选：同科优先（same），轮内已当过答案的种排后面但不排除（经典卷同语义）
+    const others = distractorList.filter((s) => s.id !== answerSp.id)
+    const same = shuffle(others.filter((s) => s.family && s.family === answerSp.family))
+    const diff = shuffle(others.filter((s) => !(s.family && s.family === answerSp.family)))
+    const candidates = [...same, ...diff]
+
+    // 分批解析候选素材（分片按桶缓存，跨题复用）；先取需要量的 2 倍补偿取不到的
+    const need = cfg.optionCount - 1
+    const answerName = nameByMode(answerSp, nameMode)
+    const picked: { id: string; name: string; media: MediaAsset }[] = []
+    let cursor = 0
+    while (picked.length < need && cursor < candidates.length) {
+      const batch = candidates.slice(cursor, cursor + (need - picked.length) * 2)
+      cursor += batch.length
+      const resolvedList = await Promise.all(batch.map((sp) => ensureMedia(sp, type)))
+      const resolved = new Map<string, MediaAsset[]>()
+      for (const sp of resolvedList) {
+        const assets = assetsOf(sp, type)
+        if (assets.length) resolved.set(sp.id, assets)
+      }
+      // 选项名体系与答案一致（D-8：判分体系锁定，不跨卷）
+      const filled = fillDistractorsInMode(answerName, batch, resolved, need - picked.length, nameMode)
+      picked.push(...filled)
+    }
+    if (picked.length < need) continue // 同卷可播候选不足一个整题的选项数 → 少出一题
+
+    usedAnswers.add(answerSp.id)
+    const optionPairs = shuffle([
+      { id: answerSp.id, name: answerName, media: answerAssets[0]! },
+      ...picked,
+    ])
+    questions.push({
+      id: `${answerSp.id}-${type}-${questions.length}`,
+      tier: 6,
+      type,
+      media: answerAssets[0]!,
+      assets: answerAssets,
+      crossAssets: assetsOf(answerSp, otherType),
+      answer: answerName,
+      sci: answerSp.nameSci,
+      family: answerSp.family,
+      options: optionPairs.map((p) => p.name),
+      optionIds: optionPairs.map((p) => p.id),
+      optionsMedia: optionPairs.map((p) => p.media),
+      answerMode: 'choice',
+      nameMode,
+      timeLimitSec: cfg.timeLimitSec,
+    })
+    onStats?.({ candidates: bank.length, unique: scoped.length, enriched: questions.length, want })
+  }
+  return questions
+}
+
+/** fillDistractors 的卷别感知版本（nameByMode 决定选项名体系） */
+function fillDistractorsInMode(
+  answerName: string,
+  ordered: BankSpecies[],
+  resolved: Map<string, MediaAsset[]>,
+  n: number,
+  mode: NameMode,
+): { id: string; name: string; media: MediaAsset }[] {
+  const used = new Set<string>([answerName])
+  const picked: { id: string; name: string; media: MediaAsset }[] = []
+  for (const s of ordered) {
+    if (picked.length >= n) break
+    const name = nameByMode(s, mode)
+    if (!name || used.has(name)) continue
+    const assets = resolved.get(s.id)
+    if (!assets?.length) continue
+    used.add(name)
+    picked.push({ id: s.id, name, media: assets[0]! })
+  }
+  return picked
+}
+
+// ---------------------------------------------------------------------------
+// L7 鸟娲·造鸟者（docs/089 §6.1）：媒体作题干 → 输入鸟名（answerMode 'input'）。
+// ---------------------------------------------------------------------------
+
+export interface BuildInputOptions {
+  type: MediaType
+  count?: number
+  tier?: Tier
+  speciesPool?: ReadonlySet<string>
+  locale?: string
+  /** 卷别（语言名 zh/en 或学名 sci——介绍页模式选择，089 §6.2） */
+  nameMode?: NameMode
+  regionTiers?: Map<string, number> | null
+  distractorPool?: BankSpecies[]
+  starterOnly?: boolean
+  onStats?: (s: BuildStats) => void
+}
+
+/**
+ * 构建一轮 L7 题：**复用经典 buildQuestions 的全部池子语义**（nameMode 过滤在最前、
+ * 档位/地区档位、赛制池、轮内去重、ensureMedia 补素材），差异只有：
+ *  - 无选项/干扰项（answerMode 'input'，options/optionIds 为空数组——错题 chosenId 天然 undefined）；
+ *  - 限时取 L7_TIERS（图 15s / 音 18s；素材切换递减由组件管）；
+ *  - answer = 该卷显示名（判分在 nameMatch，接受集合含港台名/繁体字形）。
+ */
+export async function buildInputQuestions(
+  bank: BankSpecies[],
+  opts: BuildInputOptions,
+): Promise<Question[]> {
+  const classic = await buildQuestions(bank, { ...opts, tier: opts.tier ?? 7 })
+  const limit = L7_TIERS[opts.type].timeLimitSec
+  return classic.map((q, i) => ({
+    ...q,
+    id: `${q.id}-input-${i}`,
+    tier: 7,
+    answerMode: 'input' as const,
+    options: [],
+    optionIds: [],
+    timeLimitSec: limit,
+  }))
 }
