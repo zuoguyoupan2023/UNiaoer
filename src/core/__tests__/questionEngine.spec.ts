@@ -262,6 +262,21 @@ describe('难度梯度', () => {
       expect(q.options).toContain(q.answer)
     }
   })
+
+  it('听音限时一律长于同档看图（L1–L5 全部）', async () => {
+    for (const tier of [1, 2, 3, 4, 5] as const) {
+      const img = await buildQuestions(bank, { type: 'image', count: 1, tier })
+      const aud = await buildQuestions(bank, { type: 'audio', count: 1, tier })
+      expect(aud[0]!.timeLimitSec!).toBeGreaterThan(img[0]!.timeLimitSec!)
+    }
+  })
+
+  it('L5 听音 20s，仍比 L4 听音少 2s', async () => {
+    const l4 = await buildQuestions(bank, { type: 'audio', count: 1, tier: 4 })
+    const l5 = await buildQuestions(bank, { type: 'audio', count: 1, tier: 5 })
+    expect(l5[0]!.timeLimitSec).toBe(20)
+    expect(l5[0]!.timeLimitSec).toBe(l4[0]!.timeLimitSec! - 2)
+  })
 })
 
 describe('pickDistractors', () => {

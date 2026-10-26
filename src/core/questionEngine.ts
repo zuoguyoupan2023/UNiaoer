@@ -1,6 +1,6 @@
 import type { MediaAsset, MediaType, NameMode, Question, Tier } from '@/types'
 import { speciesName, loadSpeciesAssets, type BankSpecies } from './bank'
-import { TIERS, L6_TIERS, L7_TIERS, type DistractorStrategy } from './difficulty'
+import { TIERS, L6_TIERS, L7_TIERS, timeLimitFor, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
 
 /** 072-a 观测：组题过程的计数（只用于诊断，不参与判定） */
@@ -346,7 +346,7 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
       options: optionPairs.map((p) => p.name),
       optionIds: optionPairs.map((p) => p.id),
       answerMode: 'choice',
-      timeLimitSec: cfg.timeLimitSec,
+      timeLimitSec: timeLimitFor(cfg, type),
     }
   })
 }
@@ -393,7 +393,7 @@ function nameByMode(s: BankSpecies, mode: NameMode): string {
  *  - 干扰项策略固定 same（同科为主，docs/081 §7「多选项都是同科鸟」），素材不够时自然
  *    回落到跨科（与 pickDistractorPairs 的 same 语义一致）；
  *  - 不走在线候选（服务端干扰项无素材，当不了选项）、无地区档位/赛制池（L6 无档位选择）；
- *  - 每题选项数/限时按题型取 L6_TIERS（图 6 选项 10s / 音 4 选项 25s）。
+ *  - 每题选项数/限时按题型取 L6_TIERS（图 6 选项 15s / 音 4 选项 20s）。
  *
  * 池子语义与经典卷共用：先 mediaPool 再 filterByNameMode（051 S1 的 D1 决策顺序不变，
  * docs/084 §4-3）；`usableInNameMode` 已保证卷内名字非空，选项名/答案名不会是空串。

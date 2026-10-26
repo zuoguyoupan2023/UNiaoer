@@ -12,8 +12,13 @@ export interface TierConfig {
   optionCount: number
   /** 干扰项策略：cross 跨科（易）/ mixed 含同科 / same 同科为主（难） */
   distractor: DistractorStrategy
-  /** 限时（秒），undefined 为不限时 */
+  /** 看图限时（秒），undefined 为不限时 */
   timeLimitSec?: number
+  /**
+   * 听音限时（秒）；缺省回退 timeLimitSec。
+   * 录音不裁剪、允许重听，且计时从音频真正开播算起，所以听音比看图给得宽松。
+   */
+  timeLimitSecAudio?: number
   /**
    * 隐藏选项的时长（秒）。2026-10-25 起**五档全部显式**（不再依赖"限时 1/3"的隐式规则，
    * 否则 L2≈6.7s / L3=5s / L4·L5≈3.3s 这些值既不好记也说不清）：
@@ -39,6 +44,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 3,
     distractor: 'cross',
     timeLimitSec: 25,
+    timeLimitSecAudio: 30,
     optionRevealSec: 5,
     commonness: [1, 2],
     mediaPoolSize: 1,
@@ -50,6 +56,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 4,
     distractor: 'mixed',
     timeLimitSec: 20,
+    timeLimitSecAudio: 28,
     optionRevealSec: 5,
     commonness: [1, 2, 3],
     mediaPoolSize: 3,
@@ -61,6 +68,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 4,
     distractor: 'same',
     timeLimitSec: 15,
+    timeLimitSecAudio: 25,
     optionRevealSec: 5,
     commonness: [2, 3, 4],
     mediaPoolSize: 3,
@@ -72,6 +80,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 12,
+    timeLimitSecAudio: 22,
     optionRevealSec: 2,
     commonness: [3, 4],
     mediaPoolSize: 5,
@@ -83,6 +92,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 10,
+    timeLimitSecAudio: 20,
     optionRevealSec: 2,
     commonness: [3, 4],
     mediaPoolSize: 5,
@@ -120,6 +130,14 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
 }
 
+/**
+ * 按题型的限时：听音取 timeLimitSecAudio（缺省回退看图值）。
+ * L6/L7 的限时在 L6_TIERS / L7_TIERS，不走这里。
+ */
+export function timeLimitFor(cfg: TierConfig, type: MediaType): number | undefined {
+  return type === 'audio' ? (cfg.timeLimitSecAudio ?? cfg.timeLimitSec) : cfg.timeLimitSec
+}
+
 /** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6） */
 export const TIER_LIST: TierConfig[] = [
   TIERS[1],
@@ -133,13 +151,13 @@ export const TIER_LIST: TierConfig[] = [
 
 /**
  * L6 半鸟人的分题型配置（docs/081 §7 + README，2026-10-24 修订）：
- *   看图版：6 个图像选项，限时 15s（10→15，用户 2026-10-24 定）；听音版：4 个声音选项，限时 25s。
+ *   看图版：6 个图像选项，限时 15s（10→15，用户 2026-10-24 定）；听音版：4 个声音选项，限时 20s。
  * 干扰项策略固定 same（同科为主，「多选项都是同科鸟」）；选项素材都取首选
  * （媒体池大小 1：标准照/最佳录音，识别题不做姿态随机）。
  */
 export const L6_TIERS: Record<MediaType, { optionCount: number; timeLimitSec: number; distractor: DistractorStrategy }> = {
   image: { optionCount: 6, timeLimitSec: 15, distractor: 'same' },
-  audio: { optionCount: 4, timeLimitSec: 25, distractor: 'same' },
+  audio: { optionCount: 4, timeLimitSec: 20, distractor: 'same' },
 }
 
 /**

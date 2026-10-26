@@ -73,7 +73,7 @@ describe('buildNameQuestions（L6 半鸟人）', () => {
     }
   })
 
-  it('听音版 4 选项、限时 25s，且只用有音频的物种', async () => {
+  it('听音版 4 选项、限时 20s，且只用有音频的物种', async () => {
     const qs = await buildNameQuestions(bank, { type: 'audio', count: 10 })
     expect(qs.length).toBeGreaterThan(0)
     for (const q of qs) {

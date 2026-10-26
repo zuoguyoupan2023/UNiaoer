@@ -89,12 +89,12 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     }
   })
 
-  it('听音版 L6：4 选项、25s', async () => {
+  it('听音版 L6：4 选项、20s', async () => {
     const quiz = useQuizStore()
     await quiz.start('audio', { tier: 6 })
     expect(quiz.error).toBe('')
     for (const q of quiz.questions) {
-      expect(q.timeLimitSec).toBe(25)
+      expect(q.timeLimitSec).toBe(20)
       expect(q.options.length).toBe(4)
       for (const m of q.optionsMedia ?? []) expect(m.type).toBe('audio')
     }

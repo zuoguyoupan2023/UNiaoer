@@ -96,7 +96,7 @@ function persistTier(v: Tier) {
 
 /**
  * 2026-10-25 用户要求：L6/L7 的说明**只写当前模式**（看图版就只写图、听音版只写音），
- * 与 L1–L5 同规格，不要「图 15s / 音 25s」并列。L6/L7 因此提供 `descKey + 'Audio'` 变体。
+ * 与 L1–L5 同规格，不要「图 15s / 音 20s」并列。L6/L7 因此提供 `descKey + 'Audio'` 变体。
  */
 function tierDescOf(cfg: (typeof TIER_LIST)[number]): string {
   if (props.type === 'audio') {

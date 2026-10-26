@@ -1024,27 +1024,32 @@ const en: typeof zhMessages = {
     l1: {
       label: 'L1 Beginner',
       desc: '3 options · cross-family distractors · 25s · options hidden for the first 5s',
+      descAudio: '3 options · cross-family distractors · 30s · options hidden for the first 5s',
     },
     l2: {
       label: 'L2 Casual',
       desc: '4 options · 1 same-family · 20s · options hidden for the first 5s',
+      descAudio: '4 options · 1 same-family · 28s · options hidden for the first 5s',
     },
     l3: {
       label: 'L3 Skilled',
       desc: '4 options · mostly same family · 15s · options hidden for the first 5s',
+      descAudio: '4 options · mostly same family · 25s · options hidden for the first 5s',
     },
     l4: {
       label: 'L4 Expert',
       desc: '6 options · close relatives · 12s · options hidden for the first 2s',
+      descAudio: '6 options · close relatives · 22s · options hidden for the first 2s',
     },
     l5: {
       label: 'L5 Hell',
       desc: '6 options · close relatives · 10s · options hidden for the first 2s · random interference calls',
+      descAudio: '6 options · close relatives · 20s · options hidden for the first 2s · random interference calls',
     },
     l6: {
       label: 'L6 Half-Birder',
-      desc: 'Photo given the name · 6 close-relative options · 15s',
-      descAudio: 'Sound given the name · 4 close-relative options · 25s',
+      desc: 'See the name, choose the photo · 6 close-relative options · 15s',
+      descAudio: 'See the name, choose the sound · 4 close-relative options · 20s',
     },
     l7: {
       label: 'L7 Bird-Maker',
