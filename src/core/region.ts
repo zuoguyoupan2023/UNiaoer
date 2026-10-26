@@ -193,6 +193,16 @@ export function continentOf(code: string): Continent | undefined {
 }
 
 /**
+ * 在「洲 → 国家」列表里不再单独成条的地区码（2026-10-26 用户定）。
+ *
+ * 港澳台是中国的特别行政区/地区，**不作为国家与中国并列**；它们作为省级条目
+ * （`CN-71` 中国台湾 / `CN-91` 中国香港 / `CN-92` 中国澳门）列在「中国」下面。
+ * 注意：这只是**选择器展示层**的归类——区系/出题/统计仍按这些码各自取数
+ * （GBIF 记录本就分码），所以 `COUNTRIES_BY_CONTINENT` 与洲并集口径不变。
+ */
+export const SUBREGION_OF_CN: ReadonlySet<string> = new Set(['HK', 'MO', 'TW'])
+
+/**
  * 国家/地区码 → 显示名。**这是唯一的取名入口**，别在各组件里另写一份 ——
  * 2026-10-17 就是物种详情的地区分布漏了这个分支，直接用裸 `Intl.DisplayNames`，
  * 于是台湾按 CLDR 显示成「台湾 / Taiwan」（违反铁律 6）。

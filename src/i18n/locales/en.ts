@@ -129,6 +129,7 @@ const en: typeof zhMessages = {
     regionAll: 'Global',
     regionHint: 'Low tiers prioritise species common in the selected region',
     regionProvinceCap: 'Narrow to a province (optional; uses local frequency)',
+    regionDone: 'Done',
     regionCurrent: 'Current region',
     regionChange: 'Change',
     regionPickerTitle: 'Pick a region',

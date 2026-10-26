@@ -45,6 +45,7 @@ import {
   continentClickAction,
   COUNTRIES_BY_CONTINENT,
   REGION_LABEL_KEY,
+  SUBREGION_OF_CN,
   continentCodeOf,
   continentOf,
   countriesOfContinent,
@@ -282,6 +283,8 @@ const continentGroups = computed(() =>
   CONTINENTS.map((key) => ({
     key,
     countries: COUNTRIES_BY_CONTINENT[key]
+      // 港澳台不再是并列的国家条目：它们的省级条目（CN-71/91/92）已在中国下面
+      .filter((code) => !SUBREGION_OF_CN.has(code))
       .map((code) => ({ code, n: distCounts.value[code] ?? 0 }))
       .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
   })),
@@ -412,6 +415,7 @@ function chooseRegionProvince(code: string) {
 /** 当前所选国家（省选择被清空时回退到它） */
 const selectedCountry = computed(() => {
   const r = regionChoice.value
+  if (SUBREGION_OF_CN.has(r)) return 'CN' // 旧存档里的 HK/MO/TW → 归到中国下面
   return r.includes('-') ? r.split('-')[0]! : r
 })
 /**
@@ -1172,7 +1176,7 @@ function onTouchEnd(e: TouchEvent) {
           :aria-expanded="regionPickerOpen"
           @click="regionPickerOpen = !regionPickerOpen"
         >
-          {{ regionPickerOpen ? t('common.cancel') : t('quiz.regionChange') }}
+          {{ regionPickerOpen ? t('quiz.regionDone') : t('quiz.regionChange') }}
         </button>
       </div>
       <div v-if="regionPickerOpen" class="region-picker">
