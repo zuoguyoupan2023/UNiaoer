@@ -239,9 +239,9 @@ describe('难度梯度', () => {
     expect(qs[0]!.tier).toBe(1)
   })
 
-  it('L4 限时 10s，且选项数多于 L1', async () => {
+  it('L4 限时 12s，且选项数多于 L1', async () => {
     const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
-    expect(qs[0]!.timeLimitSec).toBe(10)
+    expect(qs[0]!.timeLimitSec).toBe(12)
     expect(qs[0]!.options.length).toBeGreaterThan(3)
     expect(qs[0]!.options.length).toBeLessThanOrEqual(TIERS[4].optionCount)
   })
@@ -252,7 +252,7 @@ describe('难度梯度', () => {
     expect(qs.length).toBeGreaterThan(0)
   })
 
-  it('L5 地狱：L4 规格（6 选项、8s 限时），题目正常生成', async () => {
+  it('L5 地狱：6 选项、10s 限时，题目正常生成', async () => {
     const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 5 })
     expect(qs.length).toBeGreaterThan(0)
     expect(qs[0]!.tier).toBe(5)

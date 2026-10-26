@@ -17,7 +17,7 @@ export interface TierConfig {
   /**
    * 隐藏选项的时长（秒）。2026-10-25 起**五档全部显式**（不再依赖"限时 1/3"的隐式规则，
    * 否则 L2≈6.7s / L3=5s / L4·L5≈3.3s 这些值既不好记也说不清）：
-   * L1–L3 = 前 5s；L4/L5 = 前 2s（总限时仅 10s，藏太久等于没时间答）。
+   * L1–L3 = 前 5s；L4 = 前 2s（限时 12s）；L5 = 前 2s（限时 10s）。
    * 缺省值仍按 pacing.OPTION_REVEAL_RATIO 兜底（仅防配置遗漏，正常不会走到）。
    */
   optionRevealSec?: number
@@ -71,7 +71,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     descKey: 'difficulty.l4.desc',
     optionCount: 6,
     distractor: 'same',
-    timeLimitSec: 10,
+    timeLimitSec: 12,
     optionRevealSec: 2,
     commonness: [3, 4],
     mediaPoolSize: 5,

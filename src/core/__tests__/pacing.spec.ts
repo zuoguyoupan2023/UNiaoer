@@ -74,7 +74,7 @@ describe('选项隐藏时长（2026-10-25：五档全部显式）', () => {
     expect(TIERS[5].optionRevealSec).toBe(2)
   })
 
-  it('L4 在 10s 限时下：第 0/1 秒仍隐藏，第 2 秒起显示', async () => {
+  it('L4 在 12s 限时下：第 0/1 秒仍隐藏，第 2 秒起显示', async () => {
     const { TIERS } = await import('../difficulty')
     const { secondsUntilReveal } = await import('../pacing')
     const limit = TIERS[4].timeLimitSec!

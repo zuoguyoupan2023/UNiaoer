@@ -1035,11 +1035,11 @@ const en: typeof zhMessages = {
     },
     l4: {
       label: 'L4 Expert',
-      desc: '6 options · close relatives · 10s · options hidden for the first 2s',
+      desc: '6 options · close relatives · 12s · options hidden for the first 2s',
     },
     l5: {
       label: 'L5 Hell',
-      desc: 'L4 rules · 10s · options hidden for the first 2s · random interference calls',
+      desc: '6 options · close relatives · 10s · options hidden for the first 2s · random interference calls',
     },
     l6: {
       label: 'L6 Half-Birder',
