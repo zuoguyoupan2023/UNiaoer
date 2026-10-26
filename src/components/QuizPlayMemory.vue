@@ -109,13 +109,44 @@ const faceUp = ref<boolean[]>([])
 const matchedPairs = ref<Set<number>>(new Set())
 const firstIdx = ref<number | null>(null)
 const lock = ref(false)
-const MISMATCH_COOLDOWN_MS = 800
+/**
+ * 配错冷却（2026-10-27 用户定）：看图 2s / 听音 5s 再盖回（原来是 800ms 马上盖）。
+ * 听音给 5s 是留出"对着两张牌回想/比较"的时间，且倒计时可见（4.9s → 4.8s …）；
+ * 看图不显示倒计时（安静地多看 2 秒）。
+ */
+const MISMATCH_MS: Record<MediaType, number> = { image: 2000, audio: 5000 }
+/** 冷却中的两张牌（盖回前 cdIdx 含它们的下标）；remain 只在听音模式更新（秒，1 位小数） */
+const cdIdx = ref<[number, number] | null>(null)
+const cdRemain = ref<number | null>(null)
+let cooldownTimer: number | undefined
+let cooldownTicker: number | undefined
+
+function clearCooldownTimers() {
+  if (cooldownTimer !== undefined) {
+    clearTimeout(cooldownTimer)
+    cooldownTimer = undefined
+  }
+  if (cooldownTicker !== undefined) {
+    clearInterval(cooldownTicker)
+    cooldownTicker = undefined
+  }
+}
 
 function isSettled(card: MemoryCard): boolean {
   return matchedPairs.value.has(card.pair)
 }
 
 function flip(card: MemoryCard) {
+  // 冷却期点的是刚配错、还翻着的音牌 → 再听一遍（一次只响一个；看图/名字牌无效）
+  if (
+    lock.value &&
+    cdIdx.value?.includes(card.idx) &&
+    props.type === 'audio' &&
+    card.kind === 'media'
+  ) {
+    attemptPlay(card)
+    return
+  }
   if (lock.value || finished.value || faceUp.value[card.idx] || isSettled(card)) return
   startTimer() // 计时从第一张翻开起（docs/092 §4；已开表则空操作）
   faceUp.value[card.idx] = true
@@ -136,15 +167,28 @@ function flip(card: MemoryCard) {
     }
     if (matchedPairs.value.size >= quiz.questions.length) finish()
   } else {
-    // 配错：两张盖回（位置不变），冷却期忽略点击；盖回的音牌暂停（§5.2.3 配错不播放）
+    // 配错：冷却期（图 2s / 音 5s + 可见倒计时）后两张盖回（位置不变）；盖回即停播
     lock.value = true
-    window.setTimeout(() => {
+    cdIdx.value = [a.idx, b.idx]
+    const ms = MISMATCH_MS[props.type]
+    const deadline = Date.now() + ms
+    if (props.type === 'audio') {
+      cdRemain.value = ms / 1000
+      cooldownTicker = window.setInterval(() => {
+        const left = Math.max(0, (deadline - Date.now()) / 1000)
+        cdRemain.value = left
+      }, 100)
+    }
+    cooldownTimer = window.setTimeout(() => {
+      clearCooldownTimers()
+      cdIdx.value = null
+      cdRemain.value = null
       faceUp.value[a.idx] = false
       faceUp.value[b.idx] = false
-      pauseCard(a)
+      pauseCard(a) // 盖回即停播：不许上一张的声音拖进下一次翻牌（用户 2026-10-27 定）
       pauseCard(b)
       lock.value = false
-    }, MISMATCH_COOLDOWN_MS)
+    }, ms)
   }
 }
 
@@ -163,10 +207,19 @@ function audioOf(card: MemoryCard): HTMLAudioElement | null {
   return mediaCard ? (audioEls.value.get(mediaCard.idx) ?? null) : null
 }
 
+/** 停掉**其它**所有正在播的音（一次只响一个）：翻新牌/重听前调用，防止两种鸟鸣混在一起 */
+function pauseOthers(pair: number) {
+  for (const [idx, el] of audioEls.value) {
+    const c = cards.value[idx]
+    if (c && c.pair !== pair && !el.paused) el.pause()
+  }
+}
+
 /** 翻开即播；被策略拦截（NotAllowedError 等）→ 牌面显示播放按钮兜底 */
 function attemptPlay(card: MemoryCard) {
   const el = audioOf(card)
   if (!el) return
+  pauseOthers(card.pair)
   el.currentTime = 0
   el.play().catch(() => {
     blockedIdx.value = card.pair
@@ -177,6 +230,7 @@ function attemptPlay(card: MemoryCard) {
 function replayOf(card: MemoryCard) {
   const el = audioOf(card)
   if (!el) return
+  pauseOthers(card.pair)
   el.currentTime = 0
   el.play().catch(() => {})
 }
@@ -286,6 +340,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopTimer()
+  clearCooldownTimers()
   for (const el of audioEls.value.values()) el.pause()
 })
 
@@ -388,6 +443,12 @@ watch(
               </template>
             </span>
           </span>
+          <!-- 听音版配错冷却：可见倒计时（4.9s → 4.8s …），到点盖回（看图版静默等 2s，不显示） -->
+          <span
+            v-if="cdIdx && cdRemain !== null && (cdIdx[0] === c.idx || cdIdx[1] === c.idx)"
+            class="cd-badge"
+            aria-hidden="true"
+          >{{ cdRemain.toFixed(1) }}s</span>
           <!-- 音牌常驻元素：preload 预热 + 翻开即播；crossorigin 先于 src（铁律 5 / docs/033） -->
           <audio
             v-if="c.kind === 'media' && type === 'audio'"
@@ -520,7 +581,7 @@ watch(
   grid-template-columns: repeat(3, 1fr);
   max-width: 380px;
 }
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .memory-board.std {
     grid-template-columns: repeat(4, 1fr);
     gap: 5px;
@@ -537,7 +598,7 @@ watch(
   perspective: 600px;
   -webkit-tap-highlight-color: transparent;
 }
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .memory-board.std .mcard {
     aspect-ratio: 6 / 5;
   }
@@ -553,6 +614,22 @@ watch(
 }
 .mcard.matched {
   cursor: default;
+}
+/* 听音版配错冷却倒计时（两张配错的牌各挂一枚，到点随盖回一起消失） */
+.cd-badge {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(18, 38, 29, 0.78);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 .face {
   position: absolute;

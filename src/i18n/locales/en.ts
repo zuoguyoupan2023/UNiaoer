@@ -846,8 +846,9 @@ const en: typeof zhMessages = {
   // L8 Memory Challenge (docs/092; finalized 2026-10-27: stopwatch + 3 ratings, excluded from titles/badges)
   memory: {
     boardLabel: 'Memory board',
-    hint: 'Flip two cards: a photo and a name of the same bird form a pair and stay open; a miss flips back. The timer starts on your first flip.',
-    hintAudio: 'Flip two cards: a sound and a name of the same bird form a pair; sound cards play automatically when flipped. The timer starts on your first flip.',
+    hint: 'Flip two cards: a photo and a name of the same bird form a pair and stay open; a miss lingers 2s before flipping back. The timer starts on your first flip.',
+    hintAudio:
+      'Flip two cards: a sound and a name of the same bird form a pair; sound cards play automatically when flipped. A miss lingers 5s (with a countdown) before flipping back — tap a sound card to replay it; sounds stop when cards flip back. The timer starts on your first flip.',
     audioCard: 'Bird sound',
     playCard: 'Play this recording',
     cardClosed: 'Face-down card',
