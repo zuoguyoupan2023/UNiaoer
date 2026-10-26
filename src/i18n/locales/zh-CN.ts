@@ -128,7 +128,7 @@ export const messages = {
     regionCurrent: '当前地区',
     regionChange: '更改',
     regionPickerTitle: '选择地区',
-    beginnerHint: '新手福利：首轮只出最最常见的鸟（喜鹊、麻雀、白头鹎…）',
+    beginnerHint: '新手福利:首轮题目只有常见鸟种',
     stepForm: '形式',
     start: '开始答题',
     preparing: '正在准备题目…',

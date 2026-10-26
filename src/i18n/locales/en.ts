@@ -132,7 +132,7 @@ const en: typeof zhMessages = {
     regionCurrent: 'Current region',
     regionChange: 'Change',
     regionPickerTitle: 'Pick a region',
-    beginnerHint: 'First-timer boost: your first round uses only the very commonest birds',
+    beginnerHint: 'New Birder here? Common birds for the first round!',
     stepForm: 'Mode',
     start: 'Start',
     preparing: 'Preparing questions…',
