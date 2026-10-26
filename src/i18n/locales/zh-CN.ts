@@ -208,6 +208,9 @@ export const messages = {
     start: '开始答题',
     preparing: '正在准备题目…',
     preparingSub: '正在加载第 1 题，并预取接下来 3 题',
+    // 092 记忆挑战：无"后续题预取"语义，文案换成组牌堆
+    preparingMemory: '正在洗牌…',
+    preparingSubMemory: '正在挑选鸟图/鸟声与名字，组成记忆牌堆',
     cannotStart: '无法开始',
     backHome: '返回首页',
     progress: '第 {n} / {total} 题',
@@ -937,9 +940,14 @@ export const messages = {
     pairsProgress: '{n}/{total} 对',
     pairsDone: '{n} 对全部配对成功',
     complete: '全部配对成功！',
-    shortRound: '该地区/赛制凑不满 12 对，本局只有 {built} 对（目标 {want} 对）。',
+    shortRound: '目标 {want} 对：该地区/赛制只凑到 {built} 对。',
     quitConfirm: '配对尚未完成，退出将不保留本次记录（记忆挑战不落库）。确定退出？',
     notCountedTag: '不计入评级',
+    boardCap: '盘面大小',
+    boardStd: '12 对 · 标准',
+    boardStdHint: '桌面 6×4 / 手机 4×6 · 正式阈值',
+    boardMini: '6 对 · 缩小试玩',
+    boardMiniHint: '3×4 · 独立阈值（实验档，结论后可能移除）',
     rating: {
       genius: '天才鸟！',
       awesome: '厉害厉害鸟！',
@@ -1150,8 +1158,8 @@ export const messages = {
     },
     l8: {
       label: 'L8 记忆挑战鸟',
-      desc: '翻牌配对 · 12 对「鸟图 ↔ 鸟名」· 纯计时不限时',
-      descAudio: '翻牌配对 · 12 对「鸟声 ↔ 鸟名」· 纯计时不限时',
+      desc: '翻牌配对 · 鸟图 ↔ 鸟名 · 纯计时不限时',
+      descAudio: '翻牌配对 · 鸟声 ↔ 鸟名 · 纯计时不限时',
     },
   },
   badges: {

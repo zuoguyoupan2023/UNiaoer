@@ -50,6 +50,13 @@ interface MemoryCard {
 
 const cards = ref<MemoryCard[]>([])
 
+/**
+ * 盘面档（2026-10-27 用户加）：按**实际建出的对数**判定（6 对 = 缩小盘 3×4，
+ * 其余 = 标准盘：桌面 6 列×4 行 / 手机 4 列×6 行）。布局跟着对数走，绝不跟设置走——
+ * 设置只在开轮时决定 buildMemoryPairs 的 pairs。
+ */
+const isCompact = computed(() => quiz.questions.length > 0 && quiz.questions.length <= 6)
+
 function buildBoard() {
   const out: MemoryCard[] = []
   quiz.questions.forEach((q, i) => {
@@ -226,7 +233,7 @@ function finish() {
   quiz.memoryResult = {
     pairs,
     matched: matchedPairs.value.size,
-    rating: memoryRatingFor(props.type, elapsedMs.value),
+    rating: memoryRatingFor(props.type, elapsedMs.value, pairs),
     durationMs: elapsedMs.value,
   }
   window.setTimeout(() => router.push('/result'), 1400)
@@ -324,7 +331,7 @@ watch(
 
       <p class="board-hint muted">{{ t(type === 'audio' ? 'memory.hintAudio' : 'memory.hint') }}</p>
 
-      <div class="memory-board" role="group" :aria-label="t('memory.boardLabel')">
+      <div class="memory-board" :class="isCompact ? 'compact' : 'std'" role="group" :aria-label="t('memory.boardLabel')">
         <button
           v-for="c in cards"
           :key="c.idx"
@@ -341,8 +348,8 @@ watch(
           <span class="mcard-inner">
             <!-- 背面（盖着） -->
             <span class="face back" aria-hidden="true">
-              <ImageIcon v-if="type === 'image'" class="back-ic" :size="26" />
-              <AudioLines v-else class="back-ic" :size="26" />
+              <ImageIcon v-if="type === 'image'" class="back-ic" :size="18" />
+              <AudioLines v-else class="back-ic" :size="18" />
             </span>
             <!-- 正面（翻开）：媒体牌 / 名字牌 -->
             <span class="face front">
@@ -356,7 +363,7 @@ watch(
                   draggable="false"
                 />
                 <template v-else>
-                  <AudioLines class="audio-ic" :size="30" />
+                  <AudioLines class="audio-ic" :size="22" />
                   <span class="audio-cap muted small">{{ t('memory.audioCard') }}</span>
                   <!-- 拦截兜底：翻了没声（或自动播放已关）→ 原地给播放按钮（docs/092 §5.3/§5.4） -->
                   <span
@@ -497,27 +504,43 @@ watch(
   background: #fff;
 }
 
-/* ---- 盘面：4×6（≤560px 折 3×8；对数不变，评语阈值才可比，docs/092 §7） ---- */
+/* ---- 盘面（2026-10-27 用户定）：
+     标准盘 = 桌面 6 列×4 行 / 手机（≤700px）4 列×6 行；
+     缩小盘（实验）= 3 列×4 行。目标：整个盘面一屏放得下，卡片宁小勿大。 ---- */
 .memory-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 6px;
+  margin: 0 auto;
 }
-@media (max-width: 560px) {
-  .memory-board {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+.memory-board.std {
+  grid-template-columns: repeat(6, 1fr);
+  max-width: 680px;
+}
+.memory-board.compact {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 380px;
+}
+@media (max-width: 700px) {
+  .memory-board.std {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
   }
 }
 .mcard {
   position: relative;
-  aspect-ratio: 3 / 4;
+  /* 手机上标准盘 6 行偏高，用略扁的牌（6:5）把整盘压进一屏；桌面/缩小盘保持方形 */
+  aspect-ratio: 1 / 1;
   border: none;
   background: transparent;
   padding: 0;
   cursor: pointer;
   perspective: 600px;
   -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 700px) {
+  .memory-board.std .mcard {
+    aspect-ratio: 6 / 5;
+  }
 }
 .mcard-inner {
   position: absolute;
@@ -602,8 +625,8 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 2px solid var(--primary);
   background: var(--primary);
@@ -612,13 +635,13 @@ watch(
 }
 /* 名字牌正面 */
 .name {
-  font-size: clamp(0.72rem, 2.4vw, 1rem);
+  font-size: clamp(0.6rem, 1.9vw, 0.85rem);
   font-weight: 700;
   color: var(--text);
   line-height: 1.25;
   text-align: center;
   overflow-wrap: anywhere;
-  padding: 2px;
+  padding: 1px;
 }
 .name.sci {
   font-style: italic;

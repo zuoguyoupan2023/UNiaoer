@@ -18,8 +18,8 @@ import {
 } from 'lucide-vue-next'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
-import { TIERS, MEMORY_THRESHOLDS_MS } from '@/core/difficulty'
-import { formatMemoryTime } from '@/core/memoryRating'
+import { TIERS } from '@/core/difficulty'
+import { formatMemoryTime, memoryThresholdSec } from '@/core/memoryRating'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
 import { accuracyBand, track, trackBatch } from '@/core/metrics'
@@ -80,13 +80,10 @@ const memoryInfo = computed(() => {
     pairs: m.pairs,
   }
 })
-/** 记忆轮的三档阈值提示（让玩家一眼看到「离下一档还差多少秒」，docs/092 §4.2） */
+/** 记忆轮的三档阈值提示（让玩家一眼看到「离下一档还差多少秒」，docs/092 §4.2；按盘面对数取阈值） */
 const memoryThresholds = computed(() => {
-  const th = MEMORY_THRESHOLDS_MS[quiz.mode]
-  return t('memory.thresholds', {
-    a: Math.round(th.genius / 1000),
-    b: Math.round(th.awesome / 1000),
-  })
+  const { genius, awesome } = memoryThresholdSec(quiz.mode, quiz.memoryResult?.pairs)
+  return t('memory.thresholds', { a: genius, b: awesome })
 })
 /** 087 §6.5：本轮生效地区角标（全球不显示，避免噪音）；省名要省级索引，懒加载不阻塞 */
 const provinceIndex = ref<ProvinceIndex | null>(null)

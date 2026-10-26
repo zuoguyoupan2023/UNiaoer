@@ -167,19 +167,44 @@ export const TIER_LIST: TierConfig[] = [
 ]
 
 /**
- * L8 记忆挑战鸟盘面常量（docs/092 §1/§8）：12 对合区 4×6（窄屏 CSS 折成 3×8，对数不变——
- * 否则评语阈值不可比）。对数是评语阈值的前提，改这里必须同步实测阈值。
+ * L8 记忆挑战鸟盘面常量（docs/092 §1/§8 + 2026-10-27 用户追加的盘面二选一）：
+ * - standard：12 对；**桌面 6 列×4 行 / 手机（≤700px）4 列×6 行**，正式档位；
+ * - compact：6 对 3 列×4 行，**实验性缩小盘**（用户试玩"是否应该降级"，结论出来前保留，
+ *   不行就删）。评语阈值独立——对数减半阈值不是线性减半（开局找首对的开销摊不薄），
+ *   暂按图 20/30s、音 35/50s 暂定，实测后调整。
+ * 对数是评语阈值的前提，改这里必须同步实测阈值。
  */
-export const MEMORY_PAIRS = 12
+export type MemoryBoardKind = 'standard' | 'compact'
 
-/**
- * L8 评语阈值（docs/092 §4.2 定稿）：看图 40/60s、听音 70/100s（听音每张牌都要听，天然更慢）。
- * 常量表，不随地区/常见度变；memoryRatingFor 是唯一消费方。
- */
-export const MEMORY_THRESHOLDS_MS: Record<MediaType, { genius: number; awesome: number }> = {
-  image: { genius: 40_000, awesome: 60_000 },
-  audio: { genius: 70_000, awesome: 100_000 },
+export interface MemoryBoardDef {
+  /** 对数（= 24 张牌的一半 / 12 张牌的一半） */
+  pairs: number
+  /** i18n 键尾段（memory.board*） */
+  key: MemoryBoardKind
+  thresholds: Record<MediaType, { genius: number; awesome: number }>
 }
+
+export const MEMORY_BOARDS: Record<MemoryBoardKind, MemoryBoardDef> = {
+  standard: {
+    pairs: 12,
+    key: 'standard',
+    thresholds: {
+      image: { genius: 40_000, awesome: 60_000 },
+      audio: { genius: 70_000, awesome: 100_000 },
+    },
+  },
+  compact: {
+    pairs: 6,
+    key: 'compact',
+    thresholds: {
+      image: { genius: 20_000, awesome: 30_000 }, // 暂定（实验盘，实测后调）
+      audio: { genius: 35_000, awesome: 50_000 },
+    },
+  },
+}
+
+/** 默认盘面（未选择/旧设置时） */
+export const MEMORY_DEFAULT_BOARD: MemoryBoardKind = 'standard'
 
 /**
  * L6 半鸟人的分题型配置（docs/081 §7 + README，2026-10-24 修订）：

@@ -212,6 +212,9 @@ const en: typeof zhMessages = {
     start: 'Start',
     preparing: 'Preparing questions…',
     preparingSub: 'Loading question 1 and prefetching the next 3',
+    // 092 memory challenge: no "next questions" prefetch semantics
+    preparingMemory: 'Shuffling…',
+    preparingSubMemory: 'Picking photos/sounds and names to build the memory board',
     cannotStart: 'Cannot start',
     backHome: 'Back home',
     progress: 'Q{n} / {total}',
@@ -852,9 +855,14 @@ const en: typeof zhMessages = {
     pairsProgress: '{n}/{total} pairs',
     pairsDone: 'All {n} pairs matched',
     complete: 'All pairs matched!',
-    shortRound: 'Not enough species here for 12 pairs — this round has {built} pairs (target {want}).',
+    shortRound: 'Target {want} pairs: only {built} available in this region/regime.',
     quitConfirm: 'Pairs are not all matched yet. Quitting discards this round (memory rounds are not saved). Quit?',
     notCountedTag: 'Not ranked',
+    boardCap: 'Board size',
+    boardStd: '12 pairs · Standard',
+    boardStdHint: 'Desktop 6×4 / mobile 4×6 · official thresholds',
+    boardMini: '6 pairs · Compact',
+    boardMiniHint: '3×4 · separate thresholds (experimental, may be removed)',
     rating: {
       genius: 'Genius Bird!',
       awesome: 'Awesome Bird!',
@@ -1159,8 +1167,8 @@ const en: typeof zhMessages = {
     },
     l8: {
       label: 'L8 Memory Challenge',
-      desc: 'Flip & match · 12 pairs of "photo ↔ name" · stopwatch, no time limit',
-      descAudio: 'Flip & match · 12 pairs of "sound ↔ name" · stopwatch, no time limit',
+      desc: 'Flip & match · photo ↔ name · stopwatch, no time limit',
+      descAudio: 'Flip & match · sound ↔ name · stopwatch, no time limit',
     },
   },
   badges: {

@@ -150,6 +150,18 @@ const modeHintTier = computed<'L6' | 'L7' | 'L8'>(() =>
   tier.value === 7 ? 'L7' : tier.value === 8 ? 'L8' : 'L6',
 )
 
+/**
+ * 092 + 2026-10-27 用户加：L8 盘面二选一（选中「记忆挑战鸟」档后出现）。
+ * standard = 12 对（桌面 6×4 / 手机 4×6，正式阈值）；compact = 6 对 3×4 **实验性缩小盘**
+ * （试玩"是否应该降级"，结论后可能移除）。选择持久化在 settings，开轮时 quiz.start 读取。
+ */
+const memoryBoard = computed<'standard' | 'compact'>({
+  get: () => settings.memoryBoardSize ?? 'standard',
+  set: (v) => {
+    settings.memoryBoardSize = v
+  },
+})
+
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
 const showNameModal = ref(false)
 // 无 onClose：昵称浮窗只能「开始 / 直接开始」二选一，ESC 不跳过
@@ -1180,6 +1192,30 @@ function onTouchEnd(e: TouchEvent) {
         </button>
       </div>
     </template>
+    <!-- 092 + 2026-10-27：L8 盘面二选一——只在「记忆挑战鸟」被选中后出现（缩小盘为实验档） -->
+    <template v-if="tier === 8">
+      <p class="step-cap l6-mode-cap">{{ t('memory.boardCap') }}</p>
+      <div class="tiers l6-mode">
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: memoryBoard === 'standard' }"
+          @click="memoryBoard = 'standard'"
+        >
+          <strong>{{ t('memory.boardStd') }}</strong>
+          <span>{{ t('memory.boardStdHint') }}</span>
+        </button>
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: memoryBoard === 'compact' }"
+          @click="memoryBoard = 'compact'"
+        >
+          <strong>{{ t('memory.boardMini') }}</strong>
+          <span>{{ t('memory.boardMiniHint') }}</span>
+        </button>
+      </div>
+    </template>
     <!-- 第 2 步 区域（2026-10-25 全档统一：任何档位任选 省/国家/洲/全球） -->
     <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepRegion') }}</p>
       <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
@@ -1293,11 +1329,11 @@ function onTouchEnd(e: TouchEvent) {
     <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
-  <!-- 加载中 -->
+  <!-- 加载中（092：记忆挑战不预取后续题，文案换成"组牌堆"，不出现"接下来 3 题"） -->
   <section v-else-if="quiz.loading" class="card center placeholder">
     <div class="spinner"></div>
-    <h2>{{ t('quiz.preparing') }}</h2>
-    <p class="muted">{{ t('quiz.preparingSub') }}</p>
+    <h2>{{ t(quiz.tier === 8 ? 'quiz.preparingMemory' : 'quiz.preparing') }}</h2>
+    <p class="muted">{{ t(quiz.tier === 8 ? 'quiz.preparingSubMemory' : 'quiz.preparingSub') }}</p>
   </section>
 
   <!-- 出错 -->

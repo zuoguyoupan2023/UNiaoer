@@ -10,7 +10,7 @@ import { fetchOnlinePool } from '@/core/onlinePool'
 import { isDiag } from '@/core/diag'
 import { regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
-import { MEMORY_PAIRS } from '@/core/difficulty'
+import { MEMORY_BOARDS } from '@/core/difficulty'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
@@ -288,8 +288,12 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       //   （10,844 种，质量已足够），从源头避免连续请求 D1。
       // 030 措施 3:在线路径自带 sessionStorage 缓存（10 分钟 / 30 条候选），
       //   客户端命中即零网络；一次取 30 条也够本轮多次取材。
-      // 092：L8 记忆挑战鸟固定 12 对（盘面常量），不随经典题量走。
-      const count = tier.value === 8 ? MEMORY_PAIRS : (opts.count ?? 10)
+      // 092：L8 记忆挑战鸟按盘面取对数（standard 12 对 / compact 6 对，2026-10-27 用户加），
+      //      不随经典题量走；其余档位 10 题。
+      const count =
+        tier.value === 8
+          ? MEMORY_BOARDS[useSettingsStore().memoryBoardSize ?? 'standard'].pairs
+          : (opts.count ?? 10)
       const settings = useSettingsStore()
       // 新手福利（2026-10-09）：**第一轮 + L1** → 候选限定为人人皆知的最常见鸟
       // （starterBirds.ts；不足一轮自动回退常规逻辑）。仅在会话首轮判定，后续轮不再干预。

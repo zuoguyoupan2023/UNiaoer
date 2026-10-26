@@ -12,7 +12,7 @@
  */
 import type { MediaAsset, MediaType, NameMode, Question } from '@/types'
 import type { BankSpecies } from './bank'
-import { MEMORY_PAIRS } from './difficulty'
+import { MEMORY_BOARDS, MEMORY_DEFAULT_BOARD } from './difficulty'
 import {
   assetsOf,
   ensureMedia,
@@ -26,7 +26,7 @@ import {
 export interface BuildMemoryOptions {
   /** A 牌类型：'image' 看图版 / 'audio' 听音版 */
   type: MediaType
-  /** 目标对数（缺省 12；盘面常量 MEMORY_PAIRS） */
+  /** 目标对数（缺省 = 标准盘 12 对；缩小盘 6 对由调用方传入） */
   pairs?: number
   /** 名字牌卷别（zh/en/sci）；`usableInNameMode` 保证卷内名字非空 */
   nameMode?: NameMode
@@ -56,7 +56,7 @@ export async function buildMemoryPairs(
   bank: BankSpecies[],
   opts: BuildMemoryOptions,
 ): Promise<MemoryPair[]> {
-  const { type, pairs = MEMORY_PAIRS, nameMode = 'zh', speciesPool, onStats } = opts
+  const { type, pairs = MEMORY_BOARDS[MEMORY_DEFAULT_BOARD].pairs, nameMode = 'zh', speciesPool, onStats } = opts
   const pool = filterByNameMode(mediaPool(bank, type), nameMode)
   const scoped = speciesPool ? pool.filter((s) => speciesPool.has(s.id)) : pool
   const want = Math.min(pairs, scoped.length)
