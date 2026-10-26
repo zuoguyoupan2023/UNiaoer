@@ -19,6 +19,7 @@ import { AUTO_NEXT_DELAY_WRONG_MS } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIERS } from '@/core/difficulty'
+import { useMediaGate } from '@/composables/useMediaGate'
 import { loadBank, speciesNoteById } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
 import { submitReport as uploadReport } from '@/core/reportsApi'
@@ -158,9 +159,32 @@ const nextLabel = computed(() =>
   quiz.index + 1 >= quiz.total ? t('quiz.viewResult') : t('quiz.next'),
 )
 
-// ---- 计时：L6 无「先听题面音频」阶段，看图/听音都在切题后立即开始；选项即刻可见 ----
+// ---- 计时：看图等 6 张选项图全部加载完；听音无预载素材，切题即计 ----
 const timeLeft = ref<number | null>(null)
 let tick: number | undefined
+
+/** 媒体就绪门：选项图就是题面，图没出来不该开始倒数 */
+const gate = useMediaGate()
+
+/** 本题必须等齐的媒体数：看图=选项图数（题干是名字，无图）；听音=0（点按试听才出声） */
+function gateCount(): number {
+  const q = quiz.current
+  if (!q || q.type !== 'image') return 0
+  return (q.optionsMedia ?? []).filter((m) => (m.thumbUrl || m.url) && m.type === 'image').length
+}
+
+/** 网络失败过多时的提示 */
+const networkNote = computed(() => {
+  const speed = gate.speedMbps.value
+  return speed === null
+    ? t('quiz.networkPoorUnknown')
+    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
+})
+
+function onOptionMediaSettled(ok: boolean) {
+  if (ok) gate.markLoaded()
+  else gate.markFailed()
+}
 
 function stopTimer() {
   if (tick !== undefined) {
@@ -186,6 +210,22 @@ function startTimer() {
     }
   }, 1000)
 }
+
+/** 每题起点：选项图未就绪时冻结计时（等 load / 1s 兜底） */
+function beginTiming() {
+  const first = quiz.current?.optionsMedia?.find((m) => m.thumbUrl || m.url)
+  gate.reset(gateCount(), true, first?.thumbUrl ?? first?.url ?? null)
+  if (gate.ready.value) startTimer()
+  else resetTimer()
+}
+
+// 门禁放行即开始计时
+watch(
+  () => gate.ready.value,
+  (ok) => {
+    if (ok && !quiz.answered) startTimer()
+  },
+)
 
 // ---- D2 自动下一题 / R43 浮窗与取消（与经典卷同款） ----
 const autoPending = ref(false)
@@ -331,7 +371,7 @@ onMounted(() => {
   }
   advancedAt = nowMs() // 首题的静默期起点
   preloadQuestions(quiz.questions, quiz.index, 2) // 当前题 + 下 1 题（每题素材多，少预）
-  startTimer()
+  beginTiming()
 })
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
@@ -347,7 +387,7 @@ watch(
     advancedAt = nowMs()
     diagMarkAdvance()
     preloadQuestions(quiz.questions, i + 1, 1) // 之后 1 题（每题素材多，少预）
-    startTimer()
+    beginTiming()
   },
 )
 watch(
@@ -510,6 +550,7 @@ const optionAttributions = computed(() => {
   <template v-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
+    <p v-if="gate.shouldPromptRetry.value" class="network-note" role="alert">{{ networkNote }}</p>
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
     </p>
@@ -521,7 +562,10 @@ const optionAttributions = computed(() => {
       </span>
       <span class="sb-mid">{{ t('quiz.progress', { n: quiz.index + 1, total: quiz.total }) }}</span>
       <span class="sb-right">
-        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
+        <span v-if="!gate.ready.value && !quiz.answered" class="timer loading">
+          <span class="spin" aria-hidden="true"></span> {{ t('quiz.loadingMedia') }}
+        </span>
+        <span v-else-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
         <span v-else>{{
@@ -559,6 +603,7 @@ const optionAttributions = computed(() => {
         :chosen="quiz.currentChoice"
         :type="quiz.current.type"
         @select="onSelectOption"
+        @media-settled="onOptionMediaSettled"
       />
 
       <!-- G1 报错按钮 -->
@@ -683,6 +728,33 @@ const optionAttributions = computed(() => {
   border-radius: var(--radius-sm);
   padding: 5px 10px;
   margin: 0 0 8px;
+}
+.network-note {
+  font-size: 0.75rem;
+  color: #8a3b2e;
+  background: #fdeae6;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin: 0 0 8px;
+}
+.timer.loading .spin {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: gate-spin 0.8s linear infinite;
+}
+@keyframes gate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer.loading .spin {
+    animation: none;
+  }
 }
 .diag-body {
   color: var(--text-light);

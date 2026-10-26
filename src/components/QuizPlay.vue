@@ -11,6 +11,7 @@ import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIER_LIST, TIERS } from '@/core/difficulty'
+import { useMediaGate } from '@/composables/useMediaGate'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
   AlarmClock,
@@ -594,9 +595,15 @@ const nextLabel = computed(() =>
 
 // ---- 计时 ----
 const timeLeft = ref<number | null>(null)
-/** 本题计时是否已真正开始（听音版等考题音频开播，R24） */
+/** 本题计时是否已真正开始（媒体就绪后才开始，2026-10-26） */
 const timerBegun = ref(false)
 let tick: number | undefined
+
+/**
+ * 媒体就绪门：图等 `<img>` load（慢则 1s 兜底），音等真正开播。
+ * 网络造成的等待不计入答题时间。
+ */
+const gate = useMediaGate()
 
 /** D1：限时题前段隐藏选项（缺省 1/3；L1 固定前 5s），revealInSec 为出现前倒计时秒数 */
 const revealInSec = computed(() => {
@@ -819,24 +826,52 @@ function onSelectOption(value: string, source: 'click' | 'key' = 'click') {
   quiz.answer(value)
 }
 
-/** 每题计时/干扰的启动点：看图=切题即开始；听音=考题音频开播后（R24） */
+/** 媒体加载失败过多时的提示（带实时网速，帮助判断是不是网络问题） */
+const networkNote = computed(() => {
+  const speed = gate.speedMbps.value
+  return speed === null
+    ? t('quiz.networkPoorUnknown')
+    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
+})
+
+/** 每题计时/干扰的启动点：等题面媒体就绪（图 load / 音开播），网络等待不计时 */
 function beginQuestionTiming() {
   timerBegun.value = false
-  if (props.type === 'image') {
-    timerBegun.value = true
-    startTimer()
-  } else {
-    resetTimer() // 冻结在满值，等 MediaCard 的 audio-play
-  }
+  // 图：等 image-settled（1s 兜底）；音：等 audio-play，缓冲多久等多久（不设兜底）
+  gate.reset(1, props.type === 'image', quiz.current?.media?.url)
+  // 听音：音频可能永远播不出来（文件坏/解码失败），10s 后放行并记为失败
+  if (props.type === 'audio') gate.armStall()
+  resetTimer() // 冻结在满值，等就绪信号
+  // reset 可能已同步放行（ready 从 false→true 在同一 tick，watch 看不到）；这里补一次
+  if (gate.ready.value) onGateReady()
 }
 
-/** 听音版考题音频开播：计时开始；L5 地狱此时才启动干扰音 */
-function onQuestionAudioPlay() {
+/** 题面媒体就绪（图片 load / 1s 兜底 / 音频开播）：开始倒数 */
+function onGateReady() {
   if (quiz.answered || timerBegun.value) return
   timerBegun.value = true
   startTimer()
   updateInterference()
 }
+
+/** 听音版考题音频开播：计时开始；L5 地狱此时才启动干扰音 */
+function onQuestionAudioPlay() {
+  gate.release()
+}
+
+/** 图片加载成功/失败：交给门禁计数（失败达 1/3 时门禁自行测速） */
+function onImageSettled(ok: boolean) {
+  if (ok) gate.markLoaded()
+  else gate.markFailed()
+}
+
+// 门禁放行即开始计时（图片慢/失败兜底、音频开播都在这里汇合）
+watch(
+  () => gate.ready.value,
+  (ok) => {
+    if (ok) onGateReady()
+  },
+)
 
 /** L5 地狱干扰：看图 2 条切题即启；听音 1 条等考题音频开播；作答即停 */
 function updateInterference() {
@@ -1258,6 +1293,10 @@ function onTouchEnd(e: TouchEvent) {
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <!-- 072-a：题量不足时明确说明原因（不再是"静默少几题"） -->
     <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
+    <!-- 媒体加载失败过多：明确提示换网络重开（不静默扣时间） -->
+    <p v-if="gate.shouldPromptRetry.value" class="network-note" role="alert">
+      {{ networkNote }}
+    </p>
     <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts）+ 选项残留观测（2026-10-25） -->
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
@@ -1270,7 +1309,11 @@ function onTouchEnd(e: TouchEvent) {
       </span>
       <span class="sb-mid">{{ t('quiz.progress', { n: quiz.index + 1, total: quiz.total }) }}</span>
       <span class="sb-right">
-        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
+        <!-- 媒体未就绪：加载期占住计时位，明确告诉用户"还没开始算时间" -->
+        <span v-if="!gate.ready.value && !quiz.answered" class="timer loading">
+          <span class="spin" aria-hidden="true"></span> {{ t('quiz.loadingMedia') }}
+        </span>
+        <span v-else-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
         <span v-else>{{
@@ -1295,6 +1338,7 @@ function onTouchEnd(e: TouchEvent) {
         :autoplay-delay="settings.autoplayDelayMs"
         :show-attribution="false"
         @audio-play="onQuestionAudioPlay"
+        @image-settled="onImageSettled"
       >
         <template #media-corner>
           <button class="quit-corner" type="button" @click="quitRound">
@@ -1439,6 +1483,33 @@ function onTouchEnd(e: TouchEvent) {
   border-radius: var(--radius-sm);
   padding: 5px 10px;
   margin: 0 0 8px;
+}
+.network-note {
+  font-size: 0.75rem;
+  color: #8a3b2e;
+  background: #fdeae6;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin: 0 0 8px;
+}
+.timer.loading .spin {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: gate-spin 0.8s linear infinite;
+}
+@keyframes gate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer.loading .spin {
+    animation: none;
+  }
 }
 .diag-body {
   color: var(--text-light);

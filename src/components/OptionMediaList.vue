@@ -20,7 +20,7 @@ const props = defineProps<{
   type: MediaType
 }>()
 
-const emit = defineEmits<{ select: [value: string] }>()
+const emit = defineEmits<{ select: [value: string]; 'media-settled': [ok: boolean] }>()
 
 const { t } = useI18n()
 
@@ -106,8 +106,9 @@ defineExpose({ pressIndex: pressByKey, stopPlayback })
           class="thumb"
           :src="optionsMedia[i]?.thumbUrl || optionsMedia[i]?.url"
           :alt="''"
-          loading="lazy"
           decoding="async"
+          @load="emit('media-settled', true)"
+          @error="emit('media-settled', false)"
         />
       </template>
       <template v-else>

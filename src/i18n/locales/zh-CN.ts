@@ -138,6 +138,9 @@ export const messages = {
     progress: '第 {n} / {total} 题',
     // 072-a：题量不足时明确说明（允许不足但说明）
     shortRound: '本组 {built} 题（标准 {want} 题）：当前难度 · 地区 · 赛制组合下可选素材不足',
+    loadingMedia: '加载中…',
+    networkPoor: '素材加载失败较多（当前约 {speed} Mbps）。建议在网络良好时重新开始本轮。',
+    networkPoorUnknown: '素材加载失败较多。建议在网络良好时重新开始本轮。',
     regimePool: '{regime}：候选 {n} 种',
     // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
     diagHead: '诊断 · {tier}{region} · {regime}',

@@ -141,6 +141,9 @@ const en: typeof zhMessages = {
     backHome: 'Back home',
     progress: 'Q{n} / {total}',
     shortRound: 'Only {built} of {want} questions — not enough media for this difficulty / region / mode',
+    loadingMedia: 'Loading…',
+    networkPoor: 'Several media files failed to load (about {speed} Mbps). We recommend restarting this round on a better connection.',
+    networkPoorUnknown: 'Several media files failed to load. We recommend restarting this round on a better connection.',
     regimePool: '{regime}: {n} candidates',
     // 072-a observation: diagnostic line (only with ?diag=1)
     diagHead: 'Diag · {tier}{region} · {regime}',

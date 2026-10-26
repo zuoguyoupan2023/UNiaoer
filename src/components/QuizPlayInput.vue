@@ -22,6 +22,7 @@ import { AUTO_NEXT_DELAY_WRONG_MS } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIERS } from '@/core/difficulty'
+import { useMediaGate } from '@/composables/useMediaGate'
 import { loadBank, speciesNoteById } from '@/core/bank'
 import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
 import { submitReport as uploadReport } from '@/core/reportsApi'
@@ -134,13 +135,13 @@ const canSwitch = computed(() => {
   if (assetIdx.value + 1 >= assetPool.value.length) return false
   return baseLimit.value - (switches.value + 1) > 0
 })
-/** 切一次素材：重置输入与计时（听音版等新素材开播才起计） */
+/** 切一次素材：重置输入与计时（等新素材就绪：图 load / 音开播） */
 function switchAsset() {
   if (!canSwitch.value) return
   assetIdx.value++
   switches.value++
   draft.value = ''
-  startTimer()
+  beginTiming()
 }
 
 // ---- 072-a 说明 / 诊断行（与 L6 同款） ----
@@ -212,10 +213,13 @@ function submitAnswer() {
   quiz.answer(v)
 }
 
-// ---- 计时：图=切题即计；音=正式开播起计（R24 同机制）；切换素材重置 ----
+// ---- 计时：图/音都等媒体就绪（图 load / 音开播）；切换素材重置 ----
 const timeLeft = ref<number | null>(null)
 const timerBegun = ref(false)
 let tick: number | undefined
+
+/** 媒体就绪门：网络等待不计入答题时间 */
+const gate = useMediaGate()
 
 function stopTimer() {
   if (tick !== undefined) {
@@ -249,10 +253,24 @@ function onTimeUp() {
 }
 /** 听音：正式开播才起计（加载/网络不耗时）；换素材后同样等开播 */
 function onMediaAudioPlay() {
-  if (quiz.answered || timerBegun.value) return
-  timerBegun.value = true
-  startTimer()
+  gate.release()
 }
+
+/** 图片加载成功/失败：交给门禁计数（失败达 1/3 时门禁自行测速） */
+function onImageSettled(ok: boolean) {
+  if (ok) gate.markLoaded()
+  else gate.markFailed()
+}
+
+// 门禁放行即开始计时（图 load / 音开播 / 兜底 都在这里汇合）
+watch(
+  () => gate.ready.value,
+  (ok) => {
+    if (!ok || quiz.answered || timerBegun.value) return
+    timerBegun.value = true
+    startTimer()
+  },
+)
 
 // ---- 自动切题 / 反馈（与 L6 同款骨架） ----
 const autoPending = ref(false)
@@ -326,6 +344,14 @@ function enableAuto() {
 }
 const warnThreshold = computed(() => 5)
 
+/** 媒体加载失败过多时的提示（带实时网速） */
+const networkNote = computed(() => {
+  const speed = gate.speedMbps.value
+  return speed === null
+    ? t('quiz.networkPoorUnknown')
+    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
+})
+
 function quitRound() {
   const n = quiz.answeredCount
   const msg =
@@ -364,15 +390,18 @@ onUnmounted(() => {
   clearAutoNext()
 })
 
-/** 每题计时起点：图=立即；音=冻结满值等开播 */
+/** 每题计时起点：等题面媒体就绪（图 load / 音开播） */
 function beginTiming() {
   timerBegun.value = false
-  if (props.type === 'image') {
+  // 图：等 image-settled（1s 兜底）；音：等 audio-play（不设兜底）
+  gate.reset(1, props.type === 'image', currentMedia.value?.url)
+  // 听音：音频可能永远播不出来，10s 后放行并记为失败
+  if (props.type === 'audio') gate.armStall()
+  stopTimer()
+  timeLeft.value = Math.max(1, baseLimit.value - switches.value) // 冻结显示，等就绪信号
+  if (gate.ready.value) {
     timerBegun.value = true
     startTimer()
-  } else {
-    stopTimer()
-    timeLeft.value = Math.max(1, baseLimit.value - switches.value) // 冻结显示，等 audio-play
   }
 }
 
@@ -501,6 +530,7 @@ function onTouchEnd(e: TouchEvent) {
   <template v-if="quiz.current">
     <ProgressBar :current="quiz.index + (quiz.answered ? 1 : 0)" :total="quiz.total" />
     <p v-if="shortRoundNote" class="short-round-note" role="status">{{ shortRoundNote }}</p>
+    <p v-if="gate.shouldPromptRetry.value" class="network-note" role="alert">{{ networkNote }}</p>
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
     </p>
@@ -511,7 +541,10 @@ function onTouchEnd(e: TouchEvent) {
       </span>
       <span class="sb-mid">{{ t('quiz.progress', { n: quiz.index + 1, total: quiz.total }) }}</span>
       <span class="sb-right">
-        <span v-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
+        <span v-if="!gate.ready.value && !quiz.answered" class="timer loading">
+          <span class="spin" aria-hidden="true"></span> {{ t('quiz.loadingMedia') }}
+        </span>
+        <span v-else-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
         <span v-else>{{
@@ -534,6 +567,7 @@ function onTouchEnd(e: TouchEvent) {
         :autoplay-delay="settings.autoplayDelayMs"
         :show-attribution="false"
         @audio-play="onMediaAudioPlay"
+        @image-settled="onImageSettled"
       />
 
       <!-- 作答区：输入框 + 提交（IME 门禁见 input 事件） -->
@@ -686,6 +720,33 @@ function onTouchEnd(e: TouchEvent) {
   border-radius: var(--radius-sm);
   padding: 5px 10px;
   margin: 0 0 8px;
+}
+.network-note {
+  font-size: 0.75rem;
+  color: #8a3b2e;
+  background: #fdeae6;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin: 0 0 8px;
+}
+.timer.loading .spin {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: gate-spin 0.8s linear infinite;
+}
+@keyframes gate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer.loading .spin {
+    animation: none;
+  }
 }
 .diag-body {
   color: var(--text-light);
