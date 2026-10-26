@@ -180,9 +180,11 @@ const immersive = computed(
       </a>
       <span class="src">{{ t('footer.source') }}</span>
     </p>
-    <!-- 最下方：关于（README 镜像）+ 答疑专栏 -->
+    <!-- 最下方：关于 + 更新日志 + 答疑专栏 -->
     <nav class="footer-links">
       <RouterLink to="/about">{{ t('footer.about') }}</RouterLink>
+      <span class="dot" aria-hidden="true">·</span>
+      <RouterLink to="/changelog">{{ t('footer.changelog') }}</RouterLink>
       <span class="dot" aria-hidden="true">·</span>
       <RouterLink to="/faq">{{ t('faq.title') }}</RouterLink>
     </nav>

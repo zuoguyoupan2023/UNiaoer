@@ -1,4 +1,4 @@
-# UNiaoer · Bird Identification Practice
+# UNiaoer
 
 The environment of our planet is deteriorating, and so is our health.
 

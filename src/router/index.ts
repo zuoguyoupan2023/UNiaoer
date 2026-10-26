@@ -35,10 +35,16 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
     },
     {
-      // 关于（2026-10-21）：渲染仓库 README（数据源/许可/计划题型）
+      // 关于（2026-10-26）：结构化介绍页（内容取自 README 中英版，按站点版式重排）
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
+    },
+    {
+      // 更新日志（2026-10-26）：按日期倒序的发布记录
+      path: '/changelog',
+      name: 'changelog',
+      component: () => import('../views/ChangelogView.vue'),
     },
     {
       // 答疑专栏（011 §9）：总览 + 单条详情

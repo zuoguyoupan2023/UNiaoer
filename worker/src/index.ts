@@ -1754,7 +1754,7 @@ async function handleSharePage(request: Request, env: Env, id: string): Promise<
     .first<{ nickname: string | null; payload: string; hidden: number; view_count: number }>()
 
   let title = 'UNiaoer'
-  let description = 'UNiaoer · 鸟语识别：看图认鸟 / 听音认鸟'
+  let description = 'UNiaoer：看图认鸟 / 听音认鸟'
   let image: string | null = null
   if (row && row.hidden !== 1) {
     try {
