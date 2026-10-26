@@ -128,6 +128,22 @@ export const TIERS: Record<Tier, TierConfig> = {
     commonness: [3, 4], // 与 L4/L5 同档的常见度口径（高难=少见鸟）
     mediaPoolSize: 5,
   },
+  /**
+   * L8 记忆挑战鸟（docs/092；2026-10-27 定稿）：翻牌配对（第八档）。
+   * 12 对「图/音 ↔ 鸟名」合区 4×6 盘面；纯正计时 + 三档评语（memoryRating.ts），
+   * 无限时、无选项、不进错题本、不参与称号与徽章（getStats/evaluate* 跳过 tier 8）。
+   * optionCount/distractor/timeLimitSec 为类型完备的代表值，玩法不使用；
+   * 每对只用首选素材（标准照/最佳录音）；常见度全开——难度梯度只在名称体系（zh/en vs sci）。
+   */
+  8: {
+    tier: 8,
+    labelKey: 'difficulty.l8.label',
+    descKey: 'difficulty.l8.desc',
+    optionCount: 2, // 每对 2 张牌；代表值（记忆翻牌无选项）
+    distractor: 'same',
+    commonness: [1, 2, 3, 4],
+    mediaPoolSize: 1,
+  },
 }
 
 /**
@@ -138,7 +154,7 @@ export function timeLimitFor(cfg: TierConfig, type: MediaType): number | undefin
   return type === 'audio' ? (cfg.timeLimitSecAudio ?? cfg.timeLimitSec) : cfg.timeLimitSec
 }
 
-/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6） */
+/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6；L8 = 092） */
 export const TIER_LIST: TierConfig[] = [
   TIERS[1],
   TIERS[2],
@@ -147,7 +163,23 @@ export const TIER_LIST: TierConfig[] = [
   TIERS[5],
   TIERS[6],
   TIERS[7],
+  TIERS[8],
 ]
+
+/**
+ * L8 记忆挑战鸟盘面常量（docs/092 §1/§8）：12 对合区 4×6（窄屏 CSS 折成 3×8，对数不变——
+ * 否则评语阈值不可比）。对数是评语阈值的前提，改这里必须同步实测阈值。
+ */
+export const MEMORY_PAIRS = 12
+
+/**
+ * L8 评语阈值（docs/092 §4.2 定稿）：看图 40/60s、听音 70/100s（听音每张牌都要听，天然更慢）。
+ * 常量表，不随地区/常见度变；memoryRatingFor 是唯一消费方。
+ */
+export const MEMORY_THRESHOLDS_MS: Record<MediaType, { genius: number; awesome: number }> = {
+  image: { genius: 40_000, awesome: 60_000 },
+  audio: { genius: 70_000, awesome: 100_000 },
+}
 
 /**
  * L6 半鸟人的分题型配置（docs/081 §7 + README，2026-10-24 修订）：

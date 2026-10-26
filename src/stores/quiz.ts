@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { MediaType, NameMode, Question, QuizRegime, Tier } from '@/types'
+import type { MediaType, MemoryRating, NameMode, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
 import { buildQuestions, buildInputQuestions, buildNameQuestions, speciesPlayable } from '@/core/questionEngine'
+import { buildMemoryQuestions } from '@/core/memoryEngine'
 import type { BuildStats } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
 import { isDiag } from '@/core/diag'
 import { regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
+import { MEMORY_PAIRS } from '@/core/difficulty'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
@@ -96,6 +98,19 @@ export const useQuizStore = defineStore('quiz', () => {
   const source = ref<'normal' | 'wrong-practice'>('normal')
   /** 退出确认点了「取消」后继续答题（"浪子回头"标记） */
   const escapedQuit = ref(false)
+
+  /**
+   * 092 记忆挑战鸟（tier=8 专用）：完成时的汇总（正计时 + 评语）。
+   * durationMs 是**首次翻牌 → 最后一对配对成功**的用时（不是开轮时间）——
+   * 由 QuizPlayMemory 完成时写入，roundRecorder 落库与结果页/海报展示共用该口径。
+   * 中途退出不写（记忆轮不落库），reset 清空。
+   */
+  const memoryResult = ref<{
+    pairs: number
+    matched: number
+    rating: MemoryRating
+    durationMs: number
+  } | null>(null)
 
   const current = computed<Question | null>(() => questions.value[index.value] ?? null)
   const currentChoice = computed<string | null>(() => chosen.value[index.value] ?? null)
@@ -273,7 +288,8 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
       //   （10,844 种，质量已足够），从源头避免连续请求 D1。
       // 030 措施 3:在线路径自带 sessionStorage 缓存（10 分钟 / 30 条候选），
       //   客户端命中即零网络；一次取 30 条也够本轮多次取材。
-      const count = opts.count ?? 10
+      // 092：L8 记忆挑战鸟固定 12 对（盘面常量），不随经典题量走。
+      const count = tier.value === 8 ? MEMORY_PAIRS : (opts.count ?? 10)
       const settings = useSettingsStore()
       // 新手福利（2026-10-09）：**第一轮 + L1** → 候选限定为人人皆知的最常见鸟
       // （starterBirds.ts；不足一轮自动回退常规逻辑）。仅在会话首轮判定，后续轮不再干预。
@@ -338,8 +354,9 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
         const rm = await regionTierMap(region.value).catch(() => null)
         regionTiers = rm?.tiers ?? null
       }
-      // 087 §4.8 + 089 §6：L6=名字→图/音；L7=图/音→输入。同一介绍页/赛制/池子语义，
-      // 仅玩法分支；regionTiers 只在 L1–L4（tier<=4 已限定，L6/L7 全球/洲）。
+      // 087 §4.8 + 089 §6 + 092：L6=名字→图/音；L7=图/音→输入；L8=记忆翻牌配对。
+      // 同一介绍页/赛制/池子语义，仅玩法分支；L6/L8 不用省级档位表（L8 常见度全开，
+      // 12 对全靠地区区系过滤，再叠加省级表会明显缩小小地区池子）。
       const qs =
         tier.value === 6
           ? await buildNameQuestions(speciesForBuild, {
@@ -363,7 +380,17 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
                   buildStats.v = s
                 },
               })
-            : await buildQuestions(speciesForBuild, {
+            : tier.value === 8
+              ? await buildMemoryQuestions(speciesForBuild, {
+                  type,
+                  pairs: count,
+                  nameMode: nameMode.value,
+                  speciesPool,
+                  onStats: (s) => {
+                    buildStats.v = s
+                  },
+                })
+              : await buildQuestions(speciesForBuild, {
             type,
             count,
             tier: tier.value,
@@ -455,7 +482,9 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     sessionTotal.value += total.value
     sessionRound.value += 1
     pendingContinue.value = true
-    if (useSettingsStore().adaptiveTier) {
+    // 092：记忆挑战鸟（tier=8）不参与自适应升降——suggestTier 只懂 1–5，
+    // 从 L8 出发会把"再来一轮"降到别的档，玩法直接变了。其它档位行为不变。
+    if (useSettingsStore().adaptiveTier && tier.value !== 8) {
       const s = await tierSuggestion(mode.value, tier.value)
       tier.value = s.tier
     }
@@ -503,6 +532,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     regime.value = 'standard'
     source.value = 'normal'
     escapedQuit.value = false
+    memoryResult.value = null
     region.value = 'ALL'
   }
 
@@ -534,6 +564,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizReg
     regime,
     source,
     escapedQuit,
+    memoryResult,
     overallAccuracy,
     start,
     regimeCounts,

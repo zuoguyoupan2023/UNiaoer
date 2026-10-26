@@ -149,12 +149,16 @@ export function speciesPlayable(sp: BankSpecies, type: MediaType): boolean {
   return type === 'image' ? sp.playableImage === true : sp.playableAudio === true
 }
 
-function mediaPool(bank: BankSpecies[], type: MediaType): BankSpecies[] {
+/** 题型 → 可玩物种池（092 起导出：memoryEngine 复用同一"可玩"口径） */
+export function mediaPool(bank: BankSpecies[], type: MediaType): BankSpecies[] {
   return bank.filter((s) => speciesPlayable(s, type))
 }
 
-/** S6：为出题种补齐素材——内联缺失时按需从 assets 分片取（分片含 images+audios 全部）。 */
-async function ensureMedia(sp: BankSpecies, type: MediaType): Promise<BankSpecies> {
+/**
+ * S6：为出题种补齐素材——内联缺失时按需从 assets 分片取。
+ * （092 起导出：memoryEngine.buildMemoryPairs 复用同一"标记可玩但分片缺失则跳过"链路。）
+ */
+export async function ensureMedia(sp: BankSpecies, type: MediaType): Promise<BankSpecies> {
   if (assetsOf(sp, type).length) return sp
   const a = await loadSpeciesAssets(sp.id).catch(() => null)
   if (!a) return sp
@@ -377,8 +381,9 @@ export interface BuildNameOptions {
  * 卷别 → 该卷显示名（**卷别权威**，与 speciesName 的 locale 链无关——
  * D-8 判分体系锁定：en 卷必须出英文名，即使调用方传了 zh locale；
  * 回退链与 bank.speciesName 同构，`usableInNameMode` 已保证主字段非空）。
+ * （092 起导出：memoryEngine 的名字牌与 L6 选项共用同一卷别权威。）
  */
-function nameByMode(s: BankSpecies, mode: NameMode): string {
+export function nameByMode(s: BankSpecies, mode: NameMode): string {
   if (mode === 'sci') return s.nameSci
   if (mode === 'en') return s.nameEn || s.nameSci || s.nameZh
   return s.nameZh || s.nameEn || s.nameSci

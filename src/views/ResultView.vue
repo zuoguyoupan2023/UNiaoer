@@ -18,7 +18,8 @@ import {
 } from 'lucide-vue-next'
 import { TIMEOUT, useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
-import { TIERS } from '@/core/difficulty'
+import { TIERS, MEMORY_THRESHOLDS_MS } from '@/core/difficulty'
+import { formatMemoryTime } from '@/core/memoryRating'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
 import { accuracyBand, track, trackBatch } from '@/core/metrics'
@@ -65,6 +66,28 @@ const { t } = useI18n()
 
 const hasResult = computed(() => quiz.total > 0)
 const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
+/**
+ * 092 记忆挑战鸟：结果页不显示 0–100 分数，改为**用时 + 评语**（docs/092 §4.1/§8.4）。
+ * 数据源是 quiz.memoryResult（QuizPlayMemory 完成时写入；刷新结果页后仍在 store 内）。
+ */
+const isMemory = computed(() => quiz.tier === 8)
+const memoryInfo = computed(() => {
+  const m = quiz.memoryResult
+  if (!m) return null
+  return {
+    time: formatMemoryTime(m.durationMs),
+    ratingLabel: t(`memory.rating.${m.rating}`),
+    pairs: m.pairs,
+  }
+})
+/** 记忆轮的三档阈值提示（让玩家一眼看到「离下一档还差多少秒」，docs/092 §4.2） */
+const memoryThresholds = computed(() => {
+  const th = MEMORY_THRESHOLDS_MS[quiz.mode]
+  return t('memory.thresholds', {
+    a: Math.round(th.genius / 1000),
+    b: Math.round(th.awesome / 1000),
+  })
+})
 /** 087 §6.5：本轮生效地区角标（全球不显示，避免噪音）；省名要省级索引，懒加载不阻塞 */
 const provinceIndex = ref<ProvinceIndex | null>(null)
 const regionBadge = computed(() =>
@@ -284,14 +307,16 @@ const message = computed<{ icon: Component; text: string }>(() => {
 const textOf = (x: TitleText) => t(x.key, x.params ?? {})
 
 const posterData = computed<PosterData>(() => {
-  const wrong: PosterWrong[] = quiz.questions
-    .map((q, i) => ({ q, chosen: quiz.chosen[i] ?? null }))
-    .filter(({ q, chosen }) => chosen !== q.answer)
-    .map(({ q, chosen }) => ({
-      answer: nameOf(q),
-      chosen: chosen === TIMEOUT || chosen === null ? null : choiceOf(q, chosen),
-      timedOut: chosen === TIMEOUT,
-    }))
+  const wrong: PosterWrong[] = isMemory.value
+    ? []
+    : quiz.questions
+        .map((q, i) => ({ q, chosen: quiz.chosen[i] ?? null }))
+        .filter(({ q, chosen }) => chosen !== q.answer)
+        .map(({ q, chosen }) => ({
+          answer: nameOf(q),
+          chosen: chosen === TIMEOUT || chosen === null ? null : choiceOf(q, chosen),
+          timedOut: chosen === TIMEOUT,
+        }))
   return {
     modeLabel: quiz.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
     tierLabel: tierLabel.value,
@@ -307,6 +332,16 @@ const posterData = computed<PosterData>(() => {
     wornBadge: wornBadgeLabel.value || undefined,
     wornBadgeIcon: wornBadgeIcon.value || undefined,
     nickname: archiveNickname.value || settings.nickname || undefined,
+    // 092 记忆挑战鸟：海报画 评语 + 用时，不画分数/错题
+    ...(memoryInfo.value
+      ? {
+          memory: {
+            time: memoryInfo.value.time,
+            rating: memoryInfo.value.ratingLabel,
+            pairs: memoryInfo.value.pairs,
+          },
+        }
+      : {}),
     wrong,
   }
 })
@@ -381,13 +416,29 @@ onMounted(async () => {
   // 028 计量：一轮完成（仅在本轮真正落库时计一次——刷新结果页不会重复计数）
   if (res.record) {
     track('quiz_complete', { mode: quiz.mode, tier: quiz.tier })
-    // 072-k：各档位正确率（分桶上报，见 core/metrics.ts；不含物种/用户）
-    track('quiz_result', {
-      tier: quiz.tier,
-      band: accuracyBand(quiz.accuracy),
-      // 073 P0 + 087 §6.5：**实际生效**地区（L5+ 恒 ALL，与出题口径一致；旧记录回退用户所选）
-      region: res.record.region ?? settings.region,
-    })
+    // 092：记忆挑战鸟只报 quiz_complete + quiz_score（正确率分桶与逐题作答对它无意义：
+    // 恒 12/12、无作答语义）。tier=8 需 Worker 白名单放行（docs/092 §7.9）。
+    if (quiz.tier === 8) {
+      trackBatch([
+        {
+          e: 'quiz_score',
+          p: {
+            tier: quiz.tier,
+            correct: quiz.correctCount,
+            total: quiz.total,
+            nameMode: quiz.nameMode,
+            region: res.record.region ?? settings.region,
+          },
+        },
+      ])
+    } else {
+      // 072-k：各档位正确率（分桶上报，见 core/metrics.ts；不含物种/用户）
+      track('quiz_result', {
+        tier: quiz.tier,
+        band: accuracyBand(quiz.accuracy),
+        // 073 P0 + 087 §6.5：**实际生效**地区（L5+ 恒 ALL，与出题口径一致；旧记录回退用户所选）
+        region: res.record.region ?? settings.region,
+      })
     // 076 + 077：精确得分（correct/total）+ 逐题物种级对错，**一轮一次批量请求**
     //  - quiz_score 可能带省码（用户同意时由 Worker 注入），供省际统计；
     //  - quiz_answer 不带省码（Worker 的 GEO_EVENTS 不含它），供 admin 的鸟种错误率。
@@ -422,6 +473,7 @@ onMounted(async () => {
       },
       ...answers,
     ])
+    }
   }
   // 035：该轮若已分享过，恢复"已分享/已撤回"状态与海报二维码
   if (res.record) {
@@ -451,12 +503,24 @@ async function again() {
   <section v-if="hasResult" class="card result">
     <h2><PartyPopper class="ic" :size="22" /> {{ t('result.doneTitle') }}</h2>
     <p class="muted">{{ modeLabel }} · {{ tierLabel }}<template v-if="regionBadge"> · {{ regionBadge }}</template></p>
-    <div class="score">
-      <span class="num">{{ quiz.correctCount }}</span>
-      <span class="den">/ {{ quiz.total }}</span>
-    </div>
-    <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
-    <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
+
+    <!-- 092 记忆挑战鸟：纯正计时 + 三句评语，不显示 0–100 分数（docs/092 §4.1/§8.4） -->
+    <template v-if="isMemory && memoryInfo">
+      <div class="score memory-score">
+        <span class="num">{{ memoryInfo.time }}</span>
+      </div>
+      <p class="msg memory-rating">{{ memoryInfo.ratingLabel }}</p>
+      <p class="muted small">{{ t('memory.pairsDone', { n: memoryInfo.pairs }) }}</p>
+      <p class="muted small">{{ memoryThresholds }}</p>
+    </template>
+    <template v-else>
+      <div class="score">
+        <span class="num">{{ quiz.correctCount }}</span>
+        <span class="den">/ {{ quiz.total }}</span>
+      </div>
+      <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
+      <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
+    </template>
 
     <div v-if="newTitleTexts.length" class="badges-new">
       <span class="muted"><Sparkles class="ic" :size="15" /> {{ t('result.newTitles') }}</span>
@@ -534,14 +598,22 @@ async function again() {
   <section v-if="hasResult" class="card review">
     <h3>{{ t('result.review') }}</h3>
     <ol>
-      <li v-for="(q, i) in quiz.questions" :key="q.id" :class="{ ok: quiz.chosen[i] === q.answer }">
+      <li
+        v-for="(q, i) in quiz.questions"
+        :key="q.id"
+        :class="{ ok: isMemory || quiz.chosen[i] === q.answer }"
+      >
         <div class="line">
-          <CircleCheck v-if="quiz.chosen[i] === q.answer" class="mark ok" :size="16" />
+          <CircleCheck
+            v-if="isMemory || quiz.chosen[i] === q.answer"
+            class="mark ok"
+            :size="16"
+          />
           <CircleX v-else class="mark no" :size="16" />
           <span class="ans">{{ nameOf(q) }}</span>
           <span class="muted">{{ q.sci }} · {{ familyOf(q.family) }}</span>
         </div>
-        <div class="muted small">
+        <div v-if="!isMemory" class="muted small">
           {{ t('result.yourChoice', { choice: choiceOf(q, quiz.chosen[i] ?? null) }) }}
         </div>
         <AttributionLine :media="q.media" />
@@ -600,6 +672,15 @@ async function again() {
 .score .den {
   font-size: 0.8rem;
   color: var(--text-light);
+}
+/* 092 记忆挑战鸟：用时替代分数（同款圆环，字号略收敛以容纳 1′23″ 形态） */
+.score.memory-score .num {
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.memory-rating {
+  font-size: 1.15rem;
+  color: var(--primary-dark, var(--primary));
 }
 .msg {
   font-size: 1rem;

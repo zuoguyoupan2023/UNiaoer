@@ -1086,8 +1086,8 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   },
   quiz_complete: {
     mode: ['image', 'audio'],
-    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）
-    tier: ['1', '2', '3', '4', '5', '6', '7'],
+    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）；'8' = 记忆挑战鸟（docs/092）
+    tier: ['1', '2', '3', '4', '5', '6', '7', '8'],
   },
   /**
    * 072-k：一轮结果的正确率分桶（不是每题、不含物种/用户）。
@@ -1095,8 +1095,9 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 076 起精确口径走 `quiz_score`；本事件保留仅为历史数据兼容。
    */
   quiz_result: {
-    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）；与 quiz_complete / quiz_score 对齐
-    tier: ['1', '2', '3', '4', '5', '6', '7'],
+    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）；'8' = 记忆挑战鸟（docs/092，
+    // 前端对 tier 8 实际不发 quiz_result——恒 12/12 无分桶意义；白名单对齐以防漏改）
+    tier: ['1', '2', '3', '4', '5', '6', '7', '8'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：答题时**用户自选**的地区（不是 IP）。取值形态见 REGION_VALUE_RE
     region: ['@region'],
@@ -1104,9 +1105,10 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   /**
    * 076：精确得分（correct / total，0–99 整数）。
    * 取代分桶估算：正确率 = Σcorrect / Σtotal（题级加权，题量不足 10 也不失真）。
+   * 092：tier 8（记忆挑战鸟）复用本事件上报 12/12（docs/092 §7.9）。
    */
   quiz_score: {
-    tier: ['1', '2', '3', '4', '5', '6', '7'],
+    tier: ['1', '2', '3', '4', '5', '6', '7', '8'],
     correct: ['@score'],
     total: ['@score'],
     // 085 D-3（2026-10-24）：统计分卷（zh/en/sci）；旧数据无该属性 = 未指定卷。
@@ -1117,11 +1119,12 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
   /**
    * 077：逐题作答（物种级）。用于 admin 的「鸟种错误率 / 错认成哪种鸟」；
    * **不在 GEO_EVENTS 里** → 永远不会带 `uprov`，与省级口径物理隔离。
+   * 092：tier 8 前端不发逐题事件（无作答语义）；白名单对齐以防漏改。
    */
   quiz_answer: {
     species: ['@species'],
     ok: ['0', '1'],
-    tier: ['1', '2', '3', '4', '5', '6', '7'],
+    tier: ['1', '2', '3', '4', '5', '6', '7', '8'],
     // 085 D-3：同 quiz_score，逐题对错也按卷别分
     nameMode: ['zh', 'en', 'sci'],
     region: ['@region'],

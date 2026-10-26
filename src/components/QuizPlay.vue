@@ -59,6 +59,7 @@ import { track } from '@/core/metrics'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
+import QuizPlayMemory from './QuizPlayMemory.vue'
 import QuizPlayName from './QuizPlayName.vue'
 import QuizPlayInput from './QuizPlayInput.vue'
 import ProgressBar from './ProgressBar.vue'
@@ -109,30 +110,45 @@ function tierDescOf(cfg: (typeof TIER_LIST)[number]): string {
   return t(cfg.descKey)
 }
 
-// ---- 089 §6.1/6.2：L6/L7 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
+// ---- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
 const nameMode67 = computed<'default' | 'sci'>({
   get: () => {
     const t = tier.value
     if (props.type === 'audio')
-      return t === 6 ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode7Audio ?? 'default')
-    return t === 6 ? (settings.nameMode6Image ?? 'default') : (settings.nameMode7Image ?? 'default')
+      return t === 6
+        ? (settings.nameMode6Audio ?? 'default')
+        : t === 7
+          ? (settings.nameMode7Audio ?? 'default')
+          : (settings.nameMode8Audio ?? 'default')
+    return t === 6
+      ? (settings.nameMode6Image ?? 'default')
+      : t === 7
+        ? (settings.nameMode7Image ?? 'default')
+        : (settings.nameMode8Image ?? 'default')
   },
   set: (v) => {
     const t = tier.value
     if (props.type === 'audio') {
       if (t === 6) settings.nameMode6Audio = v
-      else settings.nameMode7Audio = v
+      else if (t === 7) settings.nameMode7Audio = v
+      else settings.nameMode8Audio = v
     } else {
       if (t === 6) settings.nameMode6Image = v
-      else settings.nameMode7Image = v
+      else if (t === 7) settings.nameMode7Image = v
+      else settings.nameMode8Image = v
     }
   },
 })
-/** 开轮用的 L6/L7 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
+/** 开轮用的 L6/L7/L8 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
 function resolvedNameMode67(): NameMode {
   if (nameMode67.value === 'sci') return 'sci'
   return currentLocale() === 'en' ? 'en' : 'zh'
 }
+
+/** 卷别提示文案按档位取（L6 选图/选音、L7 输入、L8 记忆翻牌，措辞各不同） */
+const modeHintTier = computed<'L6' | 'L7' | 'L8'>(() =>
+  tier.value === 7 ? 'L7' : tier.value === 8 ? 'L8' : 'L6',
+)
 
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
 const showNameModal = ref(false)
@@ -240,11 +256,17 @@ const intro = computed(() =>
 
 // ---- 第 2/3 步：水平、形式（主界面完整显示两个区域，直接切换，无「更改」步骤） ----
 const regimeCountsData = ref<Record<QuizRegime, number> | null>(null)
-/** 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰 */
+/**
+ * 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰。
+ * 092 §4.5：记忆挑战鸟**不显示复活赛**——它不产生错题（虽然错题本可能有其它档位的记录，
+ * 池子非空，这里仍显式排除；文档"复活池恒为空"的前提不成立，故保留一处特判）。
+ */
 const visibleRegimes = computed(() => {
   const c = regimeCountsData.value
-  if (!c) return REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
-  return REGIMES.filter((r) => c[r.id] > 0)
+  const base = c
+    ? REGIMES.filter((r) => c[r.id] > 0)
+    : REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
+  return tier.value === 8 ? base.filter((r) => r.id !== 'revival') : base
 })
 function chooseTier(v: Tier) {
   tier.value = v
@@ -768,13 +790,14 @@ async function begin() {
   started.value = true
   // 环境鸟鸣是全局功能，但测试开始后不播放（选难度阶段不算开始，见 R23）
   ambiencePlayer.stop()
-  // 087 §4.8 + 089 §6.2：L6（tier=6）也是普通开轮——store 内按档位分支到 buildNameQuestions；
-  // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。卷别按模式选择传入。
+  // 087 §4.8 + 089 §6.2 + 092：L6/L7/L8 也是普通开轮——store 内按档位分支到对应构建器；
+  // 计时/作答交互由嵌入的各答题组件自管，经典链路零改动。卷别按模式选择传入。
   await quiz.start(props.type, {
     tier: tier.value,
     ...(tier.value >= 6 ? { nameMode: resolvedNameMode67() } : {}),
   })
   if (quiz.error || !quiz.questions.length) return // 错误区接管
+  if (quiz.tier === 8) return // 记忆挑战鸟：盘面素材由 QuizPlayMemory 自预热（缩略图）
   preloadQuestions(quiz.questions, 0, quiz.tier >= 6 ? 2 : 4)
   if (quiz.tier >= 6) return // L6/L7 的计时起点由各自答题组件挂载时启动
   beginQuestionTiming()
@@ -1143,17 +1166,17 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ tierDescOf(cfg) }}</span>
       </button>
     </div>
-    <!-- 089 §6.1/6.2：L6/L7 作答模式（语言名/学名）——高两档显示，不计步骤号 -->
+    <!-- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名/学名）——高两档+记忆档显示，不计步骤号 -->
     <template v-if="tier >= 6">
       <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
       <div class="tiers l6-mode">
         <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">
           <strong>{{ t('quiz6.modeLang') }}</strong>
-          <span>{{ t(tier === 7 ? 'quiz6.modeLangHintL7' : 'quiz6.modeLangHintL6') }}</span>
+          <span>{{ t(`quiz6.modeLangHint${modeHintTier}`) }}</span>
         </button>
         <button type="button" class="tier" :class="{ on: nameMode67 === 'sci' }" @click="nameMode67 = 'sci'">
           <strong>{{ t('quiz6.modeSci') }}</strong>
-          <span>{{ t(tier === 7 ? 'quiz6.modeSciHintL7' : 'quiz6.modeSciHintL6') }}</span>
+          <span>{{ t(`quiz6.modeSciHint${modeHintTier}`) }}</span>
         </button>
       </div>
     </template>
@@ -1291,6 +1314,8 @@ function onTouchEnd(e: TouchEvent) {
   <QuizPlayName v-else-if="quiz.tier === 6" :type="type" />
   <!-- 089：L7 答题区（输入题）——自管计时（音从开播起）/素材切换/IME/判分反馈 -->
   <QuizPlayInput v-else-if="quiz.tier === 7" :type="type" />
+  <!-- 092：L8 记忆挑战鸟答题区（翻牌配对）——自管盘面/正计时/音频自动播放/退出 -->
+  <QuizPlayMemory v-else-if="quiz.tier === 8" :type="type" />
 
   <!-- 答题 -->
   <template v-else-if="quiz.current">

@@ -1,9 +1,16 @@
 /**
  * 难度档位：1 入门 / 2 进阶 / 3 高手 / 4 专家 / 5 地狱（随机鸟鸣干扰，R23）
  * / 6 半鸟人（题型 L6「名字 → 图/音」，docs/081 §7；与 045 的称号级 L6「非人」无关，
- * 见 docs/084 §1.3 命名陷阱）。L6 不出现在经典介绍页的档位列表（TIER_LIST 仍 1–5）。
+ * 见 docs/084 §1.3 命名陷阱） / 8 记忆挑战鸟（翻牌配对，docs/092）。
+ * L6 不出现在经典介绍页的档位列表（TIER_LIST 仍 1–5）。
  */
-export type Tier = 1 | 2 | 3 | 4 | 5 | 6 | 7
+export type Tier = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+
+/**
+ * 记忆挑战鸟（docs/092 §4.2）评语档：纯函数 memoryRatingFor 的返回值。
+ * genius/awesome 有用时阈值，good = 配完全部对即可。
+ */
+export type MemoryRating = 'genius' | 'awesome' | 'good'
 
 /** 题型 */
 export type MediaType = 'image' | 'audio'

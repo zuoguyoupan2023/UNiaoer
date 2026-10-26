@@ -45,6 +45,9 @@ interface Persisted {
   /** L7 作答模式（同 L6 形态，图/声分离；089 §6.1/6.2） */
   nameMode7Image?: 'default' | 'sci'
   nameMode7Audio?: 'default' | 'sci'
+  /** L8 记忆挑战鸟名字牌卷别（092；同 L6 形态，图/声分离） */
+  nameMode8Image?: 'default' | 'sci'
+  nameMode8Audio?: 'default' | 'sci'
   /** D5 自适应难度：按最近表现自动升降档（默认开） */
   adaptiveTier?: boolean
   /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
@@ -115,6 +118,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const nameMode6Audio = ref<'default' | 'sci'>(saved.nameMode6Audio ?? 'default')
   const nameMode7Image = ref<'default' | 'sci'>(saved.nameMode7Image ?? 'default')
   const nameMode7Audio = ref<'default' | 'sci'>(saved.nameMode7Audio ?? 'default')
+  const nameMode8Image = ref<'default' | 'sci'>(saved.nameMode8Image ?? 'default')
+  const nameMode8Audio = ref<'default' | 'sci'>(saved.nameMode8Audio ?? 'default')
   /** L6 半鸟人卷别（docs/085 D-2：switch 切换，'default' 跟随界面语言 / 'sci' 学名卷） */
   /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
@@ -154,6 +159,8 @@ export const useSettingsStore = defineStore('settings', () => {
       nameMode6Audio,
       nameMode7Image,
       nameMode7Audio,
+      nameMode8Image,
+      nameMode8Audio,
       adaptiveTier,
       region,
       metricsEnabled,
@@ -186,6 +193,8 @@ export const useSettingsStore = defineStore('settings', () => {
             nameMode6Audio: nameMode6Audio.value,
             nameMode7Image: nameMode7Image.value,
             nameMode7Audio: nameMode7Audio.value,
+            nameMode8Image: nameMode8Image.value,
+            nameMode8Audio: nameMode8Audio.value,
             adaptiveTier: adaptiveTier.value,
             region: region.value,
             metricsEnabled: metricsEnabled.value,
@@ -222,6 +231,8 @@ export const useSettingsStore = defineStore('settings', () => {
     nameMode6Audio,
     nameMode7Image,
     nameMode7Audio,
+    nameMode8Image,
+    nameMode8Audio,
     adaptiveTier,
     region,
     metricsEnabled,

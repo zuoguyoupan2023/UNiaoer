@@ -359,8 +359,11 @@ export const BADGES: BadgeDef[] = [
 /** 返回本次新获得的徽章（排除已获得的） */
 export function evaluateBadges(
   stats: Stats,
-  rounds: RoundRecord[],
+  allRounds: RoundRecord[],
   earnedIds: Set<string>,
 ): BadgeDef[] {
+  // 092 记忆挑战鸟（tier=8）：恒为"满分轮"，混进 rounds 会误触
+  // 「稳定输出」「全档通关」「连续完美」等轮序列徽章——不参与徽章体系，整轮剔除。
+  const rounds = allRounds.filter((r) => r.tier !== 8)
   return BADGES.filter((b) => !earnedIds.has(b.id) && b.test(stats, rounds))
 }

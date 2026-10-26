@@ -115,6 +115,8 @@ const strings = computed<PosterStrings>(() => {
     timedOut: t('result.timedOut'),
     // 带参构造：{name} 由 i18n 插值（不带参调用会把占位符替换成空串——2026-10-08 空括号 bug，见 docs/034）
     mistakenAs: (name: string) => t('poster.canvas.mistakenAs', { name }),
+    // 092 记忆挑战鸟：「N 对全部配对成功」（带参构造，理由同 mistakenAs）
+    memoryPairsLine: (pairs: number) => t('poster.canvas.memoryPairs', { n: pairs }),
     sourceLine: t('poster.canvas.sourceLine'),
     scanCta: t('poster.canvas.scanCta'),
   }
