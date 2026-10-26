@@ -1095,7 +1095,8 @@ const METRIC_EVENTS: Record<string, Record<string, string[]>> = {
    * 076 起精确口径走 `quiz_score`；本事件保留仅为历史数据兼容。
    */
   quiz_result: {
-    tier: ['1', '2', '3', '4', '5', '6'],
+    // '6'/'7' = L6 半鸟人 / L7 鸟娲·造鸟者（docs/089）；与 quiz_complete / quiz_score 对齐
+    tier: ['1', '2', '3', '4', '5', '6', '7'],
     band: ['0-20', '20-40', '40-60', '60-80', '80-100'],
     // 073 P0：答题时**用户自选**的地区（不是 IP）。取值形态见 REGION_VALUE_RE
     region: ['@region'],
