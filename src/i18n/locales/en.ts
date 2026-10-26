@@ -66,11 +66,12 @@ const en: typeof zhMessages = {
   // L6 Half-Birder (docs/081 §7): name → photo/sound; play-area copy (L6 is tier 6, no intro of its own)
   quiz6: {
     modeCap: 'Name system',
-    modeLang: 'Common names',
-    modeLangHintL6: 'The prompt shows the Chinese name (English UI: English name); options are photos/recordings',
-    modeLangHintL7: 'Answer with the common name (English in the English UI)',
-    modeSci: 'Scientific names',
-    modeSciHintL6: 'The prompt shows the Latin name (options are still photos/recordings)',
+    // English UI only states English-side wording (no cross-language parentheticals).
+    modeLang: 'Common name',
+    modeLangHintL6: 'The prompt shows the English name; options are photos/recordings',
+    modeLangHintL7: 'Answer with the English name',
+    modeSci: 'Scientific name',
+    modeSciHintL6: 'The prompt shows the Latin scientific name',
     modeSciHintL7: 'Answer with the Latin name (e.g. Turdus merula)',
     stemCap: 'Which one matches this name?',
     mode: { zh: 'Chinese', en: 'English', sci: 'Scientific' },
@@ -1022,23 +1023,23 @@ const en: typeof zhMessages = {
   difficulty: {
     l1: {
       label: 'L1 Beginner',
-      desc: '3 options · cross-family distractors · 25s (options hidden for the first 5s)',
+      desc: '3 options · cross-family distractors · 25s · options hidden for the first 5s',
     },
     l2: {
       label: 'L2 Casual',
-      desc: '4 options · 1 same-family · 20s',
+      desc: '4 options · 1 same-family · 20s · options hidden for the first 5s',
     },
     l3: {
       label: 'L3 Skilled',
-      desc: '4 options · mostly same family · 15s',
+      desc: '4 options · mostly same family · 15s · options hidden for the first 5s',
     },
     l4: {
       label: 'L4 Expert',
-      desc: '6 options · close relatives · 10s',
+      desc: '6 options · close relatives · 10s · options hidden for the first 2s',
     },
     l5: {
       label: 'L5 Hell',
-      desc: 'L4 rules · 10s · random interference calls',
+      desc: 'L4 rules · 10s · options hidden for the first 2s · random interference calls',
     },
     l6: {
       label: 'L6 Half-Birder',
@@ -1048,7 +1049,7 @@ const en: typeof zhMessages = {
     l7: {
       label: 'L7 Bird-Maker',
       desc: 'Type the bird name from a photo · 15s',
-      descAudio: 'Type the bird name from a recording · 18s (timer starts on playback)',
+      descAudio: 'Type the bird name from a recording · 18s · timer starts on playback',
     },
   },
   badges: {

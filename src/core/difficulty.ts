@@ -14,7 +14,12 @@ export interface TierConfig {
   distractor: DistractorStrategy
   /** 限时（秒），undefined 为不限时 */
   timeLimitSec?: number
-  /** 隐藏选项的时长（秒）；缺省按限时的 1/3（见 pacing OPTION_REVEAL_RATIO） */
+  /**
+   * 隐藏选项的时长（秒）。2026-10-25 起**五档全部显式**（不再依赖"限时 1/3"的隐式规则，
+   * 否则 L2≈6.7s / L3=5s / L4·L5≈3.3s 这些值既不好记也说不清）：
+   * L1–L3 = 前 5s；L4/L5 = 前 2s（总限时仅 10s，藏太久等于没时间答）。
+   * 缺省值仍按 pacing.OPTION_REVEAL_RATIO 兜底（仅防配置遗漏，正常不会走到）。
+   */
   optionRevealSec?: number
   /** 允许的物种常见度（1 最常见 → 4 最少见） */
   commonness: number[]
@@ -45,6 +50,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 4,
     distractor: 'mixed',
     timeLimitSec: 20,
+    optionRevealSec: 5,
     commonness: [1, 2, 3],
     mediaPoolSize: 3,
   },
@@ -55,6 +61,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 4,
     distractor: 'same',
     timeLimitSec: 15,
+    optionRevealSec: 5,
     commonness: [2, 3, 4],
     mediaPoolSize: 3,
   },
@@ -65,6 +72,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 10,
+    optionRevealSec: 2,
     commonness: [3, 4],
     mediaPoolSize: 5,
   },
@@ -75,6 +83,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 10,
+    optionRevealSec: 2,
     commonness: [3, 4],
     mediaPoolSize: 5,
   },

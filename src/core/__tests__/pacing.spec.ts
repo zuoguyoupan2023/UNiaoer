@@ -63,3 +63,24 @@ describe('pacing', () => {
     expect(secondsUntilReveal(undefined, null)).toBeNull()
   })
 })
+
+describe('选项隐藏时长（2026-10-25：五档全部显式）', () => {
+  it('L1–L3 = 前 5s；L4/L5 = 前 2s（不再走"限时 1/3"的隐式规则）', async () => {
+    const { TIERS } = await import('../difficulty')
+    expect(TIERS[1].optionRevealSec).toBe(5)
+    expect(TIERS[2].optionRevealSec).toBe(5)
+    expect(TIERS[3].optionRevealSec).toBe(5)
+    expect(TIERS[4].optionRevealSec).toBe(2)
+    expect(TIERS[5].optionRevealSec).toBe(2)
+  })
+
+  it('L4 在 10s 限时下：第 0/1 秒仍隐藏，第 2 秒起显示', async () => {
+    const { TIERS } = await import('../difficulty')
+    const { secondsUntilReveal } = await import('../pacing')
+    const limit = TIERS[4].timeLimitSec!
+    const reveal = TIERS[4].optionRevealSec
+    expect(secondsUntilReveal(limit, limit, reveal)).not.toBeNull()
+    expect(secondsUntilReveal(limit, limit - 1, reveal)).not.toBeNull()
+    expect(secondsUntilReveal(limit, limit - 2, reveal)).toBeNull()
+  })
+})
