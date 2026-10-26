@@ -1705,8 +1705,6 @@ function onTouchEnd(e: TouchEvent) {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  max-height: 132px;
-  overflow-y: auto;
 }
 .prov-pill {
   padding: 3px 9px;
@@ -1796,10 +1794,9 @@ function onTouchEnd(e: TouchEvent) {
 .continent-head.on .count {
   background: #d7ece2;
 }
+/* 洲/国家/省三层都内联展开，靠页面整体滚动查看（不做嵌套滚动条） */
 .continent-body {
   padding: 0 10px 10px;
-  max-height: 264px;
-  overflow-y: auto;
 }
 .continent-body .tier.region {
   flex-direction: row;
