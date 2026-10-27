@@ -10,7 +10,7 @@ import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
-import { TIER_LIST, TIERS } from '@/core/difficulty'
+import { L8_ENABLED, TIER_LIST, TIERS } from '@/core/difficulty'
 import { useMediaGate } from '@/composables/useMediaGate'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
@@ -216,7 +216,10 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
-const tier = ref<Tier>(savedTier.value ?? quiz.tier)
+// L8 未上线（difficulty.L8_ENABLED）时忽略已存的第八档：介绍页没有该按钮，
+// 不回退会直接出现 L8 盘面选择并可开轮。2 = quiz store 默认档。
+const restoredTier = savedTier.value ?? quiz.tier
+const tier = ref<Tier>(restoredTier === 8 && !L8_ENABLED ? 2 : restoredTier)
 /** D5：介绍页的档位推荐提示（用户手动改档后清除） */
 const adaptiveHint = ref<TierSuggestion | null>(null)
 // 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）

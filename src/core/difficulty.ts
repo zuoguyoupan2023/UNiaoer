@@ -154,6 +154,15 @@ export function timeLimitFor(cfg: TierConfig, type: MediaType): number | undefin
   return type === 'audio' ? (cfg.timeLimitSecAudio ?? cfg.timeLimitSec) : cfg.timeLimitSec
 }
 
+/**
+ * L8 记忆挑战鸟正式上线开关（2026-10-28）：
+ * - false = 介绍页难度按钮**不上架第八档**（看图/听音同），已存的「上次档位 = 8」
+ *   在介绍页回退默认档（QuizPlay）；玩法代码与数据链路全部保留，本地历史里的
+ *   L8 记录照常显示（不伪造用户数据）。
+ * - 正式推出时：改回 true 重新构建即可，无其他改动。
+ */
+export const L8_ENABLED = false
+
 /** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6；L8 = 092） */
 export const TIER_LIST: TierConfig[] = [
   TIERS[1],
@@ -163,7 +172,7 @@ export const TIER_LIST: TierConfig[] = [
   TIERS[5],
   TIERS[6],
   TIERS[7],
-  TIERS[8],
+  ...(L8_ENABLED ? [TIERS[8]] : []),
 ]
 
 /**
