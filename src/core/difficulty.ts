@@ -174,6 +174,13 @@ export const TIER_LIST: TierConfig[] = [
  *   暂按图 20/30s、音 35/50s 暂定，实测后调整。
  * 对数是评语阈值的前提，改这里必须同步实测阈值。
  */
+/**
+ * L8 记忆挑战鸟盘面常量（docs/092 §1/§8 + 2026-10-27 用户改定）：
+ * - standard：12 对；**桌面 6 列×4 行 / 手机（≤640px）4 列×6 行**，正式档位；
+ * - compact：6 对 3 列×4 行，缩小盘（用户在试"是否应该降级"，结论前保留）。
+ * 评语阈值（2026-10-27 用户定）：**大盘 60/90s、小盘 30/60s，看图与听音共用同一套**
+ * （不再按题型分档）。对数是评语阈值的前提，改这里必须同步实测阈值。
+ */
 export type MemoryBoardKind = 'standard' | 'compact'
 
 export interface MemoryBoardDef {
@@ -181,26 +188,14 @@ export interface MemoryBoardDef {
   pairs: number
   /** i18n 键尾段（memory.board*） */
   key: MemoryBoardKind
-  thresholds: Record<MediaType, { genius: number; awesome: number }>
+  /** 天才 / 厉害的用时上限（ms）；两种题型共用 */
+  geniusMs: number
+  awesomeMs: number
 }
 
 export const MEMORY_BOARDS: Record<MemoryBoardKind, MemoryBoardDef> = {
-  standard: {
-    pairs: 12,
-    key: 'standard',
-    thresholds: {
-      image: { genius: 40_000, awesome: 60_000 },
-      audio: { genius: 70_000, awesome: 100_000 },
-    },
-  },
-  compact: {
-    pairs: 6,
-    key: 'compact',
-    thresholds: {
-      image: { genius: 20_000, awesome: 30_000 }, // 暂定（实验盘，实测后调）
-      audio: { genius: 35_000, awesome: 50_000 },
-    },
-  },
+  standard: { pairs: 12, key: 'standard', geniusMs: 60_000, awesomeMs: 90_000 },
+  compact: { pairs: 6, key: 'compact', geniusMs: 30_000, awesomeMs: 60_000 },
 }
 
 /** 默认盘面（未选择/旧设置时） */

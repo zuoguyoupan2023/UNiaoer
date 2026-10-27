@@ -208,9 +208,10 @@ export const messages = {
     start: '开始答题',
     preparing: '正在准备题目…',
     preparingSub: '正在加载第 1 题，并预取接下来 3 题',
-    // 092 记忆挑战：无"后续题预取"语义，文案换成组牌堆
+    // 092 记忆挑战：无"后续题预取"语义；图/音各自分开写，绝不混写
     preparingMemory: '正在洗牌…',
-    preparingSubMemory: '正在挑选鸟图/鸟声与名字，组成记忆牌堆',
+    preparingSubMemoryImage: '正在挑选鸟图与鸟名，组成记忆牌堆',
+    preparingSubMemoryAudio: '正在挑选鸟鸣与鸟名，组成记忆牌堆',
     cannotStart: '无法开始',
     backHome: '返回首页',
     progress: '第 {n} / {total} 题',

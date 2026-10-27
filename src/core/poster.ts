@@ -536,7 +536,9 @@ export function drawPoster(
       drawSegments(
         ctx,
         [
-          { text: strings.memoryPairsLine(data.memory.pairs), color: P.muted, weight: 500, size: 28 },
+          // 游戏名称必须出现在海报上（2026-10-27 用户反馈：记忆轮原来只有用时，看不出是什么游戏）
+          { text: data.tierLabel, color: P.dark, weight: 700, size: 28 },
+          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 28 },
           ...(data.regionLabel
             ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
             : []),
@@ -648,7 +650,8 @@ export function drawPoster(
       drawSegments(
         ctx,
         [
-          { text: strings.memoryPairsLine(data.memory.pairs), color: P.muted, weight: 500, size: 28 },
+          { text: data.tierLabel, color: P.dark, weight: 700, size: 28 },
+          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 28 },
           ...(data.regionLabel
             ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
             : []),

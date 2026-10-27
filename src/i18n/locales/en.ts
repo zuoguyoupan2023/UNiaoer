@@ -212,9 +212,10 @@ const en: typeof zhMessages = {
     start: 'Start',
     preparing: 'Preparing questions…',
     preparingSub: 'Loading question 1 and prefetching the next 3',
-    // 092 memory challenge: no "next questions" prefetch semantics
+    // 092 memory challenge: no "next questions" prefetch semantics; photo/audio written separately
     preparingMemory: 'Shuffling…',
-    preparingSubMemory: 'Picking photos/sounds and names to build the memory board',
+    preparingSubMemoryImage: 'Picking bird photos and names to build the memory board',
+    preparingSubMemoryAudio: 'Picking bird sounds and names to build the memory board',
     cannotStart: 'Cannot start',
     backHome: 'Back home',
     progress: 'Q{n} / {total}',

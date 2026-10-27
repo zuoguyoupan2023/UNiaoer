@@ -82,7 +82,7 @@ const memoryInfo = computed(() => {
 })
 /** 记忆轮的三档阈值提示（让玩家一眼看到「离下一档还差多少秒」，docs/092 §4.2；按盘面对数取阈值） */
 const memoryThresholds = computed(() => {
-  const { genius, awesome } = memoryThresholdSec(quiz.mode, quiz.memoryResult?.pairs)
+  const { genius, awesome } = memoryThresholdSec(quiz.memoryResult?.pairs)
   return t('memory.thresholds', { a: genius, b: awesome })
 })
 /** 087 §6.5：本轮生效地区角标（全球不显示，避免噪音）；省名要省级索引，懒加载不阻塞 */

@@ -7,7 +7,7 @@
  * 点开两张牌，同物种即配上、永久翻开，配不上盖回（位置不变）。
  *
  * 计分（docs/092 §4）：**纯正计时**——从第一张翻开设表，到最后一对配对成功停表；
- * 三档评语 memoryRatingFor(图 40/60s、音 70/100s)。不设错题、不记翻牌次数、
+ * 三档评语 memoryRatingFor（大盘 60/90s、小盘 30/60s，图音同一套）。不设错题、不记翻牌次数、
  * 不参与称号与徽章。中途退出**不落库、不给评语**（直接回家，不经结果页）。
  *
  * 音频（docs/092 §5）：翻开音牌即尝试 play()——首次翻牌的手势即解锁来源；
@@ -297,7 +297,7 @@ function finish() {
   quiz.memoryResult = {
     pairs,
     matched: matchedPairs.value.size,
-    rating: memoryRatingFor(props.type, elapsedMs.value, pairs),
+    rating: memoryRatingFor(elapsedMs.value, pairs),
     durationMs: elapsedMs.value,
   }
   window.setTimeout(() => router.push('/result'), 1400)

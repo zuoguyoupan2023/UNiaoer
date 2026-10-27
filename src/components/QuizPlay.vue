@@ -1329,11 +1329,21 @@ function onTouchEnd(e: TouchEvent) {
     <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
-  <!-- 加载中（092：记忆挑战不预取后续题，文案换成"组牌堆"，不出现"接下来 3 题"） -->
+  <!-- 加载中（092：记忆挑战不预取后续题；图/音文案各自分开，绝不混写） -->
   <section v-else-if="quiz.loading" class="card center placeholder">
     <div class="spinner"></div>
     <h2>{{ t(quiz.tier === 8 ? 'quiz.preparingMemory' : 'quiz.preparing') }}</h2>
-    <p class="muted">{{ t(quiz.tier === 8 ? 'quiz.preparingSubMemory' : 'quiz.preparingSub') }}</p>
+    <p class="muted">
+      {{
+        t(
+          quiz.tier === 8
+            ? type === 'audio'
+              ? 'quiz.preparingSubMemoryAudio'
+              : 'quiz.preparingSubMemoryImage'
+            : 'quiz.preparingSub',
+        )
+      }}
+    </p>
   </section>
 
   <!-- 出错 -->
