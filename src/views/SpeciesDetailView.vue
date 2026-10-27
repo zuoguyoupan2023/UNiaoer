@@ -213,11 +213,6 @@ const liteLinks = computed(() => {
       <!-- 省级出现强度（036 热力条，非地图）：无省级数据（如全球池物种）时整块不显示 -->
       <SpeciesProvinces class="prov-block" :species-id="species.id" />
 
-      <section v-if="note" class="note">
-        <h3>{{ note.title }}</h3>
-        <p class="body">{{ note.body }}</p>
-      </section>
-
       <SpeciesGallery
         :images="images"
         :audios="audios"
@@ -225,6 +220,12 @@ const liteLinks = computed(() => {
         default-open
         :label="t('gallery.title')"
       />
+
+      <!-- 素材优先：处理说明放在画廊之后，想追来龙去脉的再往下看 -->
+      <section v-if="note" class="note">
+        <h3>{{ note.title }}</h3>
+        <p class="body">{{ note.body }}</p>
+      </section>
 
       <section v-if="media.length" class="credits">
         <h4>{{ t('faq.attributionHeading') }}</h4>

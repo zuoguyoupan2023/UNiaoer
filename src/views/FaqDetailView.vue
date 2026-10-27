@@ -85,11 +85,6 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
         loading="lazy"
       />
 
-      <section class="note">
-        <h3>{{ note.title }}</h3>
-        <p class="body">{{ note.body }}</p>
-      </section>
-
       <SpeciesFacts class="facts-block" :profile="species.profile" :species-id="species.id" />
 
       <SpeciesGallery
@@ -98,6 +93,12 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
         mode="browse"
         :label="t('gallery.title')"
       />
+
+      <!-- 素材优先：处理说明放在画廊之后，想追来龙去脉的再往下看 -->
+      <section class="note">
+        <h3>{{ note.title }}</h3>
+        <p class="body">{{ note.body }}</p>
+      </section>
 
       <section v-if="media.length" class="credits">
         <h4>{{ t('faq.attributionHeading') }}</h4>

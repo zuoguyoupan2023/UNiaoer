@@ -259,6 +259,89 @@
           "reportIds": []
         }
       ]
+    },
+    "anas-platyrhynchos": {
+      "_reason": "2026-10-28 用户复核：原 image-2（家鸭凤头品种，头顶毛冠，非野生绿头鸭形态）、image-3（无法定种的小鸭群）、image-4（白色家鸭，北京鸭类型）、image-5（雌鸟背光坐在喂食器上，主体难辨）四张不适合出题。已停用 2/3/4/5，保留 image-1（雄鸟+雌鸟标准侧身）；新增 4 张（obs 254201604 雄鸟水面近照、108300981 雄鸟雪地、158495089 雌鸟飞行、189928707 双雄争偶），使用从未出现的 key（image-6/7/8/9）以避免旧缓存；旧对象保留在 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
+        "https://www.inaturalist.org/photos/95268822"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/455270906/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Евгения, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/254201604",
+          "sourceId": "455270906"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/182316260/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) sfreeman7, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/108300981",
+          "sourceId": "182316260"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/273915788/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Craig Chaddock, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/158495089",
+          "sourceId": "273915788"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/332833822/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) sfreeman7, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/189928707",
+          "sourceId": "332833822"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/anas-platyrhynchos/image-1.full.webp"
+      ],
+      "rejected": [
+        {
+          "slot": "image-2",
+          "sourceUrl": "https://www.inaturalist.org/observations/8174772",
+          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-2.full.webp",
+          "reason": "家鸭凤头品种，头顶毛冠，不是野生绿头鸭形态",
+          "reportIds": []
+        },
+        {
+          "slot": "image-3",
+          "sourceUrl": "https://www.inaturalist.org/observations/13447878",
+          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-3.full.webp",
+          "reason": "幼鸭群，无法确认为绿头鸭幼鸟，作为题目不可用",
+          "reportIds": []
+        },
+        {
+          "slot": "image-4",
+          "sourceUrl": "https://www.inaturalist.org/observations/21203884",
+          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-4.full.webp",
+          "reason": "白色家鸭（北京鸭类型），不是绿头鸭",
+          "reportIds": []
+        },
+        {
+          "slot": "image-5",
+          "sourceUrl": "https://www.inaturalist.org/observations/39432879",
+          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-5.full.webp",
+          "reason": "雌鸟背光坐在喂食器上，侧后角度，主体难辨",
+          "reportIds": []
+        }
+      ]
     }
   }
 }
