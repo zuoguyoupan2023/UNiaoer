@@ -20,7 +20,6 @@ import { isLeftSwipe } from '@/core/swipe'
 import { diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIERS } from '@/core/difficulty'
 import { useMediaGate } from '@/composables/useMediaGate'
-import { loadBank, speciesNoteById } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import {
@@ -43,7 +42,7 @@ import OptionMediaList from './OptionMediaList.vue'
 import ProgressBar from './ProgressBar.vue'
 import ReportDialog from './ReportDialog.vue'
 
-const props = defineProps<{ type: MediaType }>()
+defineProps<{ type: MediaType }>()
 const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
@@ -109,13 +108,6 @@ const diagBody = computed(() => {
   })
 })
 
-/** 答疑专栏入口：**仅作答后**显示（题干是答案名，答题前入口会泄露答案） */
-const bankReady = ref(false)
-const faqId = computed<string | null>(() => {
-  if (!bankReady.value || !quiz.answered) return null
-  const id = quiz.current?.media?.speciesId
-  return id && speciesNoteById(id) ? id : null
-})
 
 /** 「下一题」；最后一题改为「查看结果」 */
 const nextLabel = computed(() =>
@@ -323,10 +315,6 @@ const optionListRef = ref<InstanceType<typeof OptionMediaList> | null>(null)
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
-  // 答疑入口需要物种 notes（bank 通常已由 startName 加载，此处兜底）
-  void loadBank()
-    .then(() => (bankReady.value = true))
-    .catch(() => {})
   // 「再来一轮」续轮（ResultView → nextRound 重建题目后回到本页）
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
@@ -523,11 +511,6 @@ const optionAttributions = computed(() => {
       <button class="report-link" type="button" @click="openReport">
         <Flag class="ic" :size="14" /> {{ t('report.button') }}
       </button>
-
-      <!-- 答疑专栏入口（仅作答后显示，避免泄露答案） -->
-      <RouterLink v-if="faqId" class="faq-link" :to="`/faq/${faqId}`">
-        {{ props.type === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
-      </RouterLink>
 
       <!-- 自动切换中：浮窗（与经典卷同款） -->
       <Transition name="toast">
@@ -841,26 +824,6 @@ const optionAttributions = computed(() => {
 }
 .quiz-attr {
   margin-top: 14px;
-}
-.faq-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin: 12px 0 0 10px;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #f0f4f2;
-  color: var(--text-light);
-  font-size: 0.76rem;
-  font-weight: 600;
-  transition: all 0.18s ease;
-}
-.faq-link:hover {
-  color: var(--primary);
-  border-color: var(--primary-light);
-  background: #eaf4ef;
-  text-decoration: none;
 }
 .correct-toast {
   position: fixed;
