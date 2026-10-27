@@ -591,6 +591,9 @@ const count = computed(() => reports.value.length)
             <p v-if="r.note" class="note">{{ r.note }}</p>
             <p class="meta">
               {{ dateOf(r.created_at) }}
+              <span v-if="r.nickname" class="reporter">{{
+                t('admin.reporter', { name: r.nickname })
+              }}</span>
               <a v-if="r.media_url" class="media" :href="r.media_url" target="_blank" rel="noopener">
                 {{ t('admin.openMedia') }}
               </a>
@@ -939,6 +942,9 @@ const count = computed(() => reports.value.length)
   margin-top: 4px;
   font-size: 0.72rem;
   color: var(--text-light);
+}
+.reporter {
+  margin-left: 8px;
 }
 .media {
   margin-left: 8px;

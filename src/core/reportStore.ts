@@ -29,6 +29,8 @@ export interface ReportEntry {
   suggestedAnswer?: string
   /** 补充说明（可选） */
   note?: string
+  /** 报错者昵称（可选，空 = 匿名；致谢时按「匿名用户」处理） */
+  nickname?: string
   /** 是否已上传到后端（B6；离线时先本地，联网后补传） */
   synced?: boolean
 }

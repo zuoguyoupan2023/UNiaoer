@@ -33,9 +33,6 @@ import {
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, NameMode, QuizRegime, Tier } from '@/types'
 import { loadBank, speciesNoteById, loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
-import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
-import { submitReport as uploadReport } from '@/core/reportsApi'
-import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
 import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
@@ -55,7 +52,6 @@ import {
 } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
-import { track } from '@/core/metrics'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
@@ -63,6 +59,7 @@ import QuizPlayMemory from './QuizPlayMemory.vue'
 import QuizPlayName from './QuizPlayName.vue'
 import QuizPlayInput from './QuizPlayInput.vue'
 import ProgressBar from './ProgressBar.vue'
+import ReportDialog from './ReportDialog.vue'
 import SpeciesGallery from './SpeciesGallery.vue'
 
 const props = defineProps<{ type: MediaType }>()
@@ -192,62 +189,28 @@ function wizardSkip() {
   showNameModal.value = false
 }
 
-// ---- G1 报错按钮：本地记录「图/音/答案有问题」 ----
-const REPORT_REASONS: { id: ReportReason; labelKey: string }[] = [
-  { id: 'image', labelKey: 'report.reasons.image' },
-  { id: 'audio', labelKey: 'report.reasons.audio' },
-  { id: 'answer', labelKey: 'report.reasons.answer' },
-  // 029 M3:质量问题（素材没错但不适合当考题）→ 隔离/降级链路
-  { id: 'quality', labelKey: 'report.reasons.quality' },
-  { id: 'other', labelKey: 'report.reasons.other' },
-]
+// ---- G1 报错按钮：本地记录「图/音/答案有问题」（浮窗见 ReportDialog） ----
 const showReport = ref(false)
-const reportReason = ref<ReportReason>('image')
-const reportAnswer = ref('')
-const reportNote = ref('')
-const reportState = ref<'idle' | 'done' | 'error'>('idle')
-// ESC / 焦点圈闭 / 打开时移焦由 useDialogA11y 统一处理
-const { panelRef: reportPanelRef } = useDialogA11y(() => showReport.value, {
-  onClose: closeReport,
-})
-
+/** 打开浮窗时锁定当前题面素材（浮窗内不再跟随切换） */
+const reportTarget = ref<{
+  speciesId: string
+  speciesName: string
+  sci: string
+  questionType: MediaType
+  mediaUrl: string
+} | null>(null)
 function openReport() {
-  reportReason.value = quiz.current?.type === 'audio' ? 'audio' : 'image'
-  reportAnswer.value = ''
-  reportNote.value = ''
-  reportState.value = 'idle'
-  showReport.value = true
-}
-function closeReport() {
-  showReport.value = false
-}
-async function submitReport() {
   const q = quiz.current
   if (!q) return
-  try {
-    const row = await addReport({
-      speciesId: q.media?.speciesId,
-      speciesName: q.answer,
-      sci: q.sci,
-      questionType: q.type,
-      mediaUrl: (displayMedia.value ?? q.media)?.url,
-      reason: reportReason.value,
-      suggestedAnswer: reportAnswer.value.trim() || undefined,
-      note: reportNote.value.trim() || undefined,
-    })
-    // B6：尝试上传后端（失败则留在本地，设置页可补传）
-    try {
-      await uploadReport(row, getClientId())
-      await markReportSynced(row.id)
-      track('report_submit') // 028 计量：反馈管道活跃度（无属性）
-    } catch {
-      /* 离线/后端不可用：保留 pending */
-    }
-    reportState.value = 'done'
-    setTimeout(closeReport, 1200)
-  } catch {
-    reportState.value = 'error'
+  const media = displayMedia.value ?? q.media
+  reportTarget.value = {
+    speciesId: media?.speciesId ?? q.media.speciesId,
+    speciesName: q.answer,
+    sci: q.sci,
+    questionType: q.type,
+    mediaUrl: media?.url ?? q.media.url,
   }
+  showReport.value = true
 }
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
@@ -1088,66 +1051,16 @@ function onTouchEnd(e: TouchEvent) {
     </div>
   </Teleport>
 
-  <!-- G1 报错浮窗（本地记录） -->
-  <Teleport to="body">
-    <div
-      v-if="showReport"
-      class="wizard-overlay"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('report.title')"
-      @click.self="closeReport"
-    >
-      <div ref="reportPanelRef" class="wizard-panel report-panel">
-        <h3 class="wizard-title">
-          <Flag class="ic" :size="18" /> {{ t('report.title') }}
-        </h3>
-
-        <template v-if="reportState !== 'done'">
-          <p class="wizard-sub">{{ t('report.sub') }}</p>
-
-          <p class="report-label">{{ t('report.reasonLabel') }}</p>
-          <div class="report-reasons" role="group" :aria-label="t('report.reasonLabel')">
-            <button
-              v-for="r in REPORT_REASONS"
-              :key="r.id"
-              type="button"
-              class="reason"
-              :class="{ on: reportReason === r.id }"
-              :aria-pressed="reportReason === r.id"
-              @click="reportReason = r.id"
-            >
-              {{ t(r.labelKey) }}
-            </button>
-          </div>
-
-          <label class="report-field">
-            <span>{{ t('report.answerLabel') }}</span>
-            <input v-model="reportAnswer" type="text" :placeholder="t('report.answerPlaceholder')" />
-          </label>
-          <label class="report-field">
-            <span>{{ t('report.noteLabel') }}</span>
-            <textarea v-model="reportNote" rows="2" :placeholder="t('report.notePlaceholder')"></textarea>
-          </label>
-
-          <p v-if="reportState === 'error'" class="report-err" role="alert">
-            {{ t('report.error') }}
-          </p>
-
-          <div class="wizard-actions">
-            <button class="btn btn-primary" type="button" @click="submitReport">
-              {{ t('report.submit') }}
-            </button>
-            <button class="btn btn-secondary" type="button" @click="closeReport">
-              {{ t('common.cancel') }}
-            </button>
-          </div>
-        </template>
-
-        <p v-else class="report-done">{{ t('report.done') }}</p>
-      </div>
-    </div>
-  </Teleport>
+  <!-- G1 报错浮窗（本地记录 + 可选昵称） -->
+  <ReportDialog
+    v-if="reportTarget"
+    v-model:open="showReport"
+    :species-id="reportTarget.speciesId"
+    :species-name="reportTarget.speciesName"
+    :sci="reportTarget.sci"
+    :question-type="reportTarget.questionType"
+    :media-url="reportTarget.mediaUrl"
+  />
 
   <!-- 介绍页：第 2 步 水平（L1–L6）→ 第 3 步 地区 → 第 4 步 形式（087 §4.8：L6 是第六档） -->
   <section v-if="!started" class="card intro">
@@ -2343,77 +2256,5 @@ function onTouchEnd(e: TouchEvent) {
 }
 .report-link:hover {
   color: var(--primary);
-}
-.report-panel {
-  text-align: left;
-  max-width: 400px;
-}
-.report-panel .wizard-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.report-panel .wizard-title .ic {
-  color: var(--primary);
-}
-.report-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin: 12px 0 6px;
-}
-.report-reasons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.report-reasons .reason {
-  padding: 8px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: var(--text);
-  font-size: 0.82rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-.report-reasons .reason.on {
-  border-color: var(--primary);
-  background: #eaf4ef;
-  font-weight: 700;
-}
-.report-field {
-  display: block;
-  margin-top: 12px;
-}
-.report-field span {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin-bottom: 4px;
-}
-.report-field input,
-.report-field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: var(--text);
-  resize: vertical;
-}
-.report-err {
-  margin-top: 10px;
-  color: var(--wrong);
-  font-size: 0.8rem;
-}
-.report-done {
-  margin: 12px 0;
-  text-align: center;
-  color: var(--primary);
-  font-weight: 700;
 }
 </style>

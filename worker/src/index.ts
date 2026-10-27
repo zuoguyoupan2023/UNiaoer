@@ -747,8 +747,8 @@ async function handleSubmitReport(request: Request, env: Env): Promise<Response>
   const id = str(body.id, 64) ?? crypto.randomUUID()
   await env.DB.prepare(
     `INSERT OR IGNORE INTO reports
-      (id,created_at,updated_at,species_id,species_name,sci,question_type,media_url,reason,suggested_answer,note,status,client_id)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',?)`,
+      (id,created_at,updated_at,species_id,species_name,sci,question_type,media_url,reason,suggested_answer,note,nickname,status,client_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'open',?)`,
   )
     .bind(
       id,
@@ -762,6 +762,8 @@ async function handleSubmitReport(request: Request, env: Env): Promise<Response>
       reason,
       str(body.suggestedAnswer, 100),
       str(body.note, 1000),
+      // 昵称可选：空 = 匿名（致谢时按「匿名用户」处理，不下发这个说法给用户）
+      str(body.nickname, 24),
       clientId,
     )
     .run()

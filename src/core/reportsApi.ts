@@ -41,6 +41,7 @@ export async function submitReport(entry: ReportEntry, clientId: string): Promis
       reason: entry.reason,
       suggestedAnswer: entry.suggestedAnswer,
       note: entry.note,
+      nickname: entry.nickname,
     }),
   })
   if (!res.ok) throw new Error(`submit failed: ${res.status}`)
@@ -81,6 +82,8 @@ export type ReportStatus = 'open' | 'published' | 'fixed' | 'rejected'
 export interface AdminReport extends PublicReport {
   updated_at: number
   client_id: string | null
+  /** 报错者昵称（NULL/空 = 匿名）；只在管理端可见，公开评审页不下发 */
+  nickname: string | null
 }
 
 /** 管理密钥无效（401） */
