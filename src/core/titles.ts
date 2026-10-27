@@ -183,7 +183,10 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
 ]
 
 /** 当前各轨道达到的最高级 + 称号文本（level ≥1 才返回） */
-export function evaluateTitles(stats: Stats, rounds: RoundRecord[]): EarnedTitle[] {
+export function evaluateTitles(stats: Stats, allRounds: RoundRecord[]): EarnedTitle[] {
+  // 092 记忆挑战鸟（tier=8）：不参与称号体系——levelScore/物种聚合混入记忆轮
+  // 会凭空抬级（恒满分 + 恒新增物种），整轮剔除。
+  const rounds = allRounds.filter((r) => r.tier !== 8)
   const out: EarnedTitle[] = []
   for (const track of TITLE_TRACKS) {
     const value = track.metric(stats, rounds)

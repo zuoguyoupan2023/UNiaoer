@@ -34,6 +34,47 @@ export interface PersistResult {
 /** 当前一轮 → 本地记录（纯映射；persistRound 与成绩分享共用同一份语义） */
 export function buildRoundRecord(quiz: QuizStore): RoundRecord | null {
   if (!quiz.roundId || !quiz.questions.length) return null
+
+  // 092 记忆挑战鸟（tier=8）：每题 = 一对（媒体牌 + 名字牌），配对即"答对"。
+  // 走到落库的必然是**配完全部对**的轮（中途退出由 QuizPlayMemory 直接回家，不经结果页），
+  // items 全 correct → 错题本零写入；memory 汇总由 QuizPlayMemory 写进 store。
+  if (quiz.tier === 8) {
+    const items: RoundItem[] = quiz.questions.map((q) => {
+      const speciesId = q.media.speciesId || q.media.url
+      return {
+        speciesId,
+        answer: q.answer,
+        sci: q.sci,
+        family: q.family,
+        type: q.type,
+        chosen: q.answer, // 名字牌与媒体牌配上；无"作答"语义，填自身保持形状一致
+        correct: true,
+        timedOut: false,
+        mediaUrl: q.media.url,
+        source: q.media.source,
+        author: q.media.author,
+        license: q.media.license,
+      }
+    })
+    const memory = quiz.memoryResult
+    return {
+      id: quiz.roundId,
+      at: Date.now(),
+      category: 'bird',
+      mode: quiz.mode,
+      tier: quiz.tier,
+      nameMode: quiz.nameMode,
+      region: quiz.region,
+      total: items.length,
+      correct: items.length,
+      accuracy: 100,
+      durationMs: memory?.durationMs ?? (quiz.startedAt ? Date.now() - quiz.startedAt : 0),
+      items,
+      source: quiz.source,
+      ...(memory ? { memory: { pairs: memory.pairs, matched: memory.matched, rating: memory.rating } } : {}),
+    }
+  }
+
   const items: RoundItem[] = quiz.questions.map((q, i) => {
     const raw = quiz.chosen[i] ?? null
     const timedOut = raw === TIMEOUT
@@ -87,6 +128,17 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
     return { badges: [], newTitles: [], record: null }
   }
   persisted.add(record.id)
+
+  // 092 记忆挑战鸟：不参与称号与徽章体系——只落库（供复盘列表展示），不做任何判定。
+  if (record.tier === 8) {
+    try {
+      await saveRound(record)
+      return { badges: [], newTitles: [], record }
+    } catch (e) {
+      console.warn('failed to persist round:', e)
+      return { badges: [], newTitles: [], record }
+    }
+  }
 
   try {
     await saveRound(record)

@@ -115,11 +115,16 @@ CREATE TABLE IF NOT EXISTS reports (
   reason           TEXT NOT NULL,        -- image | audio | answer | quality | other
   suggested_answer TEXT,                 -- 用户认为的正确答案（可选）
   note             TEXT,                 -- 补充说明（可选）
+  nickname         TEXT,                 -- 报错者昵称（可选；NULL = 匿名，致谢按「匿名用户」）
   status           TEXT NOT NULL DEFAULT 'open', -- open | published | fixed | rejected
   up               INTEGER NOT NULL DEFAULT 0,
   down             INTEGER NOT NULL DEFAULT 0,
   client_id        TEXT                  -- 匿名设备 id（去重/防刷，非追踪）
 );
+-- ⚠️ 既有部署补列（一次性，**尚未执行**）：
+--   ALTER TABLE reports ADD COLUMN nickname TEXT;
+--   （CREATE TABLE IF NOT EXISTS 对已存在的表是 no-op，不会补列——改列必须手工 ALTER；
+--     不补列时 Worker 的 INSERT 会因多余列直接失败，需与 Worker 部署同批完成）
 CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_reports_species ON reports(species_id);
 

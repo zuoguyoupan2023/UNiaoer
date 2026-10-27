@@ -20,14 +20,8 @@ import { isLeftSwipe } from '@/core/swipe'
 import { diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { TIERS } from '@/core/difficulty'
 import { useMediaGate } from '@/composables/useMediaGate'
-import { loadBank, speciesNoteById } from '@/core/bank'
-import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
-import { submitReport as uploadReport } from '@/core/reportsApi'
-import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
-import { useDialogA11y } from '@/composables/useDialogA11y'
-import { track } from '@/core/metrics'
 import {
   AlarmClock,
   ArrowRight,
@@ -46,66 +40,34 @@ import type { MediaType } from '@/types'
 import AttributionLine from './AttributionLine.vue'
 import OptionMediaList from './OptionMediaList.vue'
 import ProgressBar from './ProgressBar.vue'
+import ReportDialog from './ReportDialog.vue'
 
-const props = defineProps<{ type: MediaType }>()
+defineProps<{ type: MediaType }>()
 const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
 
-// ---- G1 报错按钮（与经典卷同款） ----
-const REPORT_REASONS: { id: ReportReason; labelKey: string }[] = [
-  { id: 'image', labelKey: 'report.reasons.image' },
-  { id: 'audio', labelKey: 'report.reasons.audio' },
-  { id: 'answer', labelKey: 'report.reasons.answer' },
-  { id: 'quality', labelKey: 'report.reasons.quality' },
-  { id: 'other', labelKey: 'report.reasons.other' },
-]
+// ---- G1 报错按钮（与经典卷同款；浮窗见 ReportDialog） ----
 const showReport = ref(false)
-const reportReason = ref<ReportReason>('image')
-const reportAnswer = ref('')
-const reportNote = ref('')
-const reportState = ref<'idle' | 'done' | 'error'>('idle')
-const { panelRef: reportPanelRef } = useDialogA11y(() => showReport.value, {
-  onClose: closeReport,
-})
-
+const reportTarget = ref<{
+  speciesId: string
+  speciesName: string
+  sci: string
+  questionType: MediaType
+  mediaUrl: string
+} | null>(null)
 function openReport() {
-  reportReason.value = quiz.current?.type === 'audio' ? 'audio' : 'image'
-  reportAnswer.value = ''
-  reportNote.value = ''
-  reportState.value = 'idle'
-  showReport.value = true
-}
-function closeReport() {
-  showReport.value = false
-}
-async function submitReport() {
   const q = quiz.current
   if (!q) return
-  try {
-    const row = await addReport({
-      speciesId: q.media?.speciesId,
-      speciesName: q.answer,
-      sci: q.sci,
-      questionType: q.type,
-      mediaUrl: q.media?.url,
-      reason: reportReason.value,
-      suggestedAnswer: reportAnswer.value.trim() || undefined,
-      note: reportNote.value.trim() || undefined,
-    })
-    try {
-      await uploadReport(row, getClientId())
-      await markReportSynced(row.id)
-      track('report_submit')
-    } catch {
-      /* 离线/后端不可用：保留 pending */
-    }
-    reportState.value = 'done'
-    setTimeout(closeReport, 1200)
-  } catch {
-    reportState.value = 'error'
+  reportTarget.value = {
+    speciesId: q.media.speciesId,
+    speciesName: q.answer,
+    sci: q.sci,
+    questionType: q.type,
+    mediaUrl: q.media.url,
   }
+  showReport.value = true
 }
 
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
@@ -146,13 +108,6 @@ const diagBody = computed(() => {
   })
 })
 
-/** 答疑专栏入口：**仅作答后**显示（题干是答案名，答题前入口会泄露答案） */
-const bankReady = ref(false)
-const faqId = computed<string | null>(() => {
-  if (!bankReady.value || !quiz.answered) return null
-  const id = quiz.current?.media?.speciesId
-  return id && speciesNoteById(id) ? id : null
-})
 
 /** 「下一题」；最后一题改为「查看结果」 */
 const nextLabel = computed(() =>
@@ -360,10 +315,6 @@ const optionListRef = ref<InstanceType<typeof OptionMediaList> | null>(null)
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
-  // 答疑入口需要物种 notes（bank 通常已由 startName 加载，此处兜底）
-  void loadBank()
-    .then(() => (bankReady.value = true))
-    .catch(() => {})
   // 「再来一轮」续轮（ResultView → nextRound 重建题目后回到本页）
   if (quiz.pendingContinue) {
     quiz.pendingContinue = false
@@ -485,66 +436,16 @@ const optionAttributions = computed(() => {
 </script>
 
 <template>
-  <!-- G1 报错浮窗（本地记录） -->
-  <Teleport to="body">
-    <div
-      v-if="showReport"
-      class="wizard-overlay"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('report.title')"
-      @click.self="closeReport"
-    >
-      <div ref="reportPanelRef" class="wizard-panel report-panel">
-        <h3 class="wizard-title">
-          <Flag class="ic" :size="18" /> {{ t('report.title') }}
-        </h3>
-
-        <template v-if="reportState !== 'done'">
-          <p class="wizard-sub">{{ t('report.sub') }}</p>
-
-          <p class="report-label">{{ t('report.reasonLabel') }}</p>
-          <div class="report-reasons" role="group" :aria-label="t('report.reasonLabel')">
-            <button
-              v-for="r in REPORT_REASONS"
-              :key="r.id"
-              type="button"
-              class="reason"
-              :class="{ on: reportReason === r.id }"
-              :aria-pressed="reportReason === r.id"
-              @click="reportReason = r.id"
-            >
-              {{ t(r.labelKey) }}
-            </button>
-          </div>
-
-          <label class="report-field">
-            <span>{{ t('report.answerLabel') }}</span>
-            <input v-model="reportAnswer" type="text" :placeholder="t('report.answerPlaceholder')" />
-          </label>
-          <label class="report-field">
-            <span>{{ t('report.noteLabel') }}</span>
-            <textarea v-model="reportNote" rows="2" :placeholder="t('report.notePlaceholder')"></textarea>
-          </label>
-
-          <p v-if="reportState === 'error'" class="report-err" role="alert">
-            {{ t('report.error') }}
-          </p>
-
-          <div class="wizard-actions">
-            <button class="btn btn-primary" type="button" @click="submitReport">
-              {{ t('report.submit') }}
-            </button>
-            <button class="btn btn-secondary" type="button" @click="closeReport">
-              {{ t('common.cancel') }}
-            </button>
-          </div>
-        </template>
-
-        <p v-else class="report-done">{{ t('report.done') }}</p>
-      </div>
-    </div>
-  </Teleport>
+  <!-- G1 报错浮窗（本地记录 + 可选昵称） -->
+  <ReportDialog
+    v-if="reportTarget"
+    v-model:open="showReport"
+    :species-id="reportTarget.speciesId"
+    :species-name="reportTarget.speciesName"
+    :sci="reportTarget.sci"
+    :question-type="reportTarget.questionType"
+    :media-url="reportTarget.mediaUrl"
+  />
 
   <!-- 答题 -->
   <template v-if="quiz.current">
@@ -610,11 +511,6 @@ const optionAttributions = computed(() => {
       <button class="report-link" type="button" @click="openReport">
         <Flag class="ic" :size="14" /> {{ t('report.button') }}
       </button>
-
-      <!-- 答疑专栏入口（仅作答后显示，避免泄露答案） -->
-      <RouterLink v-if="faqId" class="faq-link" :to="`/faq/${faqId}`">
-        {{ props.type === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
-      </RouterLink>
 
       <!-- 自动切换中：浮窗（与经典卷同款） -->
       <Transition name="toast">
@@ -759,46 +655,6 @@ const optionAttributions = computed(() => {
 .diag-body {
   color: var(--text-light);
   opacity: 0.92;
-}
-.wizard-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(10, 30, 22, 0.55);
-  backdrop-filter: blur(6px);
-}
-.wizard-panel {
-  width: min(480px, 100%);
-  background: #fff;
-  border-radius: var(--radius);
-  padding: 24px;
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6);
-}
-.wizard-title {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--primary-dark);
-  text-align: center;
-  margin-bottom: 6px;
-}
-.wizard-sub {
-  font-size: 0.82rem;
-  color: var(--text-light);
-  text-align: center;
-  margin-bottom: 14px;
-}
-.wizard-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 16px;
-}
-.wizard-actions .btn {
-  flex: 1;
 }
 .status-bar {
   display: grid;
@@ -969,26 +825,6 @@ const optionAttributions = computed(() => {
 .quiz-attr {
   margin-top: 14px;
 }
-.faq-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin: 12px 0 0 10px;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #f0f4f2;
-  color: var(--text-light);
-  font-size: 0.76rem;
-  font-weight: 600;
-  transition: all 0.18s ease;
-}
-.faq-link:hover {
-  color: var(--primary);
-  border-color: var(--primary-light);
-  background: #eaf4ef;
-  text-decoration: none;
-}
 .correct-toast {
   position: fixed;
   left: 0;
@@ -1125,78 +961,6 @@ const optionAttributions = computed(() => {
 }
 .report-link:hover {
   color: var(--primary);
-}
-.report-panel {
-  text-align: left;
-  max-width: 400px;
-}
-.report-panel .wizard-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.report-panel .wizard-title .ic {
-  color: var(--primary);
-}
-.report-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin: 12px 0 6px;
-}
-.report-reasons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.report-reasons .reason {
-  padding: 8px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: var(--text);
-  font-size: 0.82rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-.report-reasons .reason.on {
-  border-color: var(--primary);
-  background: #eaf4ef;
-  font-weight: 700;
-}
-.report-field {
-  display: block;
-  margin-top: 12px;
-}
-.report-field span {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin-bottom: 4px;
-}
-.report-field input,
-.report-field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: var(--text);
-  resize: vertical;
-}
-.report-err {
-  margin-top: 10px;
-  color: var(--wrong);
-  font-size: 0.8rem;
-}
-.report-done {
-  margin: 12px 0;
-  text-align: center;
-  color: var(--primary);
-  font-weight: 700;
 }
 @keyframes pop {
   0% {

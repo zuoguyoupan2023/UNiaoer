@@ -82,6 +82,7 @@ function posterStrings(): PosterStrings {
     overflow: i18n.global.t('poster.canvas.overflow'),
     timedOut: i18n.global.t('result.timedOut'),
     mistakenAs: (name: string) => i18n.global.t('poster.canvas.mistakenAs', { name }),
+    memoryPairsLine: (n: number) => i18n.global.t('poster.canvas.memoryPairs', { n }),
     sourceLine: i18n.global.t('poster.canvas.sourceLine'),
     scanCta: i18n.global.t('poster.canvas.scanCta'),
   }

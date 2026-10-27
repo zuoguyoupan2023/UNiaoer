@@ -6,6 +6,7 @@ import {
   CircleCheck,
   CircleX,
   Eye,
+  Flag,
   Headphones,
   History,
   Images,
@@ -18,6 +19,7 @@ import {
   type RoundRecord,
 } from '@/core/historyDb'
 import { TIERS } from '@/core/difficulty'
+import { formatMemoryTime } from '@/core/memoryRating'
 import { posterDataFromRound, posterImagesFromRound, type RoundPosterDeps } from '@/core/roundPoster'
 import type { PosterData, PosterImage } from '@/core/poster'
 import PosterEditor from '@/components/PosterEditor.vue'
@@ -31,11 +33,12 @@ import {
   type ShareLedgerEntry,
 } from '@/core/shareRound'
 import { loadProvincesIndex, regionDisplayName, type ProvinceIndex } from '@/core/provinces'
-import type { MediaAsset } from '@/types'
+import type { MediaAsset, MediaType } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const { t } = useI18n()
 /** 087 §6.5：轮次角标的省名索引（懒加载，失败退省码） */
@@ -74,6 +77,26 @@ const visible = computed(() => rounds.value.slice(0, visibleCount.value))
 
 function toggle(id: string) {
   openedId.value = openedId.value === id ? null : id
+}
+
+/** 报错入口：历史里对某一题的素材报错（与做题中的报错同一浮窗与同一落库） */
+const showReport = ref(false)
+const reportTarget = ref<{
+  speciesId: string
+  speciesName: string
+  sci: string
+  questionType: MediaType
+  mediaUrl: string
+} | null>(null)
+function openReport(it: RoundItem) {
+  reportTarget.value = {
+    speciesId: it.speciesId,
+    speciesName: nameOf(it),
+    sci: it.sci,
+    questionType: it.type,
+    mediaUrl: it.mediaUrl,
+  }
+  showReport.value = true
 }
 
 /** 记录里的答案名按当前语言解析（016：id → 存储名反查 → 原字符串） */
@@ -161,6 +184,11 @@ function posterDepsOf(r: RoundRecord): RoundPosterDeps {
     // 旧数据兼容：无 region 记录 → 空串 → 海报不画题目范围
     regionLabel: r.region ?? '',
     nickname: undefined, // 历史页不自动带昵称（用户可自行决定是否发布；如需带上可传 settings.nickname）
+    // 092 记忆挑战鸟：海报画 评语 + 用时（不画分数/错题）
+    memoryText: (rec) => ({
+      time: formatMemoryTime(rec.durationMs),
+      rating: rec.memory ? t(`memory.rating.${rec.memory.rating}`) : '',
+    }),
   }
 }
 
@@ -232,6 +260,8 @@ async function onCopy(round: RoundRecord) {
               <span v-if="r.source === 'wrong-practice'" class="tag">
                 <Swords class="ic" :size="11" /> {{ t('history.wrongPracticeTag') }}
               </span>
+              <!-- 092 记忆挑战鸟：列出但不参与评级（docs/092 §4.4） -->
+              <span v-if="r.tier === 8" class="tag">{{ t('memory.notCountedTag') }}</span>
             </span>
             <span class="score" :class="{ perfect: r.total > 0 && r.correct === r.total }">
               {{ r.correct }}/{{ r.total }} · {{ r.accuracy }}%
@@ -276,8 +306,14 @@ async function onCopy(round: RoundRecord) {
                   {{ nameOf(it) }}
                   <span class="muted small">（{{ it.sci }} · {{ familyOf(it.family) }}）</span>
                 </div>
-                <div class="muted small">{{ t('result.yourChoice', { choice: choiceOf(it) }) }}</div>
+                <!-- 092 记忆轮：无"作答"语义，只列配对的物种 -->
+                <div v-if="r.tier !== 8" class="muted small">{{ t('result.yourChoice', { choice: choiceOf(it) }) }}</div>
                 <AttributionLine :media="toAsset(it)" />
+              </div>
+              <div class="item-actions">
+                <button class="btn btn-secondary btn-sm" @click="openReport(it)">
+                  <Flag class="ic" :size="13" /> {{ t('report.button') }}
+                </button>
               </div>
               <!-- 同种五图五音（browse：缩略图放大 / 内联试听），对齐结果页回顾 -->
               <SpeciesGallery
@@ -297,6 +333,17 @@ async function onCopy(round: RoundRecord) {
           {{ t('history.showMore') }}
         </button>
       </div>
+
+      <!-- 报错浮窗（与做题中的报错共用：本地留痕 + 可选昵称） -->
+      <ReportDialog
+        v-if="reportTarget"
+        v-model:open="showReport"
+        :species-id="reportTarget.speciesId"
+        :species-name="reportTarget.speciesName"
+        :sci="reportTarget.sci"
+        :question-type="reportTarget.questionType"
+        :media-url="reportTarget.mediaUrl"
+      />
     </template>
 
     <p v-else class="muted">
@@ -462,6 +509,15 @@ async function onCopy(round: RoundRecord) {
 .info {
   flex: 1;
   min-width: 0;
+}
+.item-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-basis: 100%;
+  min-width: 0;
+}
+.item-actions .ic {
+  margin-right: 2px;
 }
 .item-gallery {
   flex-basis: 100%;

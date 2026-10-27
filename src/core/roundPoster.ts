@@ -23,7 +23,7 @@ export interface RoundPosterDeps {
   choiceOf: (it: RoundItem) => string
   /** 模式标签（鸟图版/鸟声版等） */
   modeLabel: string
-  /** 档位标签（L1 入门 … L7 鸟娲·造鸟者） */
+  /** 档位标签（L1 入门 … L7 鸟娲·造鸟者 / L8 记忆挑战鸟） */
   tierLabel: string
   /** 题目范围（地区展示名）；缺省/'' → 不画（旧数据兼容） */
   regionLabel?: string
@@ -31,18 +31,16 @@ export interface RoundPosterDeps {
   nickname?: string
   /** 日期文本（缺省用记录时间） */
   date?: string
+  /**
+   * 092 记忆挑战鸟：记忆轮（round.memory 存在）的 用时/评语 展示文本
+   * （调用方按 locale 构造；不传则记忆轮回退分数画法——旧调用方兼容）。
+   */
+  memoryText?: (round: RoundRecord) => { time: string; rating: string }
 }
 
 /** RoundRecord → PosterData（不含称号/徽章/会话轮次——历史无这些上下文） */
 export function posterDataFromRound(round: RoundRecord, deps: RoundPosterDeps): PosterData {
-  const wrong: PosterWrong[] = round.items
-    .filter((it) => !it.correct)
-    .map((it) => ({
-      answer: deps.nameOf(it),
-      chosen: it.timedOut || it.chosen == null ? null : deps.choiceOf(it),
-      timedOut: !!it.timedOut,
-    }))
-  return {
+  const base = {
     modeLabel: deps.modeLabel,
     tierLabel: deps.tierLabel,
     regionLabel: deps.regionLabel || undefined,
@@ -51,8 +49,20 @@ export function posterDataFromRound(round: RoundRecord, deps: RoundPosterDeps): 
     accuracy: round.accuracy,
     date: deps.date ?? new Intl.DateTimeFormat().format(new Date(round.at)),
     nickname: deps.nickname || undefined,
-    wrong,
   }
+  // 092 记忆挑战鸟：海报画「评语 + 用时」，不画分数/错题（docs/092 §4.1）
+  if (round.memory && deps.memoryText) {
+    const mt = deps.memoryText(round)
+    return { ...base, memory: { time: mt.time, rating: mt.rating, pairs: round.memory.pairs }, wrong: [] }
+  }
+  const wrong: PosterWrong[] = round.items
+    .filter((it) => !it.correct)
+    .map((it) => ({
+      answer: deps.nameOf(it),
+      chosen: it.timedOut || it.chosen == null ? null : deps.choiceOf(it),
+      timedOut: !!it.timedOut,
+    }))
+  return { ...base, wrong }
 }
 
 /**

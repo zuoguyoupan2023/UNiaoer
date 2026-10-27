@@ -10,7 +10,7 @@ import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
-import { TIER_LIST, TIERS } from '@/core/difficulty'
+import { L8_ENABLED, TIER_LIST, TIERS } from '@/core/difficulty'
 import { useMediaGate } from '@/composables/useMediaGate'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
@@ -20,7 +20,6 @@ import {
   CircleCheck,
   CircleX,
   Flag,
-  HelpCircle,
   Hourglass,
   Image as ImageIcon,
   Keyboard,
@@ -32,10 +31,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import type { MediaAsset, MediaType, NameMode, QuizRegime, Tier } from '@/types'
-import { loadBank, speciesNoteById, loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
-import { addReport, markReportSynced, type ReportReason } from '@/core/reportStore'
-import { submitReport as uploadReport } from '@/core/reportsApi'
-import { getClientId } from '@/core/anonymousId'
+import { loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
 import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
@@ -55,13 +51,14 @@ import {
 } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
-import { track } from '@/core/metrics'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
+import QuizPlayMemory from './QuizPlayMemory.vue'
 import QuizPlayName from './QuizPlayName.vue'
 import QuizPlayInput from './QuizPlayInput.vue'
 import ProgressBar from './ProgressBar.vue'
+import ReportDialog from './ReportDialog.vue'
 import SpeciesGallery from './SpeciesGallery.vue'
 
 const props = defineProps<{ type: MediaType }>()
@@ -109,30 +106,57 @@ function tierDescOf(cfg: (typeof TIER_LIST)[number]): string {
   return t(cfg.descKey)
 }
 
-// ---- 089 §6.1/6.2：L6/L7 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
+// ---- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名 ↔ 学名，图/声 × 档位分别记忆） ----
 const nameMode67 = computed<'default' | 'sci'>({
   get: () => {
     const t = tier.value
     if (props.type === 'audio')
-      return t === 6 ? (settings.nameMode6Audio ?? 'default') : (settings.nameMode7Audio ?? 'default')
-    return t === 6 ? (settings.nameMode6Image ?? 'default') : (settings.nameMode7Image ?? 'default')
+      return t === 6
+        ? (settings.nameMode6Audio ?? 'default')
+        : t === 7
+          ? (settings.nameMode7Audio ?? 'default')
+          : (settings.nameMode8Audio ?? 'default')
+    return t === 6
+      ? (settings.nameMode6Image ?? 'default')
+      : t === 7
+        ? (settings.nameMode7Image ?? 'default')
+        : (settings.nameMode8Image ?? 'default')
   },
   set: (v) => {
     const t = tier.value
     if (props.type === 'audio') {
       if (t === 6) settings.nameMode6Audio = v
-      else settings.nameMode7Audio = v
+      else if (t === 7) settings.nameMode7Audio = v
+      else settings.nameMode8Audio = v
     } else {
       if (t === 6) settings.nameMode6Image = v
-      else settings.nameMode7Image = v
+      else if (t === 7) settings.nameMode7Image = v
+      else settings.nameMode8Image = v
     }
   },
 })
-/** 开轮用的 L6/L7 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
+/** 开轮用的 L6/L7/L8 卷别：default → 界面语言（D-1）；sci → 学名卷（D-2） */
 function resolvedNameMode67(): NameMode {
   if (nameMode67.value === 'sci') return 'sci'
   return currentLocale() === 'en' ? 'en' : 'zh'
 }
+
+/** 卷别提示文案按档位取（L6 选图/选音、L7 输入、L8 记忆翻牌，措辞各不同） */
+const modeHintTier = computed<'L6' | 'L7' | 'L8'>(() =>
+  tier.value === 7 ? 'L7' : tier.value === 8 ? 'L8' : 'L6',
+)
+
+/**
+ * 092 + 2026-10-27 用户加：L8 盘面二选一（选中「记忆挑战鸟」档后出现）。
+ * standard = 12 对（桌面 6×4 / 手机 4×6，正式阈值）；compact = 6 对 3×4 **实验性缩小盘**
+ * （试玩"是否应该降级"，结论后可能移除）。选择持久化在 settings，开轮时 quiz.start 读取。
+ */
+const memoryBoard = computed<'standard' | 'compact'>({
+  get: () => settings.memoryBoardSize ?? 'standard',
+  set: (v) => {
+    settings.memoryBoardSize = v
+  },
+})
 
 // ---- 第 1 步：昵称浮窗（013 §3.1；仅此步用浮窗，第 2/3 步落回主界面） ----
 const showNameModal = ref(false)
@@ -164,69 +188,38 @@ function wizardSkip() {
   showNameModal.value = false
 }
 
-// ---- G1 报错按钮：本地记录「图/音/答案有问题」 ----
-const REPORT_REASONS: { id: ReportReason; labelKey: string }[] = [
-  { id: 'image', labelKey: 'report.reasons.image' },
-  { id: 'audio', labelKey: 'report.reasons.audio' },
-  { id: 'answer', labelKey: 'report.reasons.answer' },
-  // 029 M3:质量问题（素材没错但不适合当考题）→ 隔离/降级链路
-  { id: 'quality', labelKey: 'report.reasons.quality' },
-  { id: 'other', labelKey: 'report.reasons.other' },
-]
+// ---- G1 报错按钮：本地记录「图/音/答案有问题」（浮窗见 ReportDialog） ----
 const showReport = ref(false)
-const reportReason = ref<ReportReason>('image')
-const reportAnswer = ref('')
-const reportNote = ref('')
-const reportState = ref<'idle' | 'done' | 'error'>('idle')
-// ESC / 焦点圈闭 / 打开时移焦由 useDialogA11y 统一处理
-const { panelRef: reportPanelRef } = useDialogA11y(() => showReport.value, {
-  onClose: closeReport,
-})
-
+/** 打开浮窗时锁定当前题面素材（浮窗内不再跟随切换） */
+const reportTarget = ref<{
+  speciesId: string
+  speciesName: string
+  sci: string
+  questionType: MediaType
+  mediaUrl: string
+} | null>(null)
 function openReport() {
-  reportReason.value = quiz.current?.type === 'audio' ? 'audio' : 'image'
-  reportAnswer.value = ''
-  reportNote.value = ''
-  reportState.value = 'idle'
-  showReport.value = true
-}
-function closeReport() {
-  showReport.value = false
-}
-async function submitReport() {
   const q = quiz.current
   if (!q) return
-  try {
-    const row = await addReport({
-      speciesId: q.media?.speciesId,
-      speciesName: q.answer,
-      sci: q.sci,
-      questionType: q.type,
-      mediaUrl: (displayMedia.value ?? q.media)?.url,
-      reason: reportReason.value,
-      suggestedAnswer: reportAnswer.value.trim() || undefined,
-      note: reportNote.value.trim() || undefined,
-    })
-    // B6：尝试上传后端（失败则留在本地，设置页可补传）
-    try {
-      await uploadReport(row, getClientId())
-      await markReportSynced(row.id)
-      track('report_submit') // 028 计量：反馈管道活跃度（无属性）
-    } catch {
-      /* 离线/后端不可用：保留 pending */
-    }
-    reportState.value = 'done'
-    setTimeout(closeReport, 1200)
-  } catch {
-    reportState.value = 'error'
+  const media = displayMedia.value ?? q.media
+  reportTarget.value = {
+    speciesId: media?.speciesId ?? q.media.speciesId,
+    speciesName: q.answer,
+    sci: q.sci,
+    questionType: q.type,
+    mediaUrl: media?.url ?? q.media.url,
   }
+  showReport.value = true
 }
 /** 科名「拉丁名+本地名」组合，随 locale 切换（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
-const tier = ref<Tier>(savedTier.value ?? quiz.tier)
+// L8 未上线（difficulty.L8_ENABLED）时忽略已存的第八档：介绍页没有该按钮，
+// 不回退会直接出现 L8 盘面选择并可开轮。2 = quiz store 默认档。
+const restoredTier = savedTier.value ?? quiz.tier
+const tier = ref<Tier>(restoredTier === 8 && !L8_ENABLED ? 2 : restoredTier)
 /** D5：介绍页的档位推荐提示（用户手动改档后清除） */
 const adaptiveHint = ref<TierSuggestion | null>(null)
 // 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）
@@ -240,11 +233,17 @@ const intro = computed(() =>
 
 // ---- 第 2/3 步：水平、形式（主界面完整显示两个区域，直接切换，无「更改」步骤） ----
 const regimeCountsData = ref<Record<QuizRegime, number> | null>(null)
-/** 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰 */
+/**
+ * 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰。
+ * 092 §4.5：记忆挑战鸟**不显示复活赛**——它不产生错题（虽然错题本可能有其它档位的记录，
+ * 池子非空，这里仍显式排除；文档"复活池恒为空"的前提不成立，故保留一处特判）。
+ */
 const visibleRegimes = computed(() => {
   const c = regimeCountsData.value
-  if (!c) return REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
-  return REGIMES.filter((r) => c[r.id] > 0)
+  const base = c
+    ? REGIMES.filter((r) => c[r.id] > 0)
+    : REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
+  return tier.value === 8 ? base.filter((r) => r.id !== 'revival') : base
 })
 function chooseTier(v: Tier) {
   tier.value = v
@@ -585,13 +584,6 @@ const galleryAudios = computed<MediaAsset[]>(() =>
     : mergePool(crossPool.value, lazyPool.value.audios),
 )
 
-/** 答疑专栏入口（011 §9）：仅当该物种有说明时显示 */
-const bankReady = ref(false)
-const faqId = computed<string | null>(() => {
-  if (!bankReady.value) return null
-  const id = quiz.current?.media?.speciesId
-  return id && speciesNoteById(id) ? id : null
-})
 /** 「下一题」；最后一题改为「查看结果」（没有第 11 题） */
 const nextLabel = computed(() =>
   quiz.index + 1 >= quiz.total ? t('quiz.viewResult') : t('quiz.next'),
@@ -768,13 +760,14 @@ async function begin() {
   started.value = true
   // 环境鸟鸣是全局功能，但测试开始后不播放（选难度阶段不算开始，见 R23）
   ambiencePlayer.stop()
-  // 087 §4.8 + 089 §6.2：L6（tier=6）也是普通开轮——store 内按档位分支到 buildNameQuestions；
-  // 计时/预载/作答交互由嵌入的 QuizPlayName 自管，经典链路零改动。卷别按模式选择传入。
+  // 087 §4.8 + 089 §6.2 + 092：L6/L7/L8 也是普通开轮——store 内按档位分支到对应构建器；
+  // 计时/作答交互由嵌入的各答题组件自管，经典链路零改动。卷别按模式选择传入。
   await quiz.start(props.type, {
     tier: tier.value,
     ...(tier.value >= 6 ? { nameMode: resolvedNameMode67() } : {}),
   })
   if (quiz.error || !quiz.questions.length) return // 错误区接管
+  if (quiz.tier === 8) return // 记忆挑战鸟：盘面素材由 QuizPlayMemory 自预热（缩略图）
   preloadQuestions(quiz.questions, 0, quiz.tier >= 6 ? 2 : 4)
   if (quiz.tier >= 6) return // L6/L7 的计时起点由各自答题组件挂载时启动
   beginQuestionTiming()
@@ -889,10 +882,6 @@ function updateInterference() {
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
-  // 答疑入口需要物种 notes（bank 通常已由 quiz.start 加载，此处兜底）
-  void loadBank()
-    .then(() => (bankReady.value = true))
-    .catch(() => {})
   if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.tier >= 6) {
     // 087 §4.8：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
     // QuizPlayName 消费（计时/预载由它做），经典链路不碰。
@@ -1053,66 +1042,16 @@ function onTouchEnd(e: TouchEvent) {
     </div>
   </Teleport>
 
-  <!-- G1 报错浮窗（本地记录） -->
-  <Teleport to="body">
-    <div
-      v-if="showReport"
-      class="wizard-overlay"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('report.title')"
-      @click.self="closeReport"
-    >
-      <div ref="reportPanelRef" class="wizard-panel report-panel">
-        <h3 class="wizard-title">
-          <Flag class="ic" :size="18" /> {{ t('report.title') }}
-        </h3>
-
-        <template v-if="reportState !== 'done'">
-          <p class="wizard-sub">{{ t('report.sub') }}</p>
-
-          <p class="report-label">{{ t('report.reasonLabel') }}</p>
-          <div class="report-reasons" role="group" :aria-label="t('report.reasonLabel')">
-            <button
-              v-for="r in REPORT_REASONS"
-              :key="r.id"
-              type="button"
-              class="reason"
-              :class="{ on: reportReason === r.id }"
-              :aria-pressed="reportReason === r.id"
-              @click="reportReason = r.id"
-            >
-              {{ t(r.labelKey) }}
-            </button>
-          </div>
-
-          <label class="report-field">
-            <span>{{ t('report.answerLabel') }}</span>
-            <input v-model="reportAnswer" type="text" :placeholder="t('report.answerPlaceholder')" />
-          </label>
-          <label class="report-field">
-            <span>{{ t('report.noteLabel') }}</span>
-            <textarea v-model="reportNote" rows="2" :placeholder="t('report.notePlaceholder')"></textarea>
-          </label>
-
-          <p v-if="reportState === 'error'" class="report-err" role="alert">
-            {{ t('report.error') }}
-          </p>
-
-          <div class="wizard-actions">
-            <button class="btn btn-primary" type="button" @click="submitReport">
-              {{ t('report.submit') }}
-            </button>
-            <button class="btn btn-secondary" type="button" @click="closeReport">
-              {{ t('common.cancel') }}
-            </button>
-          </div>
-        </template>
-
-        <p v-else class="report-done">{{ t('report.done') }}</p>
-      </div>
-    </div>
-  </Teleport>
+  <!-- G1 报错浮窗（本地记录 + 可选昵称） -->
+  <ReportDialog
+    v-if="reportTarget"
+    v-model:open="showReport"
+    :species-id="reportTarget.speciesId"
+    :species-name="reportTarget.speciesName"
+    :sci="reportTarget.sci"
+    :question-type="reportTarget.questionType"
+    :media-url="reportTarget.mediaUrl"
+  />
 
   <!-- 介绍页：第 2 步 水平（L1–L6）→ 第 3 步 地区 → 第 4 步 形式（087 §4.8：L6 是第六档） -->
   <section v-if="!started" class="card intro">
@@ -1143,17 +1082,41 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ tierDescOf(cfg) }}</span>
       </button>
     </div>
-    <!-- 089 §6.1/6.2：L6/L7 作答模式（语言名/学名）——高两档显示，不计步骤号 -->
+    <!-- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名/学名）——高两档+记忆档显示，不计步骤号 -->
     <template v-if="tier >= 6">
       <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
       <div class="tiers l6-mode">
         <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">
           <strong>{{ t('quiz6.modeLang') }}</strong>
-          <span>{{ t(tier === 7 ? 'quiz6.modeLangHintL7' : 'quiz6.modeLangHintL6') }}</span>
+          <span>{{ t(`quiz6.modeLangHint${modeHintTier}`) }}</span>
         </button>
         <button type="button" class="tier" :class="{ on: nameMode67 === 'sci' }" @click="nameMode67 = 'sci'">
           <strong>{{ t('quiz6.modeSci') }}</strong>
-          <span>{{ t(tier === 7 ? 'quiz6.modeSciHintL7' : 'quiz6.modeSciHintL6') }}</span>
+          <span>{{ t(`quiz6.modeSciHint${modeHintTier}`) }}</span>
+        </button>
+      </div>
+    </template>
+    <!-- 092 + 2026-10-27：L8 盘面二选一——只在「记忆挑战鸟」被选中后出现（缩小盘为实验档） -->
+    <template v-if="tier === 8">
+      <p class="step-cap l6-mode-cap">{{ t('memory.boardCap') }}</p>
+      <div class="tiers l6-mode">
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: memoryBoard === 'standard' }"
+          @click="memoryBoard = 'standard'"
+        >
+          <strong>{{ t('memory.boardStd') }}</strong>
+          <span>{{ t('memory.boardStdHint') }}</span>
+        </button>
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: memoryBoard === 'compact' }"
+          @click="memoryBoard = 'compact'"
+        >
+          <strong>{{ t('memory.boardMini') }}</strong>
+          <span>{{ t('memory.boardMiniHint') }}</span>
         </button>
       </div>
     </template>
@@ -1270,11 +1233,21 @@ function onTouchEnd(e: TouchEvent) {
     <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
-  <!-- 加载中 -->
+  <!-- 加载中（092：记忆挑战不预取后续题；图/音文案各自分开，绝不混写） -->
   <section v-else-if="quiz.loading" class="card center placeholder">
     <div class="spinner"></div>
-    <h2>{{ t('quiz.preparing') }}</h2>
-    <p class="muted">{{ t('quiz.preparingSub') }}</p>
+    <h2>{{ t(quiz.tier === 8 ? 'quiz.preparingMemory' : 'quiz.preparing') }}</h2>
+    <p class="muted">
+      {{
+        t(
+          quiz.tier === 8
+            ? type === 'audio'
+              ? 'quiz.preparingSubMemoryAudio'
+              : 'quiz.preparingSubMemoryImage'
+            : 'quiz.preparingSub',
+        )
+      }}
+    </p>
   </section>
 
   <!-- 出错 -->
@@ -1291,6 +1264,8 @@ function onTouchEnd(e: TouchEvent) {
   <QuizPlayName v-else-if="quiz.tier === 6" :type="type" />
   <!-- 089：L7 答题区（输入题）——自管计时（音从开播起）/素材切换/IME/判分反馈 -->
   <QuizPlayInput v-else-if="quiz.tier === 7" :type="type" />
+  <!-- 092：L8 记忆挑战鸟答题区（翻牌配对）——自管盘面/正计时/音频自动播放/退出 -->
+  <QuizPlayMemory v-else-if="quiz.tier === 8" :type="type" />
 
   <!-- 答题 -->
   <template v-else-if="quiz.current">
@@ -1360,12 +1335,6 @@ function onTouchEnd(e: TouchEvent) {
         :label="t('gallery.title')"
         @select="selected = $event"
       />
-
-      <!-- 答疑专栏入口（011 §9）：仅该物种有说明时显示 -->
-      <RouterLink v-if="faqId" class="faq-link" :to="`/faq/${faqId}`">
-        <HelpCircle class="ic" :size="14" />
-        {{ displayType === 'audio' ? t('faq.whyAudio') : t('faq.whyImage') }}
-      </RouterLink>
 
       <!-- G1 报错按钮：图/音/答案有问题 → 先本地记录 -->
       <button class="report-link" type="button" @click="openReport">
@@ -2056,27 +2025,6 @@ function onTouchEnd(e: TouchEvent) {
 .quiz-attr {
   margin-top: 14px;
 }
-/* 答疑专栏入口（011 §9） */
-.faq-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 12px;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #f0f4f2;
-  color: var(--text-light);
-  font-size: 0.76rem;
-  font-weight: 600;
-  transition: all 0.18s ease;
-}
-.faq-link:hover {
-  color: var(--primary);
-  border-color: var(--primary-light);
-  background: #eaf4ef;
-  text-decoration: none;
-}
 /* 自动切换浮窗（R43）：可点击「取消切换」，取消后回落到下方常驻 */
 .correct-toast {
   position: fixed;
@@ -2272,77 +2220,5 @@ function onTouchEnd(e: TouchEvent) {
 }
 .report-link:hover {
   color: var(--primary);
-}
-.report-panel {
-  text-align: left;
-  max-width: 400px;
-}
-.report-panel .wizard-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.report-panel .wizard-title .ic {
-  color: var(--primary);
-}
-.report-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin: 12px 0 6px;
-}
-.report-reasons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.report-reasons .reason {
-  padding: 8px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: var(--text);
-  font-size: 0.82rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-.report-reasons .reason.on {
-  border-color: var(--primary);
-  background: #eaf4ef;
-  font-weight: 700;
-}
-.report-field {
-  display: block;
-  margin-top: 12px;
-}
-.report-field span {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-light);
-  margin-bottom: 4px;
-}
-.report-field input,
-.report-field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: var(--text);
-  resize: vertical;
-}
-.report-err {
-  margin-top: 10px;
-  color: var(--wrong);
-  font-size: 0.8rem;
-}
-.report-done {
-  margin: 12px 0;
-  text-align: center;
-  color: var(--primary);
-  font-weight: 700;
 }
 </style>

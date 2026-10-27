@@ -8,7 +8,7 @@
  * 默认用户 + 默认档案（档案名 = 最早一轮的日期，无记录则建档日），meta.schema=2 标记；
  * versionchange 事务只在版本跃迁时执行一次，天然幂等（013 §2.1）。
  */
-import type { MediaType, NameMode, Tier } from '@/types'
+import type { MediaType, MemoryRating, NameMode, Tier } from '@/types'
 
 export interface RoundItem {
   speciesId: string
@@ -54,6 +54,18 @@ export interface RoundRecord {
   source?: 'normal' | 'wrong-practice'
   /** 退出确认点了「取消」后继续答完本轮（隐藏徽章"浪子回头"，R28） */
   escapedQuit?: boolean
+  /**
+   * 092 记忆挑战鸟（仅 tier=8 轮次填写）：纯计时评语汇总。
+   * total=pairs、correct=matched（完成度，仅供复盘展示）；评语只看 durationMs。
+   * 该类轮次**不参与**称号/徽章/统计（getStats 与 evaluate* 显式跳过 tier 8）。
+   */
+  memory?: {
+    /** 目标对数（盘面实际对数，通常 12；小地区池不足时更少） */
+    pairs: number
+    /** 完成对数（完成时 = pairs；中途退出不落库，理论恒相等） */
+    matched: number
+    rating: MemoryRating
+  }
   /** 归属（013 A0，落库时写入） */
   profileId?: string
   archiveId?: string
@@ -724,7 +736,10 @@ function maxStreak(items: RoundItem[]): number {
 
 /** 汇总统计（活动档；用于徽章判定与"我的"页面） */
 export async function getStats(): Promise<Stats> {
-  const [rounds, wrong] = await Promise.all([listRounds(), getWrongBook()])
+  const [allRounds, wrong] = await Promise.all([listRounds(), getWrongBook()])
+  // 092 记忆挑战鸟（tier=8）：纯计时玩法，不设错题、不参与称号与徽章——
+  // 统计里整轮跳过（含轮数/题数/正确率/满分轮/maxTier/跨轮连对/时段徽章），只保留复盘展示。
+  const rounds = allRounds.filter((r) => r.tier !== 8)
   const species = new Set<string>()
   const correctSpecies = new Set<string>()
   let totalQuestions = 0

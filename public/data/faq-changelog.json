@@ -2,6 +2,14 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-10-28",
+      "titleZh": "绿头鸭：四张不适合作答的图已停用，补入四张成鸟图",
+      "titleEn": "Mallard: four unsuitable photos retired, four adult photos added",
+      "bodyZh": "图 2 是家鸭的凤头品种（头顶毛冠）；图 3 是无法定种的小鸭；图 4 是白色家鸭；图 5 是雌鸟背光在喂食器上、主体难辨——四张均已停用。保留原图 1（雄雌并肩、标准侧身），新增四张：雄鸟水面近照、雄鸟雪地、雌鸟飞行、双雄争偶，占用 image-6/7/8/9，老缓存不会看到旧图。首图随之更换，题库同步更新。",
+      "bodyEn": "Photo 2 was a crested domestic duck (tuft on the head); photo 3 a brood of ducklings that cannot be confirmed as Mallard; photo 4 a white domestic duck; photo 5 a backlit female on a feeder with an unrecognisable subject. All four are retired. Original 1 (male and female side by side, standard profile) is kept, and four new photos are added: male close-up on water, male on snow, female in flight, two males competing. They occupy image-6/7/8/9, so old caches will not show the retired images. The lead photo has changed and the quiz bank follows.",
+      "speciesId": "anas-platyrhynchos"
+    },
+    {
       "date": "2026-10-22",
       "titleZh": "赭红尾鸲：脚环特写与白化个体两张图已停用，补入雄/雌各一张",
       "titleEn": "Black Redstart: band close-up and leucistic bird retired, one male and one female added",

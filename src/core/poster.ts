@@ -36,6 +36,12 @@ export interface PosterData {
   wornBadgeIcon?: string
   /** R33：用户昵称（有则显示在日期前） */
   nickname?: string
+  /**
+   * 092 记忆挑战鸟（tier=8）：**用时 + 评语**替代分数/正确率/错题回顾。
+   * time/rating 是调用方按 locale 拼好的展示文本（core 不 import i18n）；
+   * 有该字段时正文区画 评语标题 + 大号用时 + 「N 对全配平」，不画错题行。
+   */
+  memory?: { time: string; rating: string; pairs: number }
   wrong: PosterWrong[]
 }
 
@@ -85,6 +91,10 @@ export interface PosterStrings {
    * 故插值交给 i18n 带参完成，画布侧不再做字符串替换（2026-10-08 修复，见 docs/034）。
    */
   mistakenAs: (name: string) => string
+  /**
+   * 092 记忆挑战鸟：记忆轮的副行「N 对全部配对成功」（带参构造，理由同 mistakenAs）。
+   */
+  memoryPairsLine: (pairs: number) => string
   /** 页脚数据来源 */
   sourceLine: string
   /** 二维码下方提示 */
@@ -504,85 +514,122 @@ export function drawPoster(
   if (opts.includeResults !== false) {
     // 正文
     drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
-    const perfect = data.total > 0 && data.correct === data.total
-    drawSegments(
-      ctx,
-      [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
-      W / 2,
-      650,
-      'center',
-      box,
-    )
-    drawSegments(
-      ctx,
-      [
-        { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
-        { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
-      ],
-      W / 2,
-      860,
-      'center',
-      box,
-    )
-    const accText = strings.accuracyLine
-    // 2026-10-25 用户定：题目范围接在「正确率 … · L6 半鸟人」**后面**（同一行，换色区分），
-    // 不再单独占上方一行——「中国上海看图版 L7」与「全球版」在此即可区分。
-    drawSegments(
-      ctx,
-      [
-        { text: accText, color: P.muted, weight: 500, size: 28 },
-        ...(data.regionLabel
-          ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
-          : []),
-      ],
-      W / 2,
-      950,
-      'center',
-      box,
-    )
-
-    // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
-    drawSegments(ctx, [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
-    const rows = buildWrongRows(data.wrong, strings.overflow)
-    if (rows.length === 0) {
+    if (data.memory) {
+      // 092 记忆挑战鸟：**用时 + 评语**，不显示 0–100 分数（docs/092 §4.1/§8.4）——
+      // 评语作主标题、大号用时替代 correct/total、副行「N 对全配平」；无错题区。
       drawSegments(
         ctx,
-        [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 28 }],
-        60,
-        1070,
-        'left',
+        [{ text: data.memory.rating, color: P.dark, weight: 800, size: 64 }],
+        W / 2,
+        650,
+        'center',
+        box,
+      )
+      drawSegments(
+        ctx,
+        [{ text: data.memory.time, color: P.accent, weight: 800, size: 150 }],
+        W / 2,
+        860,
+        'center',
+        box,
+      )
+      drawSegments(
+        ctx,
+        [
+          // 游戏名称必须出现在海报上（2026-10-27 用户反馈：记忆轮原来只有用时，看不出是什么游戏）
+          { text: data.tierLabel, color: P.dark, weight: 700, size: 28 },
+          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 28 },
+          ...(data.regionLabel
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            : []),
+        ],
+        W / 2,
+        950,
+        'center',
         box,
       )
     } else {
-      const colWidth = 440
-      const rowGap = 48
-      const top = 1058
-      ctx.textAlign = 'left'
-      rows.forEach((w, i) => {
-        const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
-        const y = top + (i % (POSTER_WRONG_MAX / 2)) * rowGap
-        if (w.placeholder) {
-          drawSegments(
-            ctx,
-            [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 25 }],
-            x,
-            y,
-            'left',
-            box,
-          )
-          return
-        }
-        const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
-        const mineText = w.timedOut ? strings.timedOut : strings.mistakenAs(w.chosen ?? '—')
-        ctx.font = `600 26px ${FONT}`
-        const headW = ctx.measureText(head.text).width
-        const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
-        drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 24 }], x, y, 'left', box)
-      })
+      const perfect = data.total > 0 && data.correct === data.total
+      drawSegments(
+        ctx,
+        [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
+        W / 2,
+        650,
+        'center',
+        box,
+      )
+      drawSegments(
+        ctx,
+        [
+          { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
+          { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
+        ],
+        W / 2,
+        860,
+        'center',
+        box,
+      )
+      const accText = strings.accuracyLine
+      // 2026-10-25 用户定：题目范围接在「正确率 … · L6 半鸟人」**后面**（同一行，换色区分），
+      // 不再单独占上方一行——「中国上海看图版 L7」与「全球版」在此即可区分。
+      drawSegments(
+        ctx,
+        [
+          { text: accText, color: P.muted, weight: 500, size: 28 },
+          ...(data.regionLabel
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            : []),
+        ],
+        W / 2,
+        950,
+        'center',
+        box,
+      )
+
+      // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
+      drawSegments(ctx, [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
+      const rows = buildWrongRows(data.wrong, strings.overflow)
+      if (rows.length === 0) {
+        drawSegments(
+          ctx,
+          [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 28 }],
+          60,
+          1070,
+          'left',
+          box,
+        )
+      } else {
+        const colWidth = 440
+        const rowGap = 48
+        const top = 1058
+        ctx.textAlign = 'left'
+        rows.forEach((w, i) => {
+          const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
+          const y = top + (i % (POSTER_WRONG_MAX / 2)) * rowGap
+          if (w.placeholder) {
+            drawSegments(
+              ctx,
+              [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 25 }],
+              x,
+              y,
+              'left',
+              box,
+            )
+            return
+          }
+          const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
+          const mineText = w.timedOut ? strings.timedOut : strings.mistakenAs(w.chosen ?? '—')
+          ctx.font = `600 26px ${FONT}`
+          const headW = ctx.measureText(head.text).width
+          const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
+          drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 24 }], x, y, 'left', box)
+        })
+      }
     }
   } else {
     // 2026-10-25 用户定：取消「包含本组测试内容」= 隐藏**详情**（错题回顾等），
     // 但**分数与题目范围照常显示**——成绩本身是分享主体，隐藏它反而失去海报意义。
+    // 092 记忆轮：这里的"分数"就是用时（评语在 includeResults 时作主标题，这里一并显示）。
     drawSegments(
       ctx,
       [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }],
@@ -591,39 +638,64 @@ export function drawPoster(
       'center',
       box,
     )
-    const perfect = data.total > 0 && data.correct === data.total
-    drawSegments(
-      ctx,
-      [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
-      W / 2,
-      700,
-      'center',
-      box,
-    )
-    drawSegments(
-      ctx,
-      [
-        { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
-        { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
-      ],
-      W / 2,
-      890,
-      'center',
-      box,
-    )
-    drawSegments(
-      ctx,
-      [
-        { text: strings.accuracyLine, color: P.muted, weight: 500, size: 28 },
-        ...(data.regionLabel
-          ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
-          : []),
-      ],
-      W / 2,
-      960,
-      'center',
-      box,
-    )
+    if (data.memory) {
+      drawSegments(
+        ctx,
+        [{ text: `${data.memory.rating} · ${data.memory.time}`, color: P.dark, weight: 800, size: 64 }],
+        W / 2,
+        700,
+        'center',
+        box,
+      )
+      drawSegments(
+        ctx,
+        [
+          { text: data.tierLabel, color: P.dark, weight: 700, size: 28 },
+          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 28 },
+          ...(data.regionLabel
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            : []),
+        ],
+        W / 2,
+        960,
+        'center',
+        box,
+      )
+    } else {
+      const perfect = data.total > 0 && data.correct === data.total
+      drawSegments(
+        ctx,
+        [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
+        W / 2,
+        700,
+        'center',
+        box,
+      )
+      drawSegments(
+        ctx,
+        [
+          { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
+          { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
+        ],
+        W / 2,
+        890,
+        'center',
+        box,
+      )
+      drawSegments(
+        ctx,
+        [
+          { text: strings.accuracyLine, color: P.muted, weight: 500, size: 28 },
+          ...(data.regionLabel
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            : []),
+        ],
+        W / 2,
+        960,
+        'center',
+        box,
+      )
+    }
   }
 
   // 页脚（左对齐，给右下角二维码让位）

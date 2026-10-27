@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Flag, ThumbsDown, ThumbsUp } from 'lucide-vue-next'
-import { loadBank, speciesById, speciesName, type BankSpecies } from '@/core/bank'
+import {
+  loadBank,
+  loadSpeciesAssets,
+  speciesById,
+  speciesName,
+  type BankSpecies,
+} from '@/core/bank'
 import { listPublicReports, voteReport, type PublicReport } from '@/core/reportsApi'
 import { getClientId } from '@/core/anonymousId'
 import { currentLocale } from '@/i18n'
+import AttributionLine from '@/components/AttributionLine.vue'
+import type { MediaAsset } from '@/types'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -15,6 +23,10 @@ const failed = ref(false)
 const total = ref(0)
 const reports = ref<PublicReport[]>([])
 const myVotes = ref<Record<string, number>>({})
+/** species_id → 完整素材池（029 分片；桶级去重/重试在 bank 内部），按 URL 找回署名素材用 */
+const pools = reactive<Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] } | null>>({})
+/** 内联加载失败的素材（图 404/解码失败；音 src 出错）→ 回退为外链 */
+const mediaFail = reactive(new Set<string>())
 
 const speciesFilter = computed(() => (route.query.species as string) || undefined)
 
@@ -24,6 +36,13 @@ onMounted(async () => {
     const res = await listPublicReports({ species: speciesFilter.value, limit: 50 })
     reports.value = res.reports
     total.value = res.total
+    for (const r of reports.value) {
+      const id = r.species_id
+      if (!id || id in pools) continue
+      void loadSpeciesAssets(id)
+        .then((p) => (pools[id] = p ?? null))
+        .catch(() => (pools[id] = null))
+    }
   } catch {
     failed.value = true
   } finally {
@@ -38,10 +57,32 @@ function displayName(r: PublicReport): string {
   const sp = speciesOf(r.species_id)
   return sp ? speciesName(sp, currentLocale()) : r.species_name || r.species_id || ''
 }
-function thumbOf(r: PublicReport): string | undefined {
+function isAudio(r: PublicReport): boolean {
+  return r.question_type === 'audio'
+}
+/**
+ * 报错涉及的素材 → 带署名的 MediaAsset（铁律 5）。
+ * 报错只存了 media_url；要内联展示必须找回落到该 URL 的池内素材拿署名，
+ * 找不到（素材库已更新/分片加载失败）就不内联展示，只给外链——不展示无署名媒体。
+ */
+function matchedMedia(r: PublicReport): MediaAsset | undefined {
+  const url = r.media_url
+  if (!url) return undefined
   const sp = speciesOf(r.species_id)
-  const img = sp?.images?.[0] ?? sp?.image ?? null
-  return img ? img.thumbUrl || img.url : undefined
+  const pool = r.species_id ? pools[r.species_id] : null
+  const wantAudio = isAudio(r)
+  const cands: MediaAsset[] = []
+  if (pool) cands.push(...(wantAudio ? (pool.audios ?? []) : (pool.images ?? [])))
+  if (sp) {
+    const core = wantAudio ? [sp.audio, ...(sp.audios ?? [])] : [sp.image, ...(sp.images ?? [])]
+    for (const m of core) if (m) cands.push(m)
+  }
+  return (
+    cands.find((m) => m.url === url) ??
+    cands.find(
+      (m) => m.thumbUrl === url || m.avifUrl === url || m.xlUrl === url || m.originalUrl === url,
+    )
+  )
 }
 function dateOf(at: number): string {
   try {
@@ -75,47 +116,85 @@ async function vote(r: PublicReport, value: 1 | -1) {
 
     <ul v-else class="list">
       <li v-for="r in reports" :key="r.id" class="item">
-        <img v-if="thumbOf(r)" class="thumb" :src="thumbOf(r)" alt="" loading="lazy" />
-        <div class="body">
-          <div class="line1">
-            <RouterLink v-if="r.species_id" class="name" :to="`/species/${r.species_id}`">
-              {{ displayName(r) }}
-            </RouterLink>
-            <span v-else class="name">{{ displayName(r) }}</span>
-            <span class="reason">{{ t(`report.reasons.${r.reason}`) }}</span>
-            <span v-if="r.status === 'fixed'" class="status fixed">{{ t('reports.status.fixed') }}</span>
-          </div>
-          <!-- 061 M2：公开页也把「建议答案」提到前面并加重（与 admin 一致） -->
-          <p v-if="r.suggested_answer" class="suggest">
-            {{ t('reports.suggested', { name: r.suggested_answer }) }}
+        <RouterLink v-if="r.species_id" class="name" :to="`/species/${r.species_id}`">
+          {{ displayName(r) }}
+        </RouterLink>
+        <span v-else class="name">{{ displayName(r) }}</span>
+
+        <!-- 做题时报错的那条素材（含署名行）；找不到署名素材则只给外链 -->
+        <div v-if="r.media_url" class="media">
+          <template v-if="matchedMedia(r) && !mediaFail.has(r.id)">
+            <img
+              v-if="!isAudio(r)"
+              class="media-img"
+              :src="r.media_url"
+              loading="lazy"
+              alt=""
+              @error="mediaFail.add(r.id)"
+            />
+            <!-- crossorigin 必须先于 src 设置（Safari 只读设置 src 那一刻的值，docs/033） -->
+            <audio
+              v-else
+              class="media-audio"
+              crossorigin="anonymous"
+              :src="r.media_url"
+              controls
+              preload="none"
+              @error="mediaFail.add(r.id)"
+            ></audio>
+            <AttributionLine :media="matchedMedia(r)" />
+          </template>
+          <p v-else class="media-missing">
+            {{ t('reports.mediaMissing') }}
+            <a :href="r.media_url" target="_blank" rel="noopener noreferrer">
+              {{ t('reports.openMedia') }}
+            </a>
           </p>
-          <p v-if="r.note" class="note">{{ r.note }}</p>
-          <p class="meta">{{ dateOf(r.created_at) }}</p>
         </div>
-        <div class="votes">
-          <button
-            type="button"
-            class="vote"
-            :class="{ on: myVotes[r.id] === 1 }"
-            :aria-pressed="myVotes[r.id] === 1"
-            :aria-label="t('reports.upvoteCount', { n: r.up })"
-            @click="vote(r, 1)"
-          >
-            <ThumbsUp :size="15" /> {{ r.up }}
-          </button>
-          <button
-            type="button"
-            class="vote down"
-            :class="{ on: myVotes[r.id] === -1 }"
-            :aria-pressed="myVotes[r.id] === -1"
-            :aria-label="t('reports.downvoteCount', { n: r.down })"
-            @click="vote(r, -1)"
-          >
-            <ThumbsDown :size="15" /> {{ r.down }}
-          </button>
+
+        <p class="sec-title">{{ t('reports.userReport') }}</p>
+        <p class="type-row">
+          <span class="reason">{{ t(`report.reasons.${r.reason}`) }}</span>
+          <span v-if="r.status === 'fixed'" class="status fixed">
+            {{ t('reports.status.fixed') }}
+          </span>
+        </p>
+        <p v-if="r.note" class="note">{{ r.note }}</p>
+        <p v-if="r.suggested_answer" class="suggest">
+          {{ t('reports.suggested', { name: r.suggested_answer }) }}
+        </p>
+
+        <div class="vote-row">
+          <span class="vote-q">{{ t('reports.voteQuestion') }}</span>
+          <div class="vote-btns">
+            <button
+              type="button"
+              class="vote"
+              :class="{ on: myVotes[r.id] === 1 }"
+              :aria-pressed="myVotes[r.id] === 1"
+              :aria-label="t('reports.upvoteCount', { n: r.up })"
+              @click="vote(r, 1)"
+            >
+              <ThumbsUp :size="14" /> {{ t('reports.agree') }} <b>{{ r.up }}</b>
+            </button>
+            <button
+              type="button"
+              class="vote down"
+              :class="{ on: myVotes[r.id] === -1 }"
+              :aria-pressed="myVotes[r.id] === -1"
+              :aria-label="t('reports.downvoteCount', { n: r.down })"
+              @click="vote(r, -1)"
+            >
+              <ThumbsDown :size="14" /> {{ t('reports.disagree') }} <b>{{ r.down }}</b>
+            </button>
+          </div>
         </div>
+
+        <p class="meta">{{ dateOf(r.created_at) }}</p>
       </li>
     </ul>
+
+    <p class="contact">{{ t('reports.contact') }}</p>
   </section>
 </template>
 
@@ -149,89 +228,132 @@ async function vote(r: PublicReport, value: 1 | -1) {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   max-width: 680px;
   margin: 0 auto;
   text-align: left;
 }
 .item {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 10px 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
 }
-.thumb {
-  width: 64px;
-  height: 52px;
-  object-fit: cover;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-  background: #f0f4f2;
+.name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text);
 }
-.body {
-  flex: 1;
-  min-width: 0;
+a.name:hover {
+  color: var(--primary);
 }
-.line1 {
+.media {
+  text-align: center;
+}
+.media-img {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #f5f8f6;
+}
+.media-audio {
+  width: 100%;
+  max-width: 420px;
+}
+.media :deep(.attribution) {
+  text-align: center;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.media-missing {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  background: #f5f8f6;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  justify-content: center;
+  align-items: baseline;
+}
+.media-missing a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sec-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.type-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
 }
-.name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text);
-}
 .reason {
-  font-size: 0.72rem;
-  padding: 1px 8px;
+  font-size: 0.74rem;
+  padding: 2px 9px;
   border-radius: var(--radius-xs);
   background: #fdf3d8;
   color: #8a6d00;
 }
 .status.fixed {
   font-size: 0.72rem;
-  padding: 1px 8px;
+  padding: 2px 9px;
   border-radius: var(--radius-xs);
   background: #eaf4ef;
   color: var(--primary);
 }
 .note {
-  margin-top: 4px;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--text);
 }
 .suggest {
-  margin-top: 3px;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--primary);
 }
-.meta {
-  margin-top: 4px;
-  font-size: 0.72rem;
-  color: var(--text-light);
-}
-.votes {
+.vote-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+.vote-q {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.vote-btns {
+  display: flex;
+  gap: 8px;
 }
 .vote {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: 5px;
+  padding: 5px 12px;
   border: 2px solid var(--border);
   border-radius: 999px;
   background: #fff;
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  font-family: inherit;
   cursor: pointer;
 }
 .vote:hover {
@@ -247,6 +369,17 @@ async function vote(r: PublicReport, value: 1 | -1) {
   border-color: var(--wrong);
   background: #fdecee;
   color: var(--wrong);
+}
+.meta {
+  font-size: 0.72rem;
+  color: var(--text-light);
+}
+.contact {
+  max-width: 680px;
+  margin: 18px auto 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-light);
 }
 .empty {
   margin: 16px 0;

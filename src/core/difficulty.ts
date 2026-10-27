@@ -128,6 +128,22 @@ export const TIERS: Record<Tier, TierConfig> = {
     commonness: [3, 4], // 与 L4/L5 同档的常见度口径（高难=少见鸟）
     mediaPoolSize: 5,
   },
+  /**
+   * L8 记忆挑战鸟（docs/092；2026-10-27 定稿）：翻牌配对（第八档）。
+   * 12 对「图/音 ↔ 鸟名」合区 4×6 盘面；纯正计时 + 三档评语（memoryRating.ts），
+   * 无限时、无选项、不进错题本、不参与称号与徽章（getStats/evaluate* 跳过 tier 8）。
+   * optionCount/distractor/timeLimitSec 为类型完备的代表值，玩法不使用；
+   * 每对只用首选素材（标准照/最佳录音）；常见度全开——难度梯度只在名称体系（zh/en vs sci）。
+   */
+  8: {
+    tier: 8,
+    labelKey: 'difficulty.l8.label',
+    descKey: 'difficulty.l8.desc',
+    optionCount: 2, // 每对 2 张牌；代表值（记忆翻牌无选项）
+    distractor: 'same',
+    commonness: [1, 2, 3, 4],
+    mediaPoolSize: 1,
+  },
 }
 
 /**
@@ -138,7 +154,16 @@ export function timeLimitFor(cfg: TierConfig, type: MediaType): number | undefin
   return type === 'audio' ? (cfg.timeLimitSecAudio ?? cfg.timeLimitSec) : cfg.timeLimitSec
 }
 
-/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6） */
+/**
+ * L8 记忆挑战鸟正式上线开关（2026-10-28）：
+ * - false = 介绍页难度按钮**不上架第八档**（看图/听音同），已存的「上次档位 = 8」
+ *   在介绍页回退默认档（QuizPlay）；玩法代码与数据链路全部保留，本地历史里的
+ *   L8 记录照常显示（不伪造用户数据）。
+ * - 正式推出时：改回 true 重新构建即可，无其他改动。
+ */
+export const L8_ENABLED = false
+
+/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6；L8 = 092） */
 export const TIER_LIST: TierConfig[] = [
   TIERS[1],
   TIERS[2],
@@ -147,7 +172,43 @@ export const TIER_LIST: TierConfig[] = [
   TIERS[5],
   TIERS[6],
   TIERS[7],
+  ...(L8_ENABLED ? [TIERS[8]] : []),
 ]
+
+/**
+ * L8 记忆挑战鸟盘面常量（docs/092 §1/§8 + 2026-10-27 用户追加的盘面二选一）：
+ * - standard：12 对；**桌面 6 列×4 行 / 手机（≤700px）4 列×6 行**，正式档位；
+ * - compact：6 对 3 列×4 行，**实验性缩小盘**（用户试玩"是否应该降级"，结论出来前保留，
+ *   不行就删）。评语阈值独立——对数减半阈值不是线性减半（开局找首对的开销摊不薄），
+ *   暂按图 20/30s、音 35/50s 暂定，实测后调整。
+ * 对数是评语阈值的前提，改这里必须同步实测阈值。
+ */
+/**
+ * L8 记忆挑战鸟盘面常量（docs/092 §1/§8 + 2026-10-27 用户改定）：
+ * - standard：12 对；**桌面 6 列×4 行 / 手机（≤640px）4 列×6 行**，正式档位；
+ * - compact：6 对 3 列×4 行，缩小盘（用户在试"是否应该降级"，结论前保留）。
+ * 评语阈值（2026-10-27 用户定）：**大盘 60/90s、小盘 30/60s，看图与听音共用同一套**
+ * （不再按题型分档）。对数是评语阈值的前提，改这里必须同步实测阈值。
+ */
+export type MemoryBoardKind = 'standard' | 'compact'
+
+export interface MemoryBoardDef {
+  /** 对数（= 24 张牌的一半 / 12 张牌的一半） */
+  pairs: number
+  /** i18n 键尾段（memory.board*） */
+  key: MemoryBoardKind
+  /** 天才 / 厉害的用时上限（ms）；两种题型共用 */
+  geniusMs: number
+  awesomeMs: number
+}
+
+export const MEMORY_BOARDS: Record<MemoryBoardKind, MemoryBoardDef> = {
+  standard: { pairs: 12, key: 'standard', geniusMs: 60_000, awesomeMs: 90_000 },
+  compact: { pairs: 6, key: 'compact', geniusMs: 30_000, awesomeMs: 60_000 },
+}
+
+/** 默认盘面（未选择/旧设置时） */
+export const MEMORY_DEFAULT_BOARD: MemoryBoardKind = 'standard'
 
 /**
  * L6 半鸟人的分题型配置（docs/081 §7 + README，2026-10-24 修订）：

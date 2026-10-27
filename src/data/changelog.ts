@@ -26,6 +26,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-27',
+    zh: {
+      title: '报错可留昵称',
+      items: [
+        '反馈问题时可填写昵称，用于更正日志的致谢；不填也可以提交',
+        '这里填的昵称与「我的」页的昵称互通，填一次两处都在',
+        '管理端能看到每条反馈的昵称',
+      ],
+    },
+    en: {
+      title: 'Leave a nickname with your report',
+      items: [
+        'You can add a nickname when reporting an issue, used to credit you in the fix log; leaving it empty is fine',
+        'The nickname is shared with the one on your profile page — set it once, it applies to both',
+        'The admin view now shows the reporter nickname',
+      ],
+    },
+  },
+  {
     date: '2026-10-26',
     zh: {
       title: '新的「关于」页与更新日志',
