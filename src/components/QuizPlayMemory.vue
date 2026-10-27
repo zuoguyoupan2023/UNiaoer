@@ -137,17 +137,15 @@ function isSettled(card: MemoryCard): boolean {
 }
 
 function flip(card: MemoryCard) {
-  // 冷却期点的是刚配错、还翻着的音牌 → 再听一遍（一次只响一个；看图/名字牌无效）
-  if (
-    lock.value &&
-    cdIdx.value?.includes(card.idx) &&
-    props.type === 'audio' &&
-    card.kind === 'media'
-  ) {
-    attemptPlay(card)
-    return
-  }
-  if (lock.value || finished.value || faceUp.value[card.idx] || isSettled(card)) return
+  // 已翻开（含冷却中配错的两张）与已配对的牌：点击无反应
+  if (finished.value || faceUp.value[card.idx] || isSettled(card)) return
+  // 冷却期点隐藏的牌 = 提前继续：配错两张立即盖回（停播），所点的牌翻开当新的第一张
+  if (lock.value) endCooldown()
+  openAndCompare(card)
+}
+
+/** 翻开一张牌并进入配对比较：第一张 → 记住；第二张 → 判定配对/配错 */
+function openAndCompare(card: MemoryCard) {
   startTimer() // 计时从第一张翻开起（docs/092 §4；已开表则空操作）
   faceUp.value[card.idx] = true
   if (props.type === 'audio' && card.kind === 'media' && settings.autoplayAudio) attemptPlay(card)
@@ -167,7 +165,7 @@ function flip(card: MemoryCard) {
     }
     if (matchedPairs.value.size >= quiz.questions.length) finish()
   } else {
-    // 配错：冷却期（图 2s / 音 5s + 可见倒计时）后两张盖回（位置不变）；盖回即停播
+    // 配错：冷却期（图 2s / 音 5s + 可见倒计时）后盖回；期间点隐藏牌可提前继续
     lock.value = true
     cdIdx.value = [a.idx, b.idx]
     const ms = MISMATCH_MS[props.type]
@@ -179,17 +177,29 @@ function flip(card: MemoryCard) {
         cdRemain.value = left
       }, 100)
     }
-    cooldownTimer = window.setTimeout(() => {
-      clearCooldownTimers()
-      cdIdx.value = null
-      cdRemain.value = null
-      faceUp.value[a.idx] = false
-      faceUp.value[b.idx] = false
-      pauseCard(a) // 盖回即停播：不许上一张的声音拖进下一次翻牌（用户 2026-10-27 定）
-      pauseCard(b)
-      lock.value = false
-    }, ms)
+    cooldownTimer = window.setTimeout(endCooldown, ms)
   }
+}
+
+/** 立即盖回冷却中的两张配错牌（自然到点或用户提前继续），停播、解锁 */
+function endCooldown() {
+  clearCooldownTimers()
+  const cd = cdIdx.value
+  if (cd) {
+    const a = cards.value[cd[0]!]
+    const b = cards.value[cd[1]!]
+    if (a) {
+      faceUp.value[a.idx] = false
+      pauseCard(a) // 盖回即停播：不许上一张的声音拖进下一次翻牌
+    }
+    if (b) {
+      faceUp.value[b.idx] = false
+      pauseCard(b)
+    }
+  }
+  cdIdx.value = null
+  cdRemain.value = null
+  lock.value = false
 }
 
 // ---- 音频：每张音牌独立 <audio>（同牌常驻，preload 预热），共享"首次手势已解锁"状态 ----
