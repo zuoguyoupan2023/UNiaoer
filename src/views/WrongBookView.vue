@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Bird, BookX, Eye, Headphones } from 'lucide-vue-next'
+import { Bird, BookX, Eye, Flag, Headphones } from 'lucide-vue-next'
 import { useQuizStore } from '@/stores/quiz'
 import {
   clearWrong,
@@ -19,6 +19,7 @@ import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const router = useRouter()
 const quiz = useQuizStore()
@@ -97,6 +98,32 @@ onMounted(async () => {
 async function remove(speciesId: string) {
   await removeWrong(speciesId)
   await refresh()
+}
+
+/** 报错入口：从错题本/历史直接对某个素材报错（与做题中的报错同一浮窗与同一落库） */
+const showReport = ref(false)
+const reportTarget = ref<{
+  speciesId: string
+  speciesName: string
+  sci: string
+  questionType: MediaType
+  mediaUrl: string
+} | null>(null)
+function openReport(e: {
+  speciesId: string
+  answer: string
+  sci: string
+  type: MediaType
+  mediaUrl: string
+}) {
+  reportTarget.value = {
+    speciesId: e.speciesId,
+    speciesName: nameOf(e.speciesId, e.answer),
+    sci: e.sci,
+    questionType: e.type,
+    mediaUrl: e.mediaUrl,
+  }
+  showReport.value = true
 }
 
 async function clearAll() {
@@ -194,9 +221,14 @@ function fmt(at: number) {
               :media="toAsset(e.speciesId, e.type, e.mediaUrl, e.source, e.author, e.license)"
             />
           </div>
-          <button class="btn btn-secondary btn-sm" @click="remove(e.speciesId)">
-            {{ t('common.remove') }}
-          </button>
+          <div class="entry-actions">
+            <button class="btn btn-secondary btn-sm" @click="openReport(e)">
+              <Flag class="ic" :size="13" /> {{ t('report.button') }}
+            </button>
+            <button class="btn btn-secondary btn-sm" @click="remove(e.speciesId)">
+              {{ t('common.remove') }}
+            </button>
+          </div>
           <!-- 同种其它图/音（对齐结果页/轮次历史） -->
           <SpeciesGallery
             class="item-gallery"
@@ -258,6 +290,9 @@ function fmt(at: number) {
             <AttributionLine
               :media="toAsset(e.speciesId, e.type, e.mediaUrl, e.source, e.author, e.license)"
             />
+            <button class="btn btn-secondary btn-sm" @click="openReport(e)">
+              <Flag class="ic" :size="13" /> {{ t('report.button') }}
+            </button>
           </div>
           <!-- 同种其它图/音（对齐结果页/轮次历史） -->
           <SpeciesGallery
@@ -270,6 +305,17 @@ function fmt(at: number) {
         </li>
       </ul>
     </template>
+
+    <!-- 报错浮窗（与做题中的报错共用：本地留痕 + 可选昵称） -->
+    <ReportDialog
+      v-if="reportTarget"
+      v-model:open="showReport"
+      :species-id="reportTarget.speciesId"
+      :species-name="reportTarget.speciesName"
+      :sci="reportTarget.sci"
+      :question-type="reportTarget.questionType"
+      :media-url="reportTarget.mediaUrl"
+    />
   </section>
 </template>
 
@@ -336,6 +382,15 @@ function fmt(at: number) {
 .item-gallery {
   flex-basis: 100%;
   min-width: 0;
+}
+.entry-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: center;
+}
+.entry-actions .ic {
+  margin-right: 2px;
 }
 .name {
   font-weight: 700;

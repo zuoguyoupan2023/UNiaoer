@@ -6,6 +6,7 @@ import {
   CircleCheck,
   CircleX,
   Eye,
+  Flag,
   Headphones,
   History,
   Images,
@@ -32,11 +33,12 @@ import {
   type ShareLedgerEntry,
 } from '@/core/shareRound'
 import { loadProvincesIndex, regionDisplayName, type ProvinceIndex } from '@/core/provinces'
-import type { MediaAsset } from '@/types'
+import type { MediaAsset, MediaType } from '@/types'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import AttributionLine from '@/components/AttributionLine.vue'
 import SpeciesGallery from '@/components/SpeciesGallery.vue'
+import ReportDialog from '@/components/ReportDialog.vue'
 
 const { t } = useI18n()
 /** 087 §6.5：轮次角标的省名索引（懒加载，失败退省码） */
@@ -75,6 +77,26 @@ const visible = computed(() => rounds.value.slice(0, visibleCount.value))
 
 function toggle(id: string) {
   openedId.value = openedId.value === id ? null : id
+}
+
+/** 报错入口：历史里对某一题的素材报错（与做题中的报错同一浮窗与同一落库） */
+const showReport = ref(false)
+const reportTarget = ref<{
+  speciesId: string
+  speciesName: string
+  sci: string
+  questionType: MediaType
+  mediaUrl: string
+} | null>(null)
+function openReport(it: RoundItem) {
+  reportTarget.value = {
+    speciesId: it.speciesId,
+    speciesName: nameOf(it),
+    sci: it.sci,
+    questionType: it.type,
+    mediaUrl: it.mediaUrl,
+  }
+  showReport.value = true
 }
 
 /** 记录里的答案名按当前语言解析（016：id → 存储名反查 → 原字符串） */
@@ -288,6 +310,11 @@ async function onCopy(round: RoundRecord) {
                 <div v-if="r.tier !== 8" class="muted small">{{ t('result.yourChoice', { choice: choiceOf(it) }) }}</div>
                 <AttributionLine :media="toAsset(it)" />
               </div>
+              <div class="item-actions">
+                <button class="btn btn-secondary btn-sm" @click="openReport(it)">
+                  <Flag class="ic" :size="13" /> {{ t('report.button') }}
+                </button>
+              </div>
               <!-- 同种五图五音（browse：缩略图放大 / 内联试听），对齐结果页回顾 -->
               <SpeciesGallery
                 class="item-gallery"
@@ -306,6 +333,17 @@ async function onCopy(round: RoundRecord) {
           {{ t('history.showMore') }}
         </button>
       </div>
+
+      <!-- 报错浮窗（与做题中的报错共用：本地留痕 + 可选昵称） -->
+      <ReportDialog
+        v-if="reportTarget"
+        v-model:open="showReport"
+        :species-id="reportTarget.speciesId"
+        :species-name="reportTarget.speciesName"
+        :sci="reportTarget.sci"
+        :question-type="reportTarget.questionType"
+        :media-url="reportTarget.mediaUrl"
+      />
     </template>
 
     <p v-else class="muted">
@@ -471,6 +509,15 @@ async function onCopy(round: RoundRecord) {
 .info {
   flex: 1;
   min-width: 0;
+}
+.item-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-basis: 100%;
+  min-width: 0;
+}
+.item-actions .ic {
+  margin-right: 2px;
 }
 .item-gallery {
   flex-basis: 100%;
