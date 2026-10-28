@@ -2,7 +2,7 @@
 import { inject, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Activity, Download, History, Upload } from 'lucide-vue-next'
+import { Activity, Download, Flag, History, Upload } from 'lucide-vue-next'
 import {
   clearAll,
   exportAllArchives,
@@ -15,6 +15,16 @@ import {
   type RoundRecord,
   type Stats,
 } from '@/core/historyDb'
+import { applyRemoteStatuses, listReports, type ReportEntry } from '@/core/reportStore'
+import { syncPendingReports } from '@/core/reportSync'
+import { getClientId } from '@/core/anonymousId'
+import { listMyReports } from '@/core/reportsApi'
+import {
+  matchReportMedia,
+  resolveMyReportStatus,
+  type MyReportDisplay,
+  type ReportMediaMatch,
+} from '@/core/reportStatus'
 import StatsCharts from '@/components/StatsCharts.vue'
 
 const { t } = useI18n()
@@ -26,12 +36,79 @@ const fileInput = ref<HTMLInputElement | null>(null)
 /** 由 ProfileView provide：导入可能新建档案，重载档案列表/活动档 */
 const reloadProfile = inject<() => void | Promise<void>>('reloadProfile', () => {})
 
+// ---- 064 我的报错：本地报错 + 远端处理状态 + 素材比对自动闭环 ----
+const myReports = ref<ReportEntry[]>([])
+const matches = ref<Record<string, ReportMediaMatch>>({})
+const myReportsMsg = ref('')
+/** 状态拉取节流：进入「我的」太频繁时不重复打接口 */
+const STATUS_FETCH_THROTTLE_MS = 10 * 60_000
+let lastStatusFetchAt = 0
+
+function displayOf(r: ReportEntry): MyReportDisplay {
+  return resolveMyReportStatus(r, matches.value[r.id])
+}
+/** 已处理/已调整的条目给出「看新素材」的物种链接 */
+function isResolved(d: MyReportDisplay): boolean {
+  return d === 'fixed' || d === 'resolved-media' || d === 'resolved-species'
+}
+
+function dateOf(at: number): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(at))
+  } catch {
+    return new Date(at).toLocaleDateString()
+  }
+}
+
+async function refreshMyReports() {
+  try {
+    let list = await listReports()
+    if (!list.length) {
+      myReports.value = []
+      return
+    }
+    // 先补传未上传的（复用 B6 补传），再拉远端状态（节流）
+    try {
+      await syncPendingReports()
+    } catch {
+      /* 离线：继续尝试拉状态 */
+    }
+    if (Date.now() - lastStatusFetchAt > STATUS_FETCH_THROTTLE_MS) {
+      lastStatusFetchAt = Date.now()
+      const rows = await listMyReports(getClientId())
+      await applyRemoteStatuses(
+        rows.map((r) => ({ id: r.id, status: r.status, updatedAt: r.updated_at })),
+      )
+    }
+    list = await listReports()
+    myReports.value = list
+    // 素材比对：只对尚未被远端明确「已修正」的条目（fixed 优先，无需推断）
+    const todo = list.filter((r) => r.remoteStatus !== 'fixed' && r.mediaUrl)
+    const results = await Promise.all(
+      todo.map((r) =>
+        matchReportMedia(r.speciesId, r.questionType, r.mediaUrl).catch(
+          (): ReportMediaMatch => ({ state: 'unknown' }),
+        ),
+      ),
+    )
+    const map: Record<string, ReportMediaMatch> = {}
+    todo.forEach((r, i) => {
+      const m = results[i]
+      if (m) map[r.id] = m
+    })
+    matches.value = map
+  } catch {
+    myReportsMsg.value = t('profile.myReportsUnavailable')
+  }
+}
+
 async function refresh() {
   loading.value = true
   const [s, r] = await Promise.all([getStats(), listRounds()])
   stats.value = s
   rounds.value = r
   loading.value = false
+  void refreshMyReports()
 }
 
 onMounted(refresh)
@@ -153,6 +230,39 @@ async function onFile(e: Event) {
       />
     </template>
   </section>
+
+  <!-- 064 我的报错：提交过的报错与处理进度（无报错时整卡不出现） -->
+  <section v-if="myReports.length" class="card">
+    <h3 class="block-title"><Flag class="ic" :size="17" /> {{ t('profile.myReportsTitle') }}</h3>
+    <p class="muted my-reports-desc">{{ t('profile.myReportsDesc') }}</p>
+    <p v-if="myReportsMsg" class="muted" role="status">{{ myReportsMsg }}</p>
+    <ul class="rp-list">
+      <li v-for="r in myReports" :key="r.id" class="rp-item">
+        <div class="rp-line1">
+          <RouterLink v-if="r.speciesId" class="rp-name" :to="`/species/${r.speciesId}`">
+            {{ r.speciesName }}
+          </RouterLink>
+          <span v-else class="rp-name">{{ r.speciesName }}</span>
+          <span class="rp-type">
+            {{ r.questionType === 'audio' ? t('profile.reportTypeAudio') : t('profile.reportTypeImage') }}
+          </span>
+          <span class="rp-reason">{{ t(`report.reasons.${r.reason}`) }}</span>
+          <span class="rp-status" :class="`s-${displayOf(r)}`">{{ t(`profile.rpStatus.${displayOf(r)}`) }}</span>
+        </div>
+        <p v-if="r.note" class="rp-note">{{ r.note }}</p>
+        <div class="rp-line2">
+          <span class="rp-date">{{ dateOf(r.at) }}</span>
+          <RouterLink
+            v-if="isResolved(displayOf(r)) && r.speciesId"
+            class="rp-view"
+            :to="`/species/${r.speciesId}`"
+          >
+            {{ t('profile.rpViewSpecies') }}
+          </RouterLink>
+        </div>
+      </li>
+    </ul>
+  </section>
 </template>
 
 <style scoped>
@@ -209,5 +319,100 @@ async function onFile(e: Event) {
 }
 .hidden-input {
   display: none;
+}
+/* ---- 064 我的报错 ---- */
+.my-reports-desc {
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+.rp-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.rp-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: #fff;
+}
+.rp-line1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rp-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.rp-name:hover {
+  color: var(--primary);
+}
+.rp-type {
+  font-size: 0.7rem;
+  padding: 1px 7px;
+  border-radius: var(--radius-xs);
+  background: #eef2f0;
+  color: var(--text-light);
+}
+.rp-reason {
+  font-size: 0.7rem;
+  padding: 1px 7px;
+  border-radius: var(--radius-xs);
+  background: #fdf3d8;
+  color: #8a6d00;
+}
+.rp-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: var(--radius-xs);
+}
+.rp-status.s-local {
+  background: #eef2f0;
+  color: var(--text-light);
+}
+.rp-status.s-open {
+  background: #e8f0fb;
+  color: #2b5ba8;
+}
+.rp-status.s-published {
+  background: #fdf3d8;
+  color: #8a6d00;
+}
+.rp-status.s-fixed,
+.rp-status.s-resolved-media,
+.rp-status.s-resolved-species {
+  background: #eaf4ef;
+  color: var(--primary);
+}
+.rp-status.s-rejected {
+  background: #fdecee;
+  color: var(--wrong);
+}
+.rp-note {
+  margin-top: 5px;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.rp-line2 {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rp-date {
+  font-size: 0.72rem;
+  color: var(--text-light);
+}
+.rp-view {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 </style>

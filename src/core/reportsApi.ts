@@ -75,6 +75,45 @@ export async function voteReport(
   return (await res.json()) as { up: number; down: number; myVote: number }
 }
 
+// ---------- 064 我的报错 ----------
+
+export interface MyReportRow {
+  id: string
+  status: string
+  updated_at: number
+  species_id: string | null
+  species_name: string | null
+  question_type: string | null
+  media_url: string | null
+  reason: string
+}
+
+/** 拉取本设备提交的报错状态（凭匿名 clientId；进入「我的」时调用） */
+export async function listMyReports(clientId: string): Promise<MyReportRow[]> {
+  const q = new URLSearchParams({ clientId })
+  const res = await fetch(`/api/reports/mine?${q.toString()}`)
+  if (!res.ok) throw new Error(`mine failed: ${res.status}`)
+  const data = (await res.json()) as { reports?: MyReportRow[] }
+  return data.reports ?? []
+}
+
+/**
+ * 请求导出验证码（归户凭据）：服务端签发 32 位 hex 随机令牌，**只存其 SHA-256**，
+ * 明文仅随导出文件出现一次；未来账号体系凭它一次性验证归属。离线导出时拿不到
+ * （调用方须容错降级为无验证码导出）。
+ */
+export async function createReportClaim(clientId: string): Promise<string> {
+  const res = await fetch('/api/reports/claims', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clientId }),
+  })
+  if (!res.ok) throw new Error(`claim failed: ${res.status}`)
+  const data = (await res.json()) as { token?: string }
+  if (!data.token) throw new Error('claim missing token')
+  return data.token
+}
+
 // ---------- B6 管理（需 ADMIN_KEY） ----------
 
 export type ReportStatus = 'open' | 'published' | 'fixed' | 'rejected'

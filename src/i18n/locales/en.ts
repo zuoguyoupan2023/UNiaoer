@@ -918,6 +918,22 @@ const en: typeof zhMessages = {
     importDone:
       'Imported: {created} new and {merged} merged archive(s); {rounds} rounds, {wrong} wrong entries and {badges} badges added/updated.',
     importParseFailed: 'Import failed: the file could not be parsed.',
+    myReportsTitle: 'My reports',
+    myReportsDesc:
+      'Issues you reported and their progress. Linked only by an anonymous device id — no personal information. Automatically marked as resolved once the media is actually replaced.',
+    reportTypeImage: 'Image',
+    reportTypeAudio: 'Audio',
+    rpViewSpecies: 'View this species',
+    myReportsUnavailable: 'Could not fetch report status (network required). Will retry later.',
+    rpStatus: {
+      local: 'Pending upload',
+      open: 'Submitted',
+      published: 'In review',
+      fixed: 'Resolved',
+      rejected: 'Not adopted',
+      'resolved-media': 'Resolved · media updated',
+      'resolved-species': 'Resolved · species adjusted',
+    },
     wearTitle: 'Worn',
     titleLabel: 'Title',
     badgeLabel: 'Badge',
@@ -1127,6 +1143,19 @@ const en: typeof zhMessages = {
     reportsSynced: 'Uploaded {n}, failed {failed}.',
     clearReports: 'Clear local reports',
     reportsCleared: 'Local reports cleared.',
+    exportAllData: 'Export all data',
+    importReports: 'Import data',
+    reportsExported:
+      'Exported all personal data ({n} report(s)). The file contains an ownership claim code — keep it safe.',
+    reportsExportedNoClaim: 'Exported all personal data ({n} report(s); offline — no claim code).',
+    reportsImportDone:
+      'Imported reports: {imported} added, {skipped} skipped; archives: {created} created, {merged} merged.',
+    reportsImportInvalid: 'Import failed: not a valid backup file.',
+    clearWarnTitle: 'Consider exporting first',
+    clearWarnDesc:
+      'Cleared data cannot be recovered. The export file contains all archives, reports and an ownership claim code that can later verify your authorship once accounts are introduced.',
+    clearExportFirst: 'Export backup first',
+    clearConfirm: 'Clear anyway',
   },
   charts: {
     trendTitle: 'Accuracy trend',

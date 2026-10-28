@@ -33,6 +33,9 @@ export interface ReportEntry {
   nickname?: string
   /** 是否已上传到后端（B6；离线时先本地，联网后补传） */
   synced?: boolean
+  /** 064：远端最新状态（进入「我的」时拉取合并；undefined = 尚未拉到） */
+  remoteStatus?: string
+  remoteUpdatedAt?: number
 }
 
 export type NewReport = Omit<ReportEntry, 'id' | 'at' | 'synced'>
@@ -139,6 +142,53 @@ export async function clearReports(): Promise<void> {
   const tx = db.transaction(STORE, 'readwrite')
   tx.objectStore(STORE).clear()
   await txDone(tx)
+}
+
+/**
+ * 064：把远端状态合并进本地记录（进入「我的」拉取 /api/reports/mine 后调用）。
+ * 只更新已存在的本地条目；远端有而本地无的不补（本地留存是唯一事实源）。
+ */
+export async function applyRemoteStatuses(
+  updates: readonly { id: string; status: string; updatedAt: number }[],
+): Promise<void> {
+  const db = await openDb()
+  for (const u of updates) {
+    const row = await p<ReportEntry | undefined>(db.transaction(STORE).objectStore(STORE).get(u.id))
+    if (!row) continue
+    const tx = db.transaction(STORE, 'readwrite')
+    tx.objectStore(STORE).put({ ...row, remoteStatus: u.status, remoteUpdatedAt: u.updatedAt })
+    await txDone(tx)
+  }
+}
+
+/**
+ * 064 导入：按 id 去重合并（已存在跳过），返回导入/跳过计数。
+ * 供设置页「导入报错」使用；条目先经 reportExport.sanitizeImportedReport 白名单清洗。
+ */
+export async function importReports(
+  entries: readonly ReportEntry[],
+): Promise<{ imported: number; skipped: number }> {
+  const db = await openDb()
+  let imported = 0
+  let skipped = 0
+  for (const e of entries) {
+    if (!e?.id) {
+      skipped++
+      continue
+    }
+    const existing = await p<ReportEntry | undefined>(
+      db.transaction(STORE).objectStore(STORE).get(e.id),
+    )
+    if (existing) {
+      skipped++
+      continue
+    }
+    const tx = db.transaction(STORE, 'readwrite')
+    tx.objectStore(STORE).put({ ...e, synced: e.synced ?? false })
+    await txDone(tx)
+    imported++
+  }
+  return { imported, skipped }
 }
 
 /** 测试用：关闭并重置连接 */

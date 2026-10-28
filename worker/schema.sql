@@ -155,6 +155,20 @@ CREATE TABLE IF NOT EXISTS report_votes (
 );
 CREATE INDEX IF NOT EXISTS idx_report_votes_report ON report_votes(report_id);
 
+-- 064 报错导出验证码（归户凭据）：服务端签发 32 位 hex 随机令牌，库内只存 SHA-256
+-- （同 round_shares 令牌模式，明文不落库）。生命周期：用户导出报错备份 → Worker 签发
+-- token（仅随导出文件出现一次）→ 库存 claim_hash；未来账号体系接入后凭 token
+-- **一次性**验证归属（consumed_at 置位 + account_id 写入），报错归入该账号；
+-- 非注册用户不提交此值。新表部署：CREATE TABLE IF NOT EXISTS 幂等，可单独远程执行。
+CREATE TABLE IF NOT EXISTS report_claims (
+  claim_hash  TEXT PRIMARY KEY,        -- SHA-256(token) hex；明文令牌不落库
+  client_id   TEXT NOT NULL,           -- 该凭据覆盖的报错来源设备（匿名 id）
+  created_at  INTEGER NOT NULL,
+  consumed_at INTEGER,                 -- 非空 = 已被账号体系一次性验证消耗
+  account_id  TEXT                     -- 预留：验证通过后写入的账号 id
+);
+CREATE INDEX IF NOT EXISTS idx_report_claims_client ON report_claims(client_id);
+
 -- 035 单轮成绩分享（用户主动分享；D-035-1~6 已拍板）
 -- 生命周期：结果页点「分享」→ POST /api/shares（写入 payload 快照）→ 海报二维码指向 /s/:id
 --          → 任何人可读（GET，默认不缓存：撤回需即时生效）→ 分享者凭管理令牌撤回（hidden=1，公开读 404）。

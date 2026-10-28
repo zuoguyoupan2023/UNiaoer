@@ -1003,6 +1003,22 @@ export const messages = {
     importDone:
       '导入完成：新建 {created} 个档案、合并 {merged} 个；新增/更新 {rounds} 轮、{wrong} 条错题、{badges} 枚徽章。',
     importParseFailed: '导入失败：文件无法解析。',
+    myReportsTitle: '我的报错',
+    myReportsDesc:
+      '你提交的报错与处理进度。仅凭设备匿名 id 关联，无任何个人身份信息；素材被实质更新后会自动标记为已处理。',
+    reportTypeImage: '图片',
+    reportTypeAudio: '音频',
+    rpViewSpecies: '查看该鸟种',
+    myReportsUnavailable: '报错状态获取失败（需要联网），稍后自动重试。',
+    rpStatus: {
+      local: '待上传',
+      open: '已提交',
+      published: '评审中',
+      fixed: '已处理',
+      rejected: '未采纳',
+      'resolved-media': '已处理 · 素材已更新',
+      'resolved-species': '已处理 · 物种已调整',
+    },
     wearTitle: '佩戴',
     titleLabel: '称号',
     badgeLabel: '徽章',
@@ -1117,6 +1133,18 @@ export const messages = {
     reportsSynced: '已上传 {n} 条，失败 {failed} 条。',
     clearReports: '清空本地反馈',
     reportsCleared: '已清空本地反馈。',
+    exportAllData: '导出全部数据',
+    importReports: '导入数据',
+    reportsExported: '已导出全部个人数据（{n} 条报错），文件含归户验证码，请妥善保存。',
+    reportsExportedNoClaim: '已导出全部个人数据（{n} 条报错；当前离线，未含验证码）。',
+    reportsImportDone:
+      '导入完成：报错新增 {imported} 条、跳过 {skipped} 条；档案新建 {created} 个、合并 {merged} 个。',
+    reportsImportInvalid: '导入失败：不是有效的备份文件。',
+    clearWarnTitle: '清空前建议先导出',
+    clearWarnDesc:
+      '清空后本机数据无法恢复。导出文件含全部档案、报错与归户验证码，未来加入账号体系时可凭验证码一次性认领这些报错。',
+    clearExportFirst: '先导出备份',
+    clearConfirm: '确认清空',
   },
   charts: {
     trendTitle: '正确率趋势',
