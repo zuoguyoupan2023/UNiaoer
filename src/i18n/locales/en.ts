@@ -395,7 +395,7 @@ const en: typeof zhMessages = {
     sectionActivity: 'Activity',
     sectionAccuracy: 'Accuracy by difficulty level',
     accuracyEmpty: 'No data yet.',
-    accuracyMean: '{mean}% avg · {n} rounds',
+    accuracyMean: '{mean}% · {n} rounds',
     accuracyNote: 'Weighted average of accuracy data; no personal or bird-species data.',
     earlyBandsTitle: 'Early data (bucketed estimate)',
     earlyBandsNote: 'Rounds before exact scoring began only have accuracy buckets, estimated from bucket midpoints (≈) — for historical reference only.',

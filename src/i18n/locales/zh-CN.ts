@@ -390,7 +390,7 @@ export const messages = {
     sectionActivity: '活动',
     sectionAccuracy: '各水平正确率',
     accuracyEmpty: '还没有数据。',
-    accuracyMean: '平均 {mean}% · {n} 轮',
+    accuracyMean: '{mean}% · {n} 轮',
     accuracyNote: '按正确率数据加权平均，不含个人或鸟种信息。',
     earlyBandsTitle: '早期数据（分桶估算）',
     earlyBandsNote: '精确统计上线前的轮次只有正确率分桶，按桶中点估算（带 ≈），仅供历史参考。',
