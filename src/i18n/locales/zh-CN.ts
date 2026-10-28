@@ -123,6 +123,7 @@ export const messages = {
     bankStatsFull: '图片 {image} · 音频 {audio}（共 {total} 种）',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
+    regionPreviewSub: '快速预习某地鸟类',
     regionSub: '按国家/地区浏览鸟种',
   },
   mode: {
@@ -982,6 +983,8 @@ export const messages = {
     tabBadges: '徽章',
     tabWrong: '错题本',
     tabHistory: '历史',
+    masteryStat: '已熟记 {n} 种',
+    goPreview: '去预习',
     nicknamePlaceholder: '2–12 个字符',
     nicknameLabel: '昵称',
     nicknameEmpty: '昵称不能为空',

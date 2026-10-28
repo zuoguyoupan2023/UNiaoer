@@ -129,6 +129,7 @@ const en: typeof zhMessages = {
     bankStatsFull: '{image} photos · {audio} recordings ({total} species)',
     modeImageSub: 'Openly licensed photos from iNaturalist',
     modeAudioSub: 'Real bird recordings from Xeno-canto',
+    regionPreviewSub: 'Preview birds anywhere',
     regionSub: 'Browse birds by country/region',
   },
   mode: {
@@ -897,6 +898,8 @@ const en: typeof zhMessages = {
     tabBadges: 'Badges',
     tabWrong: 'Wrong book',
     tabHistory: 'History',
+    masteryStat: '{n} species learned',
+    goPreview: 'Preview birds',
     nicknamePlaceholder: '2–12 characters',
     nicknameLabel: 'Nickname',
     nicknameEmpty: 'Nickname cannot be empty',

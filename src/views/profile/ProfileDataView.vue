@@ -2,7 +2,7 @@
 import { inject, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Activity, Download, Flag, History, Upload } from 'lucide-vue-next'
+import { Activity, Download, Flag, History, Lightbulb, Upload } from 'lucide-vue-next'
 import {
   clearAll,
   exportAllArchives,
@@ -26,6 +26,7 @@ import {
   type ReportMediaMatch,
 } from '@/core/reportStatus'
 import StatsCharts from '@/components/StatsCharts.vue'
+import { masteredCount } from '@/core/mastery'
 
 const { t } = useI18n()
 const stats = ref<Stats | null>(null)
@@ -33,6 +34,8 @@ const rounds = ref<RoundRecord[]>([])
 const loading = ref(true)
 const backupMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+/** 预习熟记（观鸟页标记，localStorage）；进本页时读一次 */
+const mastered = ref(0)
 /** 由 ProfileView provide：导入可能新建档案，重载档案列表/活动档 */
 const reloadProfile = inject<() => void | Promise<void>>('reloadProfile', () => {})
 
@@ -107,6 +110,7 @@ async function refresh() {
   const [s, r] = await Promise.all([getStats(), listRounds()])
   stats.value = s
   rounds.value = r
+  mastered.value = masteredCount()
   loading.value = false
   void refreshMyReports()
 }
@@ -204,6 +208,17 @@ async function onFile(e: Event) {
       </div>
 
       <StatsCharts :rounds="rounds" />
+
+      <!-- 预习熟记（观鸟页灯泡标记的数据）；入口直达观鸟页并自动打开预习浮窗 -->
+      <div class="mastery-row">
+        <span class="mastery-info">
+          <Lightbulb class="ic" :size="16" />
+          {{ t('profile.masteryStat', { n: mastered }) }}
+        </span>
+        <RouterLink class="btn btn-secondary btn-sm" to="/birding?preview=1">
+          {{ t('profile.goPreview') }}
+        </RouterLink>
+      </div>
 
       <div class="actions">
         <RouterLink class="btn btn-secondary" to="/profile/history">
@@ -311,6 +326,29 @@ async function onFile(e: Event) {
   gap: 10px;
   margin-top: 18px;
   flex-wrap: wrap;
+}
+/* ---- 预习熟记行 ---- */
+.mastery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fffbe6;
+}
+.mastery-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.mastery-info .ic {
+  color: #c98a00;
+  fill: #ffd600;
 }
 .backup-msg {
   margin-top: 10px;

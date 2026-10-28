@@ -148,6 +148,8 @@ function applyQuery() {
   nearby.value = tab === 'spots' && q.nearby === '1'
   if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
   if (typeof q.sub === 'string') province.value = q.sub
+  // `?preview=1`：外部入口（如「我的」页的「去预习」）直达预习浮窗；一次性参数，不写回 URL
+  if (q.preview === '1') previewOpen.value = true
   // `watch(selected)` 会重置省份 —— 深链里 cc+sub 同时给出时必须抑制一次，
   // 否则 `?cc=US&sub=US-CA` 的省份会被清掉（刷新/分享还原残缺）。
   applyingQuery = true
@@ -462,7 +464,7 @@ const previewFilter = ref<'all' | 'unmastered' | 'mastered'>('unmastered')
 const previewIndex = ref(0)
 /** isMastered 基于模块级 Set（非响应式）——切换后 bump 触发列表/灯泡重算 */
 const masteryVersion = ref(0)
-/** 熟记后 0.5s 停留：期间继续展示该鸟的新状态，到点再切下一只 */
+/** 熟记后 2s 停留：期间继续展示该鸟的新状态，到点再切下一只 */
 const holdSlug = ref('')
 let holdTimer: number | null = null
 const { panelRef: previewPanelRef } = useDialogA11y(previewOpen, {
@@ -484,7 +486,7 @@ const previewList = computed<GridItem[]>(() => {
   return byRecords.filter((it) => (f === 'mastered' ? isMastered(it.slug) : !isMastered(it.slug)))
 })
 const previewCurrent = computed(() => {
-  // 熟记后的 0.5s 停留期：当前鸟已被筛出列表，但仍要展示它的新状态（灯变黄 → 再切下一只）
+  // 熟记后的 2s 停留期：当前鸟已被筛出列表，但仍要展示它的新状态（灯变黄 → 再切下一只）
   if (holdSlug.value) {
     return (
       gridItems.value.find((it) => it.playable && it.slug === holdSlug.value) ??
@@ -533,8 +535,9 @@ function stepPreview(delta: number) {
   if (!n) return
   previewIndex.value = (previewIndex.value + delta + n) % n
 }
-/** 灯泡点击：切换熟记。筛选模式下当前鸟会离开列表——先停留 0.5s 展示新状态
- *  （灯变黄/文本变已熟记），再切到下一只；直接跳会让人莫名其妙（2026-10-29 用户反馈）。 */
+/** 灯泡点击：切换熟记。筛选模式下当前鸟会离开列表——先停留 2s 展示新状态
+ *  （灯变黄/文本变已熟记），再切到下一只；直接跳会让人莫名其妙（2026-10-29 用户反馈，
+ *  原定的 0.5s 偏快，改 2s）。 */
 function togglePreviewMastery() {
   const cur = previewCurrent.value
   if (!cur) return
@@ -549,9 +552,9 @@ function togglePreviewMastery() {
       holdSlug.value = ''
       // 列表已重新过滤：previewIndex 现在正好指向下一只
       previewIndex.value = Math.min(previewIndex.value, Math.max(0, previewList.value.length - 1))
-    }, 500)
+    }, 2000)
   } else {
-    // 快速连点回到列表内（如 0.5s 内取消熟记）→ 取消停留
+    // 快速连点回到列表内（如停留期内取消熟记）→ 取消停留
     clearHold()
   }
 }
@@ -1890,9 +1893,12 @@ function pickProvince(code: string) {
 }
 .preview-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 430px;
-  max-height: 86vh;
+  /* 固定高度：切换鸟种时浮窗不再随内容增减而重新居中跳动（2026-10-29 用户反馈） */
+  height: min(620px, 86vh);
   overflow-y: auto;
   padding: 16px;
   border-radius: var(--radius);
@@ -1953,6 +1959,8 @@ function pickProvince(code: string) {
 }
 .pv-facts {
   margin-top: 10px;
+  /* 特征/生境内容长短不一：给最小高度，减少熟记按钮的位置跳动 */
+  min-height: 150px;
 }
 .pv-master {
   display: flex;
@@ -2023,7 +2031,9 @@ function pickProvince(code: string) {
 .pv-filters {
   display: flex;
   justify-content: center;
-  margin-top: 14px;
+  /* 固定高度浮窗内：筛选行锚在底部 */
+  margin-top: auto;
+  padding-top: 14px;
 }
 
 /* 移动端：单栏 + 抽屉（选择器已 Teleport 到 body，见模板） */
@@ -2037,7 +2047,7 @@ function pickProvince(code: string) {
   }
   .preview-card {
     max-width: none;
-    max-height: 82vh;
+    height: 82vh;
     border-radius: var(--radius) var(--radius) 0 0;
   }
 }

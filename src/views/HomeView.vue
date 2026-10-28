@@ -74,11 +74,17 @@ onMounted(async () => {
       </RouterLink>
     </div>
 
-    <RouterLink to="/birding" class="region-link">
-      <Globe2 class="ic" :size="16" />
-      <span class="region-title">{{ t('nav.birding') }}</span>
-      <span class="region-sub">{{ t('home.regionSub') }}</span>
-    </RouterLink>
+    <!-- 观鸟入口：宽度与上方模式卡一致（半宽居中），标题下两行说明（预习在前，2026-10-29 用户定） -->
+    <div class="region-wrap">
+      <RouterLink to="/birding" class="region-link">
+        <span class="region-head">
+          <Globe2 class="ic" :size="18" />
+          <span class="region-title">{{ t('nav.birding') }}</span>
+        </span>
+        <span class="region-sub">{{ t('home.regionPreviewSub') }}</span>
+        <span class="region-sub">{{ t('home.regionSub') }}</span>
+      </RouterLink>
+    </div>
   </section>
 </template>
 
@@ -118,6 +124,9 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  /* 宽屏限宽居中（2026-10-29 用户反馈）：入口卡太大不美观，与观鸟卡共用同一宽度 */
+  max-width: 760px;
+  margin: 0 auto;
 }
 @media (max-width: 520px) {
   .modes {
@@ -155,22 +164,36 @@ onMounted(async () => {
   font-size: 0.73rem;
   color: var(--text-light);
 }
-.region-link {
+/* 观鸟入口：宽度与上方模式卡一致（半宽居中），纵向布局，标题下两行说明 */
+.region-wrap {
   display: flex;
+  justify-content: center;
+  margin: 10px auto 0;
+  max-width: 760px; /* 与 .modes 同宽：三张卡左右边缘对齐 */
+}
+.region-link {
+  width: calc(50% - 5px); /* 与 .modes 的 1fr 1fr + gap 10px 对齐 */
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 10px 14px;
+  gap: 7px;
+  padding: 20px 14px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
   color: var(--text);
+  text-align: center;
   transition: all 0.18s ease;
 }
 .region-link:hover {
   border-color: var(--primary-light);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
+}
+.region-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 .region-link .ic {
   color: var(--primary);
@@ -183,6 +206,10 @@ onMounted(async () => {
 .region-sub {
   font-size: 0.75rem;
   color: var(--text-light);
-  margin-left: auto;
+}
+@media (max-width: 520px) {
+  .region-link {
+    width: 100%; /* 窄屏与 .modes 单列一致 */
+  }
 }
 </style>
