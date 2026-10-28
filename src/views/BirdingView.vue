@@ -129,6 +129,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', measureStickyTop)
   topbarObserver?.disconnect()
+  clearHold()
   stopSharedAudio()
 })
 /** 与 region:nearby-spots 的 --cell-deg 一致（仅用于署名文案） */
@@ -297,7 +298,7 @@ const provinceName = computed(
 const provinceSet = computed(() =>
   province.value ? speciesInProvince(countryProvince.value, province.value) : null,
 )
-/** 统一网格条目:bank 物种(可玩,带头图)+ 全球骨架物种(未收录媒体,轻量详情) */
+/** 统一网格条目:bank 物种(已收录媒体,带头图)+ 全球骨架物种(未收录,轻量详情) */
 interface GridItem {
   slug: string
   name: string
@@ -308,7 +309,7 @@ interface GridItem {
 }
 /**
  * S6：名单统一到 bank（权威层 meta，10,844 种，唯一源）。
- * 「可玩」判定改用合并后的 playable——名单内任一带素材即可玩。
+ * 「已收录」判定用合并后的 playable 字段——名单内任一带素材即算收录（字段名 playable 沿用产物 schema，仅代码标识符）。
  */
 /** 短码 → 物种条目（用于徽标/缩略图；排除质量降级种） */
 const poolByCode = computed<Map<string, BankSpecies>>(() => {
@@ -337,7 +338,7 @@ const countryGridItems = computed<GridItem[]>(() => {
       const e = idx.byShortCode.get(code) ?? null
       if (!sp && e) sp = bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
       if (!e && !sp) continue
-      // 全球池条目(短码直查;骨架条目缺失时也能判定可玩)
+      // 全球池条目(短码直查;骨架条目缺失时也能判定收录)
       const gp = poolByCode.value.get(code) ?? null
       const usable = sp ?? gp
       items.push({
@@ -404,7 +405,7 @@ const recordCounts = computed(() => {
 })
 
 /** 某物种在当前选择下的记录数（0 = 无记录）。用 slug（= 产物里的物种 id），
- *  这样**未收录媒体**的骨架物种也能显示「GBIF N 条」（`bankId` 只有可玩种才有）。 */
+ *  这样**未收录**的骨架物种也能显示「GBIF N 条」（`bankId` 只有已收录种才有）。 */
 const recordCountOf = (id: string | null | undefined) => (id ? (recordCounts.value.get(id) ?? 0) : 0)
 
 /** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
@@ -444,7 +445,7 @@ const cardThumb = (gi: GridItem) => {
   if (thumbErrors.value.has(gi.slug)) return null
   return thumbUrlOf(thumbs.value, gi.slug) ?? gi.thumb
 }
-/** 仅可玩物种显示小喇叭（未收录骨架物种没有媒体） */
+/** 仅已收录（有素材）物种显示小喇叭（未收录骨架物种没有媒体） */
 const cardAudio = (gi: GridItem) => (gi.playable ? audioUrlOf(thumbs.value, gi.slug) : null)
 const onThumbError = (slug: string) => {
   const next = new Set(thumbErrors.value)
@@ -461,13 +462,16 @@ const previewFilter = ref<'all' | 'unmastered' | 'mastered'>('unmastered')
 const previewIndex = ref(0)
 /** isMastered 基于模块级 Set（非响应式）——切换后 bump 触发列表/灯泡重算 */
 const masteryVersion = ref(0)
+/** 熟记后 0.5s 停留：期间继续展示该鸟的新状态，到点再切下一只 */
+const holdSlug = ref('')
+let holdTimer: number | null = null
 const { panelRef: previewPanelRef } = useDialogA11y(previewOpen, {
   onClose: () => closePreview(),
 })
 const previewPanelBind = (el: unknown) => {
   previewPanelRef.value = el instanceof HTMLElement ? el : null
 }
-/** 预习列表：只含可玩种（骨架未收录种无图无音，预习无意义），记录数降序 → 名称兜底 */
+/** 预习列表：只含已收录（有素材）物种（未收录骨架种无图无音，预习无意义），记录数降序 → 名称兜底 */
 const previewList = computed<GridItem[]>(() => {
   void masteryVersion.value
   const base = gridItems.value.filter((it) => it.playable)
@@ -479,7 +483,17 @@ const previewList = computed<GridItem[]>(() => {
   if (f === 'all') return byRecords
   return byRecords.filter((it) => (f === 'mastered' ? isMastered(it.slug) : !isMastered(it.slug)))
 })
-const previewCurrent = computed(() => previewList.value[previewIndex.value] ?? null)
+const previewCurrent = computed(() => {
+  // 熟记后的 0.5s 停留期：当前鸟已被筛出列表，但仍要展示它的新状态（灯变黄 → 再切下一只）
+  if (holdSlug.value) {
+    return (
+      gridItems.value.find((it) => it.playable && it.slug === holdSlug.value) ??
+      previewList.value[previewIndex.value] ??
+      null
+    )
+  }
+  return previewList.value[previewIndex.value] ?? null
+})
 const previewSp = computed(() =>
   previewCurrent.value?.bankId ? (speciesById(previewCurrent.value.bankId) ?? null) : null,
 )
@@ -498,26 +512,47 @@ function openPreview() {
 }
 function closePreview() {
   previewOpen.value = false
+  clearHold()
   stopSharedAudio()
 }
+function clearHold() {
+  if (holdTimer !== null) {
+    clearTimeout(holdTimer)
+    holdTimer = null
+  }
+  holdSlug.value = ''
+}
 function setPreviewFilter(f: 'all' | 'unmastered' | 'mastered') {
+  clearHold()
   previewFilter.value = f
   previewIndex.value = 0
 }
 function stepPreview(delta: number) {
+  clearHold()
   const n = previewList.value.length
   if (!n) return
   previewIndex.value = (previewIndex.value + delta + n) % n
 }
-/** 灯泡点击：切换熟记；当前鸟离开筛选列表时（如「未熟记」里标了已熟记）自动跳到下一只 */
+/** 灯泡点击：切换熟记。筛选模式下当前鸟会离开列表——先停留 0.5s 展示新状态
+ *  （灯变黄/文本变已熟记），再切到下一只；直接跳会让人莫名其妙（2026-10-29 用户反馈）。 */
 function togglePreviewMastery() {
   const cur = previewCurrent.value
   if (!cur) return
   toggleMastered(cur.slug)
   masteryVersion.value += 1
-  const list = previewList.value
-  if (!list.some((it) => it.slug === cur.slug)) {
-    previewIndex.value = Math.min(previewIndex.value, Math.max(0, list.length - 1))
+  const inList = previewList.value.some((it) => it.slug === cur.slug)
+  if (!inList) {
+    holdSlug.value = cur.slug
+    if (holdTimer !== null) clearTimeout(holdTimer)
+    holdTimer = window.setTimeout(() => {
+      holdTimer = null
+      holdSlug.value = ''
+      // 列表已重新过滤：previewIndex 现在正好指向下一只
+      previewIndex.value = Math.min(previewIndex.value, Math.max(0, previewList.value.length - 1))
+    }, 500)
+  } else {
+    // 快速连点回到列表内（如 0.5s 内取消熟记）→ 取消停留
+    clearHold()
   }
 }
 
@@ -982,28 +1017,31 @@ function pickProvince(code: string) {
               }}
             </p>
 
-            <div class="sort" role="group" :aria-label="t('region.sortSpeciesLabel')">
+            <div class="sort-row">
+              <div class="sort" role="group" :aria-label="t('region.sortSpeciesLabel')">
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: speciesSort === 'name' }"
+                  :aria-pressed="speciesSort === 'name'"
+                  @click="speciesSort = 'name'"
+                >
+                  {{ t('region.speciesSortName') }}
+                </button>
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: speciesSort === 'records' }"
+                  :aria-pressed="speciesSort === 'records'"
+                  @click="speciesSort = 'records'"
+                >
+                  {{ t('region.speciesSortRecords') }}
+                </button>
+              </div>
+              <!-- 预习模式与排序是不同逻辑，独立放在行尾（2026-10-29 用户定） -->
               <button
                 type="button"
-                class="sort-btn"
-                :class="{ active: speciesSort === 'name' }"
-                :aria-pressed="speciesSort === 'name'"
-                @click="speciesSort = 'name'"
-              >
-                {{ t('region.speciesSortName') }}
-              </button>
-              <button
-                type="button"
-                class="sort-btn"
-                :class="{ active: speciesSort === 'records' }"
-                :aria-pressed="speciesSort === 'records'"
-                @click="speciesSort = 'records'"
-              >
-                {{ t('region.speciesSortRecords') }}
-              </button>
-              <button
-                type="button"
-                class="sort-btn preview-btn"
+                class="preview-btn"
                 :aria-pressed="previewOpen"
                 @click="openPreview"
               >
@@ -1013,7 +1051,7 @@ function pickProvince(code: string) {
             </div>
             <ul class="species-grid">
               <li v-for="gi in visibleItems" :key="gi.slug">
-                <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable, 'has-media': !!cardThumb(gi) || !!cardAudio(gi) }" :to="`/species/${gi.slug}`">
+                <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
                   <img
                     v-if="cardThumb(gi)"
                     class="thumb"
@@ -1023,20 +1061,23 @@ function pickProvince(code: string) {
                     decoding="async"
                     @error="onThumbError(gi.slug)"
                   />
-                  <button
-                    v-if="cardAudio(gi)"
-                    type="button"
-                    class="card-play"
-                    :class="{ playing: isPlaying(cardAudio(gi)!) }"
-                    :aria-label="isPlaying(cardAudio(gi)!) ? t('region.stopCall') : t('region.playCall')"
-                    :aria-pressed="isPlaying(cardAudio(gi)!)"
-                    @click.prevent.stop="playToggle(cardAudio(gi)!)"
-                  >
-                    <VolumeX v-if="isPlaying(cardAudio(gi)!)" :size="14" aria-hidden="true" />
-                    <Volume2 v-else :size="14" aria-hidden="true" />
-                  </button>
                   <span class="sp-text">
-                    <span class="sp-name">{{ gi.name }}</span>
+                    <span class="sp-name-row">
+                      <span class="sp-name">{{ gi.name }}</span>
+                      <!-- 喇叭放名称行右侧（2026-10-29 用户定），不再悬浮在缩略图上 -->
+                      <button
+                        v-if="cardAudio(gi)"
+                        type="button"
+                        class="card-play"
+                        :class="{ playing: isPlaying(cardAudio(gi)!) }"
+                        :aria-label="isPlaying(cardAudio(gi)!) ? t('region.stopCall') : t('region.playCall')"
+                        :aria-pressed="isPlaying(cardAudio(gi)!)"
+                        @click.prevent.stop="playToggle(cardAudio(gi)!)"
+                      >
+                        <VolumeX v-if="isPlaying(cardAudio(gi)!)" :size="14" aria-hidden="true" />
+                        <Volume2 v-else :size="14" aria-hidden="true" />
+                      </button>
+                    </span>
                     <span class="sp-sci">{{ gi.nameSci }}</span>
                     <span v-if="recordCountOf(gi.slug) > 0" class="sp-count muted">
                       {{ t('region.recordCount', { n: recordCountOf(gi.slug) }) }}
@@ -1241,7 +1282,8 @@ function pickProvince(code: string) {
 }
 .layout {
   display: grid;
-  grid-template-columns: minmax(200px, 260px) 1fr;
+  /* 侧栏收窄（2026-10-29 用户反馈），主体随全局宽度增加 */
+  grid-template-columns: minmax(180px, 216px) 1fr;
   gap: 16px;
   text-align: left;
 }
@@ -1772,46 +1814,67 @@ function pickProvince(code: string) {
   margin: 14px 0;
 }
 
-/* ── 卡片缩略图 + 小喇叭（P0-4） ─────────────────────────────── */
-.species-card {
-  position: relative;
+/* ── 卡片缩略图 + 名称行小喇叭（P0-4） ───────────────────────── */
+.sort-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .preview-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 3px 12px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.preview-btn:hover {
+  border-color: var(--primary-light);
+}
+.preview-btn[aria-pressed='true'] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
 .preview-btn .ic {
   color: #c98a00;
 }
+.preview-btn[aria-pressed='true'] .ic {
+  color: #ffd600;
+}
+.sp-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
 .card-play {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  flex: none;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border: 1.5px solid var(--border);
+  border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--text);
+  background: transparent;
+  color: var(--text-light);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease;
 }
 .card-play:hover {
-  border-color: var(--primary);
   color: var(--primary);
 }
 .card-play.playing {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-.card-play + .sp-text {
-  padding-right: 30px;
+  color: var(--primary);
 }
 
 /* ── 预习模式浮窗 ────────────────────────────────────────────── */
@@ -1896,11 +1959,12 @@ function pickProvince(code: string) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
-  margin-top: 12px;
-  padding: 9px 12px;
+  /* 宽度随内容，不铺满整行（2026-10-29 用户反馈） */
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 9px 20px;
   border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: #fff;
   color: var(--text);
   font-size: 0.88rem;

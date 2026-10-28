@@ -726,7 +726,8 @@ function onCountryChange() {
 
 <style scoped>
 .wrap {
-  max-width: 760px;
+  /* 2026-10-29 与 app-main 全局宽度同步（760 → 1000） */
+  max-width: 1000px;
   margin: 0 auto;
   padding: 20px 16px 48px;
 }

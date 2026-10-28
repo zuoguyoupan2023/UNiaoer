@@ -79,7 +79,7 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%; /* R34：与 app-main 真等宽（否则 auto margin 使其收缩为内容宽） */
-  max-width: 760px; /* 与 app-main 等宽 */
+  max-width: 1000px; /* 与 app-main 等宽（2026-10-29 用户定：主体加宽，760 → 1000） */
   margin: 0 auto 12px;
   /* 吸顶（016 #3）：滚动时导航常驻（设置页长列表等）；答题沉浸模式本就 v-if 隐藏 */
   position: sticky;
@@ -268,7 +268,7 @@
 
 .app-main {
   width: 100%;
-  max-width: 760px;
+  max-width: 1000px; /* 2026-10-29 用户定：主体加宽（760 → 1000），与 .app-topbar 等宽 */
   margin: 0 auto;
   padding: 0 16px 12px;
   /* 撑开剩余高度：内容短时页脚仍钉在视口底部（sticky footer） */

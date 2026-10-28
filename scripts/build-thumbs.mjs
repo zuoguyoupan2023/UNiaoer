@@ -59,19 +59,24 @@ async function main() {
     const bucket = JSON.parse(await readFile(path.join(ASSETS_DIR, f), 'utf8'))
     for (const [id, sp] of Object.entries(bucket.species ?? {})) {
       const firstImg = sp.images?.[0]
-      if (firstImg?.thumbUrl) {
-        const parsed = mediaPathOf(firstImg.thumbUrl)
-        if (parsed) {
-          if (parsed.id !== id) {
-            console.warn(`[thumbs] ${f}: thumbUrl id mismatch (${parsed.id} != ${id}), skipped`)
-            badUrls++
+      if (firstImg) {
+        // 缩略优先；未转码的直连图（image-1.jpg/jpeg，约 1,242 种）没有 .thumb.webp 变体，
+        // 回退用完整图当缩略（懒加载兜底）。只收自有媒体域的 URL，不猜外链。
+        const srcUrl = firstImg.thumbUrl || (MEDIA_PREFIX_RE.test(firstImg.url ?? '') ? firstImg.url : null)
+        if (srcUrl) {
+          const parsed = mediaPathOf(srcUrl)
+          if (parsed) {
+            if (parsed.id !== id) {
+              console.warn(`[thumbs] ${f}: image url id mismatch (${parsed.id} != ${id}), skipped`)
+              badUrls++
+            } else {
+              bases.add(srcUrl.slice(0, srcUrl.length - parsed.seg.length - parsed.id.length - 1))
+              thumb[id] = parsed.seg
+            }
           } else {
-            bases.add(firstImg.thumbUrl.slice(0, firstImg.thumbUrl.length - parsed.seg.length - parsed.id.length - 1))
-            thumb[id] = parsed.seg
+            console.warn(`[thumbs] ${f}: ${id} unexpected image url, skipped`)
+            badUrls++
           }
-        } else {
-          console.warn(`[thumbs] ${f}: ${id} unexpected thumbUrl, skipped`)
-          badUrls++
         }
       }
       const firstAud = sp.audios?.[0]
