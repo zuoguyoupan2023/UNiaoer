@@ -537,32 +537,26 @@ async function again() {
       <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
       <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
 
-      <!-- 本轮 vs 该档位匿名平均（数据口径见脚本注；无样本/加载失败整块隐藏） -->
+      <!-- 本轮 vs 该档位匿名平均（正常文本流：无边框、随内容宽；* 注释在下方，2026-10-29 用户定） -->
       <div v-if="tierCompare" class="tier-compare">
         <p class="compare-line">
-          <span>
-            {{
-              t('result.tierAvgLine', {
-                tier: tierLabel,
-                avg: tierCompare.approx ? `≈${tierCompare.mean}` : tierCompare.mean,
-                n: tierCompare.n,
-              })
-            }}
-          </span>
-          <span
-            class="diff"
-            :class="tierCompare.diff > 0 ? 'up' : tierCompare.diff < 0 ? 'down' : 'even'"
-          >
-            {{
-              tierCompare.diff > 0
-                ? t('result.tierCompareUp', { d: tierCompare.diff })
-                : tierCompare.diff < 0
-                  ? t('result.tierCompareDown', { d: -tierCompare.diff })
-                  : t('result.tierCompareEven')
-            }}
-          </span>
+          {{
+            t('result.tierAvgLine', {
+              tier: tierLabel,
+              avg: tierCompare.approx ? `≈${tierCompare.mean}` : tierCompare.mean,
+              n: tierCompare.n,
+              cmp: t(
+                tierCompare.diff > 0
+                  ? 'result.tierCompareUp'
+                  : tierCompare.diff < 0
+                    ? 'result.tierCompareDown'
+                    : 'result.tierCompareEven',
+                tierCompare.diff === 0 ? {} : { d: Math.abs(tierCompare.diff) },
+              ),
+            })
+          }}
         </p>
-        <p class="muted small">{{ t('result.tierCompareNote') }}</p>
+        <p class="muted small">*{{ t('result.tierCompareNote') }}</p>
       </div>
     </template>
 
@@ -768,27 +762,17 @@ async function again() {
 .actions .btn {
   flex: 0 0 auto;
 }
-/* 本轮 vs 该档位匿名平均（弱色块，不与成绩主视觉抢注意力） */
+/* 本轮 vs 该档位匿名平均：正常文本流（无边框、不占满宽），* 注释在下方 */
 .tier-compare {
-  margin-top: 12px;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #f6faf7;
+  margin-top: 10px;
 }
 .tier-compare .compare-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
   margin: 0;
-  font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 .tier-compare .diff {
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  font-weight: 700;
 }
 .tier-compare .diff.up {
   color: var(--primary);
@@ -798,9 +782,10 @@ async function again() {
 }
 .tier-compare .diff.even {
   color: var(--text-light);
+  font-weight: 400;
 }
 .tier-compare .small {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   font-size: 0.72rem;
 }
 /* 035 分享块：与 actions 分隔，弱化视觉（次级操作） */
