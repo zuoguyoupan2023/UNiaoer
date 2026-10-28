@@ -2,8 +2,9 @@
 /**
  * 042：「观鸟」页（合并原 `/region` 地区浏览与 `/nearby` 附近鸟点）。
  *
- * 结构：两个标签页 —— ①**观鸟点**（默认，含「附近鸟点」开关：关=按地区浏览点位，开=按定位排附近点位）
- * ②**该地鸟种**（该国家/省份的鸟种网格；042 时叫「地区浏览」，2026-10-21 更名）。
+ * 结构：两个标签页 —— ①**该地鸟种**（默认；该国家/省份的鸟种网格，2026-10-29 起为
+ * 第一标签并内嵌「预习模式」浮窗）②**观鸟点**（含「附近鸟点」开关：关=按地区浏览点位，
+ * 开=按定位排附近点位）。
  * 地区选择器（大洲/国家/省）在页面级常驻，两个标签页共用。
  * 旧路由 `/region` / `/nearby` 由 router 重定向到本页并还原状态（见 router/index.ts）。
  */
@@ -11,8 +12,9 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, Crosshair, Globe2, MapPin, Search, X } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X } from 'lucide-vue-next'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
+import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
@@ -46,6 +48,9 @@ import {
   type Hotspot,
 } from '@/core/hotspots'
 import { currentLocale } from '@/i18n'
+import { audioUrlOf, loadThumbs, thumbUrlOf, type ThumbsIndex } from '@/core/thumbs'
+import { isMastered, toggleMastered } from '@/core/mastery'
+import { isPlaying, stopSharedAudio, toggleSharedAudio } from '@/core/audioPlayer'
 import {
   entryDisplayName,
   loadSpeciesDistribution,
@@ -82,7 +87,7 @@ const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
 /** 右侧面板标签页：观鸟点（默认）/ 该地鸟种（042，2026-10-21 更名） */
-const activeTab = ref<'spots' | 'regions'>('spots')
+const activeTab = ref<'spots' | 'regions'>('regions')
 /** 「附近鸟点」开关（默认关；开 → 观鸟点列表改为按定位排序的附近点位） */
 const nearby = ref(false)
 /** 选中国家的省级二级列表是否展开（点击已选国家切换） */
@@ -124,6 +129,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', measureStickyTop)
   topbarObserver?.disconnect()
+  stopSharedAudio()
 })
 /** 与 region:nearby-spots 的 --cell-deg 一致（仅用于署名文案） */
 const CELL_DEG = 0.25
@@ -135,7 +141,8 @@ let applyingQuery = false
 /** 深链还原：`/region` → tab=regions；`/nearby` → tab=spots&nearby=1；`?cc=&sub=` → 国家/省级 */
 function applyQuery() {
   const q = route.query
-  const tab = q.tab === 'regions' ? 'regions' : 'spots'
+  // 默认标签 = 该地鸟种（2026-10-29 用户定：预习优先，该地鸟种为第一标签）
+  const tab = q.tab === 'spots' ? 'spots' : 'regions'
   activeTab.value = tab
   nearby.value = tab === 'spots' && q.nearby === '1'
   if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
@@ -160,7 +167,8 @@ function toggleNearby() {
 }
 function syncQuery() {
   const q: Record<string, string> = {}
-  if (activeTab.value === 'regions') q.tab = 'regions'
+  // 默认标签（regions）不写参数，保持链接干净；显式传 tab=regions 也兼容
+  if (activeTab.value === 'spots') q.tab = 'spots'
   if (nearby.value) q.nearby = '1'
   // 地区也进 URL：默认国（CN）不写，保持链接干净；省份总是写
   if (selected.value && selected.value !== 'CN') q.cc = selected.value
@@ -419,6 +427,100 @@ watch([selected, province], () => {
   visibleCount.value = 200
 })
 const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
+
+/**
+ * ── 卡片缩略图 + 就地播放 + 预习模式（2026-10-29，P0-4）──────────────────────
+ * 名单层（manifest-meta）不含媒体字段 → 缩略图/鸣声 URL 来自轻量索引
+ * `data/thumbs.json`（`npm run thumbs` 从 assets 分片抽取的真实路径段，
+ * 媒体纠错换槽位后重跑即一致；硬拼 image-1 会拼回已停用的坏图）。
+ */
+const thumbs = ref<ThumbsIndex | null>(null)
+/** 加载失败的缩略图（@error 时记录，隐藏 img 防破图循环） */
+const thumbErrors = ref(new Set<string>())
+void loadThumbs().then((idx) => {
+  thumbs.value = idx
+})
+const cardThumb = (gi: GridItem) => {
+  if (thumbErrors.value.has(gi.slug)) return null
+  return thumbUrlOf(thumbs.value, gi.slug) ?? gi.thumb
+}
+/** 仅可玩物种显示小喇叭（未收录骨架物种没有媒体） */
+const cardAudio = (gi: GridItem) => (gi.playable ? audioUrlOf(thumbs.value, gi.slug) : null)
+const onThumbError = (slug: string) => {
+  const next = new Set(thumbErrors.value)
+  next.add(slug)
+  thumbErrors.value = next
+}
+const playToggle = (url: string) => {
+  void toggleSharedAudio(url)
+}
+
+/* ── 预习模式浮窗 ─────────────────────────────────────────────── */
+const previewOpen = ref(false)
+const previewFilter = ref<'all' | 'unmastered' | 'mastered'>('unmastered')
+const previewIndex = ref(0)
+/** isMastered 基于模块级 Set（非响应式）——切换后 bump 触发列表/灯泡重算 */
+const masteryVersion = ref(0)
+const { panelRef: previewPanelRef } = useDialogA11y(previewOpen, {
+  onClose: () => closePreview(),
+})
+const previewPanelBind = (el: unknown) => {
+  previewPanelRef.value = el instanceof HTMLElement ? el : null
+}
+/** 预习列表：只含可玩种（骨架未收录种无图无音，预习无意义），记录数降序 → 名称兜底 */
+const previewList = computed<GridItem[]>(() => {
+  void masteryVersion.value
+  const base = gridItems.value.filter((it) => it.playable)
+  const byRecords = [...base].sort(
+    (a, b) =>
+      recordCountOf(b.bankId) - recordCountOf(a.bankId) || collator.value.compare(a.name, b.name),
+  )
+  const f = previewFilter.value
+  if (f === 'all') return byRecords
+  return byRecords.filter((it) => (f === 'mastered' ? isMastered(it.slug) : !isMastered(it.slug)))
+})
+const previewCurrent = computed(() => previewList.value[previewIndex.value] ?? null)
+const previewSp = computed(() =>
+  previewCurrent.value?.bankId ? (speciesById(previewCurrent.value.bankId) ?? null) : null,
+)
+const previewThumb = computed(() =>
+  previewCurrent.value ? (cardThumb(previewCurrent.value) ?? null) : null,
+)
+const previewAudio = computed(() =>
+  previewCurrent.value ? cardAudio(previewCurrent.value) : null,
+)
+const previewMastered = computed(() => {
+  void masteryVersion.value
+  return previewCurrent.value ? isMastered(previewCurrent.value.slug) : false
+})
+function openPreview() {
+  previewOpen.value = true
+}
+function closePreview() {
+  previewOpen.value = false
+  stopSharedAudio()
+}
+function setPreviewFilter(f: 'all' | 'unmastered' | 'mastered') {
+  previewFilter.value = f
+  previewIndex.value = 0
+}
+function stepPreview(delta: number) {
+  const n = previewList.value.length
+  if (!n) return
+  previewIndex.value = (previewIndex.value + delta + n) % n
+}
+/** 灯泡点击：切换熟记；当前鸟离开筛选列表时（如「未熟记」里标了已熟记）自动跳到下一只 */
+function togglePreviewMastery() {
+  const cur = previewCurrent.value
+  if (!cur) return
+  toggleMastered(cur.slug)
+  masteryVersion.value += 1
+  const list = previewList.value
+  if (!list.some((it) => it.slug === cur.slug)) {
+    previewIndex.value = Math.min(previewIndex.value, Math.max(0, list.length - 1))
+  }
+}
+
 const provinceSources = computed(() =>
   (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
 )
@@ -756,24 +858,8 @@ function pickProvince(code: string) {
         </Teleport>
 
         <div class="species">
-          <!-- 042：标签页顺序为「观鸟点」（默认）/「该地鸟种」 -->
+          <!-- 2026-10-29 用户定：该地鸟种为第一标签（默认），观鸟点第二 -->
           <div class="panel-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              class="panel-tab"
-              :class="{ active: activeTab === 'spots' }"
-              :aria-selected="activeTab === 'spots'"
-              @click="setTab('spots')"
-            >
-              <span class="tab-label">{{ t('region.tabHotspots') }}</span>
-              <span class="tab-count">
-                <span class="tab-n">{{ nearby ? '' : hotspotList.length }}</span>
-                <template v-if="!nearby && province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
-                  <span class="tab-sub">{{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}</span>
-                </template>
-              </span>
-            </button>
             <button
               type="button"
               role="tab"
@@ -790,9 +876,25 @@ function pickProvince(code: string) {
                 </span>
               </span>
             </button>
+            <button
+              type="button"
+              role="tab"
+              class="panel-tab"
+              :class="{ active: activeTab === 'spots' }"
+              :aria-selected="activeTab === 'spots'"
+              @click="setTab('spots')"
+            >
+              <span class="tab-label">{{ t('region.tabHotspots') }}</span>
+              <span class="tab-count">
+                <span class="tab-n">{{ nearby ? '' : hotspotList.length }}</span>
+                <template v-if="!nearby && province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
+                  <span class="tab-sub">{{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}</span>
+                </template>
+              </span>
+            </button>
           </div>
 
-          <!-- ---------- 标签页 1：观鸟点（默认） ---------- -->
+          <!-- ---------- 标签页 2：观鸟点 ---------- -->
           <div v-show="activeTab === 'spots'" class="spots-pane">
             <!-- 附近鸟点开关：默认关；开启后本页转为按定位排序的附近点位 -->
             <div class="nearby-bar">
@@ -899,18 +1001,40 @@ function pickProvince(code: string) {
               >
                 {{ t('region.speciesSortRecords') }}
               </button>
+              <button
+                type="button"
+                class="sort-btn preview-btn"
+                :aria-pressed="previewOpen"
+                @click="openPreview"
+              >
+                <Lightbulb class="ic" :size="14" aria-hidden="true" />
+                {{ t('region.previewMode') }}
+              </button>
             </div>
             <ul class="species-grid">
               <li v-for="gi in visibleItems" :key="gi.slug">
-                <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
+                <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable, 'has-media': !!cardThumb(gi) || !!cardAudio(gi) }" :to="`/species/${gi.slug}`">
                   <img
-                    v-if="gi.thumb"
+                    v-if="cardThumb(gi)"
                     class="thumb"
-                    :src="gi.thumb"
+                    :src="cardThumb(gi)!"
                     alt=""
                     loading="lazy"
                     decoding="async"
+                    @error="onThumbError(gi.slug)"
                   />
+                  <button
+                    v-if="cardAudio(gi)"
+                    type="button"
+                    class="card-play"
+                    :class="{ playing: isPlaying(cardAudio(gi)!) }"
+                    :aria-label="isPlaying(cardAudio(gi)!) ? t('region.stopCall') : t('region.playCall')"
+                    :aria-pressed="isPlaying(cardAudio(gi)!)"
+                    @click.prevent.stop="playToggle(cardAudio(gi)!)"
+                  >
+                    <VolumeX v-if="isPlaying(cardAudio(gi)!)" :size="14" aria-hidden="true" />
+                    <Volume2 v-else :size="14" aria-hidden="true" />
+                  </button>
                   <span class="sp-text">
                     <span class="sp-name">{{ gi.name }}</span>
                     <span class="sp-sci">{{ gi.nameSci }}</span>
@@ -942,6 +1066,131 @@ function pickProvince(code: string) {
           </div>
         </div>
       </div>
+
+      <!-- ---------- 预习模式浮窗（2026-10-29，P0-4）：就地看图听声 + 熟记标记 ---------- -->
+      <Teleport to="body">
+        <div v-if="previewOpen" class="preview-mask" @click.self="closePreview">
+          <div
+            :ref="previewPanelBind"
+            class="preview-card"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="t('region.previewMode')"
+          >
+            <button
+              type="button"
+              class="preview-close"
+              :aria-label="t('common.close')"
+              @click="closePreview"
+            >
+              <X :size="18" />
+            </button>
+            <template v-if="previewCurrent">
+              <div class="pv-head">
+                <img
+                  v-if="previewThumb"
+                  class="pv-thumb"
+                  :src="previewThumb"
+                  alt=""
+                  @error="onThumbError(previewCurrent.slug)"
+                />
+                <div v-else class="pv-thumb pv-thumb-empty" aria-hidden="true"></div>
+                <div class="pv-title">
+                  <p class="pv-name">{{ previewCurrent.name }}</p>
+                  <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
+                </div>
+                <button
+                  v-if="previewAudio"
+                  type="button"
+                  class="card-play pv-play"
+                  :class="{ playing: isPlaying(previewAudio) }"
+                  :aria-label="isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')"
+                  :aria-pressed="isPlaying(previewAudio)"
+                  @click="playToggle(previewAudio)"
+                >
+                  <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
+                  <Volume2 v-else :size="16" aria-hidden="true" />
+                </button>
+              </div>
+
+              <SpeciesFacts
+                class="pv-facts"
+                :profile="previewSp?.profile"
+                :species-id="previewCurrent.slug"
+                :taxon-key="previewSp?.taxonKey"
+                :name-sci="previewCurrent.nameSci"
+                compact
+              />
+
+              <button
+                type="button"
+                class="pv-master"
+                :class="{ known: previewMastered }"
+                :aria-pressed="previewMastered"
+                @click="togglePreviewMastery"
+              >
+                <Lightbulb class="bulb" :size="20" aria-hidden="true" />
+                <span>{{ previewMastered ? t('region.masteryKnown') : t('region.masteryUnknown') }}</span>
+              </button>
+
+              <div class="pv-nav">
+                <button
+                  type="button"
+                  class="pv-step"
+                  :disabled="previewList.length < 2"
+                  @click="stepPreview(-1)"
+                >
+                  <ChevronLeft :size="15" aria-hidden="true" />
+                  {{ t('region.previewPrev') }}
+                </button>
+                <span class="pv-pos muted">
+                  {{ t('region.previewPos', { i: previewIndex + 1, n: previewList.length }) }}
+                </span>
+                <button
+                  type="button"
+                  class="pv-step"
+                  :disabled="previewList.length < 2"
+                  @click="stepPreview(1)"
+                >
+                  {{ t('region.previewNext') }}
+                  <ChevronRight :size="15" aria-hidden="true" />
+                </button>
+              </div>
+            </template>
+            <p v-else class="muted pv-empty">{{ t('region.previewEmpty') }}</p>
+
+            <div class="pv-filters" role="group" :aria-label="t('region.previewMode')">
+              <button
+                type="button"
+                class="sort-btn"
+                :class="{ active: previewFilter === 'all' }"
+                :aria-pressed="previewFilter === 'all'"
+                @click="setPreviewFilter('all')"
+              >
+                {{ t('region.filterAll') }}
+              </button>
+              <button
+                type="button"
+                class="sort-btn"
+                :class="{ active: previewFilter === 'unmastered' }"
+                :aria-pressed="previewFilter === 'unmastered'"
+                @click="setPreviewFilter('unmastered')"
+              >
+                {{ t('region.filterUnmastered') }}
+              </button>
+              <button
+                type="button"
+                class="sort-btn"
+                :class="{ active: previewFilter === 'mastered' }"
+                :aria-pressed="previewFilter === 'mastered'"
+                @click="setPreviewFilter('mastered')"
+              >
+                {{ t('region.filterMastered') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </template>
 
     <p v-else-if="failed" class="muted empty" role="alert">{{ t('errors.unknown') }}</p>
@@ -1523,10 +1772,210 @@ function pickProvince(code: string) {
   margin: 14px 0;
 }
 
+/* ── 卡片缩略图 + 小喇叭（P0-4） ─────────────────────────────── */
+.species-card {
+  position: relative;
+}
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.preview-btn .ic {
+  color: #c98a00;
+}
+.card-play {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.card-play:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.card-play.playing {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.card-play + .sp-text {
+  padding-right: 30px;
+}
+
+/* ── 预习模式浮窗 ────────────────────────────────────────────── */
+.preview-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.preview-card {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  padding: 4px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+}
+.preview-close:hover {
+  color: var(--text);
+}
+.pv-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 28px;
+}
+.pv-thumb {
+  width: 84px;
+  height: 63px; /* 4:3，与网格卡片一致 */
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
+  background: #f0f4f2;
+}
+.pv-title {
+  min-width: 0;
+}
+.pv-name {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+.pv-sci {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-light);
+}
+.pv-play {
+  position: static;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  flex: none;
+}
+.pv-facts {
+  margin-top: 10px;
+}
+.pv-master {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.pv-master .bulb {
+  color: var(--text-light);
+}
+.pv-master:hover {
+  border-color: var(--primary-light);
+}
+.pv-master.known {
+  border-color: #ffd600;
+  background: #fffbe6;
+}
+.pv-master.known .bulb {
+  /* 已熟记：灯泡内填充核辐射警示黄 */
+  fill: #ffd600;
+  color: #c98a00;
+}
+.pv-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pv-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.pv-step:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pv-step:not(:disabled):hover {
+  border-color: var(--primary-light);
+}
+.pv-pos {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}
+.pv-empty {
+  margin: 18px 0;
+  text-align: center;
+}
+.pv-filters {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
 /* 移动端：单栏 + 抽屉（选择器已 Teleport 到 body，见模板） */
 @media (max-width: 640px) {
   .layout {
     grid-template-columns: 1fr;
   }
+  .preview-mask {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .preview-card {
+    max-width: none;
+    max-height: 82vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
 }
+
 </style>

@@ -28,6 +28,7 @@
     "r2:push": "node scripts/push-r2.mjs",
     "birdid:local": "node scripts/birdid-local-test.mjs",
     "layers": "node scripts/build-manifest-layers.mjs",
+    "thumbs": "node scripts/build-thumbs.mjs",
     "r2:manifest": "wrangler r2 object put uniaoerbucket/data/manifest.json --file=public/data/manifest.json --content-type \"application/json; charset=utf-8\" --cache-control \"public, max-age=300\" --remote",
     "check:bank": "node scripts/check-bank.mjs",
     "check:layers": "node scripts/check-manifest-layers.mjs",
