@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Award,
+  BarChart3,
   BookOpen,
   CircleCheck,
   CircleX,
@@ -23,6 +24,7 @@ import { formatMemoryTime, memoryThresholdSec } from '@/core/memoryRating'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
 import { accuracyBand, track, trackBatch } from '@/core/metrics'
+import { fetchPublicStats, type PublicStats } from '@/core/publicStats'
 import {
   buildShareDraft,
   createShare,
@@ -93,6 +95,21 @@ const regionBadge = computed(() =>
     : '',
 )
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
+/**
+ * 本轮 vs 该档位匿名平均（2026-10-29 用户要求）。
+ * 数据来自 `/api/stats/public` 的 `accuracyByTier`（076 精确口径，全时段 Σcorrect/Σtotal）；
+ * Worker 内有 5 分钟聚合缓存——**D1 回源频率与做题人数无关**，端上每轮只多 1 个缓存命中的 GET。
+ * 加载失败/无该档样本 → null，整块不渲染（不阻塞结果页）。
+ */
+const tierAvg = ref<PublicStats['accuracyByTier'] | null>(null)
+const tierCompare = computed(() => {
+  if (isMemory.value) return null // 记忆挑战恒 12/12，无比较语义
+  const list = tierAvg.value
+  if (!list?.length) return null
+  const hit = list.find((x) => x.tier === String(quiz.tier))
+  if (!hit || !Number.isFinite(hit.mean)) return null
+  return { mean: hit.mean, n: hit.n, approx: !!hit.approx, diff: quiz.accuracy - hit.mean }
+})
 /**
  * 2026-10-25：海报「题目范围」——**全球也要显示**（与界面角标不同：角标为降噪隐藏全球，
  * 海报必须声明范围，否则「中国上海看图版 L7」与「全球版」无法区分）。
@@ -385,6 +402,8 @@ onMounted(async () => {
     router.replace('/')
     return
   }
+  // 该档位匿名平均（不阻塞结果展示；失败静默）
+  void fetchPublicStats().then((s) => (tierAvg.value = s?.accuracyByTier ?? null))
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
@@ -517,6 +536,34 @@ async function again() {
       </div>
       <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
       <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
+
+      <!-- 本轮 vs 该档位匿名平均（数据口径见脚本注；无样本/加载失败整块隐藏） -->
+      <div v-if="tierCompare" class="tier-compare">
+        <p class="compare-line">
+          <span>
+            {{
+              t('result.tierAvgLine', {
+                tier: tierLabel,
+                avg: tierCompare.approx ? `≈${tierCompare.mean}` : tierCompare.mean,
+                n: tierCompare.n,
+              })
+            }}
+          </span>
+          <span
+            class="diff"
+            :class="tierCompare.diff > 0 ? 'up' : tierCompare.diff < 0 ? 'down' : 'even'"
+          >
+            {{
+              tierCompare.diff > 0
+                ? t('result.tierCompareUp', { d: tierCompare.diff })
+                : tierCompare.diff < 0
+                  ? t('result.tierCompareDown', { d: -tierCompare.diff })
+                  : t('result.tierCompareEven')
+            }}
+          </span>
+        </p>
+        <p class="muted small">{{ t('result.tierCompareNote') }}</p>
+      </div>
     </template>
 
     <div v-if="newTitleTexts.length" class="badges-new">
@@ -534,6 +581,9 @@ async function again() {
     <div class="actions">
       <button class="btn btn-primary" @click="again">{{ t('result.again') }}</button>
       <button class="btn btn-secondary" @click="showPoster = true">{{ t('result.makePoster') }}</button>
+      <RouterLink class="btn btn-secondary" to="/stats">
+        <BarChart3 class="ic" :size="16" /> {{ t('result.viewStats') }}
+      </RouterLink>
       <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
     </div>
 
@@ -717,6 +767,41 @@ async function again() {
 }
 .actions .btn {
   flex: 0 0 auto;
+}
+/* 本轮 vs 该档位匿名平均（弱色块，不与成绩主视觉抢注意力） */
+.tier-compare {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f6faf7;
+}
+.tier-compare .compare-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.tier-compare .diff {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tier-compare .diff.up {
+  color: var(--primary);
+}
+.tier-compare .diff.down {
+  color: #b3562d;
+}
+.tier-compare .diff.even {
+  color: var(--text-light);
+}
+.tier-compare .small {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
 }
 /* 035 分享块：与 actions 分隔，弱化视觉（次级操作） */
 .share-block {

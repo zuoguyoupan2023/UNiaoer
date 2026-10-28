@@ -1836,6 +1836,22 @@ function pickProvince(code: string) {
   font-size: 0.72rem;
   cursor: pointer;
   transition: all 0.16s ease;
+  /* 微弱呼吸灯：让用户能注意到预习入口（2026-10-29 用户要求） */
+  animation: preview-breathe 2.8s ease-in-out infinite;
+}
+@keyframes preview-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 16%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-btn {
+    animation: none; /* 减少动效偏好：只保留静态高亮 */
+  }
 }
 .preview-btn:hover {
   border-color: var(--primary-light);
