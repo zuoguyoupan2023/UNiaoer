@@ -96,19 +96,31 @@ const regionBadge = computed(() =>
 )
 const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
 /**
- * 本轮 vs 该档位匿名平均（2026-10-29 用户要求）。
+ * 该档位匿名平均正确率（2026-10-29 用户要求，表述定为「{档位}水平测试的平均正确率是: X% *」）。
  * 数据来自 `/api/stats/public` 的 `accuracyByTier`（076 精确口径，全时段 Σcorrect/Σtotal）；
  * Worker 内有 5 分钟聚合缓存——**D1 回源频率与做题人数无关**，端上每轮只多 1 个缓存命中的 GET。
  * 加载失败/无该档样本 → null，整块不渲染（不阻塞结果页）。
  */
-const tierAvg = ref<PublicStats['accuracyByTier'] | null>(null)
-const tierCompare = computed(() => {
-  if (isMemory.value) return null // 记忆挑战恒 12/12，无比较语义
-  const list = tierAvg.value
+const tierStats = ref<PublicStats | null>(null)
+const tierAvg = computed(() => {
+  if (isMemory.value) return null // 记忆挑战恒 12/12，无正确率语义
+  const list = tierStats.value?.accuracyByTier
   if (!list?.length) return null
   const hit = list.find((x) => x.tier === String(quiz.tier))
-  if (!hit || !Number.isFinite(hit.mean)) return null
-  return { mean: hit.mean, n: hit.n, approx: !!hit.approx, diff: quiz.accuracy - hit.mean }
+  return hit && Number.isFinite(hit.mean) ? hit : null
+})
+/** 注脚的「数据截止到」时间 = 聚合快照时间（Worker generatedAt，本地时区） */
+const statsCutoff = computed(() => {
+  const iso = tierStats.value?.generatedAt
+  if (!iso) return ''
+  try {
+    return new Intl.DateTimeFormat(currentLocale(), {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(iso))
+  } catch {
+    return iso
+  }
 })
 /**
  * 2026-10-25：海报「题目范围」——**全球也要显示**（与界面角标不同：角标为降噪隐藏全球，
@@ -403,7 +415,7 @@ onMounted(async () => {
     return
   }
   // 该档位匿名平均（不阻塞结果展示；失败静默）
-  void fetchPublicStats().then((s) => (tierAvg.value = s?.accuracyByTier ?? null))
+  void fetchPublicStats().then((s) => (tierStats.value = s))
   void loadBank()
     .then(() => (bankReady.value = true))
     .catch(() => {})
@@ -535,29 +547,17 @@ async function again() {
         <span class="den">/ {{ quiz.total }}</span>
       </div>
       <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
+      <!-- 该档位匿名平均，紧跟正确率一行（* 注在按钮下方；句尾链到统计看板，2026-10-29 用户定） -->
+      <p v-if="tierAvg" class="tier-avg-line">
+        {{
+          t('result.tierAvgLine', {
+            tier: tierLabel,
+            avg: tierAvg.approx ? `≈${tierAvg.mean}` : tierAvg.mean,
+          })
+        }}
+        <RouterLink class="tier-avg-link" to="/stats">{{ t('result.tierStatsLink') }}</RouterLink>
+      </p>
       <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
-
-      <!-- 本轮 vs 该档位匿名平均（正常文本流：无边框、随内容宽；* 注释在下方，2026-10-29 用户定） -->
-      <div v-if="tierCompare" class="tier-compare">
-        <p class="compare-line">
-          {{
-            t('result.tierAvgLine', {
-              tier: tierLabel,
-              avg: tierCompare.approx ? `≈${tierCompare.mean}` : tierCompare.mean,
-              n: tierCompare.n,
-              cmp: t(
-                tierCompare.diff > 0
-                  ? 'result.tierCompareUp'
-                  : tierCompare.diff < 0
-                    ? 'result.tierCompareDown'
-                    : 'result.tierCompareEven',
-                tierCompare.diff === 0 ? {} : { d: Math.abs(tierCompare.diff) },
-              ),
-            })
-          }}
-        </p>
-        <p class="muted small">*{{ t('result.tierCompareNote') }}</p>
-      </div>
     </template>
 
     <div v-if="newTitleTexts.length" class="badges-new">
@@ -580,6 +580,11 @@ async function again() {
       </RouterLink>
       <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
     </div>
+
+    <!-- * 注：紧跟按钮下方（口径与截止时间见脚本注） -->
+    <p v-if="tierAvg" class="muted small tier-note">
+      *{{ t('result.tierCompareNote', { time: statsCutoff }) }}
+    </p>
 
     <!-- 035 成绩分享：默认带昵称（可勾选隐藏）；创建后链接同时供海报二维码使用 -->
     <div v-if="roundRecord" class="share-block">
@@ -762,30 +767,22 @@ async function again() {
 .actions .btn {
   flex: 0 0 auto;
 }
-/* 本轮 vs 该档位匿名平均：正常文本流（无边框、不占满宽），* 注释在下方 */
-.tier-compare {
-  margin-top: 10px;
-}
-.tier-compare .compare-line {
-  margin: 0;
+/* 该档位平均句（紧跟正确率行）与按钮下方的 * 注 */
+.tier-avg-line {
+  margin: 2px 0 0;
   font-size: 0.9rem;
 }
-.tier-compare .diff {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-.tier-compare .diff.up {
+.tier-avg-link {
+  margin-left: 6px;
   color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
 }
-.tier-compare .diff.down {
-  color: #b3562d;
+.tier-avg-link:hover {
+  text-decoration: underline;
 }
-.tier-compare .diff.even {
-  color: var(--text-light);
-  font-weight: 400;
-}
-.tier-compare .small {
-  margin: 3px 0 0;
+.tier-note {
+  margin: 2px 0 0;
   font-size: 0.72rem;
 }
 /* 035 分享块：与 actions 分隔，弱化视觉（次级操作） */
