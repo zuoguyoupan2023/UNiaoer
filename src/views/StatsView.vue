@@ -74,14 +74,14 @@ const rangeText = computed(() => {
 })
 
 /**
- * 072-k / 076：各水平正确率（076 起服务端优先用精确得分 Σcorrect/Σtotal；
- * 只有分桶历史数据时才回退到桶中点估算，并在该档位标记 approx）。
- * 只展示有数据的档位，并按 L1..L5 升序。
+ * 072-k / 076 / 094：各水平正确率。
+ * 094-P1：**无样本量门槛**全量下发（门槛会让新档位上线初期完全不可见；
+ * 轮次数 n 随条目展示，样本大小自明）。
+ * 主口径 = 精确（quiz_score）；早期口径（approx）单独折叠，不与精确值混排。
  */
 const tierAccuracy = computed(() => stats.value?.accuracyByTier ?? [])
-
-/** 有任何档位仍是分桶估算（精确事件上线前的历史数据）→ 显示一行说明 */
-const anyApprox = computed(() => tierAccuracy.value.some((a) => a.approx))
+const exactTiers = computed(() => tierAccuracy.value.filter((a) => !a.approx))
+const earlyTiers = computed(() => tierAccuracy.value.filter((a) => a.approx))
 
 /** 徽章获取榜（按人数降序；只显示 >0 的，全部为 0 时给一句占位） */
 const badgeRows = computed(() => {
@@ -180,17 +180,28 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
         </ol>
       </div>
 
-      <!-- 072-k：各水平正确率 -->
+      <!-- 072-k：各水平正确率（094-P1：无门槛全展示；早期分桶估算折叠） -->
       <h3 class="sec">{{ t('stats.sectionAccuracy') }}</h3>
-      <p v-if="!tierAccuracy.length" class="muted small">{{ t('stats.accuracyEmpty') }}</p>
+      <p v-if="!exactTiers.length" class="muted small">{{ t('stats.accuracyEmpty') }}</p>
       <ul v-else class="ranks">
-        <li v-for="a in tierAccuracy" :key="a.tier">
+        <li v-for="a in exactTiers" :key="a.tier">
           <span class="rank-name">{{ t(`difficulty.l${a.tier}.label`) }}</span>
-          <span class="rank-n">{{ t('stats.accuracyMean', { mean: a.approx ? `≈${a.mean}` : a.mean, n: a.n }) }}</span>
+          <span class="rank-n">{{ t('stats.accuracyMean', { mean: a.mean, n: a.n }) }}</span>
         </li>
       </ul>
-      <p v-if="tierAccuracy.length" class="muted small">{{ t('stats.accuracyNote') }}</p>
-      <p v-if="anyApprox" class="muted small">{{ t('stats.accuracyApproxNote') }}</p>
+      <p v-if="exactTiers.length" class="muted small">{{ t('stats.accuracyNote') }}</p>
+
+      <!-- 094-P2：早期（各档位首次精确数据之前）只有分桶估算——折叠展示，不与精确口径混排 -->
+      <details v-if="earlyTiers.length" class="early-bands">
+        <summary>{{ t('stats.earlyBandsTitle') }}</summary>
+        <ul class="ranks">
+          <li v-for="a in earlyTiers" :key="`early-${a.tier}`">
+            <span class="rank-name">{{ t(`difficulty.l${a.tier}.label`) }}</span>
+            <span class="rank-n">{{ t('stats.accuracyMean', { mean: `≈${a.mean}`, n: a.n }) }}</span>
+          </li>
+        </ul>
+        <p class="muted small">{{ t('stats.earlyBandsNote') }}</p>
+      </details>
 
       <!-- 徽章获取榜 -->
       <h3 class="sec">{{ t('stats.sectionBadges') }}</h3>
@@ -410,6 +421,27 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
   flex-direction: column;
   gap: 4px;
   padding: 0;
+}
+/* 094-P2：早期分桶估算折叠区（默认收起，展开才见历史估算值） */
+.early-bands {
+  margin-top: 12px;
+  text-align: left;
+}
+.early-bands summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-light);
+  user-select: none;
+}
+.early-bands summary:hover {
+  color: var(--primary);
+}
+.early-bands .ranks {
+  margin-top: 8px;
+}
+.early-bands .muted {
+  margin-top: 8px;
 }
 .ranks li {
   display: flex;

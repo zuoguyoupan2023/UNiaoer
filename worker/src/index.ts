@@ -1927,16 +1927,16 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
         "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'title_earned' GROUP BY props ORDER BY n DESC",
       )
         .all<{ props: string; n: number }>(),
-      // 072-k：正确率分桶（按档位聚合；不含物种/用户）——**只作为历史口径的回退**
+      // 072-k：正确率分桶（按档位×日聚合；不含物种/用户）——只用于「早期」口径（见下）
       env.DB.prepare(
-        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' GROUP BY props",
+        "SELECT day, props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' GROUP BY day, props",
       )
-        .all<{ props: string; n: number }>(),
-      // 076：精确得分（correct/total）——新口径，正确率 = Σcorrect / Σtotal
+        .all<{ day: string; props: string; n: number }>(),
+      // 076：精确得分（correct/total）——主口径，正确率 = Σcorrect / Σtotal
       env.DB.prepare(
-        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_score' GROUP BY props",
+        "SELECT day, props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_score' GROUP BY day, props",
       )
-        .all<{ props: string; n: number }>(),
+        .all<{ day: string; props: string; n: number }>(),
     ])
 
     const totals: Record<string, number> = {}
@@ -1953,15 +1953,17 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
       badges: badges.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
       titles: titles.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
       /**
-       * 072-k / 076：各档位正确率。
+       * 072-k / 076 / 094：各档位正确率。
        *
-       * **精确口径（076，优先）**：`quiz_score{tier,correct,total}` → 正确率 = Σcorrect / Σtotal，
+       * **主口径（精确，076）**：`quiz_score{tier,correct,total}` → 正确率 = Σcorrect / Σtotal，
        * 题级加权（题量不足 10 的轮次不会被放大或缩小），`approx: false`。
+       * **无样本量门槛**（094：n≥10 门槛会让新档位上线初期完全不可见，L6/L7 曾因此隐形）；
+       * 轮次数 n 随条目下发，样本大小自明。
        *
-       * **历史回退（072-k）**：精确事件上线前的轮次只有 5 档分桶，用桶中点（10/30/50/70/90）
-       * 加权估算，`approx: true`；前端在均值前加 ≈ 标注，不把估算值当精确值展示。
-       *
-       * 两种口径都要求 n ≥ 10，避免「1 轮 100%」误导。
+       * **早期口径（估算，094-P2）**：各档位**首次出现精确数据之前**的轮次只有 5 档分桶
+       * （`quiz_result{tier,band}`），按桶中点（10/30/50/70/90）加权估算，`approx: true`，
+       * 前端折叠展示并加 ≈，不与精确值混排。首次精确数据之后的分桶行与 quiz_score
+       * 重复，不计入（前端仍在发 quiz_result 供 073 地区口径，公开看板不再用它）。
        */
       accuracyByTier: (() => {
         const BAND_MID: Record<string, number> = {
@@ -1973,8 +1975,8 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
         }
         type TierStat = { tier: string; n: number; mean: number; approx: boolean; bands?: Record<string, number> }
 
-        // 精确：按 (tier) 累计轮次与题量
-        const exact = new Map<string, { rounds: number; correct: number; total: number }>()
+        // 精确：按 (tier) 累计轮次与题量；记录首次出现日（该档位「早期」的分界线）
+        const exact = new Map<string, { rounds: number; correct: number; total: number; firstDay: string }>()
         for (const r of scores.results) {
           const p = parseProps(r.props)
           const tier = p.tier ?? ''
@@ -1983,41 +1985,38 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
           // correct ≤ total 的跨字段校验只能在这里做（单属性校验看不到彼此）
           if (!tier || !Number.isInteger(correct) || !Number.isInteger(total) || total <= 0) continue
           if (correct < 0 || correct > total) continue
-          const cell = exact.get(tier) ?? { rounds: 0, correct: 0, total: 0 }
+          const cell = exact.get(tier) ?? { rounds: 0, correct: 0, total: 0, firstDay: r.day }
           cell.rounds += r.n
           cell.correct += correct * r.n
           cell.total += total * r.n
+          if (r.day < cell.firstDay) cell.firstDay = r.day
           exact.set(tier, cell)
         }
 
-        // 历史分桶：桶中点加权
-        const band = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
+        // 早期分桶：只累计「该档位首次精确数据之前」的行（那时只有分桶，无法精确化）
+        const early = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
         for (const r of results.results) {
           const p = parseProps(r.props)
           const tier = p.tier ?? ''
           const b = p.band ?? ''
           if (!tier || !(b in BAND_MID)) continue
-          const cell = band.get(tier) ?? { n: 0, weighted: 0, bands: {} }
+          const ex = exact.get(tier)
+          if (ex && r.day >= ex.firstDay) continue // 精确时代：分桶行与 quiz_score 重复
+          const cell = early.get(tier) ?? { n: 0, weighted: 0, bands: {} }
           cell.n += r.n
           cell.weighted += r.n * (BAND_MID[b] ?? 0)
           cell.bands[b] = (cell.bands[b] ?? 0) + r.n
-          band.set(tier, cell)
+          early.set(tier, cell)
         }
 
-        const tiers = new Set([...exact.keys(), ...band.keys()])
         const out: TierStat[] = []
-        for (const tier of tiers) {
-          const ex = exact.get(tier)
-          if (ex && ex.rounds >= 10) {
-            out.push({ tier, n: ex.rounds, mean: Math.round((ex.correct / ex.total) * 100), approx: false })
-            continue
-          }
-          const bd = band.get(tier)
-          if (bd && bd.n >= 10) {
-            out.push({ tier, n: bd.n, mean: Math.round(bd.weighted / bd.n), bands: bd.bands, approx: true })
-          }
+        for (const [tier, ex] of exact) {
+          out.push({ tier, n: ex.rounds, mean: Math.round((ex.correct / ex.total) * 100), approx: false })
         }
-        return out.sort((a, b) => Number(a.tier) - Number(b.tier))
+        for (const [tier, bd] of early) {
+          out.push({ tier, n: bd.n, mean: Math.round(bd.weighted / bd.n), bands: bd.bands, approx: true })
+        }
+        return out.sort((a, b) => Number(a.tier) - Number(b.tier) || Number(a.approx) - Number(b.approx))
       })(),
       /** 口径说明（前端直接展示，避免"数字怎么来的"疑问） */
       notes: {
