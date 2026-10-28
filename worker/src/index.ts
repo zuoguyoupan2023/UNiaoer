@@ -833,6 +833,55 @@ async function handleVote(request: Request, env: Env, reportId: string): Promise
 }
 
 /**
+ * ── 064 我的报错：报错者凭本地匿名 clientId 拉取自己报错的处理状态 ──
+ * 隐私口径与投票一致：仅凭设备本地随机 id，不新增任何个人信息；
+ * 返回字段 = 报错者自己提交的内容子集 + 状态，无第三方数据。
+ * reports 表量级小（数百行），暂不为 client_id 建索引（写额度纪律优先）。
+ */
+async function handleMyReports(env: Env, url: URL): Promise<Response> {
+  const clientId = clientIdOf(url.searchParams.get('clientId'))
+  if (!clientId) return json({ error: 'invalid_client' }, { status: 400 })
+  const limit = clampInt(url.searchParams.get('limit'), 1, 200, 200)
+  const rows = await env.DB.prepare(
+    `SELECT id, status, updated_at, species_id, species_name, question_type, media_url, reason
+     FROM reports WHERE client_id = ? ORDER BY created_at DESC LIMIT ?`,
+  )
+    .bind(clientId, limit)
+    .all<Record<string, unknown>>()
+  return json({ reports: rows.results })
+}
+
+/**
+ * ── 064 报错导出验证码：为「我的报错」导出文件签发归户凭据 ──
+ * 服务端签发 32 位 hex 随机令牌，库内只存 SHA-256（同 round_shares 令牌模式），
+ * 明文仅随导出文件出现一次；未来账号体系接入后凭令牌**一次性**验证
+ * 「这些报错归该账号」（consumed_at 置位），非注册用户不提交此值。
+ * 写入成本：1 行/次（导出为低频动作；限流每小时 10 次/设备）。
+ */
+async function handleCreateReportClaim(request: Request, env: Env): Promise<Response> {
+  const body = await readBody(request)
+  const clientId = clientIdOf(body.clientId)
+  if (!clientId) return json({ error: 'invalid_client' }, { status: 400 })
+  const now = Date.now()
+  const recent = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM report_claims WHERE client_id = ? AND created_at > ?',
+  )
+    .bind(clientId, now - 3600_000)
+    .first<{ n: number }>()
+  if ((recent?.n ?? 0) >= 10) return json({ error: 'rate_limited' }, { status: 429 })
+  const token = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+  const claimHash = await sha256Hex(token)
+  await env.DB.prepare(
+    'INSERT INTO report_claims (claim_hash, client_id, created_at) VALUES (?,?,?)',
+  )
+    .bind(claimHash, clientId, now)
+    .run()
+  return json({ ok: true, token }, { status: 201 })
+}
+
+/**
  * ── 035 单轮成绩分享（用户主动分享；D-035-1~6 已拍板）────────────────────
  *
  * 设计要点：
@@ -2154,6 +2203,8 @@ export default {
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
         if (path === '/api/reports') return await handlePublicReports(env, url)
+        // 064 我的报错：报错者拉取自己提交的报错状态（凭匿名 clientId）
+        if (path === '/api/reports/mine') return await handleMyReports(env, url)
         // 035：分享读取（公开；不加边缘缓存——撤回需即时生效，D1 仅 1 行读）
         const shareGet = path.match(/^\/api\/shares\/([A-Za-z0-9]{6,24})$/)
         if (shareGet) return await handleGetShare(env, shareGet[1]!)
@@ -2185,6 +2236,10 @@ export default {
 
       if (method === 'POST' && path === '/api/reports') {
         return await handleSubmitReport(request, env)
+      }
+      // 064 报错导出验证码签发（凭匿名 clientId；令牌只存哈希）
+      if (method === 'POST' && path === '/api/reports/claims') {
+        return await handleCreateReportClaim(request, env)
       }
       // 028 匿名计量上报（公开；白名单 + 内存限流；静默 204）
       if (method === 'POST' && path === '/api/metrics') {

@@ -5,8 +5,25 @@ import { Languages, Settings } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import type { AutoNextDelaySec } from '@/types'
 import { ambiencePlayer, loadBirdTracks, type AmbienceTrack } from '@/core/ambience'
-import { clearReports, countReports, pendingReportCount } from '@/core/reportStore'
+import {
+  applyRemoteStatuses,
+  clearReports,
+  countReports,
+  importReports,
+  listReports,
+  pendingReportCount,
+} from '@/core/reportStore'
 import { syncPendingReports } from '@/core/reportSync'
+import { getClientId } from '@/core/anonymousId'
+import { createReportClaim, listMyReports } from '@/core/reportsApi'
+import { exportAllArchives, importBackup, isBackupFile, summarizeBackup } from '@/core/historyDb'
+import {
+  fullBackupFilename,
+  isFullBackup,
+  isReportsBackup,
+  sanitizeImportedReport,
+  type FullBackup,
+} from '@/core/reportExport'
 import { pendingShareCount } from '@/core/shareQueue'
 import { syncPendingShares } from '@/core/shareSync'
 import type { AutoNextMode } from '@/types'
@@ -18,6 +35,9 @@ const reportCount = ref(0)
 const pendingCount = ref(0)
 const reportsMsg = ref('')
 const syncing = ref(false)
+/** 064 清空前的导出提醒（二次确认面板） */
+const clearWarn = ref(false)
+const reportsImportInput = ref<HTMLInputElement | null>(null)
 /** 035 离线补传（2026-10-09） */
 const shareQueueCount = ref(0)
 const shareSyncing = ref(false)
@@ -70,14 +90,129 @@ async function syncShares() {
   }
 }
 
-/** G1：清空本地报错记录 */
+/** G1：清空本地报错记录（064：先经导出提醒面板确认） */
 async function clearLocalReports() {
   try {
     await clearReports()
     reportsMsg.value = t('settings.reportsCleared')
+    clearWarn.value = false
     await refreshReportCounts()
   } catch {
     reportsMsg.value = t('errors.unknown')
+  }
+}
+
+/**
+ * 064 导出个人数据备份（2026-10-29 用户定：**全部个人数据**）：
+ * 档案全量（v2：轮次/错题/徽章/昵称）+ 全部报错 + 归户验证码。
+ * 验证码由服务端签发（只存哈希，明文仅在此文件里）；离线/签发失败降级为
+ * 无验证码导出（本地恢复不受影响，只是未来无法归入账号）。
+ */
+async function exportLocalReports() {
+  reportsMsg.value = ''
+  try {
+    const [archives, reports] = await Promise.all([exportAllArchives(), listReports()])
+    let claimToken: string | undefined
+    try {
+      claimToken = await createReportClaim(getClientId())
+    } catch {
+      /* 离线/限流：无验证码导出 */
+    }
+    const backup: FullBackup = {
+      app: 'uniaoer',
+      kind: 'full-backup',
+      version: 1,
+      exportedAt: Date.now(),
+      claimToken,
+      archives,
+      reports,
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fullBackupFilename()
+    a.click()
+    URL.revokeObjectURL(url)
+    reportsMsg.value = claimToken
+      ? t('settings.reportsExported', { n: reports.length })
+      : t('settings.reportsExportedNoClaim', { n: reports.length })
+  } catch {
+    reportsMsg.value = t('errors.unknown')
+  }
+}
+
+function pickReportsFile() {
+  reportsMsg.value = ''
+  reportsImportInput.value?.click()
+}
+
+/**
+ * 064 导入个人数据备份：本地文件直接恢复（无需联网）。
+ * 接受三类文件：全量备份（档案+报错）/ 纯档案备份 / 纯报错备份（兼容期）。
+ * 报错状态稍后进入「我的」时自动对齐。
+ */
+async function onReportsFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // 允许重复选择同一文件
+  if (!file) return
+  try {
+    const parsed: unknown = JSON.parse(await file.text())
+    // 纯档案备份 → 走档案导入
+    if (!isFullBackup(parsed) && !isReportsBackup(parsed) && isBackupFile(parsed)) {
+      const s = summarizeBackup(parsed)
+      if (!confirm(t('profile.importConfirm', { ...s }))) return
+      const r = await importBackup(parsed, { newArchiveName: t('profile.importArchiveName') })
+      reportsMsg.value = t('settings.reportsImportDone', {
+        imported: 0,
+        skipped: 0,
+        created: r.archivesCreated,
+        merged: r.archivesMerged,
+      })
+      await refreshReportCounts()
+      return
+    }
+    if (isFullBackup(parsed) || isReportsBackup(parsed)) {
+      // 报错：白名单清洗 + 去重导入
+      const clean = parsed.reports.map(sanitizeImportedReport).filter((r) => r !== null)
+      const r = await importReports(clean)
+      // 档案（仅全量备份有；内容为空时跳过，避免弹无意义的确认框）
+      let created = 0
+      let merged = 0
+      if (isFullBackup(parsed) && parsed.archives) {
+        const s = summarizeBackup(parsed.archives)
+        if (s.rounds + s.wrong + s.badges > 0 && confirm(t('profile.importConfirm', { ...s }))) {
+          const ar = await importBackup(parsed.archives, {
+            newArchiveName: t('profile.importArchiveName'),
+          })
+          created = ar.archivesCreated
+          merged = ar.archivesMerged
+        }
+      }
+      reportsMsg.value = t('settings.reportsImportDone', {
+        imported: r.imported,
+        skipped: r.skipped,
+        created,
+        merged,
+      })
+      await refreshReportCounts()
+      void refreshRemoteStatusesQuietly()
+      return
+    }
+    reportsMsg.value = t('settings.reportsImportInvalid')
+  } catch {
+    reportsMsg.value = t('settings.reportsImportInvalid')
+  }
+}
+
+/** 064：导入后顺手拉一次状态（可失败——只是让新导入的条目尽快带上远端状态） */
+async function refreshRemoteStatusesQuietly() {
+  try {
+    const rows = await listMyReports(getClientId())
+    await applyRemoteStatuses(rows.map((r) => ({ id: r.id, status: r.status, updatedAt: r.updated_at })))
+  } catch {
+    /* 静默：进入「我的」时会再拉 */
   }
 }
 
@@ -327,11 +462,40 @@ const autoNextOptions: { value: AutoNextMode; labelKey: string; hintKey: string 
         <button class="btn btn-secondary" :disabled="syncing || !pendingCount" @click="syncReports">
           {{ syncing ? t('settings.syncing') : t('settings.syncReports') }}
         </button>
-        <button class="btn btn-secondary" :disabled="!reportCount" @click="clearLocalReports">
+        <button class="btn btn-secondary" @click="exportLocalReports">
+          {{ t('settings.exportAllData') }}
+        </button>
+        <button class="btn btn-secondary" @click="pickReportsFile">
+          {{ t('settings.importReports') }}
+        </button>
+        <button v-if="!clearWarn" class="btn btn-secondary" :disabled="!reportCount" @click="clearWarn = true">
           {{ t('settings.clearReports') }}
         </button>
       </div>
+      <!-- 064 清空二次确认：清空不可恢复，先提醒导出（导出文件含归户验证码） -->
+      <div v-if="clearWarn" class="clear-warn" role="alertdialog" :aria-label="t('settings.clearWarnTitle')">
+        <p class="warn-title">{{ t('settings.clearWarnTitle') }}</p>
+        <p class="muted">{{ t('settings.clearWarnDesc') }}</p>
+        <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
+          <button class="btn btn-primary" @click="exportLocalReports">
+            {{ t('settings.clearExportFirst') }}
+          </button>
+          <button class="btn btn-secondary" @click="clearLocalReports">
+            {{ t('settings.clearConfirm') }}
+          </button>
+          <button class="btn btn-secondary" @click="clearWarn = false">
+            {{ t('common.cancel') }}
+          </button>
+        </div>
+      </div>
       <p v-if="reportsMsg" class="muted" role="status" style="margin-top: 8px">{{ reportsMsg }}</p>
+      <input
+        ref="reportsImportInput"
+        type="file"
+        accept=".json,application/json"
+        style="display: none"
+        @change="onReportsFile"
+      />
     </div>
   </section>
 </template>
@@ -344,6 +508,20 @@ h2.sec {
 .setting {
   padding: 16px 0;
   border-bottom: 1px solid var(--border);
+}
+/* 064 清空前的导出提醒面板 */
+.clear-warn {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 2px solid #f0d9a8;
+  border-radius: var(--radius-sm);
+  background: #fdf8ee;
+}
+.clear-warn .warn-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #8a6d00;
+  margin-bottom: 4px;
 }
 .setting:last-of-type {
   border-bottom: none;
