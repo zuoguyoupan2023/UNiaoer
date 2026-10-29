@@ -45,6 +45,7 @@ import {
 } from './lib/profiles.mjs'
 import { rgbaToThumbHash } from 'thumbhash'
 import { isDegraded } from './lib/quality.mjs'
+import { keepTaxonKey } from './lib/species-stub.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -639,6 +640,10 @@ async function main() {
 async function buildSpecies(sp, useXc, prev) {
   const id = slug(sp.nameSci)
   const base = stub(sp)
+  // data/taxa.json 不带 taxonKey（AviList 键由 species-index 只增注入到完整层）。
+  // 定向重建时沿用上一版的键，否则每次修图都会把该种的 avibase 概念键抹成 null，
+  // 连带让性状层（按 taxonKey 挂载）丢条目。见 scripts/lib/species-stub.mjs。
+  base.taxonKey = keepTaxonKey(base, prev)
 
   try {
     const taxon = await resolveTaxon(sp)

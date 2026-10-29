@@ -2,6 +2,14 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-10-29",
+      "titleZh": "三宝鸟：图一其实是红嘴蓝鹊，已停用并换题",
+      "titleEn": "Dollarbird: the first photo was actually a Red-billed Blue Magpie — retired and replaced",
+      "bodyZh": "图一（iNaturalist 照片 238508830）画面主体是红嘴蓝鹊，不是三宝鸟——它恰是 iNat 上三宝鸟的物种默认图，其观察只有这一张照片却被社区标到 research grade，源站标注本身就错了。该图已停用，补入 1 张北京国家植物园的照片（obs 221758152，CC BY-NC），占用从未用过的 image-6，老缓存不会看到旧图。原 2/3/4/5 复核无误予以保留，现在展示 6/2/3/4/5 共 5 张。首图随之更换（D1 同步），题库不再出这张错图。",
+      "bodyEn": "The subject of photo 1 (iNaturalist photo 238508830) is a Red-billed Blue Magpie, not a Dollarbird. It happens to be iNaturalist's default photo for the Dollarbird taxon, and its observation — which contains only that one photo — was voted to research grade, so the source annotation itself was wrong. The photo is retired and one new photo is added (obs 221758152, Beijing Botanical Garden, CC BY-NC), using the never-used key image-6 so old caches cannot show the retired image. Originals 2/3/4/5 were re-checked and kept; the gallery now shows 6/2/3/4/5 (5 in total). The lead image changed accordingly (D1 synced) and the quiz bank no longer serves the wrong photo.",
+      "speciesId": "eurystomus-orientalis"
+    },
+    {
       "date": "2026-10-28",
       "titleZh": "绿头鸭：四张不适合作答的图已停用，补入四张成鸟图",
       "titleEn": "Mallard: four unsuitable photos retired, four adult photos added",

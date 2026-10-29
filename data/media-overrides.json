@@ -342,6 +342,40 @@
           "reportIds": []
         }
       ]
+    },
+    "eurystomus-orientalis": {
+      "_reason": "2026-10-29 用户反馈图一有问题。取证：image-1（iNat photo 238508830，photokeen，CC BY-NC-ND）是 iNat 的物种默认图，但画面主体并非三宝鸟（用户判定为红嘴蓝鹊）；其所在观察 obs 139456684 仅此一张照片却被 iNat 社区标为三宝鸟（research grade、票数第一），属源站标注错误；本站抓取管线默认优先采用物种默认图、未复核，连带使该图成为做题首图（D1 img_url）。处置：停用 image-1，保留 2/3/4/5（复核均为三宝鸟），新增 1 张（obs 221758152 北京国家植物园，fangchen，CC BY-NC，原图 1440×1080，单只正面、红喙醒目），使用从未出现的 key image-6；首图由 image-1 变为 image-6 → 需同步 D1 单行（S8）。旧对象保留在 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/238508830/large.jpg",
+        "https://www.inaturalist.org/photos/238508830",
+        "https://www.inaturalist.org/observations/139456684"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/392755186/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) fangchen, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/221758152",
+          "sourceId": "392755186"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/eurystomus-orientalis/image-2.full.webp",
+        "https://bird.wewalk.world/media/eurystomus-orientalis/image-3.full.webp",
+        "https://bird.wewalk.world/media/eurystomus-orientalis/image-4.full.webp",
+        "https://bird.wewalk.world/media/eurystomus-orientalis/image-5.full.webp"
+      ],
+      "rejected": [
+        {
+          "slot": "image-1",
+          "imageUrl": "https://bird.wewalk.world/media/eurystomus-orientalis/image-1.jpg",
+          "sourceUrl": "https://www.inaturalist.org/observations/139456684",
+          "reason": "画面主体不是三宝鸟（红嘴蓝鹊，用户判定）；该照片被 iNat 设为物种默认图但源站标注有误，且为 ND 不可转码",
+          "reportIds": []
+        }
+      ]
     }
   }
 }
