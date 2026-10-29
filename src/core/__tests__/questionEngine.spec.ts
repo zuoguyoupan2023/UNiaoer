@@ -247,8 +247,12 @@ describe('难度梯度', () => {
   })
 
   it('常见度不足时回退到全部物种（不会空题）', async () => {
-    // bank 里都是 commonness=2，L4 只允许 3-4，应回退而不是返回空
-    const qs = await buildQuestions(bank, { type: 'image', count: 5, tier: 4 })
+    // 097 单调模型后 L4 允许 [1-4]；回退语义改在 L1 上验证：
+    // 全部物种 commonness=5（L1 只允许 [1,2]）→ 严格档位为空 → 应回退而不是返回空
+    const rare: BankSpecies[] = ['r1', 'r2', 'r3', 'r4', 'r5'].map((id, i) =>
+      sp(id, `罕见鸟${i}`, `科${i}`, { commonness: 5 }),
+    )
+    const qs = await buildQuestions(rare, { type: 'image', count: 5, tier: 1 })
     expect(qs.length).toBeGreaterThan(0)
   })
 

@@ -120,12 +120,18 @@ interface SpeciesRow {
 }
 
 /** 档位 → 允许的常见度（与 src/core/difficulty.ts TIERS 对齐） */
+/**
+ * 各档位允许的常见度档（1 最常见 → 5 最罕见）。
+ * **必须与前端 `src/core/difficulty.ts` 的 TIERS[tier].commonness 保持一致**（镜像维护）。
+ * 097（2026-10-29 用户定）：单调扩展模型——L1 取最常见 40%、L2/L3 60%、L4/L5 80%
+ * （L6/L7/L8 不走在线候选，不在表内）。高难度来自同科近缘干扰项与限时，不靠稀有度。
+ */
 const TIER_COMMONNESS: Record<number, number[]> = {
   1: [1, 2],
   2: [1, 2, 3],
-  3: [2, 3, 4],
-  4: [3, 4],
-  5: [3, 4],
+  3: [1, 2, 3],
+  4: [1, 2, 3, 4],
+  5: [1, 2, 3, 4],
 }
 
 const CORS = {

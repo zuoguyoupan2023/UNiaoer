@@ -26,7 +26,16 @@ export interface TierConfig {
    * 缺省值仍按 pacing.OPTION_REVEAL_RATIO 兜底（仅防配置遗漏，正常不会走到）。
    */
   optionRevealSec?: number
-  /** 允许的物种常见度（1 最常见 → 4 最少见） */
+  /**
+   * 允许的物种常见度档位（1 最常见 → 5 最罕见）。
+   *
+   * **设计原则（2026-10-29 用户定稿，docs/097）**：档位覆盖**单调扩展**——
+   *   L1 取该地鸟种最常见 40%（[1,2]）、L2/L3 取 60%（[1,2,3]）、L4/L5 取 80%（[1,2,3,4]）、
+   *   L6/L7/L8 取满 100%（[1-5]）。
+   * 高难度来自**同科近缘干扰项 + 限时等限制条件**，不靠稀有度难倒做题人：
+   * 稀有鸟数据少，把题池限制在稀有鸟只会让题目别扭；限时逼出高度专注 → 快速判断，
+   * 做错进错题本回顾 → 最终目的是快速认鸟。
+   */
   commonness: number[]
   /**
    * 每次取材最多可选的素材数（分档取材，011 §8）：
@@ -70,7 +79,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     timeLimitSec: 15,
     timeLimitSecAudio: 25,
     optionRevealSec: 5,
-    commonness: [2, 3, 4],
+    commonness: [1, 2, 3], // 097 单调模型：最常见 60%（与 L2 同覆盖，难度靠同科干扰+限时）
     mediaPoolSize: 3,
   },
   4: {
@@ -82,7 +91,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     timeLimitSec: 12,
     timeLimitSecAudio: 22,
     optionRevealSec: 2,
-    commonness: [3, 4],
+    commonness: [1, 2, 3, 4], // 097 单调模型：80%
     mediaPoolSize: 5,
   },
   5: {
@@ -94,7 +103,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     timeLimitSec: 10,
     timeLimitSecAudio: 20,
     optionRevealSec: 2,
-    commonness: [3, 4],
+    commonness: [1, 2, 3, 4], // 097 单调模型：80%（与 L4 同覆盖，难度靠 10s 限时+环境音）
     mediaPoolSize: 5,
   },
   /**
