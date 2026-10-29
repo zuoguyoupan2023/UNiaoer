@@ -79,7 +79,7 @@
     "species-index": "node scripts/taxonomy/build-species-index.mjs",
     "check:index": "node scripts/check-species-index.mjs",
     "check:traits": "node scripts/check-traits.mjs",
-    "verify:push": "run-s check:layers check:traits check:changelog",
+    "verify:push": "run-s check:layers check:index check:traits check:changelog",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "traits:layers": "node scripts/apply-trait-layers.mjs",
     "taxonomy:habitat-en": "node scripts/taxonomy/fill-habitat-code-en.mjs",
