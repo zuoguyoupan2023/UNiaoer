@@ -444,12 +444,13 @@ const currentRegimeCount = computed<number | null>(() => {
   return typeof n === 'number' ? n : null
 })
 /**
- * 括号标注用的取数比例（097）：该档的常见度档位覆盖占五档的比例。
- * L1/L4/L5 = 40%（2/5 档）、L2/L3 = 60%（3/5 档）、L6/L7/L8 = 100%（取满）。
+ * 括号标注用的取数比例（097 十档制）：该档的常见度档位覆盖占十档的比例。
+ * L1 = 70%（7/10 档）、L2/L3 = 80%、L4/L5 = 90%、L6/L7/L8 = 100%。
  * 与出题池同源（都由 TIERS[tier].commonness 定义），数字与标注不会互相矛盾。
+ * ALL/洲走「全球档位表」（同为十等分），比例与国家/省一致，无需特判。
  */
 const tierCoveragePct = computed<number>(() =>
-  Math.round(((TIERS[tier.value]?.commonness.length ?? 5) / 5) * 100),
+  Math.round(((TIERS[tier.value]?.commonness.length ?? 10) / 10) * 100),
 )
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r

@@ -547,7 +547,8 @@ async function again() {
         <span class="den">/ {{ quiz.total }}</span>
       </div>
       <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
-      <!-- 该档位匿名平均，紧跟正确率一行（* 注在按钮下方；句尾链到统计看板，2026-10-29 用户定） -->
+      <!-- 该档位匿名平均，紧跟正确率一行（* 注在按钮下方；2026-10-30 用户定：链到统计看板的
+           超链接删除——下方 actions 已有「查看统计」按钮，重复入口） -->
       <p v-if="tierAvg" class="tier-avg-line">
         {{
           t('result.tierAvgLine', {
@@ -555,7 +556,6 @@ async function again() {
             avg: tierAvg.approx ? `≈${tierAvg.mean}` : tierAvg.mean,
           })
         }}
-        <RouterLink class="tier-avg-link" to="/stats">{{ t('result.tierStatsLink') }}</RouterLink>
       </p>
       <p class="msg"><component :is="message.icon" class="ic" :size="18" /> {{ message.text }}</p>
     </template>
@@ -578,7 +578,7 @@ async function again() {
       <RouterLink class="btn btn-secondary" to="/stats">
         <BarChart3 class="ic" :size="16" /> {{ t('result.viewStats') }}
       </RouterLink>
-      <RouterLink class="btn btn-secondary" to="/">{{ t('quiz.backHome') }}</RouterLink>
+      <!-- 2026-10-30 用户定：删「返回首页」——导航与介绍页返回已覆盖，结果页堆四个按钮过挤 -->
     </div>
 
     <!-- * 注：紧跟按钮下方（口径与截止时间见脚本注） -->

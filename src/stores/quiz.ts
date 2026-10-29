@@ -14,7 +14,7 @@ import type { BuildStats } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
 import { fetchOnlinePool } from '@/core/onlinePool'
 import { isDiag } from '@/core/diag'
-import { regionTierMap } from '@/core/provinceCommonness'
+import { loadGlobalTierMap, regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
 import { MEMORY_BOARDS, TIERS } from '@/core/difficulty'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
@@ -238,10 +238,14 @@ async function poolData(type: MediaType, tier: Tier = 2) {
 async function regionScopeInfo(type: MediaType, tier: Tier) {
   const region = effectiveRegion(tier, useSettingsStore().region)
   const species = await mergedSpecies(type, tier)
-  // 097：所有档位都接「地区档位表」的表内剔除（表外 = 本地无记录）——
-  // 否则 L6/L7/L8 选了省却出中国全境的鸟，介绍页数字也对不上。
-  const usesTiers = region !== 'ALL' && !isContinentCode(region)
-  const rm = usesTiers ? await regionTierMap(region).catch(() => null) : null
+  // 097：所有档位、所有尺度都接档位表收窄——
+  //   国家/省 → 地区档位表（province-commonness）；
+  //   洲/全球 → 全球档位表（global-commonness，全球记录数十等分，097 F）。
+  // 表内剔除（表外 = 本地无记录）+ 常见度档位区间收窄，介绍页数字与实际出题同口径。
+  const usesRegionTiers = region !== 'ALL' && !isContinentCode(region)
+  const rm = usesRegionTiers
+    ? await regionTierMap(region).catch(() => null)
+    : await loadGlobalTierMap().catch(() => null)
   const tiers = rm?.tiers ?? null
   const scoped = tiers?.size ? species.filter((sp) => tiers.has(sp.id)) : species
   const named = filterByNameMode(scoped, nameMode.value)
@@ -424,20 +428,23 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
         speciesForBuild = (await poolData(type, tier.value)).species
       }
 
-      // 036（2026-10-25 全档统一）：选了 国家/省 就用「该地区档位表」出题（任何档位）；
-      // 洲码无省级分片 → 不取表（区系并集已过滤，难度走全局 commonness）。
-      // 取不到档位表 → null → 回退全局 commonness。
+      // 036（2026-10-25 全档统一）：选了 国家/省 就用「该地区档位表」出题（任何档位）。
+      // 097 F（2026-10-30）：洲/全球也收窄——用「全球档位表」（全球记录数十等分），
+      //   否则 ALL/洲的 L1 与 L6 同池（介绍页括号 ×70% 与实际取满相矛盾）。
+      // 取不到档位表 → null → 回退全局 commonness（绝不出空）。
       let regionTiers: Map<string, number> | null = null
       if (region.value !== 'ALL' && !isContinentCode(region.value)) {
         const rm = await regionTierMap(region.value).catch(() => null)
         regionTiers = rm?.tiers ?? null
+      } else {
+        regionTiers = (await loadGlobalTierMap().catch(() => null))?.tiers ?? null
       }
       // 087 §4.8 + 089 §6 + 092：L6=名字→图/音；L7=图/音→输入；L8=记忆翻牌配对。
       // 同一介绍页/赛制/池子语义，仅玩法分支。
       // 097（2026-10-29 用户定：L6/L7 取满）：L6/L8 的引擎不接 regionTiers 参数，
       // 但"选了省就不能出省外的鸟"对所有档位成立 → 在这里先做**表内剔除**（不筛常见度），
       // 与介绍页计数（regionScopeInfo）同口径。L7 走 buildInputQuestions 自带 regionTiers，
-      // 且 TIERS[7].commonness 已改取满 [1-5]。
+      // 且 TIERS[7].commonness 已改取满（十档制 [1-10]）。
       if ((tier.value === 6 || tier.value === 8) && regionTiers?.size) {
         speciesForBuild = speciesForBuild.filter((sp) => regionTiers.has(sp.id))
       }

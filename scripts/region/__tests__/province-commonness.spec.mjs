@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_GUARDS,
   applyOverrides,
+  bandGlobal,
   bandProvince,
   bandSlices,
   buildRegionTiers,
@@ -43,6 +44,11 @@ describe('bandSlices（分档尺寸 + 最少种数合并）', () => {
     expect(bandSlices(3, 5, 1)).toEqual([1, 1, 1])
   })
 
+  it('10 等分（097 十档制）：整除等分、不整除余数给前几档', () => {
+    expect(bandSlices(100, 10, 1)).toEqual(Array.from({ length: 10 }, () => 10))
+    expect(bandSlices(103, 10, 1)).toEqual([11, 11, 11, 10, 10, 10, 10, 10, 10, 10])
+  })
+
   it('0 / 非法输入 → 空', () => {
     expect(bandSlices(0)).toEqual([])
     expect(bandSlices(-1)).toEqual([])
@@ -54,22 +60,21 @@ describe('bandProvince（份额归一 + 守卫 + 分档）', () => {
   /** 构造 entries：n 依次递减 */
   const entries = (ns) => ns.map((n, i) => ({ speciesId: `sp-${String(i).padStart(3, '0')}`, n }))
 
-  it('正常省份：按份额降序分 5 档，1 = 最常见', () => {
-    // 100 种、每档 20；total 与 sum(entries) 相同（无未匹配物种）
+  it('正常省份：按份额降序分 10 档，1 = 最常见（097 十档制）', () => {
+    // 100 种、每档 10；total 与 sum(entries) 相同（无未匹配物种）
     const list = entries(Array.from({ length: 100 }, (_, i) => 1000 - i * 5))
     const total = list.reduce((s, e) => s + e.n, 0)
-    // minBandSize=20（默认 30 时 100 种只会分 3 档——那是 D-036-3 的"每档最少 N 种"在起作用）
     const res = bandProvince(list, total, null, {
       ...DEFAULT_GUARDS,
-      minBandSize: 20,
+      minBandSize: 1,
       minProvinceSpecies: 20,
     })
     expect(res.trusted).toBe(100)
-    expect(res.bandSizes).toEqual([20, 20, 20, 20, 20])
+    expect(res.bandSizes).toEqual(Array.from({ length: 10 }, () => 10))
     // 最大的那条是 1 档
     expect(res.tiers['sp-000']).toBe(1)
-    // 最小的那条是末档
-    expect(res.tiers['sp-099']).toBe(5)
+    // 最小的那条是末档（10）
+    expect(res.tiers['sp-099']).toBe(10)
   })
 
   it('守卫 dominance：份额 >40% 的种被剔除且计数（蒙古沙鸻场景）', () => {
@@ -204,9 +209,9 @@ describe('applyOverrides（人工覆盖最高优先，D-036-7）', () => {
     expect(tiers['pycnonotus-sinensis']['CN']).toBe(1)
   })
 
-  it('非法档位被拒绝并留痕', () => {
+  it('非法档位被拒绝并留痕（097 十档制：>10 非法）', () => {
     const tiers = {}
-    const { applied, unknown } = applyOverrides(tiers, { CN: { 'sp-x': 9 } })
+    const { applied, unknown } = applyOverrides(tiers, { CN: { 'sp-x': 11 } })
     expect(applied).toBe(0)
     expect(unknown[0]).toContain('非法档位')
   })
@@ -232,5 +237,46 @@ describe('summarize（产物 coverage）', () => {
     expect(s.countryPairs).toBe(1)
     expect(s.tierHist[1]).toBe(1)
     expect(s.tierHist[5]).toBe(1)
+  })
+})
+
+describe('bandGlobal（097 F：全球档位，全球记录数十等分）', () => {
+  it('按记录数降序十等分；无记录物种兜进第 10 档（保持全球池完整）', () => {
+    // 20 个有记录的物种（数量递减）+ 3 个无记录
+    const counts = new Map(
+      Array.from({ length: 20 }, (_, i) => [`sp-${String(i).padStart(2, '0')}`, 1000 - i * 10]),
+    )
+    const all = [...counts.keys(), 'no-rec-1', 'no-rec-2', 'no-rec-3']
+    const res = bandGlobal(counts, all)
+    expect(res.withRecords).toBe(20)
+    expect(res.bandSizes).toEqual([2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
+    expect(res.tiers['sp-00']).toBe(1) // 记录最多
+    expect(res.tiers['sp-19']).toBe(10)
+    // 无记录 = 最罕见档，且**在表内**（不剔除，L6/L7/L8 取满时仍可出题）
+    expect(res.tiers['no-rec-1']).toBe(10)
+    expect(res.tiers['no-rec-2']).toBe(10)
+  })
+
+  it('总数不整除时余数给常见端；结果覆盖全部物种', () => {
+    const counts = new Map(
+      Array.from({ length: 23 }, (_, i) => [`g-${String(i).padStart(2, '0')}`, 500 - i]),
+    )
+    const all = [...counts.keys()]
+    const res = bandGlobal(counts, all)
+    expect(res.bandSizes[0]).toBe(3)
+    expect(res.bandSizes.reduce((a, b) => a + b, 0)).toBe(23)
+    expect(Object.keys(res.tiers)).toHaveLength(23)
+  })
+
+  it('记录数并列时按 id 稳定排序（结果可复现）', () => {
+    // 3 种 → bandSlices 只能切 3 档（每档 1 种）；并列的 a/b 按 id 序稳定占据前两档
+    const counts = new Map([['b', 100], ['a', 100], ['c', 50]])
+    const res = bandGlobal(counts, ['a', 'b', 'c'])
+    expect(res.tiers['a']).toBe(1)
+    expect(res.tiers['b']).toBe(2)
+    expect(res.tiers['c']).toBe(3)
+    // 可复现：同输入重跑结果一致
+    const again = bandGlobal(counts, ['a', 'b', 'c'])
+    expect(again.tiers).toEqual(res.tiers)
   })
 })

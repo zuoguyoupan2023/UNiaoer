@@ -12,8 +12,8 @@
  *      · dominance：单省单种份额 > 40% → 该(种,省)不可信（回退上级粒度）
  *      · spike    ：份额 > 15% 且该种全球出现月数 ≤ 3 → 疑似专项调查/季节尖峰
  *      · 省总量过小（< minProvinceRecords）→ 整省不可信
- *   ③ 分位分档：可信物种按份额排序五等分；**每档至少 minBandSize 种**（不足则相邻档合并，
- *      从稀有端向常见端合并）——避免小省出现"只有 3 种鸟算常见"的退化情形。
+ *   ③ 分位分档：可信物种按份额排序 **10 等分**（097，2026-10-30；原 5 等分）——档位是
+ *      "按份额排名的切分点"，前端用档位区间实现 70/80/90/100% 的单调覆盖；
  *
  * 全部为纯函数（不碰网络/文件系统），便于单测与离线重跑。
  */
@@ -28,8 +28,14 @@ export const DEFAULT_GUARDS = {
   spikeMaxMonths: 3,
   /** 省份总记录数下限（低于则整省不可信） */
   minProvinceRecords: 1000,
-  /** 每档最少物种数（不足则从稀有端向常见端合并） */
-  minBandSize: 30,
+  /**
+   * 每档最少物种数（不足则从稀有端向常见端合并）。
+   * 097（2026-10-30 用户定）：档位从 5 等分改为 **10 等分**——档位的用途收窄为
+   * "按份额排名的切分点"（前端用 `TIERS.commonness` 的档位区间实现 70/80/90/100%
+   * 覆盖），不再承担"每档有统计意义"的职责，故 minBandSize 30 → 1：
+   * 只要 trusted ≥ 10 就能切出恰好 10 档（每档 ≈ 该省鸟种的 10%）。
+   */
+  minBandSize: 1,
   /** 分档后可信物种下限（低于则整省不可信） */
   minProvinceSpecies: 20,
   /**
@@ -105,7 +111,9 @@ export function bandProvince(entries, total, monthsCount, guards = DEFAULT_GUARD
   }
 
   trusted.sort((a, b) => b.share - a.share || a.speciesId.localeCompare(b.speciesId))
-  const slices = bandSlices(trusted.length, 5, guards.minBandSize)
+  // 097（2026-10-30 用户定）：10 等分（每档 ≈ 该省鸟种 10%）——前端用档位区间实现
+  // L1=70% / L2,L3=80% / L4,L5=90% / L6,L7,L8=100% 的单调覆盖。
+  const slices = bandSlices(trusted.length, 10, guards.minBandSize)
   const tiers = {}
   let i = 0
   for (let k = 0; k < slices.length; k++) {
@@ -248,7 +256,7 @@ export function applyOverrides(tiers, overrides) {
     if (!speciesMap || typeof speciesMap !== 'object') continue
     for (const [speciesId, tierRaw] of Object.entries(speciesMap)) {
       const tier = Number(tierRaw)
-      if (!Number.isInteger(tier) || tier < 1 || tier > 5) {
+      if (!Number.isInteger(tier) || tier < 1 || tier > 10) {
         unknown.push(`${code}\t${speciesId}\t非法档位: ${tierRaw}`)
         continue
       }
@@ -277,4 +285,35 @@ export function summarize(tiers, countryTiers) {
   }
   for (const m of Object.values(countryTiers)) countryPairs += Object.keys(m).length
   return { species: species.size, provinceCodes: codes.size, pairs, countryPairs, tierHist }
+}
+
+/**
+ * 097 F（2026-10-30）：**全球档位**——按全球观测记录数把物种十等分。
+ *
+ * 用途：ALL / 洲模式没有省级档位表（档位表按省组织），此前这两档不收窄（全取满）。
+ * 全球档位补上这一层：洲/全球出题时按"全球视角的常见度"做 70/80/90/100 单调覆盖。
+ *
+ * 语义：
+ *   · 排序键 = 物种的全球 GBIF 观测记录数（region-records 各国分片求和）——
+ *     同一省内"份额排序等价于记录数排序"，全球同理，无需份额归一（全球只有一个分母）；
+ *   · 无守卫：分位切分只决定池子边界，极端物种（记录数巨大）本来就在最常见档，符合事实；
+ *   · 无记录的物种 = 最罕见档（10）——它们是地球上最不被观测的鸟，语义自洽，
+ *     且保持全球池完整（不被"表外剔除"缩小）。
+ *
+ * @param {Map<string, number>|Array<[string, number]>} counts 物种 id → 全球记录数
+ * @param {string[]} allSpeciesIds 题库全部物种 id（含无记录者，兜进第 10 档）
+ * @returns {{ tiers: Record<string, number>, bandSizes: number[], withRecords: number }}
+ */
+export function bandGlobal(counts, allSpeciesIds) {
+  const withRecords = [...counts]
+    .filter(([, n]) => Number.isFinite(n) && n > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  const slices = bandSlices(withRecords.length, 10, 1)
+  const tiers = {}
+  let i = 0
+  for (let k = 0; k < slices.length; k++) {
+    for (let j = 0; j < slices[k]; j++) tiers[withRecords[i++][0]] = k + 1
+  }
+  for (const id of allSpeciesIds) if (!(id in tiers)) tiers[id] = 10
+  return { tiers, bandSizes: slices, withRecords: withRecords.length }
 }

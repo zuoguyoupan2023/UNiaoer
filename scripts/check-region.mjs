@@ -116,8 +116,8 @@ function checkProvinceCommonnessShard(name, shard) {
     let n = 0
     for (const [spId, tier] of Object.entries(map || {})) {
       if (!spId) errors.push(`${name}: ${label} 存在空 speciesId`)
-      if (!Number.isInteger(tier) || tier < 1 || tier > 5) {
-        errors.push(`${name}: ${label} ${spId} 档位非法（${tier}，应为 1..5）`)
+      if (!Number.isInteger(tier) || tier < 1 || tier > 10) {
+        errors.push(`${name}: ${label} ${spId} 档位非法（${tier}，应为 1..10，097 十档制）`)
         if (errors.length > 20) return n
       }
       n++

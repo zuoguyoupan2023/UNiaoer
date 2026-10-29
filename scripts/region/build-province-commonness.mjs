@@ -252,7 +252,7 @@ const product = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
   method:
-    'province share (n / province total) → dominance & seasonal-spike guards → quantile banding (1 most common … 5 rarest) → manual overrides',
+    'province share (n / province total) → dominance & seasonal-spike guards → quantile banding (10 deciles, 1 most common … 10 rarest) → manual overrides',
   sources: [GBIF_SQL_SOURCE, SUBDIVISION_SOURCE],
   scope: { countries: COUNTRIES, levels: ['province', 'country'] },
   guards,

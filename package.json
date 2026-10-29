@@ -57,6 +57,7 @@
     "region:subdiv": "node scripts/region/fetch-subdivisions.mjs",
     "region:coverage": "node scripts/region/report-coverage.mjs",
     "region:pool-dry": "node scripts/region/pool-dry.mjs",
+    "region:global-tiers": "node scripts/region/build-global-commonness.mjs",
     "region:gbif-sql": "node scripts/region/gbif-sql.mjs",
     "region:ebird": "node scripts/region/fetch-ebird.mjs",
     "region:nearby-spots": "node scripts/region/build-ebird-hotspots.mjs",

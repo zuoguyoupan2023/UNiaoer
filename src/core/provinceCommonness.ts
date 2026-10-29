@@ -46,9 +46,37 @@ export interface RegionCommonnessShard {
 }
 
 const BASE = `${import.meta.env.BASE_URL}data/province-commonness`
+const GLOBAL_URL = `${import.meta.env.BASE_URL}data/global-commonness.json`
 const API = '/api/region-tiers'
 let indexCache: Promise<RegionCommonnessIndex | null> | null = null
 const shardCache = new Map<string, Promise<RegionCommonnessShard | null>>()
+let globalCache: Promise<{ tiers: Map<string, number>; level: 'global' } | null> | null = null
+
+/**
+ * 加载**全球档位表**（097 F：全球记录数十等分，1 最常见 → 10 最罕见）。
+ *
+ * 用途：ALL / 洲模式没有省级档位表（档位表按省组织），此前这两档不收窄（全取满）——
+ * 全球档位补上这一层，让洲/全球出题也有 70/80/90/100 的单调覆盖。
+ * 题库全部物种都在表内（无全球记录的物种 = 第 10 档最罕见），故**不会缩小全球池**。
+ * 返回形态与 regionTierMap 一致（{ tiers, level }），调用方可无差别处理。
+ * 加载失败 → null（调用方回退为不收窄，绝不出空）。
+ */
+export function loadGlobalTierMap(): Promise<{ tiers: Map<string, number>; level: 'global' } | null> {
+  globalCache ??= fetch(GLOBAL_URL)
+    .then(async (r) => {
+      if (!r.ok) return null
+      try {
+        const doc = (await r.json()) as { tiers?: Record<string, number> }
+        return doc?.tiers
+          ? { tiers: new Map(Object.entries(doc.tiers)), level: 'global' as const }
+          : null
+      } catch {
+        return null
+      }
+    })
+    .catch(() => null)
+  return globalCache
+}
 
 /** 加载索引（失败 → null，不阻塞；调用方回退全局档位） */
 export function loadRegionCommonnessIndex(): Promise<RegionCommonnessIndex | null> {
@@ -172,6 +200,7 @@ export function tierLabelKey(tier: number): string {
 export function _resetRegionCommonnessCache(): void {
   indexCache = null
   shardCache.clear()
+  globalCache = null
 }
 
 export type { Tier }

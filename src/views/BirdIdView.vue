@@ -166,6 +166,16 @@ function nameOf(c: Candidate | null): string {
   return c.entry?.z || c.label.split('_')[1] || c.label
 }
 
+/**
+ * 当地常见度标签（097 十档制 → 5 档文案）：档位表 1-10，文案只有 5 档语义
+ * （很常见/常见/一般/少见/罕见），按每两档一组映射（1-2→1、3-4→2 … 9-10→5）。
+ */
+function tierLabel(tier: number | null): string {
+  if (!tier) return ''
+  const band = Math.min(5, Math.max(1, Math.ceil(tier / 2)))
+  return t(`birdId.region.tier.${band}`)
+}
+
 async function loadMedia(cands: Candidate[]) {
   for (const c of cands) {
     const id = c.speciesId
@@ -542,7 +552,7 @@ function onCountryChange() {
                 <span v-if="slotOf('audio', i)" class="slot sm">{{ slotOf('audio', i) }}</span>
                 <span class="cName">{{ nameOf(c) }}</span>
                 <span v-if="c.regionTier" class="cTier">{{
-                  t(`birdId.region.tier.${c.regionTier}`)
+                  tierLabel(c.regionTier)
                 }}</span>
               </span>
               <span class="cSci">{{ c.label }}</span>
@@ -656,7 +666,7 @@ function onCountryChange() {
                 <span v-if="slotOf('image', i)" class="slot sm">{{ slotOf('image', i) }}</span>
                 <span class="cName">{{ nameOf(c) }}</span>
                 <span v-if="c.regionTier" class="cTier">{{
-                  t(`birdId.region.tier.${c.regionTier}`)
+                  tierLabel(c.regionTier)
                 }}</span>
               </span>
               <span class="cSci">{{ c.label }}</span>

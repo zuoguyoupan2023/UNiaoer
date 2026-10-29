@@ -121,17 +121,18 @@ interface SpeciesRow {
 
 /** 档位 → 允许的常见度（与 src/core/difficulty.ts TIERS 对齐） */
 /**
- * 各档位允许的常见度档（1 最常见 → 5 最罕见）。
+ * 各档位允许的常见度档（省级档位表 **10 等分**制：1 最常见 → 10 最罕见）。
  * **必须与前端 `src/core/difficulty.ts` 的 TIERS[tier].commonness 保持一致**（镜像维护）。
- * 097（2026-10-29 用户定）：单调扩展模型——L1 取最常见 40%、L2/L3 60%、L4/L5 80%
+ * 097（2026-10-30 用户定）：单调扩展模型——L1 取最常见 70%、L2/L3 80%、L4/L5 90%
  * （L6/L7/L8 不走在线候选，不在表内）。高难度来自同科近缘干扰项与限时，不靠稀有度。
+ * region=ALL 时 commonness 列表包含 1-5 全部值（全球 commonness 只有 1-5）→ 全库候选。
  */
 const TIER_COMMONNESS: Record<number, number[]> = {
-  1: [1, 2],
-  2: [1, 2, 3],
-  3: [1, 2, 3],
-  4: [1, 2, 3, 4],
-  5: [1, 2, 3, 4],
+  1: [1, 2, 3, 4, 5, 6, 7],
+  2: [1, 2, 3, 4, 5, 6, 7, 8],
+  3: [1, 2, 3, 4, 5, 6, 7, 8],
+  4: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  5: [1, 2, 3, 4, 5, 6, 7, 8, 9],
 }
 
 const CORS = {
@@ -369,8 +370,9 @@ async function handleQuestionsCached(
  *     · 省码 → 省级分片 tiersByCode[省码]；国家码 → 国家级降级层（<CC>.country.json）
  *     · 严格档位（TIER_COMMONNESS[tier]）不足 → 放宽到**表内任意档位**（仍排除表外物种）
  *     · 表外 = 本地罕见/无记录（省表只收录该省有记录的物种）→ **剔除**（不回退全局 commonness）
- *   L1–L3 + 分片缺失：降级为区系短码（species-distribution，国家级"有没有"）+ 全局 commonness
- *   L4–L5 / region=ALL：全局 commonness（不做地区过滤，与前端 D-029-2 一致）
+ *   分片缺失：降级为区系短码（species-distribution，国家级"有没有"）+ 全局 commonness
+ *   097 F（2026-10-30）：region=ALL / 洲 → **全球档位表**（data/global-commonness.json，
+ *     全球记录数十等分）收窄，洲再按成员国区系过滤；缺失才降级为全局 commonness
  *   两处共同：可玩（playable_image/audio 按题型） + quiz_excluded=0
  *
  * 返回候选物种（含 media），前端据此本地组装题面（不返回答案/选项——选项由前端按档位生成）。
@@ -388,7 +390,7 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
   let rows: SpeciesRow[] = []
   let byTiers = false
   // 2026-10-25 用户定：全档位统一自选地区（1–7 任选 省/国家/洲/全球）——
-  // 只要带 region 就按其形态过滤：国家/省→地区档位分片；洲→区系并集（全局 commonness）。
+  // 国家/省 → 地区档位分片；洲/全球 → **全球档位表**（097 F，见 globalTiers）。
   const useRegion = region !== 'ALL'
   if (useRegion && !isContinentCode(region)) {
     // ① 地区档位（036）：省/国家分片 → 严格档位；不足则放宽到表内任意档位
@@ -401,8 +403,31 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
       byTiers = true
     }
   }
+  // ② 097 F：ALL / 洲 → 全球档位表（全球记录数十等分），与前端 regionScopeInfo 同口径。
+  //    洲模式在档位过滤后再按成员国区系短码过滤；全球模式直接按档位抽样。
+  //    全球档位表缺失 → 落到 ③ 旧路径（D1 commonness，行为与 097 F 之前一致）。
+  if (!byTiers && (region === 'ALL' || isContinentCode(region))) {
+    const gtiers = await globalTiers(env)
+    if (gtiers?.size) {
+      const allowed = new Set(commonness)
+      const ids = [...gtiers].filter(([, t]) => allowed.has(t)).map(([id]) => id)
+      // 洲模式：全球抽样后还要按洲区系过滤（欧洲约占全球 17%），过采样 6 倍保证足量
+      rows = await sampleByIds(env, ids, playableCol, isContinentCode(region) ? count * 6 : count)
+      if (isContinentCode(region)) {
+        const set = new Set((await regionShortCodes(env, region)) ?? [])
+        rows = rows
+          .filter((r) => {
+            const key = r.taxon_key || ''
+            const code = key.startsWith('avibase-') ? key.slice(8) : ''
+            return code && set.has(code)
+          })
+          .slice(0, count)
+      }
+      byTiers = true
+    }
+  }
   if (!byTiers) {
-    // ② 旧路径：区系短码（分片缺失时降级）；L4/L5 或 ALL 则不做地区过滤
+    // ③ 旧路径：区系短码（分片缺失时降级）；L4/L5 或 ALL 则不做地区过滤
     const shortCodes = useRegion ? await regionShortCodes(env, region) : null
 
     // 措施二：索引区间扫描替代 ORDER BY RANDOM()（后者扫完候选集再排序：L3 每轮 ~10,000 行）。
@@ -606,6 +631,31 @@ async function regionTiers(env: Env, region: string): Promise<Map<string, number
     tiers = null
   }
   regionTiersCache.set(region, { at: Date.now(), tiers })
+  return tiers
+}
+
+const globalTiersCache = new Map<string, { at: number; tiers: Map<string, number> | null }>()
+/**
+ * 097 F（2026-10-30）：**全球档位表**（R2 `data/global-commonness.json`）。
+ * 全球 GBIF 观测记录数十等分（1 最常见 → 10 最罕见；无记录物种 = 10，保持全球池完整）。
+ * 用途：ALL / 洲模式没有省级档位表，此前不收窄（全取满）——全球档位补上这一层，
+ * 让洲/全球出题也有 70/80/90/100 的单调覆盖（与前端 regionScopeInfo 同口径）。
+ * 读取失败/缺失 → null（调用方回退 D1 commonness 路径，绝不出空）。
+ */
+async function globalTiers(env: Env): Promise<Map<string, number> | null> {
+  const hit = globalTiersCache.get('global')
+  if (hit && Date.now() - hit.at < 600_000) return hit.tiers
+  let tiers: Map<string, number> | null = null
+  try {
+    const obj = await env.MEDIA.get('data/global-commonness.json')
+    if (obj) {
+      const doc = JSON.parse(await obj.text()) as { tiers?: Record<string, number> }
+      if (doc.tiers) tiers = new Map(Object.entries(doc.tiers))
+    }
+  } catch {
+    tiers = null
+  }
+  globalTiersCache.set('global', { at: Date.now(), tiers })
   return tiers
 }
 

@@ -105,18 +105,18 @@ describe('buildQuestions', () => {
  * 表内不足 count → 放宽到"表内任意档位"（仍排除表外物种）；表内全空才兜底整池（绝不出空）。
  */
 describe('buildQuestions · regionTiers（036 地区档位）', () => {
-  it('地区档位覆盖全局档位：本地稀有（5 档）不被 L1 选中（严格档位足够时）', async () => {
-    // 全部 5 种全局都是 commonness=2（L1 允许 [1,2]）→ 不加 regionTiers 时 L1 都有资格
+  it('地区档位覆盖全局档位：本地最罕见（10 档）不被 L1 选中（严格档位足够时）', async () => {
+    // 全部 5 种全局都是 commonness=2（097 十档制 L1 允许 [1-7]）→ 不加 regionTiers 时 L1 都有资格
     const noRegion = await buildQuestions(bank, { type: 'image', count: 4, tier: 1 })
     expect(noRegion.length).toBeGreaterThan(0)
 
-    // 表内 a..d 是 1–2 档（4 种 ≥ count），e 本地 5 档 → L1 严格池不含 e（不应放宽）
+    // 表内 a..d 是 1–7 档（4 种 ≥ count），e 本地 10 档（最罕见）→ L1 严格池不含 e（不应放宽）
     const regionTiers = new Map([
       ['a', 1],
       ['b', 2],
       ['c', 1],
       ['d', 2],
-      ['e', 5],
+      ['e', 10],
     ])
     for (let i = 0; i < 12; i++) {
       const qs = await buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
@@ -155,8 +155,8 @@ describe('buildQuestions · regionTiers（036 地区档位）', () => {
     expect(qs.length).toBeGreaterThan(0)
   })
 
-  it('regionTiers 把表内物种全标为稀有 → 放宽到表内任意档位，仍能出题（绝不出空）', async () => {
-    const regionTiers = new Map(bank.map((s) => [s.id, 5]))
+  it('regionTiers 把表内物种全标为最罕见（10 档）→ 放宽到表内任意档位，仍能出题（绝不出空）', async () => {
+    const regionTiers = new Map(bank.map((s) => [s.id, 10]))
     const qs = await buildQuestions(bank, { type: 'image', count: 4, tier: 1, regionTiers })
     expect(qs.length).toBeGreaterThan(0) // 放宽到表内全部（不引入表外物种）
     expect(qs.every((q) => regionTiers.has(q.media.speciesId))).toBe(true)
