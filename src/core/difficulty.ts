@@ -102,6 +102,8 @@ export const TIERS: Record<Tier, TierConfig> = {
    * 与 L1–L5 同列，不做独立题型）。玩法是「名字 → 图/音」（引擎走 buildNameQuestions，
    * 选项数/限时按题型取 L6_TIERS），本条目供档位按钮/状态栏/结果页标签与类型完备；
    * 其余字段是"代表值"。
+   * 097（2026-10-29 用户定）：commonness **取满 [1-5]**——L6 引擎本就不按常见度筛，
+   * 介绍页计数标「该地鸟种×100%」。
    */
   6: {
     tier: 6,
@@ -110,13 +112,15 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 6,
     distractor: 'same',
     timeLimitSec: 15,
-    commonness: [1, 2, 3, 4],
+    commonness: [1, 2, 3, 4, 5],
     mediaPoolSize: 1,
   },
   /**
    * L7 鸟娲·造鸟者（docs/089；2026-10-24 定稿）：图/音 → **输入**鸟名（第七档）。
    * 判分见 core/nameMatch.ts（085 §4.1）；限时按题型取 L7_TIERS（图 15s / 音 18s，
    * 音从正式开播起计；素材切换可续命但限时递减 −n s）。
+   * 097（2026-10-29 用户定）：commonness 由 [3,4]（高难=少见鸟）改为**取满 [1-5]**——
+   * 输入题考的是名字记忆，与稀有度无关；介绍页计数标「该地鸟种×100%」。
    */
   7: {
     tier: 7,
@@ -125,7 +129,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 1, // 输入题无选项；代表值（类型完备）
     distractor: 'same',
     timeLimitSec: 15,
-    commonness: [3, 4], // 与 L4/L5 同档的常见度口径（高难=少见鸟）
+    commonness: [1, 2, 3, 4, 5],
     mediaPoolSize: 5,
   },
   /**
@@ -134,6 +138,7 @@ export const TIERS: Record<Tier, TierConfig> = {
    * 无限时、无选项、不进错题本、不参与称号与徽章（getStats/evaluate* 跳过 tier 8）。
    * optionCount/distractor/timeLimitSec 为类型完备的代表值，玩法不使用；
    * 每对只用首选素材（标准照/最佳录音）；常见度全开——难度梯度只在名称体系（zh/en vs sci）。
+   * 097（2026-10-29）：commonness 对齐取满 [1-5]，与"该地鸟种×100%"的计数标注一致。
    */
   8: {
     tier: 8,
@@ -141,7 +146,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     descKey: 'difficulty.l8.desc',
     optionCount: 2, // 每对 2 张牌；代表值（记忆翻牌无选项）
     distractor: 'same',
-    commonness: [1, 2, 3, 4],
+    commonness: [1, 2, 3, 4, 5],
     mediaPoolSize: 1,
   },
 }

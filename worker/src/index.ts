@@ -502,6 +502,32 @@ function isContinentCode(v: string): boolean {
   return Object.prototype.hasOwnProperty.call(CONTINENT_COUNTRIES, v)
 }
 
+/**
+ * 097 P0-B（2026-10-29 用户定：中国包含港澳台）：地区 → 区系层要**求并集**的国家码。
+ * **必须与前端 `src/core/globalPool.ts` 的 `floraCountriesOf` 保持同语义**——
+ * Worker 不能 import 前端代码，故此处镜像维护；改一处必须改另一处，否则在线候选与
+ * 本地池口径打架（在线给中国全境、本地只给台湾这类错配）。
+ *
+ *   · CN → CN ∪ TW ∪ HK ∪ MO（"中国的鸟"含港澳台特有分布种）
+ *   · CN-71 / CN-91 / CN-92 → 各自区系 ∪ CN（不丢独有种，也不误杀 n<2 地板的真实分布）
+ *   · 内地各省（CN-11 等）/ 其他国家省 → 单国
+ *   · ALL / 空 → null（不过滤）
+ */
+const CN_SUBREGION_CC: Record<string, string> = {
+  'CN-71': 'TW',
+  'CN-91': 'HK',
+  'CN-92': 'MO',
+}
+
+function floraCountriesOf(region: string): string[] | null {
+  const v = String(region || '').trim().toUpperCase()
+  if (!v || v === 'ALL') return null
+  if (v === 'CN') return ['CN', ...Object.values(CN_SUBREGION_CC)]
+  const sub = CN_SUBREGION_CC[v]
+  if (sub) return ['CN', sub]
+  return [v.includes('-') ? (v.split('-')[0] ?? v) : v]
+}
+
 async function regionShortCodes(env: Env, region: string): Promise<string[] | null> {
   const hit = regionCodesCache.get(region)
   if (hit && Date.now() - hit.at < 600_000) return hit.codes
@@ -510,19 +536,18 @@ async function regionShortCodes(env: Env, region: string): Promise<string[] | nu
     const obj = await env.MEDIA.get('data/species-distribution.json')
     if (obj) {
       const doc = JSON.parse(await obj.text()) as { byCountry?: Record<string, string[]> }
-      // 省码（CN-11）→ 所属国：区系层是国家级的；与前端 countryOfRegion 同语义。缓存键仍用原 region。
       // 088 方案 B：洲码 → 成员国区系求并集。
-      if (isContinentCode(region)) {
+      // 097 P0-B：国家/省码 → `floraCountriesOf` 的多国并集（中国 = 大陆 + 港澳台）。
+      const ccs = isContinentCode(region) ? CONTINENT_COUNTRIES[region]! : floraCountriesOf(region)
+      if (ccs) {
         const merged: string[] = []
-        for (const cc of CONTINENT_COUNTRIES[region]!) {
+        for (const cc of ccs) {
           const list = doc.byCountry?.[cc]
           if (Array.isArray(list)) merged.push(...list)
         }
         codes = merged
       } else {
-        const cc = region.includes('-') ? (region.split('-')[0] ?? region) : region
-        const list = doc.byCountry?.[cc]
-        codes = Array.isArray(list) ? list : []
+        codes = null
       }
     }
   } catch {

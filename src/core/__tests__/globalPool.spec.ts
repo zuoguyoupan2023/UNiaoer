@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   _resetGlobalPoolCache,
   countryOfRegion,
+  floraCountriesOf,
   globalPoolReady,
   loadGlobalPool,
   loadRegionalPool,
@@ -154,6 +155,100 @@ describe('countryOfRegion（省码 → 国家码）', () => {
     expect(countryOfRegion('US-CA')).toBe('US')
     expect(countryOfRegion('ALL')).toBe('ALL')
     expect(countryOfRegion('')).toBe('ALL')
+  })
+})
+
+/**
+ * 097 P0-B（2026-10-29 用户定）：中国包含港澳台。
+ * 区系层的"可用国家码"不再是单国，而是按地区语义求并集。
+ */
+describe('floraCountriesOf（区系并集语义）', () => {
+  it('中国 = 大陆 + 港澳台', () => {
+    expect(floraCountriesOf('CN')).toEqual(['CN', 'TW', 'HK', 'MO'])
+  })
+
+  it('港澳台 = 大陆 ∪ 自身（避免丢独有种、避免误杀 n<2 地板的真实分布）', () => {
+    expect(floraCountriesOf('CN-71')).toEqual(['CN', 'TW'])
+    expect(floraCountriesOf('CN-91')).toEqual(['CN', 'HK'])
+    expect(floraCountriesOf('CN-92')).toEqual(['CN', 'MO'])
+  })
+
+  it('内地各省只取 CN（不混入台湾特有种）', () => {
+    expect(floraCountriesOf('CN-11')).toEqual(['CN'])
+    expect(floraCountriesOf('CN-53')).toEqual(['CN'])
+  })
+
+  it('其他国家/省码与 036 一致（单国）', () => {
+    expect(floraCountriesOf('US')).toEqual(['US'])
+    expect(floraCountriesOf('US-CA')).toEqual(['US'])
+    expect(floraCountriesOf('JP')).toEqual(['JP'])
+  })
+
+  it('ALL / 空值 → null（不过滤）', () => {
+    expect(floraCountriesOf('ALL')).toBeNull()
+    expect(floraCountriesOf('')).toBeNull()
+  })
+})
+
+describe('loadRegionalPool · 港澳台并集（097 P0-B）', () => {
+  /** 扩展区系：加台湾独有种（sp-tw）与港澳各一种，验证并集确实生效 */
+  const distWithSub = {
+    schemaVersion: 1,
+    sources: [],
+    counts: {},
+    byCountry: {
+      CN: ['AAA00001', 'CCC00003'],
+      US: ['BBB00002', 'CCC00003'],
+      TW: ['AAA00001', 'DDD00004'],
+      HK: ['EEE00005'],
+      MO: ['FFF00006'],
+    },
+  }
+  const poolWithSub = [
+    ...poolSpecies,
+    sp('sp-tw', 'DDD00004'),
+    sp('sp-hk', 'EEE00005'),
+    sp('sp-mo', 'FFF00006'),
+  ]
+  const docWithSub = { layer: 'meta', total: poolWithSub.length, species: poolWithSub, buckets: [] }
+
+  function stubSub() {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const u = String(input)
+        if (u.includes('manifest-meta.json'))
+          return new Response(JSON.stringify(docWithSub), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        if (u.includes('species-distribution.json'))
+          return new Response(JSON.stringify(distWithSub), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        return new Response('not found', { status: 404 })
+      }),
+    )
+  }
+
+  it('选「中国」含港澳台独有种', async () => {
+    stubSub()
+    const cn = await loadRegionalPool('CN')
+    expect(cn?.map((s) => s.id).sort()).toEqual(['sp-both', 'sp-cn', 'sp-hk', 'sp-mo', 'sp-tw'])
+  })
+
+  it('选「中国台湾」= 大陆 ∪ 台湾（含台湾独有种，也不丢大陆种）', async () => {
+    stubSub()
+    await loadRegionalPool('CN')
+    const tw = await loadRegionalPool('CN-71')
+    expect(tw?.map((s) => s.id).sort()).toEqual(['sp-both', 'sp-cn', 'sp-tw'])
+  })
+
+  it('选内地省（CN-11）不含台湾独有种', async () => {
+    stubSub()
+    const bj = await loadRegionalPool('CN-11')
+    expect(bj?.map((s) => s.id).sort()).toEqual(['sp-both', 'sp-cn'])
   })
 })
 

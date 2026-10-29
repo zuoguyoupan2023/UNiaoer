@@ -72,16 +72,18 @@ export type QuizErrorCode =
   | 'unknown'
 
 /**
- * 介绍页赛制计数：各赛制候选数 + 该地区总量（097 §2.1 口径修复）。
+ * 介绍页赛制计数（097 §2.1 口径修复）。
  * 顶层声明——store 的 setup 闭包里不能 `export`。
+ *
+ * 界面只展示 `counts[当前赛制]`（= 本档这一赛制能出多少题）。`regionTotal` 保留给
+ * 诊断/留痕（该地区可玩总数，不收窄档位），不参与渲染——GBIF 记录口径与"能练到多少鸟"
+ * 无关，并列展示会被读成数字自相矛盾（docs/097 §6-P1-C）。
  */
 export interface RegimeCounts {
   /** 各赛制在**当前档位收窄后**的可选题数 */
   counts: Record<QuizRegime, number>
-  /** 该地区可玩物种数（区系 → 档位表排除式 → 命名体系，**不收窄档位**） */
+  /** 该地区可玩物种数（区系 → 档位表排除式 → 命名体系，**不收窄档位**；诊断用） */
   regionTotal: number
-  /** 该地区在当前档位下可出题数（= 随机赛计数，便于并列展示） */
-  tierPlayable: number
 }
 
 export const useQuizStore = defineStore('quiz', () => {
@@ -236,17 +238,16 @@ async function poolData(type: MediaType, tier: Tier = 2) {
 async function regionScopeInfo(type: MediaType, tier: Tier) {
   const region = effectiveRegion(tier, useSettingsStore().region)
   const species = await mergedSpecies(type, tier)
-  // 与出题链路逐档对齐（quiz.start 的 buildXxxQuestions 分支）：
-  //   L1–L5、L7 → 传 regionTiers；L6（名字→图/音）、L8（记忆翻牌）不传，见 docs/087 §4.8 / 092
-  const usesTiers = tier !== 6 && tier !== 8 && region !== 'ALL' && !isContinentCode(region)
+  // 097：所有档位都接「地区档位表」的表内剔除（表外 = 本地无记录）——
+  // 否则 L6/L7/L8 选了省却出中国全境的鸟，介绍页数字也对不上。
+  const usesTiers = region !== 'ALL' && !isContinentCode(region)
   const rm = usesTiers ? await regionTierMap(region).catch(() => null) : null
   const tiers = rm?.tiers ?? null
-  // 表外 = 本地无记录 → 剔除（与 questionEngine.buildPool 的排除式同语义）
   const scoped = tiers?.size ? species.filter((sp) => tiers.has(sp.id)) : species
   const named = filterByNameMode(scoped, nameMode.value)
-  // L6/L8 不做常见度档位筛选（引擎里就没有这一步）；其余档位按 TIERS.commonness 收窄
-  const filtersByTier = tier !== 6 && tier !== 8
-  const allowed = TIERS[tier]?.commonness ?? [1, 2, 3, 4]
+  // 常见度收窄只作用于 L1–L5；L6/L7/L8 取满（097 用户定：该地鸟种×100%）
+  const filtersByTier = tier <= 5
+  const allowed = TIERS[tier]?.commonness ?? [1, 2, 3, 4, 5]
   const tierOf = (sp: BankSpecies) => (tiers?.size ? tiers.get(sp.id) : sp.commonness)
   const strict = filtersByTier
     ? named.filter((sp) => allowed.includes(tierOf(sp)!))
@@ -285,7 +286,6 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       random: tierIds.size,
     },
     regionTotal,
-    tierPlayable: tierIds.size,
   }
 }
 
@@ -433,8 +433,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
         regionTiers = rm?.tiers ?? null
       }
       // 087 §4.8 + 089 §6 + 092：L6=名字→图/音；L7=图/音→输入；L8=记忆翻牌配对。
-      // 同一介绍页/赛制/池子语义，仅玩法分支；L6/L8 不用省级档位表（L8 常见度全开，
-      // 12 对全靠地区区系过滤，再叠加省级表会明显缩小小地区池子）。
+      // 同一介绍页/赛制/池子语义，仅玩法分支。
+      // 097（2026-10-29 用户定：L6/L7 取满）：L6/L8 的引擎不接 regionTiers 参数，
+      // 但"选了省就不能出省外的鸟"对所有档位成立 → 在这里先做**表内剔除**（不筛常见度），
+      // 与介绍页计数（regionScopeInfo）同口径。L7 走 buildInputQuestions 自带 regionTiers，
+      // 且 TIERS[7].commonness 已改取满 [1-5]。
+      if ((tier.value === 6 || tier.value === 8) && regionTiers?.size) {
+        speciesForBuild = speciesForBuild.filter((sp) => regionTiers.has(sp.id))
+      }
       const qs =
         tier.value === 6
           ? await buildNameQuestions(speciesForBuild, {

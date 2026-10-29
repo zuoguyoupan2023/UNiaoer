@@ -432,17 +432,25 @@ const regionSummary = computed(() => {
     : ''
   return provName ? `${country} · ${provName}` : country
 })
-/** 当前赛制的可用物种数（null = 尚未取到；072-a-fix-5） */
+/**
+ * 当前赛制在**当前档位**下能出多少题（null = 尚未取到；072-a-fix-5）。
+ * 097：这个数已按地区（含港澳台并集）→ 档位表 → 命名体系收窄，随 L 档位与赛制变化，
+ * 不再是"省码塌成国家码"的中国全境数。
+ */
 const currentRegimeCount = computed<number | null>(() => {
   const c = regimeCountsData.value?.counts
   if (!c) return null
   const n = c[quiz.regime]
   return typeof n === 'number' ? n : null
 })
-/** 该地区可玩物种总数（区系 → 档位表 → 命名体系；097 口径修复） */
-const regionTotalCount = computed<number | null>(() => regimeCountsData.value?.regionTotal ?? null)
-/** 本档按常见度严格可出题数（097 口径修复：与出题链路的档位筛选一致） */
-const tierPlayableCount = computed<number | null>(() => regimeCountsData.value?.tierPlayable ?? null)
+/**
+ * 括号标注用的取数比例（097）：该档的常见度档位覆盖占五档的比例。
+ * L1/L4/L5 = 40%（2/5 档）、L2/L3 = 60%（3/5 档）、L6/L7/L8 = 100%（取满）。
+ * 与出题池同源（都由 TIERS[tier].commonness 定义），数字与标注不会互相矛盾。
+ */
+const tierCoveragePct = computed<number>(() =>
+  Math.round(((TIERS[tier.value]?.commonness.length ?? 5) / 5) * 100),
+)
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
   persistRegime(r)
@@ -1218,13 +1226,12 @@ function onTouchEnd(e: TouchEvent) {
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
+    <!-- 097：主数字 = 本档这一赛制能出多少题（随档位/赛制变化）；括号标注取数逻辑——
+         该数字占该地区鸟种总数的比例（= 档位覆盖：L1/L4/L5 取最常见 40%、L2/L3 取 60%、
+         L6/L7/L8 取满 100%）。比例由 TIERS[tier].commonness 的档位数/5 推导，与出题池同源。 -->
     <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
       {{ t(`regime.${quiz.regime}.label`) }}：{{
-        t('quiz.regimePoolRegion', {
-          total: regionTotalCount ?? currentRegimeCount,
-          playable: tierPlayableCount ?? currentRegimeCount,
-          n: currentRegimeCount,
-        })
+        t('quiz.regimePoolTier', { n: currentRegimeCount, pct: tierCoveragePct })
       }}
     </p>
     <div class="regimes">
