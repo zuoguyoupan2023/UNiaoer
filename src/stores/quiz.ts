@@ -2,7 +2,13 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MediaType, MemoryRating, NameMode, Question, QuizRegime, Tier } from '@/types'
 import { loadBank, BankError, type BankErrorCode, type BankSpecies } from '@/core/bank'
-import { buildQuestions, buildInputQuestions, buildNameQuestions, speciesPlayable } from '@/core/questionEngine'
+import {
+  buildQuestions,
+  buildInputQuestions,
+  buildNameQuestions,
+  filterByNameMode,
+  speciesPlayable,
+} from '@/core/questionEngine'
 import { buildMemoryQuestions } from '@/core/memoryEngine'
 import type { BuildStats } from '@/core/questionEngine'
 import { loadRegionalPool } from '@/core/globalPool'
@@ -10,7 +16,7 @@ import { fetchOnlinePool } from '@/core/onlinePool'
 import { isDiag } from '@/core/diag'
 import { regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
-import { MEMORY_BOARDS } from '@/core/difficulty'
+import { MEMORY_BOARDS, TIERS } from '@/core/difficulty'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
@@ -64,6 +70,19 @@ export type QuizErrorCode =
   | 'standardPoolEmpty'
   | 'poolEmpty'
   | 'unknown'
+
+/**
+ * 介绍页赛制计数：各赛制候选数 + 该地区总量（097 §2.1 口径修复）。
+ * 顶层声明——store 的 setup 闭包里不能 `export`。
+ */
+export interface RegimeCounts {
+  /** 各赛制在**当前档位收窄后**的可选题数 */
+  counts: Record<QuizRegime, number>
+  /** 该地区可玩物种数（区系 → 档位表排除式 → 命名体系，**不收窄档位**） */
+  regionTotal: number
+  /** 该地区在当前档位下可出题数（= 随机赛计数，便于并列展示） */
+  tierPlayable: number
+}
 
 export const useQuizStore = defineStore('quiz', () => {
   const mode = ref<MediaType>('image')
@@ -203,15 +222,70 @@ async function poolData(type: MediaType, tier: Tier = 2) {
   return { withMedia, practiced, correctSet, wrongSet, species }
 }
 
-/** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
-async function regimeCounts(type: MediaType, tier: Tier): Promise<Record<QuizRegime, number>> {
-  const { withMedia, practiced, correctSet, wrongSet } = await poolData(type, tier)
+/**
+ * 介绍页口径：该地区**真实**可玩池（097 修复）。
+ *
+ * 原实现只走区系层，`CN-31` 在 `countryOfRegion` 里被塌陷成 `CN`，于是选
+ * 「中国·上海」显示的是中国全境的 1,499 种；而实际出题会被省级档位表收窄到
+ * 488 种（严格档位后 195 种）——界面数字与真实可达面差 7.7 倍。
+ *
+ * 这里按出题链路同样的三层收窄（区系 → 档位表排除式 → 命名体系 → 档位），
+ * 让所有展示数字都从**同一个池**派生，彼此一致。
+ * **只影响展示，不改出题行为**（`computePool` 仍走 `poolData`，保持既有语义）。
+ */
+async function regionScopeInfo(type: MediaType, tier: Tier) {
+  const region = effectiveRegion(tier, useSettingsStore().region)
+  const species = await mergedSpecies(type, tier)
+  // 与出题链路逐档对齐（quiz.start 的 buildXxxQuestions 分支）：
+  //   L1–L5、L7 → 传 regionTiers；L6（名字→图/音）、L8（记忆翻牌）不传，见 docs/087 §4.8 / 092
+  const usesTiers = tier !== 6 && tier !== 8 && region !== 'ALL' && !isContinentCode(region)
+  const rm = usesTiers ? await regionTierMap(region).catch(() => null) : null
+  const tiers = rm?.tiers ?? null
+  // 表外 = 本地无记录 → 剔除（与 questionEngine.buildPool 的排除式同语义）
+  const scoped = tiers?.size ? species.filter((sp) => tiers.has(sp.id)) : species
+  const named = filterByNameMode(scoped, nameMode.value)
+  // L6/L8 不做常见度档位筛选（引擎里就没有这一步）；其余档位按 TIERS.commonness 收窄
+  const filtersByTier = tier !== 6 && tier !== 8
+  const allowed = TIERS[tier]?.commonness ?? [1, 2, 3, 4]
+  const tierOf = (sp: BankSpecies) => (tiers?.size ? tiers.get(sp.id) : sp.commonness)
+  const strict = filtersByTier
+    ? named.filter((sp) => allowed.includes(tierOf(sp)!))
+    : named
+  // 严格档位不足一轮时出题会放宽到表内其余档位（buildPool 语义），计数同步放宽
+  const tierPool = filtersByTier && strict.length < 10 ? named : strict
   return {
-    standard: [...withMedia].filter((id) => !practiced.has(id)).length,
-    review: practiced.size,
-    reinforce: correctSet.size,
-    revival: wrongSet.size,
-    random: withMedia.size,
+    regionIds: new Set(named.map((sp) => sp.id)),
+    tierIds: new Set(tierPool.map((sp) => sp.id)),
+    regionTotal: named.length,
+  }
+}
+
+/** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
+async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> {
+  const { regionIds, tierIds, regionTotal } = await regionScopeInfo(type, tier)
+  const [rounds, wrong] = await Promise.all([safeListRounds(), safeWrongBook()])
+  const practiced = new Set<string>()
+  const correctSet = new Set<string>()
+  for (const round of rounds) {
+    for (const it of round.items) {
+      if (it.type !== type || !regionIds.has(it.speciesId)) continue
+      practiced.add(it.speciesId)
+      if (it.correct) correctSet.add(it.speciesId)
+    }
+  }
+  // 赛制集合按练习史取，再与当前档位收窄求交 —— 与实际出题链路同序
+  const inTier = (s: Set<string>) => [...s].filter((id) => tierIds.has(id))
+  const wrongSet = new Set(wrong.map((w) => w.speciesId).filter((id) => regionIds.has(id)))
+  return {
+    counts: {
+      standard: inTier(new Set([...tierIds].filter((id) => !practiced.has(id)))).length,
+      review: inTier(practiced).length,
+      reinforce: inTier(correctSet).length,
+      revival: inTier(wrongSet).length,
+      random: tierIds.size,
+    },
+    regionTotal,
+    tierPlayable: tierIds.size,
   }
 }
 

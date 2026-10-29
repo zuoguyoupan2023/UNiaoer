@@ -225,6 +225,9 @@ const en: typeof zhMessages = {
     networkPoor: 'Several media files failed to load (about {speed} Mbps). We recommend restarting this round on a better connection.',
     networkPoorUnknown: 'Several media files failed to load. We recommend restarting this round on a better connection.',
     regimePool: '{regime}: {n} candidates',
+    /** 097: region total and this tier's playable count side by side */
+    regimePoolRegion:
+      '{total} species in this region · {playable} playable at this tier · {n} in this mode',
     // 072-a observation: diagnostic line (only with ?diag=1)
     diagHead: 'Diag · {tier}{region} · {regime}',
     diagBody: 'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',

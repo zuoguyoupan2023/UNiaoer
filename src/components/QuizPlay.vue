@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { TIMEOUT, useQuizStore } from '@/stores/quiz'
+import { TIMEOUT, useQuizStore, type RegimeCounts } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { preloadQuestions } from '@/core/mediaLoader'
 import { listRounds, setActiveArchiveNickname, setProfileNickname } from '@/core/historyDb'
@@ -232,14 +232,14 @@ const intro = computed(() =>
 )
 
 // ---- 第 2/3 步：水平、形式（主界面完整显示两个区域，直接切换，无「更改」步骤） ----
-const regimeCountsData = ref<Record<QuizRegime, number> | null>(null)
+const regimeCountsData = ref<RegimeCounts | null>(null)
 /**
  * 只显示当前可用的赛制（未练过/无错题等不显示；随机赛常驻），减少干扰。
  * 092 §4.5：记忆挑战鸟**不显示复活赛**——它不产生错题（虽然错题本可能有其它档位的记录，
  * 池子非空，这里仍显式排除；文档"复活池恒为空"的前提不成立，故保留一处特判）。
  */
 const visibleRegimes = computed(() => {
-  const c = regimeCountsData.value
+  const c = regimeCountsData.value?.counts
   const base = c
     ? REGIMES.filter((r) => c[r.id] > 0)
     : REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
@@ -434,11 +434,15 @@ const regionSummary = computed(() => {
 })
 /** 当前赛制的可用物种数（null = 尚未取到；072-a-fix-5） */
 const currentRegimeCount = computed<number | null>(() => {
-  const c = regimeCountsData.value
+  const c = regimeCountsData.value?.counts
   if (!c) return null
   const n = c[quiz.regime]
   return typeof n === 'number' ? n : null
 })
+/** 该地区可玩物种总数（区系 → 档位表 → 命名体系；097 口径修复） */
+const regionTotalCount = computed<number | null>(() => regimeCountsData.value?.regionTotal ?? null)
+/** 本档按常见度严格可出题数（097 口径修复：与出题链路的档位筛选一致） */
+const tierPlayableCount = computed<number | null>(() => regimeCountsData.value?.tierPlayable ?? null)
 function chooseRegime(r: QuizRegime) {
   quiz.regime = r
   persistRegime(r)
@@ -1215,7 +1219,13 @@ function onTouchEnd(e: TouchEvent) {
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
     <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
-      {{ t('quiz.regimePool', { regime: t(`regime.${quiz.regime}.label`), n: currentRegimeCount }) }}
+      {{ t(`regime.${quiz.regime}.label`) }}：{{
+        t('quiz.regimePoolRegion', {
+          total: regionTotalCount ?? currentRegimeCount,
+          playable: tierPlayableCount ?? currentRegimeCount,
+          n: currentRegimeCount,
+        })
+      }}
     </p>
     <div class="regimes">
       <button

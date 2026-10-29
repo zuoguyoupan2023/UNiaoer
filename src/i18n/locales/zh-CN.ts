@@ -222,6 +222,8 @@ export const messages = {
     networkPoor: '素材加载失败较多（当前约 {speed} Mbps）。建议在网络良好时重新开始本轮。',
     networkPoorUnknown: '素材加载失败较多。建议在网络良好时重新开始本轮。',
     regimePool: '{regime}：候选 {n} 种',
+    /** 097：地区总量与本档可出题数并列（省码不再塌陷成国家码） */
+    regimePoolRegion: '该地区共 {total} 种 · 本档可出题 {playable} 种 · 本赛制 {n} 种',
     // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
     diagHead: '诊断 · {tier}{region} · {regime}',
     diagBody: '赛制池 {pool} · 候选 {cand}→筛后 {after} · 无素材 -{drop} · {path} · 出题 {built}/{want}',
