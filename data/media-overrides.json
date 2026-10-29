@@ -376,6 +376,40 @@
           "reportIds": []
         }
       ]
+    },
+    "spilopelia-chinensis": {
+      "_reason": "2026-10-29 用户反馈图四图片让人不适，要求立即撤换。已停用 image-4（obs 280685917），补入 1 张（obs 112232038，CC BY-SA，2048×1263，成鸟特写，颈侧珠点斑纹清晰），使用从未出现的 key image-6；保留原 1/2/3/5。首图未变（仍是 image-1），D1 无需改动。旧对象保留在 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/504146961/large.jpeg",
+        "https://www.inaturalist.org/observations/280685917",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/504146961/large.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/189562927/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Robert Webster, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/112232038",
+          "sourceId": "189562927"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/spilopelia-chinensis/image-1.full.webp",
+        "https://bird.wewalk.world/media/spilopelia-chinensis/image-2.jpeg",
+        "https://bird.wewalk.world/media/spilopelia-chinensis/image-3.full.webp",
+        "https://bird.wewalk.world/media/spilopelia-chinensis/image-5.full.webp"
+      ],
+      "rejected": [
+        {
+          "slot": "image-4",
+          "imageUrl": "https://bird.wewalk.world/media/spilopelia-chinensis/image-4.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/280685917",
+          "reason": "图片让人不适（用户反馈），不适合作为认鸟素材",
+          "reportIds": []
+        }
+      ]
     }
   }
 }

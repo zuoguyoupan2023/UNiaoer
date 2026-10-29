@@ -3,6 +3,14 @@
   "entries": [
     {
       "date": "2026-10-29",
+      "titleZh": "珠颈斑鸠：一张让人不适的图已停用，补入新图",
+      "titleEn": "Spotted Dove: a disturbing photo retired and replaced",
+      "bodyZh": "珠颈斑鸠原有一张图让人不适，已停用，并补入 1 张成鸟特写（CC BY-SA），占用从未用过的 image-6，老缓存不会看到旧图。其余 4 张合格图片保留，现在展示 5 张。首图随之更换（D1 同步），题库不再出这张图。",
+      "bodyEn": "One Spotted Dove photo was disturbing to look at. It is retired and replaced by an adult close-up (CC BY-SA) using the never-used key image-6, so old caches cannot show the retired image. The other four suitable photos are kept; five are shown now. The lead image changed accordingly (D1 synced) and the quiz bank no longer serves it.",
+      "speciesId": "spilopelia-chinensis"
+    },
+    {
+      "date": "2026-10-29",
       "titleZh": "三宝鸟：图一其实是红嘴蓝鹊，已停用并换题",
       "titleEn": "Dollarbird: the first photo was actually a Red-billed Blue Magpie — retired and replaced",
       "bodyZh": "图一（iNaturalist 照片 238508830）画面主体是红嘴蓝鹊，不是三宝鸟——它恰是 iNat 上三宝鸟的物种默认图，其观察只有这一张照片却被社区标到 research grade，源站标注本身就错了。该图已停用，补入 1 张北京国家植物园的照片（obs 221758152，CC BY-NC），占用从未用过的 image-6，老缓存不会看到旧图。原 2/3/4/5 复核无误予以保留，现在展示 6/2/3/4/5 共 5 张。首图随之更换（D1 同步），题库不再出这张错图。",
