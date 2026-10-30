@@ -2,10 +2,13 @@
 /**
  * 042：「观鸟」页（合并原 `/region` 地区浏览与 `/nearby` 附近鸟点）。
  *
- * 结构：两个标签页 —— ①**该地鸟种**（默认；该国家/省份的鸟种网格，2026-10-29 起为
- * 第一标签并内嵌「预习模式」浮窗）②**观鸟点**（含「附近鸟点」开关：关=按地区浏览点位，
- * 开=按定位排附近点位）。
- * 地区选择器（大洲/国家/省）在页面级常驻，两个标签页共用。
+ * 结构（2026-10-31 用户定，三区域自上而下）——
+ * ①标题与说明（页面顶部）；②地区选择（移动端：标题下常驻触发条 + 抽屉；桌面：大洲胶囊
+ * 居中 + 左侧常驻国家树；**横屏 = ②居左、③居右**两栏）；③内容三标签：
+ * 「该地鸟种」（默认；记录数降序，内嵌「预习模式」浮窗）→「观鸟点」（含附近鸟点开关）→
+ * 「名录」（2026-10-31 起由共享组件 CatalogPanel 提供，与独立 /catalog 页同源）。
+ * 打开页面时按 IP 粗定位（Worker `/api/geo`）自动选中用户所在国家/省份；用户手动
+ * 选过则记住上次选择（localStorage），URL 显式参数永远优先。
  * 旧路由 `/region` / `/nearby` 由 router 重定向到本页并还原状态（见 router/index.ts）。
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -13,6 +16,7 @@ import type { ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X } from 'lucide-vue-next'
+import CatalogPanel from '@/components/CatalogPanel.vue'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
@@ -21,6 +25,7 @@ import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } f
 import {
   buildCountryIndex,
   countriesInContinent,
+  continentOf,
   countryStats,
   filterCountries,
   presentContinents,
@@ -86,14 +91,20 @@ const continent = ref<Continent>('asia')
 const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
-/** 右侧面板标签页：观鸟点（默认）/ 该地鸟种（042，2026-10-21 更名） */
-const activeTab = ref<'spots' | 'regions'>('regions')
+/** 右侧面板标签页：该地鸟种（默认）→ 观鸟点 → 名录（2026-10-31 用户定顺序） */
+const activeTab = ref<'spots' | 'regions' | 'catalog'>('regions')
+/** 名录标签懒挂载：首次切到「名录」才加载 catalog.json（~1.3MB），此后 v-show 保持状态 */
+const catalogShown = ref(false)
 /** 「附近鸟点」开关（默认关；开 → 观鸟点列表改为按定位排序的附近点位） */
 const nearby = ref(false)
 /** 选中国家的省级二级列表是否展开（点击已选国家切换） */
 const expanded = ref(true)
-/** 移动端断点（与 style 里的 @media max-width: 640px 保持一致） */
-const isMobile = useMediaQuery('(max-width: 640px)')
+/**
+ * 移动端断点（2026-10-31 用户定布局：**竖屏**=标题→触发条→内容纵向堆叠；
+ * **横屏**即使很窄也走两栏——区域②（选区）居左、区域③（内容）居右）。
+ * 与 style 里 `@media (max-width: 640px) and (orientation: portrait)` 保持一致。
+ */
+const isMobile = useMediaQuery('(max-width: 640px) and (orientation: portrait)')
 /** 移动端「选择地区」抽屉是否展开（桌面端常驻侧栏，不使用此状态） */
 const pickerOpen = ref(false)
 /**
@@ -138,17 +149,57 @@ const CELL_DEG = 0.25
 const sortMode = ref<'name' | 'count'>('name')
 /** 深链还原期间抑制「切国重置省份」的副作用（见 applyQuery） */
 let applyingQuery = false
+/** 进入本页时 URL 是否带显式地区参数（?cc=/?sub=）：带 → 一切以 URL 为准，不做自动定位 */
+let explicitRegionOnEntry = false
+/** 用户在本会话里是否手动选过地区（自动定位的迟到响应不得覆盖手动选择） */
+let regionTouched = false
+
+/**
+ * 上次浏览的地区（localStorage `birding.region.v1`）：手动选择与 IP 自动定位都写入。
+ * URL 无显式参数时恢复它——否则每次刷新都会被 IP 定位拉回去（手动选的地区留不住）。
+ */
+const LAST_REGION_KEY = 'birding.region.v1'
+interface LastRegion {
+  cc?: string
+  sub?: string
+}
+function loadLastRegion(): LastRegion | null {
+  try {
+    const raw = localStorage.getItem(LAST_REGION_KEY)
+    if (!raw) return null
+    const v: unknown = JSON.parse(raw)
+    if (!v || typeof v !== 'object') return null
+    const o = v as Record<string, unknown>
+    const cc = typeof o.cc === 'string' ? o.cc.toUpperCase() : ''
+    const sub = typeof o.sub === 'string' ? o.sub.toUpperCase() : ''
+    if (!/^[A-Z]{2}$/.test(cc)) return null
+    return { cc, sub: /^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(sub) ? sub : '' }
+  } catch {
+    return null
+  }
+}
+function saveLastRegion() {
+  if (!selected.value) return
+  try {
+    localStorage.setItem(LAST_REGION_KEY, JSON.stringify({ cc: selected.value, sub: province.value }))
+  } catch {
+    // 隐私模式/配额满：静默降级（每次刷新走 IP 定位）
+  }
+}
 
 /** 深链还原：`/region` → tab=regions；`/nearby` → tab=spots&nearby=1；`?cc=&sub=` → 国家/省级 */
 function applyQuery() {
   const q = route.query
   // 默认标签 = 该地鸟种（2026-10-29 用户定：预习优先，该地鸟种为第一标签）
-  const tab = q.tab === 'spots' ? 'spots' : 'regions'
+  const tab = q.tab === 'spots' ? 'spots' : q.tab === 'catalog' ? 'catalog' : 'regions'
   activeTab.value = tab
+  // 深链直进名录（?tab=catalog）：懒挂载标记必须立即置位，否则面板永远不渲染
+  if (tab === 'catalog') catalogShown.value = true
   nearby.value = tab === 'spots' && q.nearby === '1'
   if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
   if (typeof q.sub === 'string') province.value = q.sub
-  // `?preview=1`：外部入口（如「我的」页的「去预习」）直达预习浮窗；一次性参数，不写回 URL
+  explicitRegionOnEntry = (!!q.cc && typeof q.cc === 'string') || (!!q.sub && typeof q.sub === 'string')
+  // `?preview=1`：外部入口（首页「预习模式」/「我的」页「去预习」）直达预习浮窗；一次性参数，不写回 URL
   if (q.preview === '1') previewOpen.value = true
   // `watch(selected)` 会重置省份 —— 深链里 cc+sub 同时给出时必须抑制一次，
   // 否则 `?cc=US&sub=US-CA` 的省份会被清掉（刷新/分享还原残缺）。
@@ -159,8 +210,9 @@ function applyQuery() {
 }
 
 /** 标签/开关/地区变化 → 写回 URL（保证刷新与分享可还原） */
-function setTab(next: 'spots' | 'regions') {
+function setTab(next: 'spots' | 'regions' | 'catalog') {
   activeTab.value = next
+  if (next === 'catalog') catalogShown.value = true
   syncQuery()
 }
 function toggleNearby() {
@@ -172,6 +224,7 @@ function syncQuery() {
   const q: Record<string, string> = {}
   // 默认标签（regions）不写参数，保持链接干净；显式传 tab=regions 也兼容
   if (activeTab.value === 'spots') q.tab = 'spots'
+  if (activeTab.value === 'catalog') q.tab = 'catalog'
   if (nearby.value) q.nearby = '1'
   // 地区也进 URL：默认国（CN）不写，保持链接干净；省份总是写
   if (selected.value && selected.value !== 'CN') q.cc = selected.value
@@ -202,10 +255,65 @@ onMounted(async () => {
   } catch {
     failed.value = true
   }
+  // ── 地区自动带入（2026-10-31）：URL 显式参数 > 上次选择（localStorage）> IP 粗定位 ──
+  if (explicitRegionOnEntry) {
+    saveLastRegion()
+  } else {
+    const last = loadLastRegion()
+    if (last?.cc) applyDetectedRegion(last.cc, last.sub ?? '')
+    else void autoDetectRegion()
+  }
   // 025 M2:全球层非致命——失败则保持现状 bank 视图
   void loadSpeciesIndex().then((idx) => (speciesIdx.value = idx))
   void loadSpeciesDistribution().then((d) => (globalByCountry.value = d?.byCountry ?? null))
 })
+
+/**
+ * 应用自动带入的地区（上次选择或 IP 定位）。`sub` 必须是「本国已知且开放二级入口」的省码，
+ * 否则落到国家级——省级索引缺失的国家、083 收起二级的国家（SG/SI/LV 等）都自动停在
+ * 国家层，**绝不猜省**（这就是「没有省级的国家怎么办」的答案：精确到国家为止）。
+ */
+function applyDetectedRegion(cc: string, sub: string) {
+  if (!/^[A-Z]{2}$/.test(cc) || regionTouched) return
+  if (cc === selected.value && sub === province.value) {
+    saveLastRegion()
+    return
+  }
+  applyingQuery = true
+  void nextTick(() => {
+    applyingQuery = false
+  })
+  selected.value = cc
+  const validSub =
+    !!sub &&
+    sub.startsWith(`${cc}-`) &&
+    provinceSecondLevelEnabled(provinceIndex.value, cc) &&
+    !!provinceIndex.value?.byCountry?.[cc]?.[sub]
+  province.value = validSub ? sub : ''
+  saveLastRegion()
+}
+
+/**
+ * IP 粗定位（Worker `/api/geo`，`request.cf` 派生，**不存 IP 不进日志**）。
+ * 中国给两字母区划码映射成 ISO 省码（SH → CN-31）；港澳台在观鸟页是独立条目
+ * （显示名「中国香港／中国澳门／中国台湾」），按国家码直接选中。
+ * 定位失败/无数据 → 保持现状（默认 CN），静默不打扰。
+ */
+async function autoDetectRegion() {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/geo`, { cache: 'no-store' })
+    if (!res.ok) return
+    const d = (await res.json()) as {
+      country?: string | null
+      province?: string | null
+    }
+    const cc = String(d.country ?? '').toUpperCase()
+    if (!/^[A-Z]{2}$/.test(cc) || regionTouched) return
+    applyDetectedRegion(cc, String(d.province ?? '').toUpperCase())
+  } catch {
+    // 网络失败/端点未部署：静默保持默认地区
+  }
+}
 
 /**
  * 按国懒加载两层地区数据（P1-6 分片 + P0-5 国家层）：
@@ -379,8 +487,11 @@ const countryGridItems = computed<GridItem[]>(() => {
  * · 选省 → 省级分片 `region-provinces/<CC>.json` 的 `bySpecies[id][省码]`（只计能映射到 ISO 省名的记录）；
  * · 只选国 → **国家层** `region-records/<CC>.json`（249 个国家/地区码都有，含未被归属到省份的记录）。
  *   旧做法"各省求和"会把未归属省份的记录整块丢掉 → 美国这类国家系统性偏低。
+ *
+ * 2026-10-31 用户定：**记录数是默认排序**（按钮也排在前面），名称序退居第二；
+ * 「预习模式」按钮只在记录数排序下显示（预习就是按常见度过一遍，名称序下无意义）。
  */
-const speciesSort = ref<'name' | 'records'>('name')
+const speciesSort = ref<'name' | 'records'>('records')
 
 /** 当前选择下「物种 id → 记录数」（一次遍历预计算，避免排序时反复求和） */
 const recordCounts = computed(() => {
@@ -428,6 +539,9 @@ const countrySpeciesCount = computed(() => countryGridItems.value.length)
 const visibleItems = computed(() => gridItems.value.slice(0, visibleCount.value))
 watch([selected, province], () => {
   visibleCount.value = 200
+  // 预习浮窗跟随地区：列表按新地区重建，进度归零（熟记停留一并取消）
+  clearHold()
+  previewIndex.value = 0
 })
 const nameOf = (sp: BankSpecies) => speciesName(sp, currentLocale())
 
@@ -557,6 +671,39 @@ function togglePreviewMastery() {
     // 快速连点回到列表内（如停留期内取消熟记）→ 取消停留
     clearHold()
   }
+}
+
+/* ── 预习浮窗内的地区选择（2026-10-31 用户定）────────────────────────
+ * 与看图/听音介绍页的选区同构：已选摘要 +「更改」展开 → 大洲手风琴 →
+ * 国家（带 GBIF 种数）→ 所选国家下方内联省 chips。差异只有两点：
+ * 大洲不是可选范围（观鸟页没有洲级名单，点洲只展开）；选省用再点一次取消。
+ * 选择直接驱动页面级 selected/province（URL 同步、上栏摘要、列表全联动）。 */
+const pvRegionOpen = ref(false)
+const pvOpenContinent = ref<Continent | null>(null)
+/** 展开选择器时自动展开当前国家所在的大洲（与 QuizPlay 同款，少一次寻找） */
+watch(pvRegionOpen, (open) => {
+  if (!open) return
+  pvOpenContinent.value = continentOf(selected.value) ?? continent.value
+})
+/** 手风琴数据：大洲 → 国家（沿用页面级 stats，GBIF 种数降序） */
+const pvContinentGroups = computed(() =>
+  continents.value.map((c) => ({ key: c, countries: countriesInContinent(stats.value, c) })),
+)
+function pvToggleContinent(c: Continent) {
+  pvOpenContinent.value = pvOpenContinent.value === c ? null : c
+}
+function pvPickCountry(code: string) {
+  if (code === selected.value) return
+  regionTouched = true
+  selected.value = code // watch(selected) 会清省、载入新国两层
+  expanded.value = true
+  saveLastRegion()
+}
+function pvPickProvince(code: string) {
+  regionTouched = true
+  // 再点一次同省 = 取消省细分（回到国家级）
+  province.value = province.value === code ? '' : code
+  saveLastRegion()
 }
 
 const provinceSources = computed(() =>
@@ -692,6 +839,7 @@ watch(provinceEnabled, (on) => {
  * 省级列表顶部另有显式「全部」行，不再只靠"再点一次国家"这个隐性手势。
  */
 function selectCountry(code: string) {
+  regionTouched = true
   if (code !== selected.value) {
     selected.value = code
     // 有省级细分的国家保持抽屉打开，让用户接着选省；没有的（绝大多数国家）直接收起
@@ -699,6 +847,7 @@ function selectCountry(code: string) {
       closePicker()
       void nextTick(scrollToResults)
     }
+    saveLastRegion()
     return
   }
   if (province.value) {
@@ -707,6 +856,7 @@ function selectCountry(code: string) {
   } else {
     expanded.value = !expanded.value
   }
+  saveLastRegion()
 }
 
 /** 该国有省级细分吗？（只看索引里的 byCountry，不依赖该国的分片是否已加载） */
@@ -718,7 +868,9 @@ function hasProvinceList(cc: string): boolean {
 
 /** 选择省级（'' = 全部省份）：移动端选完收起抽屉，并让下方结果回到视野 */
 function pickProvince(code: string) {
+  regionTouched = true
   province.value = code
+  saveLastRegion()
   if (!isMobile.value) return
   closePicker()
   void nextTick(scrollToResults)
@@ -726,32 +878,33 @@ function pickProvince(code: string) {
 </script>
 
 <template>
-  <!-- 移动端常驻触发条：放在卡片外（.card 的 overflow:hidden 会让内部 sticky 失效）；
-       窄屏下这是**唯一**的地区入口，大洲/国家/省级都在抽屉里逐级选。 -->
-  <div
-    v-if="isMobile && stats.length"
-    class="picker-bar-wrap"
-    :style="{ top: `${stickyTop}px`, '--region-sticky-top': `${stickyTop}px` }"
-  >
-    <button
-      type="button"
-      class="picker-bar"
-      aria-haspopup="dialog"
-      :aria-controls="pickerOpen ? 'region-picker' : undefined"
-      :aria-expanded="pickerOpen"
-      :aria-label="t('region.pickCurrent', { current: selectionLabel })"
-      @click="openPicker"
-    >
-      <Globe2 class="ic globe" :size="16" />
-      <span class="picker-current">{{ selectionLabel }}</span>
-      <span v-if="barCount" class="picker-count">{{ barCount }}</span>
-      <ChevronDown class="ic chev" :size="16" />
-    </button>
-  </div>
-
   <section class="card region birding" :style="{ '--region-sticky-top': `${stickyTop}px` }">
+    <!-- 区域①：标题 + 说明（2026-10-31 用户定布局：标题永远在最上面） -->
     <h2 class="region-head"><Globe2 class="ic" :size="22" /> {{ t('birding.title') }}</h2>
     <p class="muted lead">{{ t('birding.lead') }}</p>
+
+    <!-- 区域②（移动端）：常驻触发条，紧跟标题之下。本页 .birding 已放开 overflow，
+         sticky 在卡片内照常工作；窄屏下这是**唯一**的地区入口，大洲/国家/省级都在抽屉里逐级选。 -->
+    <div
+      v-if="isMobile && stats.length"
+      class="picker-bar-wrap"
+      :style="{ top: `${stickyTop}px` }"
+    >
+      <button
+        type="button"
+        class="picker-bar"
+        aria-haspopup="dialog"
+        :aria-controls="pickerOpen ? 'region-picker' : undefined"
+        :aria-expanded="pickerOpen"
+        :aria-label="t('region.pickCurrent', { current: selectionLabel })"
+        @click="openPicker"
+      >
+        <Globe2 class="ic globe" :size="16" />
+        <span class="picker-current">{{ selectionLabel }}</span>
+        <span v-if="barCount" class="picker-count">{{ barCount }}</span>
+        <ChevronDown class="ic chev" :size="16" />
+      </button>
+    </div>
 
     <template v-if="stats.length">
       <!-- 桌面端：大洲胶囊常驻在双栏上方（移动端搬进抽屉，避免一个控件两个交互面） -->
@@ -896,7 +1049,7 @@ function pickProvince(code: string) {
         </Teleport>
 
         <div class="species">
-          <!-- 2026-10-29 用户定：该地鸟种为第一标签（默认），观鸟点第二 -->
+          <!-- 2026-10-31 用户定：该地鸟种（默认）→ 观鸟点 → 名录 三标签 -->
           <div class="panel-tabs" role="tablist">
             <button
               type="button"
@@ -929,6 +1082,18 @@ function pickProvince(code: string) {
                   <span class="tab-sub">{{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}</span>
                 </template>
               </span>
+            </button>
+            <!-- 名录（第三标签）：catalog.json ~1.3MB 懒加载，首次切到才挂载 CatalogPanel；
+                 挂载后 v-show 保持，来回切换不丢展开状态与搜索词 -->
+            <button
+              type="button"
+              role="tab"
+              class="panel-tab"
+              :class="{ active: activeTab === 'catalog' }"
+              :aria-selected="activeTab === 'catalog'"
+              @click="setTab('catalog')"
+            >
+              <span class="tab-label">{{ t('region.tabCatalog') }}</span>
             </button>
           </div>
 
@@ -1022,15 +1187,8 @@ function pickProvince(code: string) {
 
             <div class="sort-row">
               <div class="sort" role="group" :aria-label="t('region.sortSpeciesLabel')">
-                <button
-                  type="button"
-                  class="sort-btn"
-                  :class="{ active: speciesSort === 'name' }"
-                  :aria-pressed="speciesSort === 'name'"
-                  @click="speciesSort = 'name'"
-                >
-                  {{ t('region.speciesSortName') }}
-                </button>
+                <!-- 2026-10-31 用户定：记录数为默认（第一），名称第二；
+                     预习按钮只在记录数排序下显示（预习=按常见度过一遍） -->
                 <button
                   type="button"
                   class="sort-btn"
@@ -1040,9 +1198,19 @@ function pickProvince(code: string) {
                 >
                   {{ t('region.speciesSortRecords') }}
                 </button>
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: speciesSort === 'name' }"
+                  :aria-pressed="speciesSort === 'name'"
+                  @click="speciesSort = 'name'"
+                >
+                  {{ t('region.speciesSortName') }}
+                </button>
               </div>
               <!-- 预习模式与排序是不同逻辑，独立放在行尾（2026-10-29 用户定） -->
               <button
+                v-if="speciesSort === 'records'"
                 type="button"
                 class="preview-btn"
                 :aria-pressed="previewOpen"
@@ -1108,141 +1276,221 @@ function pickProvince(code: string) {
               {{ t('region.provinceSource', { sources: provinceSources }) }}
             </p>
           </div>
-        </div>
-      </div>
 
-      <!-- ---------- 预习模式浮窗（2026-10-29，P0-4）：就地看图听声 + 熟记标记 ---------- -->
-      <Teleport to="body">
-        <div v-if="previewOpen" class="preview-mask" @click.self="closePreview">
-          <div
-            :ref="previewPanelBind"
-            class="preview-card"
-            role="dialog"
-            aria-modal="true"
-            :aria-label="t('region.previewMode')"
-          >
-            <button
-              type="button"
-              class="preview-close"
-              :aria-label="t('common.close')"
-              @click="closePreview"
-            >
-              <X :size="18" />
-            </button>
-            <template v-if="previewCurrent">
-              <div class="pv-head">
-                <img
-                  v-if="previewThumb"
-                  class="pv-thumb"
-                  :src="previewThumb"
-                  alt=""
-                  @error="onThumbError(previewCurrent.slug)"
-                />
-                <div v-else class="pv-thumb pv-thumb-empty" aria-hidden="true"></div>
-                <div class="pv-title">
-                  <p class="pv-name">{{ previewCurrent.name }}</p>
-                  <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
-                </div>
-                <button
-                  v-if="previewAudio"
-                  type="button"
-                  class="card-play pv-play"
-                  :class="{ playing: isPlaying(previewAudio) }"
-                  :aria-label="isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')"
-                  :aria-pressed="isPlaying(previewAudio)"
-                  @click="playToggle(previewAudio)"
-                >
-                  <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
-                  <Volume2 v-else :size="16" aria-hidden="true" />
-                </button>
-              </div>
-
-              <SpeciesFacts
-                class="pv-facts"
-                :profile="previewSp?.profile"
-                :species-id="previewCurrent.slug"
-                :taxon-key="previewSp?.taxonKey"
-                :name-sci="previewCurrent.nameSci"
-                compact
-              />
-
-              <button
-                type="button"
-                class="pv-master"
-                :class="{ known: previewMastered }"
-                :aria-pressed="previewMastered"
-                @click="togglePreviewMastery"
-              >
-                <Lightbulb class="bulb" :size="20" aria-hidden="true" />
-                <span>{{ previewMastered ? t('region.masteryKnown') : t('region.masteryUnknown') }}</span>
-              </button>
-
-              <div class="pv-nav">
-                <button
-                  type="button"
-                  class="pv-step"
-                  :disabled="previewList.length < 2"
-                  @click="stepPreview(-1)"
-                >
-                  <ChevronLeft :size="15" aria-hidden="true" />
-                  {{ t('region.previewPrev') }}
-                </button>
-                <span class="pv-pos muted">
-                  {{ t('region.previewPos', { i: previewIndex + 1, n: previewList.length }) }}
-                </span>
-                <button
-                  type="button"
-                  class="pv-step"
-                  :disabled="previewList.length < 2"
-                  @click="stepPreview(1)"
-                >
-                  {{ t('region.previewNext') }}
-                  <ChevronRight :size="15" aria-hidden="true" />
-                </button>
-              </div>
-            </template>
-            <p v-else class="muted pv-empty">{{ t('region.previewEmpty') }}</p>
-
-            <div class="pv-filters" role="group" :aria-label="t('region.previewMode')">
-              <button
-                type="button"
-                class="sort-btn"
-                :class="{ active: previewFilter === 'all' }"
-                :aria-pressed="previewFilter === 'all'"
-                @click="setPreviewFilter('all')"
-              >
-                {{ t('region.filterAll') }}
-              </button>
-              <button
-                type="button"
-                class="sort-btn"
-                :class="{ active: previewFilter === 'unmastered' }"
-                :aria-pressed="previewFilter === 'unmastered'"
-                @click="setPreviewFilter('unmastered')"
-              >
-                {{ t('region.filterUnmastered') }}
-              </button>
-              <button
-                type="button"
-                class="sort-btn"
-                :class="{ active: previewFilter === 'mastered' }"
-                :aria-pressed="previewFilter === 'mastered'"
-                @click="setPreviewFilter('mastered')"
-              >
-                {{ t('region.filterMastered') }}
-              </button>
-            </div>
+          <!-- ---------- 标签页 3：名录（2026-10-31 并入；与 /catalog 共用 CatalogPanel） ---------- -->
+          <div v-if="catalogShown" v-show="activeTab === 'catalog'" class="catalog-pane">
+            <CatalogPanel />
           </div>
         </div>
-      </Teleport>
+      </div>
     </template>
 
     <p v-else-if="failed" class="muted empty" role="alert">{{ t('errors.unknown') }}</p>
     <p v-else class="muted empty" role="status">{{ t('common.loading') }}</p>
+
+    <!-- ── 预习模式浮窗（2026-10-29，P0-4；2026-10-31 增加地区选择）─────────────
+         放在 stats.length 条件之外：首页「预习模式」深链（?preview=1）打开时题库可能
+         尚未就绪——浮窗先给出加载态，而不是整块消失（Teleport 在 v-if 里等于打不开）。 -->
+    <Teleport to="body">
+      <div v-if="previewOpen" class="preview-mask" @click.self="closePreview">
+        <div
+          :ref="previewPanelBind"
+          class="preview-card"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="t('region.previewMode')"
+        >
+          <button
+            type="button"
+            class="preview-close"
+            :aria-label="t('common.close')"
+            @click="closePreview"
+          >
+            <X :size="18" />
+          </button>
+
+          <!-- 地区选择：已选摘要 +「更改」展开（大洲手风琴 → 国家 → 省 chips），
+               与看图/听音介绍页的选区逻辑同构；选择驱动整个观鸟页与列表联动 -->
+          <div class="pv-region">
+            <span class="pv-region-current">
+              <span class="pv-region-cap">{{ t('region.pick') }}</span>
+              <strong class="pv-region-value">{{ selectionLabel }}</strong>
+            </span>
+            <button
+              type="button"
+              class="pv-region-toggle"
+              :aria-expanded="pvRegionOpen"
+              @click="pvRegionOpen = !pvRegionOpen"
+            >
+              {{ pvRegionOpen ? t('region.done') : t('region.pvRegionChange') }}
+            </button>
+          </div>
+          <!-- 展开时：**整个浮窗**就是选区面板（2026-10-31 用户反馈：选区不能挤在小滚动条里），
+               鸟内容暂时让位；大洲手风琴 → 国家（带 GBIF 种数）→ 所选国家下方省 chips。
+               与看图/听音介绍页的选区逻辑同构；选择驱动整个观鸟页与列表联动 -->
+          <div v-if="pvRegionOpen" class="pv-region-full">
+            <div v-for="g in pvContinentGroups" :key="g.key" class="pv-continent">
+              <button
+                type="button"
+                class="pv-continent-head"
+                :class="{ on: pvOpenContinent === g.key }"
+                :aria-expanded="pvOpenContinent === g.key"
+                @click="pvToggleContinent(g.key)"
+              >
+                <span>{{ t(`region.continents.${g.key}`) }}</span>
+                <span class="chev" aria-hidden="true">{{ pvOpenContinent === g.key ? '−' : '+' }}</span>
+              </button>
+              <div v-if="pvOpenContinent === g.key" class="pv-country-wrap">
+                <template v-for="s in g.countries" :key="s.code">
+                  <button
+                    type="button"
+                    class="pv-country"
+                    :class="{ on: s.code === selected }"
+                    :aria-pressed="s.code === selected"
+                    @click="pvPickCountry(s.code)"
+                  >
+                    <span class="pv-country-name">{{ countryName(s.code) }}</span>
+                    <span class="pv-n muted">{{ t('region.count', { n: s.count }) }}</span>
+                  </button>
+                  <!-- 省级 chips 内联在所选国家正下方（无省级数据的国家不出，即自动只到国家层） -->
+                  <div v-if="s.code === selected && provinces.length" class="pv-prov-wrap">
+                    <button
+                      v-for="p in provinces"
+                      :key="p.code"
+                      type="button"
+                      class="pv-prov"
+                      :class="{ on: p.code === province }"
+                      :aria-pressed="p.code === province"
+                      @click="pvPickProvince(p.code)"
+                    >
+                      {{ p.name }}
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <template v-else>
+          <template v-if="previewCurrent">
+            <div class="pv-head">
+              <img
+                v-if="previewThumb"
+                class="pv-thumb"
+                :src="previewThumb"
+                alt=""
+                @error="onThumbError(previewCurrent.slug)"
+              />
+              <div v-else class="pv-thumb pv-thumb-empty" aria-hidden="true"></div>
+              <div class="pv-title">
+                <p class="pv-name">{{ previewCurrent.name }}</p>
+                <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
+              </div>
+              <button
+                v-if="previewAudio"
+                type="button"
+                class="card-play pv-play"
+                :class="{ playing: isPlaying(previewAudio) }"
+                :aria-label="isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')"
+                :aria-pressed="isPlaying(previewAudio)"
+                @click="playToggle(previewAudio)"
+              >
+                <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
+                <Volume2 v-else :size="16" aria-hidden="true" />
+              </button>
+            </div>
+
+            <SpeciesFacts
+              class="pv-facts"
+              :profile="previewSp?.profile"
+              :species-id="previewCurrent.slug"
+              :taxon-key="previewSp?.taxonKey"
+              :name-sci="previewCurrent.nameSci"
+              compact
+            />
+
+            <button
+              type="button"
+              class="pv-master"
+              :class="{ known: previewMastered }"
+              :aria-pressed="previewMastered"
+              @click="togglePreviewMastery"
+            >
+              <Lightbulb class="bulb" :size="20" aria-hidden="true" />
+              <span>{{ previewMastered ? t('region.masteryKnown') : t('region.masteryUnknown') }}</span>
+            </button>
+
+            <div class="pv-nav">
+              <button
+                type="button"
+                class="pv-step"
+                :disabled="previewList.length < 2"
+                @click="stepPreview(-1)"
+              >
+                <ChevronLeft :size="15" aria-hidden="true" />
+                {{ t('region.previewPrev') }}
+              </button>
+              <span class="pv-pos muted">
+                {{ t('region.previewPos', { i: previewIndex + 1, n: previewList.length }) }}
+              </span>
+              <button
+                type="button"
+                class="pv-step"
+                :disabled="previewList.length < 2"
+                @click="stepPreview(1)"
+              >
+                {{ t('region.previewNext') }}
+                <ChevronRight :size="15" aria-hidden="true" />
+              </button>
+            </div>
+          </template>
+          <!-- 数据未就绪（深链直开）：给加载态，避免被误读成「暂无鸟种」 -->
+          <p v-else-if="!stats.length && !failed" class="muted pv-empty" role="status">{{ t('common.loading') }}</p>
+          <p v-else class="muted pv-empty">{{ t('region.previewEmpty') }}</p>
+
+          <div class="pv-filters" role="group" :aria-label="t('region.previewMode')">
+            <button
+              type="button"
+              class="sort-btn"
+              :class="{ active: previewFilter === 'all' }"
+              :aria-pressed="previewFilter === 'all'"
+              @click="setPreviewFilter('all')"
+            >
+              {{ t('region.filterAll') }}
+            </button>
+            <button
+              type="button"
+              class="sort-btn"
+              :class="{ active: previewFilter === 'unmastered' }"
+              :aria-pressed="previewFilter === 'unmastered'"
+              @click="setPreviewFilter('unmastered')"
+            >
+              {{ t('region.filterUnmastered') }}
+            </button>
+            <button
+              type="button"
+              class="sort-btn"
+              :class="{ active: previewFilter === 'mastered' }"
+              :aria-pressed="previewFilter === 'mastered'"
+              @click="setPreviewFilter('mastered')"
+            >
+              {{ t('region.filterMastered') }}
+            </button>
+          </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
 
 <style scoped>
+/* 区域布局（2026-10-31 用户定）：标题①在卡内最上 → 移动端触发条②（sticky）→ 内容③。
+   .card 默认 overflow:hidden 会让内部 sticky 失效——本页放开（浮层都已 Teleport，
+   卡内没有需要被裁剪的东西） */
+.birding {
+  overflow: visible;
+}
 .region-head {
   display: inline-flex;
   align-items: center;
@@ -1398,10 +1646,11 @@ function pickProvince(code: string) {
   flex-direction: column;
   gap: 2px;
 }
-/* ---------- 移动端：常驻触发条（放在卡片外，.card 的 overflow:hidden 会让内部 sticky 失效） ---------- */
+/* ---------- 移动端：常驻触发条（区域②：标题之下、内容之上；.birding 已放开 overflow，
+   sticky 在卡片内照常工作，跟随滚动吸附在顶栏下方） ---------- */
 .picker-bar-wrap {
   position: sticky;
-  top: 60px; /* 兜底值；真实值由内联 top + --region-sticky-top（顶栏实测高度）覆盖 */
+  top: 60px; /* 兜底值；真实值由内联 top（顶栏实测高度）覆盖 */
   z-index: 15;
   margin-bottom: 10px;
 }
@@ -2052,8 +2301,165 @@ function pickProvince(code: string) {
   padding-top: 14px;
 }
 
-/* 移动端：单栏 + 抽屉（选择器已 Teleport 到 body，见模板） */
-@media (max-width: 640px) {
+/* ── 名录标签页（2026-10-31 并入；面板自带样式，这里只定位） ── */
+.catalog-pane {
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ── 预习浮窗 · 地区选择（2026-10-31）：与看图/听音选区同构（摘要 + 大洲手风琴 → 国家 → 省 chips） ── */
+.pv-region {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f7faf8;
+}
+.pv-region-current {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.pv-region-cap {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-light);
+}
+.pv-region-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+.pv-region-toggle {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pv-region-toggle:hover {
+  border-color: var(--primary-light);
+}
+/* 展开时选区占满整个浮窗（2026-10-31 用户反馈）：flex:1 吃掉摘要行之下的全部空间，
+   滚动发生在面板自身；鸟内容此时整体让位（v-else） */
+.pv-region-full {
+  flex: 1 1 auto;
+  min-height: 0; /* flex 子项允许收缩：滚动条出现在面板自身而非浮窗 */
+  overflow-y: auto;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.pv-continent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: #f2f7f4;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.pv-continent-head:hover {
+  border-color: var(--primary-light);
+}
+.pv-continent-head.on {
+  border-color: var(--primary);
+  background: #eaf4ef;
+}
+.pv-continent-head .chev {
+  flex-shrink: 0;
+  color: var(--text-light);
+}
+.pv-country-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 0 6px 10px;
+  border-left: 2px solid var(--border);
+  margin-left: 10px;
+}
+.pv-country {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+.pv-country:hover {
+  border-color: var(--primary-light);
+  background: #f7faf8;
+}
+.pv-country.on {
+  border-color: var(--primary);
+  background: #eaf4ef;
+  font-weight: 700;
+}
+.pv-country-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pv-n {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+}
+.pv-prov-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0 6px 4px;
+}
+.pv-prov {
+  padding: 3px 10px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.pv-prov:hover {
+  border-color: var(--primary-light);
+}
+.pv-prov.on {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 移动端竖屏：单栏 + 抽屉（选择器已 Teleport 到 body，见模板）。
+   横屏（即便很窄）不走这条——走桌面两栏：区域②（选区）居左、区域③（内容）居右 */
+@media (max-width: 640px) and (orientation: portrait) {
   .layout {
     grid-template-columns: 1fr;
   }

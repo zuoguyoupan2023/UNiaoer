@@ -123,8 +123,10 @@ export const messages = {
     bankStatsFull: '图片 {image} · 音频 {audio}（共 {total} 种）',
     modeImageSub: '来自 iNaturalist 的开放许可照片',
     modeAudioSub: '来自 Xeno-canto 的真实鸟鸣',
-    regionPreviewSub: '快速预习某地鸟类',
-    regionSub: '按国家/地区浏览鸟种',
+    // 观鸟卡三分动作按钮（2026-10-31）：浏览 / 预习模式 / 鸟点
+    birdingBrowse: '浏览',
+    birdingSpots: '鸟点',
+    previewMode: '预习模式',
   },
   mode: {
     imageRound: '鸟图版',
@@ -511,6 +513,10 @@ export const messages = {
     tabSpecies: '鸟种',
     tabRegions: '该地鸟种',
     tabHotspots: '观鸟点',
+    // 名录（第三标签，2026-10-31 并入观鸟页）
+    tabCatalog: '名录',
+    // 预习浮窗内的地区选择（2026-10-31）
+    pvRegionChange: '更改',
     hotspotEmpty: '该地区暂无观鸟点数据',
     hotspotOnEbird: '在 eBird 查看该热点',
     hotspotOfCountry: '（全国 {n} 个）',

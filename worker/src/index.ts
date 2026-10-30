@@ -1413,7 +1413,8 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
 }
 
 /**
- * GET /api/geo —— 粗定位（039 P1「附近观鸟点」的默认定位来源）。
+ * GET /api/geo —— 粗定位（039 P1「附近观鸟点」的默认定位来源；2026-10-31 起观鸟页
+ * 「按 IP 自动选地区」也用它）。
  *
  * 位置取自 Cloudflare 注入的 `request.cf`（IP 归属地），**四舍五入到 0.05°（≈5km）**后返回：
  *  - **不落库**：不读也不写任何表；只在本次请求的内存里算一次；
@@ -1422,6 +1423,10 @@ function normalizeMetricProps(spec: Record<string, string[]>, raw: unknown): str
  * 客户端拿到后只放在页面内存里算距离。取不到（代理/某些移动网络无 cf 数据）→ 返回
  * `{ ok: true, located: false }`，前端回退到手动选地区。
  *
+ * 2026-10-31 新增 `province`（clientProvince 派生，`CN-31`/`US-CA` 形态；港澳台按
+ * 铁律 6 并入中国省级 CN-71/91/92）：观鸟页用它把用户定位到「中国 · 上海」这一级。
+ * 坐标缺失但国家可用时仍返回（located=false 表示没有坐标，nearby 功能据此回退）。
+ *
  * 隐私口径与 docs/028（计量）一致：不追踪、不画像；文案见设置页与 /nearby 页。
  */
 function handleGeo(request: Request): Response {
@@ -1429,8 +1434,13 @@ function handleGeo(request: Request): Response {
   const cf = (request as Request & { cf?: Record<string, unknown> }).cf
   const lat = Number(cf?.latitude)
   const lng = Number(cf?.longitude)
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-    return json({ ok: true, located: false })
+  const country = typeof cf?.country === 'string' ? cf.country : null
+  const province = clientProvince(cf)
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)
+  if (!hasCoords) {
+    if (!country && !province) return json({ ok: true, located: false })
+    // 无坐标但归属地可用：nearby 用不了距离，观鸟页的省级自动定位仍可用
+    return json({ ok: true, located: false, country, province })
   }
   const round = (v: number) => Math.round(v * 20) / 20 // 0.05° 步长
   return json({
@@ -1440,7 +1450,8 @@ function handleGeo(request: Request): Response {
     lng: round(lng),
     // 精度提示（前端文案用）：0.05° ≈ 5km
     precisionDeg: 0.05,
-    country: typeof cf?.country === 'string' ? cf.country : null,
+    country,
+    province,
   })
 }
 

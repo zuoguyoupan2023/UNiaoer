@@ -118,9 +118,9 @@ const immersive = computed(
   <!-- 键盘用户跳过导航直达主内容（H3） -->
   <a class="skip-link" href="#main">{{ t('nav.skipToMain') }}</a>
   <!-- 顶部：品牌（=首页链接）+ 导航同一行，节约高度（R21） -->
-  <!-- 导航顺序（2026-10-23 用户指定）：
-       单行 = 看图 · 听音 · 统计 · 观鸟 · 名录 · 识别 [· 大众评审] · 我的 · 设置 · 喇叭；
-       两行（≤699px）= 第一行 品牌 + 识别 · 我的 · 设置 · 喇叭，第二行 看图 · 听音 · 统计 · 观鸟 · 名录。 -->
+  <!-- 导航顺序（2026-10-31 用户定：名录从导航移除，/catalog 独立页保留直达）：
+       单行 = 看图 · 听音 · 统计 · 观鸟 · 识别 [· 大众评审] · 我的 · 设置 · 喇叭；
+       两行（≤699px）= 第一行 品牌 + 识别 · 我的 · 设置 · 喇叭，第二行 看图 · 听音 · 统计 · 观鸟。 -->
   <header v-if="!immersive" class="app-topbar">
     <RouterLink to="/" class="brand" :aria-label="t('nav.brandHome')">
       <Bird class="brand-icon" :size="26" />
@@ -132,8 +132,7 @@ const immersive = computed(
         <RouterLink to="/quiz/audio" class="nav-i-audio">{{ t('nav.audioQuiz') }}</RouterLink>
         <RouterLink to="/stats" class="nav-i-stats">{{ t('nav.stats') }}</RouterLink>
         <RouterLink to="/birding" class="nav-i-birding">{{ t('nav.birding') }}</RouterLink>
-        <RouterLink to="/catalog" class="nav-i-catalog">{{ t('nav.catalog') }}</RouterLink>
-        <!-- 大众评审：有已发布条目时才出现，跟着名录（两行模式下也在第一行末尾） -->
+        <!-- 大众评审：有已发布条目时才出现（两行模式下也在第一行末尾） -->
         <RouterLink v-if="(reportsMeta.publishedCount ?? 0) > 0" to="/reports" class="nav-i-reports">
           {{ t('nav.reports') }}
         </RouterLink>

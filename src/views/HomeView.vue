@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, AudioLines, Globe2, Image as ImageIcon, Library } from 'lucide-vue-next'
+import { AlertTriangle, AudioLines, Globe2, Image as ImageIcon, Library, Lightbulb, MapPin, Telescope } from 'lucide-vue-next'
 import { loadBank, BankError } from '@/core/bank'
 
 const { t } = useI18n()
@@ -74,16 +74,30 @@ onMounted(async () => {
       </RouterLink>
     </div>
 
-    <!-- 观鸟入口：宽度与上方模式卡一致（半宽居中），标题下两行说明（预习在前，2026-10-29 用户定） -->
+    <!-- 观鸟入口（2026-10-31 用户定）：标题下三分三个动作按钮——
+         浏览（望远镜）/ 预习模式（灯泡，直达观鸟页并弹开预习浮窗）/ 鸟点（定位 pin）；
+         预习不再单独占一行，合并为中间按钮 -->
     <div class="region-wrap">
-      <RouterLink to="/birding" class="region-link">
+      <div class="birding-card">
         <span class="region-head">
           <Globe2 class="ic" :size="18" />
           <span class="region-title">{{ t('nav.birding') }}</span>
         </span>
-        <span class="region-sub">{{ t('home.regionPreviewSub') }}</span>
-        <span class="region-sub">{{ t('home.regionSub') }}</span>
-      </RouterLink>
+        <div class="birding-actions">
+          <RouterLink to="/birding" class="birding-action">
+            <Telescope class="act-ic" :size="22" aria-hidden="true" />
+            <span class="act-label">{{ t('home.birdingBrowse') }}</span>
+          </RouterLink>
+          <RouterLink to="/birding?preview=1" class="birding-action">
+            <Lightbulb class="act-ic bulb" :size="22" aria-hidden="true" />
+            <span class="act-label">{{ t('home.previewMode') }}</span>
+          </RouterLink>
+          <RouterLink to="/birding?tab=spots" class="birding-action">
+            <MapPin class="act-ic" :size="22" aria-hidden="true" />
+            <span class="act-label">{{ t('home.birdingSpots') }}</span>
+          </RouterLink>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -164,38 +178,32 @@ onMounted(async () => {
   font-size: 0.73rem;
   color: var(--text-light);
 }
-/* 观鸟入口：宽度与上方模式卡一致（半宽居中），纵向布局，标题下两行说明 */
+/* 观鸟入口（2026-10-31）：标题 + 三分动作按钮；宽度与上方模式卡一致（半宽居中） */
 .region-wrap {
   display: flex;
   justify-content: center;
   margin: 10px auto 0;
-  max-width: 760px; /* 与 .modes 同宽：三张卡左右边缘对齐 */
+  max-width: 760px; /* 与 .modes 同宽：入口卡左右边缘对齐 */
 }
-.region-link {
+.birding-card {
   width: calc(50% - 5px); /* 与 .modes 的 1fr 1fr + gap 10px 对齐 */
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 20px 14px;
+  gap: 9px;
+  padding: 14px 12px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
   color: var(--text);
   text-align: center;
-  transition: all 0.18s ease;
-}
-.region-link:hover {
-  border-color: var(--primary-light);
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
 }
 .region-head {
   display: inline-flex;
   align-items: center;
   gap: 7px;
 }
-.region-link .ic {
+.region-wrap .ic {
   color: var(--primary);
   flex-shrink: 0;
 }
@@ -203,13 +211,49 @@ onMounted(async () => {
   font-weight: 800;
   font-size: 0.9rem;
 }
-.region-sub {
-  font-size: 0.75rem;
-  color: var(--text-light);
+.birding-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 三分：浏览 / 预习模式 / 鸟点 */
+  gap: 8px;
+  width: 100%;
+}
+.birding-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  text-align: center;
+  transition: all 0.18s ease;
+  min-width: 0;
+}
+.birding-action:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+}
+.birding-action .act-ic {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.birding-action .bulb {
+  color: #c98a00; /* 与观鸟页预习按钮的灯泡同色 */
+}
+.birding-action .act-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap; /* 三分后每格不宽：标签不折行，超出略缩（下方窄屏字号兜底） */
 }
 @media (max-width: 520px) {
-  .region-link {
+  .birding-card {
     width: 100%; /* 窄屏与 .modes 单列一致 */
+  }
+  .birding-action .act-label {
+    font-size: 0.72rem;
   }
 }
 </style>

@@ -124,12 +124,12 @@
 .nav-line {
   display: contents;
 }
-/* 单行顺序（2026-10-23 用户指定）：看图 · 听音 · 统计 · 观鸟 · 名录 · 识别 · [评审] · 我的 · 设置 · 喇叭 */
+/* 单行顺序（2026-10-31 用户定：名录入口已从导航移除，/catalog 独立页保留）：
+   看图 · 听音 · 统计 · 观鸟 · 识别 · [评审] · 我的 · 设置 · 喇叭 */
 .nav-i-image { order: 1; }
 .nav-i-audio { order: 2; }
 .nav-i-stats { order: 3; }
 .nav-i-birding { order: 4; }
-.nav-i-catalog { order: 5; }
 .nav-i-identify { order: 6; }
 .nav-i-reports { order: 7; }
 .nav-i-profile { order: 8; }
