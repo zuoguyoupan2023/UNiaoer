@@ -15,13 +15,13 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X } from 'lucide-vue-next'
+import { BarChart3, ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X, ZoomIn } from 'lucide-vue-next'
 import CatalogPanel from '@/components/CatalogPanel.vue'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 import { useMediaQuery } from '@/composables/useMediaQuery'
-import { loadBank, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
+import { loadBank, loadSpeciesAssets, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
 import {
   buildCountryIndex,
   countriesInContinent,
@@ -53,6 +53,7 @@ import {
   type Hotspot,
 } from '@/core/hotspots'
 import { currentLocale } from '@/i18n'
+import type { CatalogData } from '@/core/catalog'
 import { audioUrlOf, loadThumbs, thumbUrlOf, type ThumbsIndex } from '@/core/thumbs'
 import { isMastered, toggleMastered } from '@/core/mastery'
 import { isPlaying, stopSharedAudio, toggleSharedAudio } from '@/core/audioPlayer'
@@ -613,9 +614,6 @@ const previewCurrent = computed(() => {
 const previewSp = computed(() =>
   previewCurrent.value?.bankId ? (speciesById(previewCurrent.value.bankId) ?? null) : null,
 )
-const previewThumb = computed(() =>
-  previewCurrent.value ? (cardThumb(previewCurrent.value) ?? null) : null,
-)
 const previewAudio = computed(() =>
   previewCurrent.value ? cardAudio(previewCurrent.value) : null,
 )
@@ -628,6 +626,10 @@ function openPreview() {
 }
 function closePreview() {
   previewOpen.value = false
+  // 面板态一并复位：下次打开回到鸟内容（灯箱/数据面板/选区面板不残留）
+  lightboxUrl.value = ''
+  statsOpen.value = false
+  pvRegionOpen.value = false
   clearHold()
   stopSharedAudio()
 }
@@ -705,6 +707,151 @@ function pvPickProvince(code: string) {
   province.value = province.value === code ? '' : code
   saveLastRegion()
 }
+
+/* ── 预习浮窗：大图灯箱 + 多素材展开（2026-10-31 用户定）──────────────────
+ * meta 名单层不含媒体字段 → 完整图/音走 assets 分片（loadSpeciesAssets，详情页同款）。
+ * 主图放大占满浮窗宽、点击进灯箱看原分辨率（xlUrl 优先）；首图首音之外还有素材时
+ * 出现一个「展开更多素材」开关——四图四音一起展开、一起折叠。 */
+const lightboxUrl = ref('')
+function openLightbox(url: string | null | undefined) {
+  if (url) lightboxUrl.value = url
+}
+function closeLightbox() {
+  lightboxUrl.value = ''
+}
+type SpeciesAssets = Awaited<ReturnType<typeof loadSpeciesAssets>>
+const previewAssets = ref<SpeciesAssets>(null)
+const mediaExpanded = ref(false)
+watch(
+  () => previewCurrent.value?.slug,
+  async (slug) => {
+    // 切鸟：素材/展开态/灯箱一并重置，再异步补拉分片（竞态：慢响应不得覆盖已切走的鸟）
+    previewAssets.value = null
+    mediaExpanded.value = false
+    closeLightbox()
+    if (!slug) return
+    const a = await loadSpeciesAssets(slug)
+    if (previewCurrent.value?.slug === slug) previewAssets.value = a
+  },
+)
+/** 主图（浮窗内展示用 thumb 优先；无 assets 时回退 thumbs 索引/网格 thumb） */
+const previewImageMain = computed(() => {
+  const cur = previewCurrent.value
+  if (!cur) return null
+  return (
+    previewAssets.value?.images?.[0]?.thumbUrl ??
+    thumbUrlOf(thumbs.value, cur.slug) ??
+    cur.thumb
+  )
+})
+/** 灯箱大图（xl 原图 → full → 展示图） */
+const previewImageFull = computed(() => {
+  const cur = previewCurrent.value
+  if (!cur) return null
+  const first = previewAssets.value?.images?.[0]
+  return first?.xlUrl ?? first?.url ?? previewImageMain.value
+})
+/** 展开区内容：其余图（最多 4）与其余音（最多 4） */
+const extraImages = computed(() => (previewAssets.value?.images ?? []).slice(1, 5))
+const extraAudios = computed(() => (previewAssets.value?.audios ?? []).slice(1, 5))
+const hasExtraMedia = computed(() => extraImages.value.length > 0 || extraAudios.value.length > 0)
+
+/* ── 预习浮窗：数据面板（2026-10-31 用户定）──────────────────────────────
+ * 底部筛选行新增「数据」按钮 → 面板占满浮窗（与选区同模式）。两组条形：
+ * ① 本地鸟种的科/属构成（当前地区列表，含省级筛选）；② 已熟识鸟在同一口径下的
+ * 科/属分布——只在当前地区内有已熟记鸟时出现（没有用户数据就不显示）。
+ * 分类来源：AviList 名录 catalog.json（slug → 科，覆盖 ~99%）；骨架种兜底 bank 的
+ * family 字段；再无则「未归类」。属直接取学名首词。 */
+const statsOpen = ref(false)
+const statsGroupBy = ref<'family' | 'genus'>('family')
+interface FamInfo {
+  famSci: string
+  famZh: string
+}
+const catalogIndex = ref<Map<string, FamInfo> | null>(null)
+let catalogIndexLoading = false
+async function ensureCatalogIndex() {
+  if (catalogIndex.value || catalogIndexLoading) return
+  catalogIndexLoading = true
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/catalog.json`)
+    if (res.ok) {
+      const d = (await res.json()) as CatalogData
+      const m = new Map<string, FamInfo>()
+      for (const o of d.orders)
+        for (const f of o.families)
+          for (const s of f.species) m.set(s.id, { famSci: f.sci, famZh: f.zh ?? '' })
+      catalogIndex.value = m
+    }
+  } catch {
+    /* 名录不可用：统计退化为 bank family 字段 / 未归类 */
+  }
+  catalogIndexLoading = false
+}
+watch(statsOpen, (open) => {
+  if (!open) return
+  void ensureCatalogIndex()
+  // 面板在信息流内：展开后把它滚进视野（不抢占浮窗，鸟内容还在上面）
+  void nextTick(() => {
+    document
+      .querySelector('.pv-stats')
+      ?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  })
+})
+const isZhLocale = computed(() => currentLocale().startsWith('zh'))
+function familyOfItem(it: GridItem): FamInfo | null {
+  const cat = catalogIndex.value?.get(it.slug)
+  if (cat) return cat
+  const sp = it.bankId ? speciesById(it.bankId) : undefined
+  return sp?.family ? { famSci: sp.family, famZh: '' } : null
+}
+function genusOfSci(nameSci: string): string {
+  return nameSci.split(/\s+/)[0] ?? ''
+}
+interface StatRow {
+  key: string
+  name: string
+  sci: string
+  n: number
+}
+function bucketize(items: GridItem[]): { rows: StatRow[]; other: number; total: number } {
+  const m = new Map<string, StatRow>()
+  for (const it of items) {
+    let key: string
+    let name: string
+    let sci = ''
+    if (statsGroupBy.value === 'genus') {
+      key = genusOfSci(it.nameSci)
+      name = key
+    } else {
+      const fam = familyOfItem(it)
+      key = fam?.famSci ?? '__none__'
+      name = fam
+        ? isZhLocale.value
+          ? fam.famZh || fam.famSci
+          : fam.famSci
+        : t('region.pvStatsUnknown')
+      sci = fam?.famSci ?? ''
+    }
+    const row = m.get(key) ?? { key, name, sci, n: 0 }
+    row.n += 1
+    m.set(key, row)
+  }
+  const rows = [...m.values()].sort((a, b) => b.n - a.n || a.key.localeCompare(b.key))
+  // 只画前 9 条，其余合并成「其他」——两百多个科在小浮窗里没有可读性
+  const top = rows.slice(0, 9)
+  const other = rows.slice(9).reduce((s, r) => s + r.n, 0)
+  return { rows: top, other, total: items.length }
+}
+const localStats = computed(() => bucketize(gridItems.value))
+/** 已熟识构成：masteryVersion 参与依赖，标记后立即重算 */
+const masteredStats = computed(() => {
+  void masteryVersion.value
+  return bucketize(gridItems.value.filter((it) => isMastered(it.slug)))
+})
+const statPct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0)
+/** 条形按「组内最大计数」缩放（总量的百分比对几十个科来说全是不满一格的小点，不可读） */
+const barMaxOf = (s: { rows: StatRow[]; other: number }) => Math.max(s.rows[0]?.n ?? 0, s.other, 1)
 
 const provinceSources = computed(() =>
   (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
@@ -907,21 +1054,6 @@ function pickProvince(code: string) {
     </div>
 
     <template v-if="stats.length">
-      <!-- 桌面端：大洲胶囊常驻在双栏上方（移动端搬进抽屉，避免一个控件两个交互面） -->
-      <nav v-if="!isMobile" class="continents" :aria-label="t('region.continentsLabel')">
-        <button
-          v-for="c in continents"
-          :key="c"
-          type="button"
-          class="continent-btn"
-          :class="{ active: c === continent }"
-          :aria-pressed="c === continent"
-          @click="continent = c"
-        >
-          {{ t(`region.continents.${c}`) }}
-        </button>
-      </nav>
-
       <div class="layout">
         <!-- 桌面：左侧常驻国家树；移动端：同一份 DOM Teleport 到 body，变成底部抽屉 -->
         <Teleport to="body" :disabled="!isMobile">
@@ -947,11 +1079,9 @@ function pickProvince(code: string) {
                   <X class="ic" :size="18" />
                 </button>
               </div>
-              <nav
-                v-if="isMobile"
-                class="continents sheet-continents"
-                :aria-label="t('region.continentsLabel')"
-              >
+              <!-- 大洲胶囊 = 区域二的一部分（2026-10-31 用户定：与国家树同栏，不再单独一行悬在上方）。
+                   同一份 DOM：桌面在左侧栏顶部，移动端在抽屉里。 -->
+              <nav class="continents sheet-continents" :aria-label="t('region.continentsLabel')">
                 <button
                   v-for="c in continents"
                   :key="c"
@@ -1373,42 +1503,187 @@ function pickProvince(code: string) {
 
           <template v-else>
           <template v-if="previewCurrent">
+            <div class="pv-body">
             <div class="pv-head">
-              <img
-                v-if="previewThumb"
-                class="pv-thumb"
-                :src="previewThumb"
-                alt=""
-                @error="onThumbError(previewCurrent.slug)"
-              />
-              <div v-else class="pv-thumb pv-thumb-empty" aria-hidden="true"></div>
-              <div class="pv-title">
-                <p class="pv-name">{{ previewCurrent.name }}</p>
-                <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
+              <!-- 名称行在最上（2026-10-31 用户反馈：名字/学名/播放必须一眼可见），大图其下 -->
+              <div class="pv-title-row">
+                <div class="pv-title">
+                  <p class="pv-name">{{ previewCurrent.name }}</p>
+                  <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
+                </div>
+                <button
+                  v-if="previewAudio"
+                  type="button"
+                  class="card-play pv-play"
+                  :class="{ playing: isPlaying(previewAudio) }"
+                  :aria-label="isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')"
+                  :aria-pressed="isPlaying(previewAudio)"
+                  @click="playToggle(previewAudio)"
+                >
+                  <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
+                  <Volume2 v-else :size="16" aria-hidden="true" />
+                </button>
               </div>
+              <!-- 大图：占满浮窗宽（4:3），点击进灯箱看原分辨率 -->
               <button
-                v-if="previewAudio"
+                v-if="previewImageMain"
                 type="button"
-                class="card-play pv-play"
-                :class="{ playing: isPlaying(previewAudio) }"
-                :aria-label="isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')"
-                :aria-pressed="isPlaying(previewAudio)"
-                @click="playToggle(previewAudio)"
+                class="pv-photo"
+                :aria-label="t('region.pvZoom')"
+                @click="openLightbox(previewImageFull)"
               >
-                <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
-                <Volume2 v-else :size="16" aria-hidden="true" />
+                <img
+                  :src="previewImageMain"
+                  alt=""
+                  @error="onThumbError(previewCurrent.slug)"
+                />
+                <span class="pv-zoom"><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvZoom') }}</span>
               </button>
+              <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
             </div>
 
+            <!-- 展开区：其余图/音一起展开、一起折叠（一个开关） -->
+            <div v-if="mediaExpanded && hasExtraMedia" class="pv-extra">
+              <div v-if="extraImages.length" class="pv-extra-imgs">
+                <button
+                  v-for="(m, i) in extraImages"
+                  :key="`img-${i}`"
+                  type="button"
+                  class="pv-extra-img"
+                  :aria-label="t('region.pvZoom')"
+                  @click="openLightbox(m.xlUrl ?? m.url)"
+                >
+                  <img :src="m.thumbUrl ?? m.url" alt="" loading="lazy" decoding="async" />
+                </button>
+              </div>
+              <ul v-if="extraAudios.length" class="pv-extra-audios">
+                <li v-for="(m, i) in extraAudios" :key="`aud-${i}`">
+                  <button
+                    type="button"
+                    class="card-play"
+                    :class="{ playing: isPlaying(m.url) }"
+                    :aria-label="isPlaying(m.url) ? t('region.stopCall') : t('region.playCall')"
+                    :aria-pressed="isPlaying(m.url)"
+                    @click="playToggle(m.url)"
+                  >
+                    <VolumeX v-if="isPlaying(m.url)" :size="14" aria-hidden="true" />
+                    <Volume2 v-else :size="14" aria-hidden="true" />
+                  </button>
+                  <span class="muted">{{ t('region.pvAudio', { n: i + 2 }) }}</span>
+                </li>
+              </ul>
+            </div>
+            <button
+              v-if="hasExtraMedia"
+              type="button"
+              class="pv-media-toggle"
+              :aria-expanded="mediaExpanded"
+              @click="mediaExpanded = !mediaExpanded"
+            >
+              <ChevronDown class="chev" :class="{ open: mediaExpanded }" :size="14" aria-hidden="true" />
+              {{
+                mediaExpanded
+                  ? t('region.pvMediaCollapse')
+                  : t('region.pvMediaExpand', { n: extraImages.length + extraAudios.length })
+              }}
+            </button>
+
+            <!-- 完整信息（2026-10-31 用户反馈：生境/习性等必须显示，不再 compact）：
+                 生活型（可点开含义）、居留型、生境、习性、分布（可展开国家列表）+ 特征数据 -->
             <SpeciesFacts
               class="pv-facts"
               :profile="previewSp?.profile"
               :species-id="previewCurrent.slug"
               :taxon-key="previewSp?.taxonKey"
               :name-sci="previewCurrent.nameSci"
-              compact
             />
 
+            <!-- 数据面板：信息流内的展开节（2026-10-31 用户反馈：不再抢占整个浮窗）。
+                 底部筛选行的「数据」按钮开关；打开后自动滚进视野，× 收起。
+                 两组条形：① 本地鸟种科/属构成 ② 已认识鸟的构成（无数据隐藏） -->
+            <div v-if="statsOpen" class="pv-stats">
+              <div class="pvs-head">
+                <p class="pvs-title">{{ t('region.pvStatsTitle') }}</p>
+                <div class="sort" role="group" :aria-label="t('region.pvStatsTitle')">
+                  <button
+                    type="button"
+                    class="sort-btn"
+                    :class="{ active: statsGroupBy === 'family' }"
+                    :aria-pressed="statsGroupBy === 'family'"
+                    @click="statsGroupBy = 'family'"
+                  >
+                    {{ t('region.pvStatsFamily') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="sort-btn"
+                    :class="{ active: statsGroupBy === 'genus' }"
+                    :aria-pressed="statsGroupBy === 'genus'"
+                    @click="statsGroupBy = 'genus'"
+                  >
+                    {{ t('region.pvStatsGenus') }}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  class="pvs-close"
+                  :aria-label="t('region.pvMediaCollapse')"
+                  @click="statsOpen = false"
+                >
+                  <X :size="16" />
+                </button>
+              </div>
+              <p class="pvs-cap">
+                {{ t('region.pvStatsLocal') }} · {{ t('region.count', { n: localStats.total }) }}
+              </p>
+              <div class="pvs-bars">
+                <div v-for="r in localStats.rows" :key="r.key" class="pvs-row">
+                  <span class="pvs-name" :class="{ genus: statsGroupBy === 'genus' }" :title="r.sci">
+                    {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
+                  </span>
+                  <span class="pvs-track">
+                    <span class="pvs-fill" :style="{ width: `${statPct(r.n, barMaxOf(localStats))}%` }"></span>
+                  </span>
+                  <span class="pvs-n muted">{{ r.n }}</span>
+                </div>
+                <div v-if="localStats.other" class="pvs-row">
+                  <span class="pvs-name">{{ t('region.pvStatsOther') }}</span>
+                  <span class="pvs-track">
+                    <span class="pvs-fill other" :style="{ width: `${statPct(localStats.other, barMaxOf(localStats))}%` }"></span>
+                  </span>
+                  <span class="pvs-n muted">{{ localStats.other }}</span>
+                </div>
+              </div>
+              <!-- 已认识构成：仅当前地区内有已标记鸟时出现（无用户数据不渲染） -->
+              <template v-if="masteredStats.total > 0">
+                <p class="pvs-cap">
+                  {{ t('region.filterMastered') }} · {{ t('region.count', { n: masteredStats.total }) }}
+                </p>
+                <div class="pvs-bars">
+                  <div v-for="r in masteredStats.rows" :key="r.key" class="pvs-row">
+                    <span class="pvs-name" :class="{ genus: statsGroupBy === 'genus' }" :title="r.sci">
+                      {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
+                    </span>
+                    <span class="pvs-track">
+                      <span class="pvs-fill mastered" :style="{ width: `${statPct(r.n, barMaxOf(masteredStats))}%` }"></span>
+                    </span>
+                    <span class="pvs-n muted">{{ r.n }}</span>
+                  </div>
+                  <div v-if="masteredStats.other" class="pvs-row">
+                    <span class="pvs-name">{{ t('region.pvStatsOther') }}</span>
+                    <span class="pvs-track">
+                      <span class="pvs-fill other" :style="{ width: `${statPct(masteredStats.other, barMaxOf(masteredStats))}%` }"></span>
+                    </span>
+                    <span class="pvs-n muted">{{ masteredStats.other }}</span>
+                  </div>
+                </div>
+              </template>
+              <p class="pvs-note muted">{{ t('region.pvStatsNote') }}</p>
+            </div>
+            </div><!-- /.pv-body：信息区独立滚动 -->
+
+            <!-- 熟记 + 上下张 + 筛选固定在浮窗底部（2026-10-31 用户定），
+                 不同鸟的信息量差异只影响上方滚动区，不再推挤按钮 -->
             <button
               type="button"
               class="pv-master"
@@ -1476,8 +1751,30 @@ function pickProvince(code: string) {
             >
               {{ t('region.filterMastered') }}
             </button>
+            <!-- 数据面板开关：本地鸟种 + 已熟识的科/属构成（2026-10-31） -->
+            <button
+              type="button"
+              class="sort-btn pv-stats-btn"
+              :class="{ active: statsOpen }"
+              :aria-pressed="statsOpen"
+              @click="statsOpen = !statsOpen"
+            >
+              <BarChart3 :size="12" aria-hidden="true" />
+              {{ t('region.pvStats') }}
+            </button>
           </div>
           </template>
+
+          <!-- 灯箱：点任意处关闭（preview-mask 用 @click.self，不会误关浮窗） -->
+          <div
+            v-if="lightboxUrl"
+            class="pv-lightbox"
+            role="dialog"
+            :aria-label="t('region.pvZoom')"
+            @click="closeLightbox"
+          >
+            <img :src="lightboxUrl" alt="" />
+          </div>
         </div>
       </div>
     </Teleport>
@@ -1533,8 +1830,8 @@ function pickProvince(code: string) {
 }
 .layout {
   display: grid;
-  /* 侧栏收窄（2026-10-29 用户反馈），主体随全局宽度增加 */
-  grid-template-columns: minmax(180px, 216px) 1fr;
+  /* 侧栏收窄（2026-10-29 用户反馈）后 2026-10-31 并入大洲胶囊，略放宽保证两枚一列 */
+  grid-template-columns: minmax(196px, 236px) 1fr;
   gap: 16px;
   text-align: left;
 }
@@ -2186,19 +2483,59 @@ function pickProvince(code: string) {
 .preview-close:hover {
   color: var(--text);
 }
+/* 信息区独立滚动：不同鸟的信息量差异只影响这里，底部按钮组不动（2026-10-31 用户定） */
+.pv-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -2px;
+  padding: 0 2px;
+}
 .pv-head {
+  /* 大图 + 名称行纵排（2026-10-31 用户定：图像占更大宽高，点击看大图） */
+  padding-right: 28px; /* 给右上角关闭按钮让位 */
+}
+.pv-photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 300px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #f0f4f2;
+  cursor: zoom-in;
+}
+.pv-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pv-photo-empty {
+  cursor: default;
+}
+.pv-zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.66rem;
+  pointer-events: none;
+}
+.pv-title-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-right: 28px;
-}
-.pv-thumb {
-  width: 84px;
-  height: 63px; /* 4:3，与网格卡片一致 */
-  flex: none;
-  object-fit: cover;
-  border-radius: var(--radius-xs);
-  background: #f0f4f2;
+  gap: 10px;
+  margin-top: 8px;
 }
 .pv-title {
   min-width: 0;
@@ -2299,6 +2636,193 @@ function pickProvince(code: string) {
   /* 固定高度浮窗内：筛选行锚在底部 */
   margin-top: auto;
   padding-top: 14px;
+}
+/* 「数据」按钮 = 筛选行的第 4 段（无圆角无独立边框，与前三段无缝相连——
+   2026-10-31 用户反馈：弧线丑陋）。图标对齐由 inline-flex 提供 */
+.pv-stats-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── 预习浮窗 · 展开区（其余图/音）与大图灯箱 ──────────────────── */
+.pv-extra {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pv-extra-imgs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.pv-extra-img {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  background: #f0f4f2;
+  aspect-ratio: 4 / 3;
+  cursor: zoom-in;
+}
+.pv-extra-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pv-extra-audios {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.76rem;
+}
+.pv-extra-audios li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pv-media-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.pv-media-toggle:hover {
+  border-color: var(--primary-light);
+  color: var(--text);
+}
+.pv-media-toggle .chev {
+  transition: transform 0.15s ease;
+}
+.pv-media-toggle .chev.open {
+  transform: rotate(180deg);
+}
+.pv-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+}
+.pv-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* ── 预习浮窗 · 数据面板（信息流内的展开节，2026-10-31 用户反馈后改版）── */
+.pv-stats {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: #f7faf8;
+  text-align: left;
+}
+.pvs-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pvs-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex: 1;
+  min-width: 0;
+}
+.pvs-close {
+  display: inline-flex;
+  padding: 4px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pvs-close:hover {
+  color: var(--text);
+}
+.pvs-cap {
+  margin: 8px 0 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+.pvs-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pvs-row {
+  display: grid;
+  grid-template-columns: minmax(86px, 40%) 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+}
+.pvs-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvs-name.genus {
+  font-style: italic;
+}
+.pvs-name em {
+  font-style: italic;
+  color: var(--text-light);
+  margin-left: 4px;
+  font-size: 0.68rem;
+}
+.pvs-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #eef3f0;
+  overflow: hidden;
+}
+.pvs-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  min-width: 2px;
+}
+.pvs-fill.other {
+  background: #c9d3cd;
+}
+.pvs-fill.mastered {
+  background: #e0a800; /* 与灯泡黄一致 */
+}
+.pvs-n {
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  text-align: right;
+}
+.pvs-note {
+  margin: 10px 0 0;
+  font-size: 0.68rem;
+  line-height: 1.6;
 }
 
 /* ── 名录标签页（2026-10-31 并入；面板自带样式，这里只定位） ── */

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Globe2 } from 'lucide-vue-next'
+import { ChevronDown, Globe2 } from 'lucide-vue-next'
 import { speciesProfileText, type SpeciesProfile } from '@/core/bank'
 import { regionLabel } from '@/core/region'
 import { currentLocale } from '@/i18n'
@@ -39,12 +39,17 @@ const groupLabel = computed(() =>
 /**
  * 051 S2：生活型六分法。**只渲染有出处的记录**（`profile.group6` 缺失 = 没有依据 = 不显示），
  * 不做推断、不兜底。一个科可跨类 → 用「·」并列。
+ *
+ * 2026-10-31 用户定：该行**常显**——没有查证依据的鸟显示「暂无查证依据」而非整行消失
+ * （用户问"为什么有的鸟六类型完全没有"）；点击行展开六类的含义说明 + 覆盖口径注记。
  */
+const GROUP6_LIST = ['swimmer', 'wader', 'woodland', 'raptor', 'climber', 'terrestrial'] as const
 const group6Label = computed(() => {
   const gs = props.profile?.group6
   if (!gs || !gs.length) return ''
   return gs.map((g) => t(`species.group6.${g}`)).join(' · ')
 })
+const g6Open = ref(false)
 const migrationLabel = computed(() =>
   props.profile?.migration ? t(`species.migrations.${props.profile.migration}`) : '',
 )
@@ -105,10 +110,21 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
         <dt>{{ t('species.group') }}</dt>
         <dd>{{ groupLabel }}</dd>
       </template>
-      <template v-if="group6Label">
-        <dt>{{ t('species.group6.label') }}</dt>
-        <dd>{{ group6Label }}</dd>
-      </template>
+      <dt>{{ t('species.group6.label') }}</dt>
+      <dd>
+        <button type="button" class="g6-toggle" :aria-expanded="g6Open" @click="g6Open = !g6Open">
+          <span :class="{ none: !group6Label }">{{ group6Label || t('species.group6.none') }}</span>
+          <ChevronDown class="chev" :class="{ open: g6Open }" :size="13" aria-hidden="true" />
+        </button>
+        <!-- 点击展开六类含义（含覆盖口径注记，解释"为什么有的鸟没有"） -->
+        <div v-if="g6Open" class="g6-legend">
+          <p v-for="g in GROUP6_LIST" :key="g" class="g6-item">
+            <strong>{{ t(`species.group6.${g}`) }}</strong>
+            <span>{{ t(`species.group6Desc.${g}`) }}</span>
+          </p>
+          <p class="g6-note muted">{{ t('species.group6.note') }}</p>
+        </div>
+      </dd>
       <template v-if="migrationLabel">
         <dt>{{ t('species.migration') }}</dt>
         <dd>{{ migrationLabel }}</dd>
@@ -191,6 +207,61 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
   color: var(--primary);
   font-size: 0.72rem;
   font-weight: 700;
+}
+/* 生活型行（2026-10-31）：可点击展开六类含义 */
+.g6-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.g6-toggle:hover span:not(.none) {
+  text-decoration: underline;
+}
+.g6-toggle .none {
+  color: var(--text-light);
+}
+.g6-toggle .chev {
+  flex-shrink: 0;
+  color: var(--text-light);
+  transition: transform 0.15s ease;
+}
+.g6-toggle .chev.open {
+  transform: rotate(180deg);
+}
+.g6-legend {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xs);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.g6-item {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+.g6-item strong {
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+}
+.g6-note {
+  margin: 4px 0 0;
+  font-size: 0.68rem;
+  line-height: 1.6;
 }
 .countries {
   margin-top: 4px;
