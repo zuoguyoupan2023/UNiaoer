@@ -42,6 +42,12 @@ export interface PosterData {
    * 有该字段时正文区画 评语标题 + 大号用时 + 「N 对全配平」，不画错题行。
    */
   memory?: { time: string; rating: string; pairs: number }
+  /**
+   * 本轮**实际用到**的素材来源（去重，如 `['iNaturalist']` / `['Xeno-canto', 'iNaturalist']`）。
+   * 页脚「数据来源」按它生成——图像版只有 iNaturalist，音频版才出现 Xeno-canto；
+   * 缺省（旧调用方）不画该行，避免把没用的来源写上去。
+   */
+  sources?: string[]
   wrong: PosterWrong[]
 }
 
@@ -55,6 +61,24 @@ export interface PosterImage {
   answer: string
   sci?: string
   wrong?: boolean
+  /** 物种 id（署名行按海报语言取「中文名 / 英文名」，缺名则只画学名） */
+  speciesId?: string
+  /** 作者（CC 署名要求；有背景照片时画在海报上） */
+  author?: string
+  /** 许可证（CC 署名要求） */
+  license?: string
+  /** 素材来源站点（iNaturalist / Xeno-canto） */
+  source?: string
+}
+
+/** 背景图署名：CC 协议要求展示作者 / 许可证 / 来源；鸟名按海报语言 */
+export interface PosterCredit {
+  /** 鸟名（中文海报用中文名、英文海报用英文名；都没有则空） */
+  name?: string
+  sci?: string
+  author?: string
+  license?: string
+  source?: string
 }
 
 /**
@@ -95,8 +119,17 @@ export interface PosterStrings {
    * 092 记忆挑战鸟：记忆轮的副行「N 对全部配对成功」（带参构造，理由同 mistakenAs）。
    */
   memoryPairsLine: (pairs: number) => string
-  /** 页脚数据来源 */
-  sourceLine: string
+  /**
+   * 背景图署名首行：鸟名 + 学名（带参构造，理由同 mistakenAs）。
+   * 只有其中一项时不要调用它——调用方只传非空值，或直接用单项。
+   */
+  bgCreditName: (name: string, sci: string) => string
+  /**
+   * 页脚数据来源：**按实际用到的来源动态生成**（图像版只有 iNaturalist，
+   * 音频版才有 Xeno-canto；两个来源都用则两个都写）。
+   * 函数形态的理由同 mistakenAs：插值必须在 i18n 的 t() 里带参完成。
+   */
+  sourceLine: (sources: string[]) => string
   /** 二维码下方提示 */
   scanCta: string
 }
@@ -106,6 +139,11 @@ export interface PosterOptions {
   themeId: string
   bgImage?: ImageBitmap | null
   bgOffset?: { x: number; y: number }
+  /**
+   * 背景照片署名（CC 协议要求：作者 / 许可证 / 来源；同时画鸟名与学名）。
+   * 仅在 `bgImage` 存在时绘制——纯色/内置场景背景不画。
+   */
+  bgCredit?: PosterCredit
   /** 右下角二维码指向的站点（占位文案/后续替换真码用） */
   qrUrl?: string
   /** 真二维码图（可选，提供后替代占位框） */
@@ -130,6 +168,16 @@ export const DEFAULT_SITE_URL = 'https://uniaoer.com'
 
 /** 海报错题区最多展示条数（左右各 4） */
 export const POSTER_WRONG_MAX = 8
+
+/**
+ * 本轮素材来源去重（2026-11-02 用户定）：页脚只写**实际用到的**来源。
+ * 固定顺序 iNaturalist → Xeno-canto → 其它，保证同一轮多次生成/结果页与历史页一致。
+ */
+export function posterSources(list: (string | null | undefined)[]): string[] {
+  const fixed = ['iNaturalist', 'Xeno-canto']
+  const set = new Set(list.map((s) => s?.trim() || '').filter(Boolean))
+  return [...fixed.filter((s) => set.has(s)), ...[...set].filter((s) => !fixed.includes(s)).sort()]
+}
 
 /** 海报错题行：真实错题，或"放不下了"占位行 */
 export interface PosterWrongRow extends PosterWrong {
@@ -699,17 +747,84 @@ export function drawPoster(
   }
 
   // 页脚（左对齐，给右下角二维码让位）
-  drawSegments(
-    ctx,
-    [{ text: strings.sourceLine, color: P.muted, weight: 400, size: 24 }],
-    60,
-    H - 30,
-    'left',
-    box,
-  )
+  // 2026-11-02（用户定）：素材来源按**本轮实际用到的**动态生成——图像版只有 iNaturalist，
+  // 音频版才有 Xeno-canto；两个来源都用则两个都写。取不到来源（旧记录）→ 整行不画。
+  const sources = data.sources ?? []
+  // 不含二维码时整行可以铺满；含二维码必须给右下角的码让位（2026-11-02）
+  const footerMaxW =
+    opts.includeQr === false ? W - 120 : W - QR_MARGIN - QR_SIZE - 30 - 60 - PAD_X
+  if (sources.length) {
+    drawSegments(
+      ctx,
+      [
+        {
+          text: fitText(ctx, strings.sourceLine(sources), 400, 24, footerMaxW),
+          color: P.muted,
+          weight: 400,
+          size: 24,
+        },
+      ],
+      60,
+      H - 30,
+      'left',
+      box,
+    )
+  }
+
+  // 背景照片署名（CC 要求：鸟名 + 学名 + 作者 / 许可证 / 来源）
+  if (hasImage && opts.bgCredit) drawBgCredit(ctx, P, box, opts.bgCredit, strings, footerMaxW)
 
   // 右下角二维码位（F4）
   drawQrSlot(ctx, P, opts, strings)
+}
+
+/**
+ * 背景照片署名（2026-11-02 用户定）：CC 协议要求展示**作者 / 许可证 / 来源**；
+ * 同时展示背景图那只鸟的**名字 + 学名**（中文海报显示中文名、英文海报显示英文名，
+ * 都没有就只显示学名）。两行，左对齐放在页脚数据来源上方。
+ */
+function drawBgCredit(
+  ctx: CanvasRenderingContext2D,
+  P: Palette,
+  box: string | null,
+  credit: PosterCredit,
+  strings: PosterStrings,
+  maxWidth: number,
+) {
+  // 第一行：鸟名 · 学名（两个都有走 i18n 组合；只有一个就单画）
+  const name = credit.name?.trim() || ''
+  const sci = credit.sci?.trim() || ''
+  const nameLine = name && sci ? strings.bgCreditName(name, sci) : name || sci
+
+  // 第二行：作者 · 许可证 · 来源（缺哪项就不画哪项）
+  const metaLine = [credit.author, credit.license, credit.source]
+    .map((x) => x?.trim() || '')
+    .filter(Boolean)
+    .join(' · ')
+
+  // 三行（署名名 / 署名元数据 / 数据来源）在底部叠放，基线间距要够：
+  // 每行白底框 = 字号 + 2×PAD_Y 高、框顶在 baseline − 字号×0.78 − PAD_Y，
+  // 故相邻基线至少差 39px 才不会压框（2026-11-02 实测 H−96 / H−62 会与页脚重叠）。
+  if (nameLine) {
+    drawSegments(
+      ctx,
+      [{ text: fitText(ctx, nameLine, 600, 26, maxWidth), color: P.dark, weight: 600, size: 26 }],
+      60,
+      H - 116,
+      'left',
+      box,
+    )
+  }
+  if (metaLine) {
+    drawSegments(
+      ctx,
+      [{ text: fitText(ctx, metaLine, 400, 22, maxWidth), color: P.muted, weight: 400, size: 22 }],
+      60,
+      H - 74,
+      'left',
+      box,
+    )
+  }
 }
 
 export function renderPoster(

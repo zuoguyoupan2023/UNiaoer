@@ -44,6 +44,7 @@ import { evaluateTitles, TITLE_TRACKS, type TitleText } from '@/core/titles'
 import { ALL_SPECIES_TOTAL, BADGES, type BadgeDef } from '@/core/badges'
 import type { MediaAsset, Question } from '@/types'
 import type { PosterData, PosterImage, PosterWrong } from '@/core/poster'
+import { posterSources } from '@/core/poster'
 import { currentLocale } from '@/i18n'
 import { familyDisplay } from '@/i18n/data/family'
 import { loadProvincesIndex, regionDisplayName, type ProvinceIndex } from '@/core/provinces'
@@ -358,6 +359,9 @@ const posterData = computed<PosterData>(() => {
     wornBadge: wornBadgeLabel.value || undefined,
     wornBadgeIcon: wornBadgeIcon.value || undefined,
     nickname: archiveNickname.value || settings.nickname || undefined,
+    // 2026-11-02（用户定）：页脚数据来源按本轮实际素材生成——图像版只有 iNaturalist，
+    // 音频版才有 Xeno-canto；两个来源都用则两个都写（见 posterSources）。
+    sources: posterSources(quiz.questions.map((q) => q.media?.source)),
     // 092 记忆挑战鸟：海报画 评语 + 用时，不画分数/错题
     ...(memoryInfo.value
       ? {
@@ -386,6 +390,10 @@ const posterImages = computed<PosterImage[]>(() => {
       xlUrl: q.media.xlUrl,
       answer: nameOf(q),
       sci: q.sci,
+      speciesId: q.media.speciesId,
+      author: q.media.author,
+      license: q.media.license,
+      source: q.media.source,
       wrong: quiz.chosen[i] !== q.answer,
     })
   })

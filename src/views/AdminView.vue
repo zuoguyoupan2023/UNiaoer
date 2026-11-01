@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckCheck, RefreshCw, ShieldCheck, ShieldOff, Undo2, X } from 'lucide-vue-next'
 import { loadBank, speciesById, speciesName } from '@/core/bank'
+import { fetchDailyStats, type DailyStats } from '@/core/adminDailyStats'
 import { fetchRegionAccuracy, type RegionAccuracy } from '@/core/adminRegionStats'
 import { fetchProvinceStats, type ProvinceStats } from '@/core/adminProvinceStats'
 import { fetchSpeciesStats, type SpeciesStats } from '@/core/adminSpeciesStats'
@@ -69,6 +70,7 @@ async function load() {
       hasAnswer: onlyWithAnswer.value,
     })
     void refreshQuarantine()
+    void loadDailyStats()
     authed.value = true
     rememberKey(key.value)
   } catch (e) {
@@ -194,6 +196,23 @@ function daySpan(from?: string, to?: string): string {
   if (!from) return ''
   if (!to || to === from) return from
   return `${from} ~ ${to}`
+}
+
+// ---- 逐日人次（管理端；口径 = 当天按 IP+UA 哈希去重，UTC 日） ----
+const dailyStats = ref<DailyStats | null>(null)
+const dailyLoading = ref(false)
+const dailyError = ref('')
+async function loadDailyStats() {
+  if (!key.value || dailyLoading.value) return
+  dailyLoading.value = true
+  dailyError.value = ''
+  try {
+    dailyStats.value = await fetchDailyStats(key.value, 30)
+  } catch (e) {
+    dailyError.value = e instanceof Error ? e.message : 'failed'
+  } finally {
+    dailyLoading.value = false
+  }
 }
 
 /** 地区码 → 可读名（CN-11 → 中国 · 北京；HK → 中国香港；ALL → 全球） */
@@ -385,6 +404,39 @@ const count = computed(() => reports.value.length)
             >
               <Undo2 class="ic" :size="13" /> {{ t('admin.release') }}
             </button>
+          </li>
+        </ul>
+      </details>
+
+      <!-- 逐日人次（028 计量；口径 = 当天按 IP+UA 哈希去重，UTC 日） -->
+      <details class="ledger" open>
+        <summary>{{ t('admin.dailyTitle') }}</summary>
+        <div class="toolbar" style="margin: 8px 0">
+          <button class="btn btn-secondary btn-sm" type="button" :disabled="dailyLoading" @click="loadDailyStats">
+            <RefreshCw class="ic" :size="13" /> {{ t('admin.dailyLoad') }}
+          </button>
+          <span v-if="dailyStats" class="muted small">
+            {{
+              t('admin.dailyTotals', {
+                visitors: dailyStats.totals.visitors,
+                sessions: dailyStats.totals.sessions,
+                rounds: dailyStats.totals.rounds,
+                posters: dailyStats.totals.posters,
+              })
+            }}
+          </span>
+        </div>
+        <p v-if="dailyError" class="err" role="alert">{{ dailyError }}</p>
+        <p v-else-if="dailyStats" class="muted small">{{ t('admin.dailyNote') }}</p>
+        <ul v-if="dailyStats && dailyStats.daily.length" class="ranks daily-ranks">
+          <li v-for="d in dailyStats.daily" :key="d.day">
+            <span class="rank-name">{{ d.day }}</span>
+            <span class="rank-n daily-cells">
+              <span>{{ t('admin.dailyVisitors', { n: d.visitors }) }}</span>
+              <span>{{ t('admin.dailySessions', { n: d.sessions }) }}</span>
+              <span>{{ t('admin.dailyRounds', { n: d.rounds }) }}</span>
+              <span>{{ t('admin.dailyPosters', { n: d.posters }) }}</span>
+            </span>
           </li>
         </ul>
       </details>
@@ -728,6 +780,16 @@ const count = computed(() => reports.value.length)
 .sub-ranks .rank-name.sub {
   font-size: 0.85em;
   color: var(--text-light);
+}
+/* 逐日人次（028）：四列数字右对齐，等宽数字便于竖向比较 */
+.daily-ranks .daily-cells {
+  display: flex;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.daily-ranks .daily-cells > span {
+  min-width: 54px;
+  text-align: right;
 }
 
 .admin {

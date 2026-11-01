@@ -14,7 +14,7 @@
  * 答案/错选名（id 反查优先），不会因缺字段而崩。
  */
 import type { RoundRecord, RoundItem } from './historyDb'
-import type { PosterData, PosterImage, PosterWrong } from './poster'
+import { posterSources, type PosterData, type PosterImage, type PosterWrong } from './poster'
 
 export interface RoundPosterDeps {
   /** 答案名解析（当前语言）：历史页传 nameOf；结果页传等价实现 */
@@ -49,6 +49,9 @@ export function posterDataFromRound(round: RoundRecord, deps: RoundPosterDeps): 
     accuracy: round.accuracy,
     date: deps.date ?? new Intl.DateTimeFormat().format(new Date(round.at)),
     nickname: deps.nickname || undefined,
+    // 2026-11-02（用户定）：页脚数据来源按本轮**记录里的**素材生成——
+    // 图像版只有 iNaturalist，音频版才有 Xeno-canto（旧记录缺 source 时不画该行）。
+    sources: posterSources(round.items.map((it) => it.source)),
   }
   // 092 记忆挑战鸟：海报画「评语 + 用时」，不画分数/错题（docs/092 §4.1）
   if (round.memory && deps.memoryText) {
@@ -78,7 +81,17 @@ export function posterImagesFromRound(round: RoundRecord): PosterImage[] {
   for (const it of ordered) {
     if (it.type !== 'image' || !it.mediaUrl || seen.has(it.mediaUrl)) continue
     seen.add(it.mediaUrl)
-    out.push({ url: it.mediaUrl, answer: it.answer, sci: it.sci || undefined, wrong: !it.correct })
+    out.push({
+      url: it.mediaUrl,
+      answer: it.answer,
+      sci: it.sci || undefined,
+      // 署名（CC）：记录里没有 speciesId（旧数据可能存的是 URL），只有名字时仍按记录名画
+      speciesId: it.speciesId && it.speciesId !== it.mediaUrl ? it.speciesId : undefined,
+      author: it.author || undefined,
+      license: it.license || undefined,
+      source: it.source || undefined,
+      wrong: !it.correct,
+    })
   }
   return out
 }

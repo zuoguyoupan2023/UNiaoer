@@ -14,8 +14,10 @@ import {
   type PosterStrings,
 } from '@/core/poster'
 import { POSTER_BACKGROUNDS } from '@/core/posterScenes'
+import { speciesById } from '@/core/bank'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { track } from '@/core/metrics'
+import { currentLocale } from '@/i18n'
 
 const props = defineProps<{
   open: boolean
@@ -81,15 +83,36 @@ onMounted(() => {
 })
 
 function options(): PosterOptions {
+  const img = props.images.find((x) => x.url === bgUrl.value)
   return {
     themeId: themeId.value,
     bgImage: bgImage.value,
     bgOffset: offset.value,
+    // 有背景照片时按 CC 要求画署名（作者/许可证/来源）+ 该鸟的名字与学名
+    bgCredit: img
+      ? { name: nameOfImage(img), sci: img.sci, author: img.author, license: img.license, source: img.source }
+      : undefined,
     // 含测试内容 → 指向本轮成绩页（生成时确保链接）；不含 → 回退官网，不漏任何本轮信息
     qrUrl: includeResults.value ? qrForRender.value : undefined,
     includeResults: includeResults.value,
     includeQr: includeQr.value,
   }
+}
+
+/**
+ * 背景图所属鸟的名字（按海报语言）：中文海报取中文名、英文海报取英文名；
+ * **都取不到就返回 undefined**（署名行只画学名）——不回退到另一种语言，
+ * 以免中文海报上出现英文名（2026-11-02 用户定）。
+ * `PosterImage.answer` 是作答当时语言的名字（可能是英文卷），会与海报语言错位，
+ * 故优先用 speciesId 回查题库；查不到才用记录名兜底。
+ */
+function nameOfImage(img: PosterImage): string | undefined {
+  const locale = currentLocale()
+  if (img.speciesId) {
+    const sp = speciesById(img.speciesId)
+    if (sp) return (locale === 'en' ? sp.nameEn : sp.nameZh) || undefined
+  }
+  return img.answer || undefined
 }
 
 /** 海报文案（015 i18n-4）：core/poster 不 import i18n，由这里按 locale 注入 */
@@ -117,7 +140,9 @@ const strings = computed<PosterStrings>(() => {
     mistakenAs: (name: string) => t('poster.canvas.mistakenAs', { name }),
     // 092 记忆挑战鸟：「N 对全部配对成功」（带参构造，理由同 mistakenAs）
     memoryPairsLine: (pairs: number) => t('poster.canvas.memoryPairs', { n: pairs }),
-    sourceLine: t('poster.canvas.sourceLine'),
+    bgCreditName: (name: string, sci: string) => t('poster.canvas.bgCredit', { name, sci }),
+    // 数据来源按本轮实际素材生成（图像版只有 iNaturalist；音频版才出现 Xeno-canto）
+    sourceLine: (sources: string[]) => t('poster.canvas.sourceLine', { sources: sources.join(' / ') }),
     scanCta: t('poster.canvas.scanCta'),
   }
 })

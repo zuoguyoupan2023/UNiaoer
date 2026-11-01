@@ -3,6 +3,7 @@ import {
   buildWrongRows,
   drawPoster,
   posterFilename,
+  posterSources,
   POSTER_WRONG_MAX,
   DEFAULT_SITE_URL,
   type PosterData,
@@ -83,7 +84,8 @@ function posterStrings(): PosterStrings {
     timedOut: i18n.global.t('result.timedOut'),
     mistakenAs: (name: string) => i18n.global.t('poster.canvas.mistakenAs', { name }),
     memoryPairsLine: (n: number) => i18n.global.t('poster.canvas.memoryPairs', { n }),
-    sourceLine: i18n.global.t('poster.canvas.sourceLine'),
+    bgCreditName: (name: string, sci: string) => i18n.global.t('poster.canvas.bgCredit', { name, sci }),
+    sourceLine: (sources: string[]) => i18n.global.t('poster.canvas.sourceLine', { sources: sources.join(' / ') }),
     scanCta: i18n.global.t('poster.canvas.scanCta'),
   }
 }
@@ -289,8 +291,7 @@ describe('海报 · 是否包含测试内容（2026-10-09）', () => {
  * 064：二维码可选（默认勾选）。
  * 取消勾选 → 生成完全不含二维码的图（部分平台会因二维码判定为导流而限流），
  * 此时改为画站点域名，方便他人搜索。
- */
-describe('海报 · 二维码可选（includeQr）', () => {
+ */describe('海报 · 二维码可选（includeQr）', () => {
   it('默认（includeQr 未传）→ 画扫码提示', () => {
     const { canvas, texts } = stubCanvas()
     drawPoster(canvas, posterData([]), { themeId: 'white' }, posterStrings())
@@ -306,5 +307,99 @@ describe('海报 · 二维码可选（includeQr）', () => {
     // 品牌名恒为 56px（不再按 includeQr 放大到 88）
     const sizes = (canvas.getContext('2d') as unknown as { __sizes?: number[] }).__sizes ?? []
     expect(sizes).not.toContain(88)
+  })
+})
+
+/**
+ * 2026-11-02（用户定）：页脚「数据来源」只写**本轮实际用到的**来源——
+ * 图像版只有 iNaturalist，音频版才写 Xeno-canto；两个来源都用则两个都写。
+ */
+describe('海报 · 数据来源按实际素材生成', () => {
+  it('posterSources：去重、固定顺序、忽略空值', () => {
+    expect(posterSources(['iNaturalist', 'iNaturalist'])).toEqual(['iNaturalist'])
+    expect(posterSources(['Xeno-canto', 'iNaturalist'])).toEqual(['iNaturalist', 'Xeno-canto'])
+    expect(posterSources([undefined, '', null])).toEqual([])
+  })
+
+  it('图像版（只有 iNaturalist）→ 页脚不出现 Xeno-canto', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      { ...posterData([]), sources: posterSources(['iNaturalist']) },
+      { themeId: 'white' },
+      posterStrings(),
+    )
+    const joined = texts.join('\n')
+    expect(joined).toContain('iNaturalist')
+    expect(joined).not.toContain('Xeno-canto')
+  })
+
+  it('音频版含两来源 → 两个都写', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      { ...posterData([]), sources: posterSources(['Xeno-canto', 'iNaturalist']) },
+      { themeId: 'white' },
+      posterStrings(),
+    )
+    const joined = texts.join('\n')
+    expect(joined).toContain('iNaturalist')
+    expect(joined).toContain('Xeno-canto')
+  })
+
+  it('无来源（旧记录）→ 整行不画', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(canvas, posterData([]), { themeId: 'white' }, posterStrings())
+    expect(texts.join('\n')).not.toContain('数据来源')
+  })
+})
+
+/**
+ * 2026-11-02（用户定）：背景用了某张鸟图时，按 CC 规范必须画**作者 / 许可证 / 来源**，
+ * 同时画这只鸟的**名字 + 学名**（中文海报中文名、英文海报英文名，都没有则只画学名）。
+ */
+describe('海报 · 背景图署名', () => {
+  /** 假 ImageBitmap：只要 width/height 够 computeCover 用 */
+  const bg = { width: 800, height: 600 } as unknown as ImageBitmap
+
+  it('有背景图 + bgCredit → 画鸟名/学名/作者/许可证/来源', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      posterData([]),
+      {
+        themeId: 'white',
+        bgImage: bg,
+        bgCredit: { name: '白头鹎', sci: 'Pycnonotus sinensis', author: '葉子', license: 'CC0', source: 'iNaturalist' },
+      },
+      posterStrings(),
+    )
+    const joined = texts.join('\n')
+    expect(joined).toContain('白头鹎（Pycnonotus sinensis）')
+    expect(joined).toContain('葉子 · CC0 · iNaturalist')
+  })
+
+  it('没有名称时只画学名（不出现空括号）', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      posterData([]),
+      { themeId: 'white', bgImage: bg, bgCredit: { sci: 'Pycnonotus sinensis', author: 'A', license: 'CC-BY' } },
+      posterStrings(),
+    )
+    const joined = texts.join('\n')
+    expect(joined).toContain('Pycnonotus sinensis')
+    expect(joined).not.toContain('（）')
+  })
+
+  it('纯色/内置背景（无 bgImage）→ 不画署名', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      posterData([]),
+      { themeId: 'white', bgCredit: { name: '白头鹎', sci: 'Pycnonotus sinensis', author: '葉子', license: 'CC0' } },
+      posterStrings(),
+    )
+    expect(texts.join('\n')).not.toContain('Pycnonotus sinensis')
   })
 })
