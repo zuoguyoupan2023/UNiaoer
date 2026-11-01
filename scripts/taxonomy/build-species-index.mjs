@@ -23,9 +23,15 @@ import { parseAvilistXlsx, taxaFromRows, buildNameIndex, matchSpecies, normalize
 import { scoreSignals, tierOf, binomialName } from './commonness-lib.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
+// P4/P5(86db878)后旧路径 public/data/manifest.json 已退役;真源 = data-cache/manifest-core-full.json
+// (候选顺序与 build-manifest-layers 一致:命中哪个就写回哪个,只增 taxonKey/playable,幂等)。
+const MANIFEST_CANDIDATES = [
+  path.join(ROOT, 'data-cache/manifest-core-full.json'),
+  path.join(ROOT, 'public/data/manifest.json'),
+]
 const MOCK_FIXTURE = path.join(ROOT, 'tests/fixtures/taxonomy/avilist-sample.json')
 const WIKIDATA_CACHE = path.join(ROOT, 'data-cache/taxonomy/wikidata-zh')
+const GENUS_ZH_CACHE = path.join(ROOT, 'data-cache/taxonomy/genus-zh')
 const GBIF_MATCH_CACHE = path.join(ROOT, 'data-cache/taxonomy/gbif-match')
 const GBIF_RECORDS_CACHE = path.join(ROOT, 'data-cache/region/gbif-records-by-species.json')
 const XC_CACHE = path.join(ROOT, 'data-cache/xc')
@@ -103,7 +109,20 @@ try {
   let manifestPatched = false
   let manifestSpecies = []
   if (!args.mock && !args['no-manifest']) {
-    const manifest = JSON.parse(await fs.readFile(MANIFEST_PATH, 'utf8'))
+    let manifest = null
+    let manifestPath = MANIFEST_CANDIDATES[0]
+    for (const p of MANIFEST_CANDIDATES) {
+      try {
+        manifest = JSON.parse(await fs.readFile(p, 'utf8'))
+        manifestPath = p
+        break
+      } catch {
+        /* 试下一个候选 */
+      }
+    }
+    if (!manifest) {
+      throw new Error(`找不到 manifest 真源(${MANIFEST_CANDIDATES.map((p) => path.relative(ROOT, p)).join(' / ')}),先跑 npm run bank`)
+    }
     manifestSpecies = manifest.species
     const { matches: m, misses } = matchSpecies(manifest.species, buildNameIndex(taxa))
     matches = m
@@ -126,9 +145,9 @@ try {
       s.playableAudio = (s.audios ? s.audios.length : 0) >= 1
       s.playable = true // bank 1299 均有素材(≥1 图),playable=图或音可用 → 全 true
     }
-    await fs.writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
+    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
     manifestPatched = true
-    console.log(`manifest 只增字段完成:taxonKey ${matches.length}/${manifest.species.length} · playable 全 true`)
+    console.log(`manifest 只增字段完成(${path.relative(ROOT, manifestPath)}):taxonKey ${matches.length}/${manifest.species.length} · playable 全 true`)
   }
 
   // 023 P1-b:backboneTaxonId 统一来自 GBIF v2 批量 match(当前 backbone 键位,全体重建、只认种级/接受名);
@@ -239,6 +258,52 @@ try {
     if (curatedCount || wikiCount) {
       nameZhStats = { curated: curatedCount, wikidata: wikiCount, overrides: ovApplied.length }
       console.log(`中文名:curated ${curatedCount} + wikidata ${wikiCount} = ${curatedCount + wikiCount}/${species.length}` + (Object.keys(wikiLang).length ? `(语言分布 ${JSON.stringify(wikiLang)})` : ''))
+    }
+  }
+
+  // 2026-11-01:属级中文名(观鸟页统计「按属分组」的权威标签;此前前端靠成员中文名公共
+  // 尾字推导,单种属/区域内单种属(灰喜鹊 Cyanopica、夜鹭 Nycticorax…)推导不出只能回退
+  // 学名)。数据:taxonomy:genus-zh(Wikidata CC0,specieswiki 属页标题反查)。
+  // 清洗与人工把关:①去隐形字符;②只收「属/屬」结尾的标签(Wikidata 上被填成拉丁学名/
+  // 物种级名/异类群同名属的一律不要,回退前端尾字推导);③data/genus-zh-overrides.json
+  // 人工修正表(字符串=强制值,null=剔除),与 name-zh-overrides 同模式、优先级最高。
+  // 顶层 `genusZh` = { 属学名: 中文名 };缺失时前端回退尾字推导。
+  let genusZh = null
+  if (!args.mock) {
+    const clean = (s) => String(s).replace(/[\u200b-\u200f\u2060\ufeff]/g, '').trim()
+    const map = {}
+    try {
+      const files = (await fs.readdir(GENUS_ZH_CACHE)).filter((f) => /^batch-.*\.json$/.test(f)).sort()
+      for (const f of files) {
+        const j = JSON.parse(await fs.readFile(path.join(GENUS_ZH_CACHE, f), 'utf8'))
+        for (const [g, pick] of Object.entries(j.labels || {})) {
+          const zh = clean(pick?.zh)
+          if (zh && /^[A-Z][a-z]+$/.test(g) && /[属屬]$/.test(zh)) map[g] = zh
+        }
+      }
+    } catch {
+      console.log('genus-zh 缓存缺失/不可读,跳过属名填充(npm run taxonomy:genus-zh 抓取)')
+    }
+    let ovForced = 0
+    let ovDropped = 0
+    try {
+      const d = JSON.parse(await fs.readFile(path.join(ROOT, 'data/genus-zh-overrides.json'), 'utf8'))
+      for (const [g, v] of Object.entries(d.overrides || {})) {
+        if (v == null) {
+          if (map[g] !== undefined) ovDropped++
+          delete map[g]
+        } else {
+          map[g] = v
+          ovForced++
+        }
+      }
+    } catch {
+      /* 修正表缺失:按无覆盖处理 */
+    }
+    if (ovForced || ovDropped) console.log(`  属名修正表:强制 ${ovForced} · 剔除 ${ovDropped}(data/genus-zh-overrides.json)`)
+    if (Object.keys(map).length) {
+      genusZh = map
+      console.log(`属名:genus-zh ${Object.keys(map).length}/${taxa.genera.length}`)
     }
   }
 
@@ -367,6 +432,7 @@ try {
   }
   if (bankMappingNotes.length) index.bankMappingNotes = bankMappingNotes
   if (nameZhStats) index.nameZh = nameZhStats
+  if (genusZh) index.genusZh = genusZh
   if (backboneStats) index.backbone = backboneStats
   if (commonnessStats) index.commonness = commonnessStats
   // 产物为生成物,紧凑写盘(无缩进)。>2MB 时提醒:本文件是注册表(前端不整载),

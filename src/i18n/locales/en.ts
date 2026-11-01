@@ -208,6 +208,7 @@ const en: typeof zhMessages = {
     regionDone: 'Done',
     regionCurrent: 'Current region',
     regionChange: 'Change',
+    regionAutoHint: 'Auto-detected from your network',
     regionPickerTitle: 'Pick a region',
     beginnerHint: 'New Birder here? Common birds for the first round!',
     stepForm: 'Mode',

@@ -378,14 +378,14 @@
       ]
     },
     "spilopelia-chinensis": {
-      "_reason": "2026-10-29 用户反馈：图四图片让人不适 → 已停用 image-4（obs 280685917）并补入 obs 112232038（image-6）；同日发现图五为白化个体（obs 223709165，通体发白），不适合出题 → 停用 image-5 并补入 obs 220023007（image-7，两只正常体色成鸟）。首图维持 image-6，D1 无需再次改动。旧对象保留在 R2 备查。",
+      "_reason": "2026-10-29 用户反馈:图四图片让人不适 → 已停用 image-4(obs 280685917)并补入 obs 112232038(image-6);同日发现图五为白化个体(obs 223709165,通体发白),不适合出题 → 停用 image-5 并补入 obs 220023007(image-7,两只正常体色成鸟)。首图维持 image-6,D1 无需再次改动。旧对象保留在 R2 备查。",
       "imageKeyBase": 6,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/504146961/large.jpeg",
         "https://www.inaturalist.org/observations/280685917",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/504146961/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/396421060/large.jpeg",
         "https://www.inaturalist.org/observations/223709165",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/396421060/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/396421060/large.jpg"
       ],
       "images": [
@@ -416,14 +416,84 @@
           "slot": "image-4",
           "imageUrl": "https://bird.wewalk.world/media/spilopelia-chinensis/image-4.full.webp",
           "sourceUrl": "https://www.inaturalist.org/observations/280685917",
-          "reason": "图片让人不适（用户反馈），不适合作为认鸟素材",
+          "reason": "图片让人不适(用户反馈),不适合作为认鸟素材",
           "reportIds": []
         },
         {
           "slot": "image-5",
           "imageUrl": "https://bird.wewalk.world/media/spilopelia-chinensis/image-5.full.webp",
           "sourceUrl": "https://www.inaturalist.org/observations/223709165",
-          "reason": "白化鸟种或错图，不适合用来做题目",
+          "reason": "白化鸟种或错图,不适合用来做题目",
+          "reportIds": []
+        }
+      ]
+    },
+    "onychoprion-fuscatus": {
+      "_reason": "2026-11-01 用户反馈图一『像红色气球,是蛋吗?』取证:image-1(iNat photo 502631304 / obs 279880335,Kure Atoll,tluisaw,CC BY-NC)确为乌燕鸥的【无壳蛋】——观察者原文 'a sooty tern egg laid with no shell…Could see the yolk clearly inside, squishy',research grade、Life Stage=Egg;不是错物种,但作为识鸟题面/首图完全不合格。顺带逐张复核(SOP §S3/坑 11):image-3(obs 77897110,香港)背光剪影几乎无法辨认;image-5(obs 329124588,奥克兰码头)群鸟远景、主体仅数十像素。处置(方案 A,2026-11-01):停用 1/3/5;新增 3 张——Seychelles 成鸟特写(photo 64960353,CC0)与 NZ 标准站姿/飞版(photo 178291673/178291693,Oscar Thomas,CC BY-NC),均为 research grade、原图 2048px;保留 image-2(飞版)与 image-4(站岩,CC BY,角标水印属摄影师自加、iNat 授权为 CC BY)。新图使用从未占用的 key image-6/7/8(旧对象保留 R2 备查);首图由 image-1 变为 image-6 → 需 D1 单行同步(S8)。候选图存 docs/onychoprion-fuscatus/ 供人工确认。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/502631304/large.jpg",
+        "https://www.inaturalist.org/observations/279880335",
+        "https://www.inaturalist.org/photos/502631304",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/502631327/original.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/502631348/original.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/127426378/large.jpg",
+        "https://www.inaturalist.org/observations/77897110",
+        "https://www.inaturalist.org/photos/127426378",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/596532101/large.jpg",
+        "https://www.inaturalist.org/observations/329124588",
+        "https://www.inaturalist.org/photos/596532101"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/64960353/original.jpeg",
+          "license": "cc0",
+          "author": "no rights reserved (uploaded by woutervanlanduyt)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/40968699",
+          "sourceId": "64960353"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/178291673/original.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Oscar Thomas, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/106162297",
+          "sourceId": "178291673"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/178291693/original.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Oscar Thomas, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/106162297",
+          "sourceId": "178291693"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/onychoprion-fuscatus/image-2.jpg",
+        "https://bird.wewalk.world/media/onychoprion-fuscatus/image-4.full.webp"
+      ],
+      "rejected": [
+        {
+          "slot": "image-1",
+          "imageUrl": "https://bird.wewalk.world/media/onychoprion-fuscatus/image-1.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/279880335",
+          "reason": "画面主体是无壳蛋(卵黄外露呈橙红色气球状,源站标注无误),不是鸟,不能作为识鸟题面/首图",
+          "reportIds": []
+        },
+        {
+          "slot": "image-3",
+          "imageUrl": "https://bird.wewalk.world/media/onychoprion-fuscatus/image-3.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/77897110",
+          "reason": "背光剪影,主体几乎无法辨认",
+          "reportIds": []
+        },
+        {
+          "slot": "image-5",
+          "imageUrl": "https://bird.wewalk.world/media/onychoprion-fuscatus/image-5.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/329124588",
+          "reason": "码头群鸟远景,主体仅占数十像素且与白顶玄鸥/红嘴鸥混杂",
           "reportIds": []
         }
       ]

@@ -1,0 +1,23 @@
+{
+  "_comment": "属级中文名人工修正表（2026-11-01）。与 data/name-zh-overrides.json（物种级）同一模式：Wikidata 标签可能有错（张冠李戴/物种级名/拉丁名原样/生造词），人工值覆盖，优先级最高。值为字符串 = 强制使用；值为 null = 剔除该条（前端回退「成员中文名公共尾字」推导或学名）。",
+  "_note": "判定依据：郑光美《中国鸟类分类与分布名录》与 zh.wikipedia 属级条目名。剔除类是 Wikidata 上 zh 标签被填成拉丁学名或跨类群同名属（如植物属 Corypha 团扇葵、Linaria 柳穿鱼）的条目。",
+  "overrides": {
+    "Hirundo": "燕属",
+    "Spilopelia": "珠颈斑鸠属",
+    "Coloeus": "寒鸦属",
+    "Pachyglossa": "厚嘴啄花鸟属",
+    "Thaumasius": "薮蜂鸟属",
+    "Eurostopodus": "毛腿夜鹰属",
+    "Botaurus": "麻鳽属",
+    "Cardinalis": "主红雀属",
+    "Herpsilochmus": "蚁鹩属",
+    "Acrocephalus": null,
+    "Arenaria": null,
+    "Prunella": null,
+    "Bostrychia": null,
+    "Chloris": null,
+    "Lessonia": null,
+    "Corypha": null,
+    "Linaria": null
+  }
+}

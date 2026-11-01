@@ -205,6 +205,7 @@ export const messages = {
     regionDone: '完成',
     regionCurrent: '当前地区',
     regionChange: '更改',
+    regionAutoHint: '根据网络情况自动定位',
     regionPickerTitle: '选择地区',
     beginnerHint: '新手福利:首轮题目只有常见鸟种',
     stepForm: '形式',

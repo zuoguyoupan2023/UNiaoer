@@ -70,6 +70,7 @@
     "check:region": "node scripts/check-region.mjs",
     "taxonomy:avilist": "node scripts/taxonomy/fetch-avilist.mjs",
     "taxonomy:wikidata-zh": "node scripts/taxonomy/fetch-wikidata-zh.mjs",
+    "taxonomy:genus-zh": "node scripts/taxonomy/fetch-genus-zh.mjs",
     "wikidata:names": "node scripts/taxonomy/build-wikidata-names.mjs",
     "names:variants": "node scripts/taxonomy/build-name-variants.mjs",
     "taxonomy:gbif-match": "node scripts/taxonomy/fetch-gbif-match.mjs",

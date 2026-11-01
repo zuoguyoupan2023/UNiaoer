@@ -21,6 +21,8 @@ export interface SpeciesIndexData {
   schemaVersion: number
   checklistVersion: string
   species: SpeciesIndexEntry[]
+  /** 属学名 → 中文名(2026-11-01;Wikidata CC0,构建端 taxonomy:genus-zh) */
+  genusZh?: Record<string, string>
 }
 
 export interface SpeciesIndex {
@@ -28,6 +30,8 @@ export interface SpeciesIndex {
   bySlug: Map<string, SpeciesIndexEntry>
   /** AviList 短码(AvibaseID 去 avibase- 前缀)→ 条目(/region 网格用) */
   byShortCode: Map<string, SpeciesIndexEntry>
+  /** 属学名 → 中文名(观鸟页「按属分组」统计的权威属名;缺失回退尾字推导) */
+  genusZh?: Record<string, string>
 }
 
 export interface SpeciesDistribution {
@@ -73,7 +77,7 @@ export function loadSpeciesIndex(): Promise<SpeciesIndex | null> {
         bySlug.set(slugifySci(e.nameSci), e)
         byShortCode.set(shortCodeOf(e.taxonKey), e)
       }
-      indexCache = { bySlug, byShortCode }
+      indexCache = { bySlug, byShortCode, genusZh: data.genusZh ?? {} }
       return indexCache
     })
   }

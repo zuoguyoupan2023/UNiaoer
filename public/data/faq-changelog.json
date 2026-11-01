@@ -2,6 +2,14 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-11-01",
+      "titleZh": "乌燕鸥:无壳蛋图已停用,补入三张成鸟图",
+      "titleEn": "Sooty Tern: shell-less egg photo retired, three adult photos added",
+      "bodyZh": "乌燕鸥原图一其实是一枚没有蛋壳的乌燕鸥蛋(橙红色半透明、像气球),不是错标,但不适合作为认鸟题面;顺带停用了背光剪影与码头远景两张弱图。新增塞舌尔 CC0 站姿(新首图)与新西兰站姿/飞版,使用 image-6/7/8,老缓存不受影响。现在展示 5 张成鸟图,首图变更需 D1 同步。",
+      "bodyEn": "The original lead photo of the Sooty Tern was in fact a shell-less Sooty Tern egg (a translucent orange balloon look-alike). The iNat label was correct, but an egg is not a quiz image. Two weak photos (a backlit silhouette and a distant wharf scene) were retired as well. Three adult photos are added (a CC0 beach shot from Seychelles as the new lead, plus standing/flying shots from New Zealand) using keys image-6/7/8 so old caches are unaffected. Five adult photos are shown now; the lead change needs a D1 sync.",
+      "speciesId": "onychoprion-fuscatus"
+    },
+    {
       "date": "2026-10-29",
       "titleZh": "珠颈斑鸠：两张不适合出题的图已停用，补入两张新图",
       "titleEn": "Spotted Dove: two unsuitable photos retired, two new ones added",

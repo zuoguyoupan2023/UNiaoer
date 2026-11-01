@@ -58,6 +58,12 @@ interface Persisted {
   /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
   region?: string
   /**
+   * 出题地区来源（2026-11-01）：'auto' = 按 IP 归属地自动定位（介绍页进入时跟随网络重定位，
+   * 摘要下带「根据网络情况自动定位」小字）；'manual' = 用户在面板里显式选过（含「全球」，
+   * 永久退出自动定位）；缺省 = 旧用户未表态——已有非 ALL 选择时不打扰，仍是 ALL 才自动定位。
+   */
+  regionSource?: 'auto' | 'manual'
+  /**
    * 028 匿名计量开关（默认开，D-028-1）：只做**事件计数**（无 cookie/设备标识/IP）。
    * 关闭后前端完全不上报（设置页披露）。
    */
@@ -131,6 +137,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
   /** 029 M2:出题地区偏好（默认 ALL=不过滤；L1-L3 按此过滤全球池） */
   const region = ref<string>(saved.region ?? 'ALL')
+  /** 出题地区来源（2026-11-01,见 Persisted.regionSource 注释） */
+  const regionSource = ref<'auto' | 'manual' | undefined>(saved.regionSource)
   /** 028 匿名计量开关（默认开；关闭即完全不上报） */
   const metricsEnabled = ref<boolean>(saved.metricsEnabled ?? true)
   /** 076 省级归属地统计（**默认关**：处理 IP 归属地，必须显式同意；见 docs/076） */
@@ -170,6 +178,7 @@ export const useSettingsStore = defineStore('settings', () => {
       memoryBoardSize,
       adaptiveTier,
       region,
+      regionSource,
       metricsEnabled,
       metricsGeo,
     ],
@@ -205,6 +214,7 @@ export const useSettingsStore = defineStore('settings', () => {
             memoryBoardSize: memoryBoardSize.value,
             adaptiveTier: adaptiveTier.value,
             region: region.value,
+            regionSource: regionSource.value,
             metricsEnabled: metricsEnabled.value,
             metricsGeo: metricsGeo.value,
           } satisfies Persisted),
@@ -244,6 +254,7 @@ export const useSettingsStore = defineStore('settings', () => {
     memoryBoardSize,
     adaptiveTier,
     region,
+    regionSource,
     metricsEnabled,
     metricsGeo,
   }

@@ -820,12 +820,17 @@ function genusOfSci(nameSci: string): string {
   return nameSci.split(/\s+/)[0] ?? ''
 }
 /**
- * 属的中文提示名（仅中文界面）：取该属成员中文名的**公共尾字**（至多 2 字）+「属」。
- * 依据中文鸟类命名惯例——同属中文俗名几乎必含同一个类群字（柳莺属=「柳莺」、鸫属=「鸫」、
- * 斑鸠属=「斑鸠」）。推导不出（成员不足/无中文名/尾字不一致）就回退学名，绝不硬造。
+ * 属的中文提示名(仅中文界面):
+ * ① 权威属名(species-index.genusZh,Wikidata CC0;2026-11-01 起,单种属也能给出,
+ *    如 Cyanopica=灰喜鹊属、Nycticorax=夜鹭属);
+ * ② 取该属成员中文名的**公共尾字**(至多 2 字)+「属」——同属中文俗名几乎必含同一个
+ *    类群字(柳莺属=「柳莺」、鸫属=「鸫」),作为缺数据属的兜底;
+ * ③ 推导不出(无中文名/尾字不一致)就回退学名,绝不硬造。
  */
 function genusZhLabel(items: GridItem[]): string {
   if (!isZhLocale.value) return ''
+  const authoritative = speciesIdx.value?.genusZh?.[genusOfSci(items[0]?.nameSci ?? '')]
+  if (authoritative) return /[属屬]$/.test(authoritative) ? authoritative : `${authoritative}属`
   const names = items.map((it) => it.name).filter((n) => /[\u4e00-\u9fff]/.test(n))
   if (names.length < 2) return ''
   const first = names[0]
