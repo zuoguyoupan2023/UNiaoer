@@ -147,8 +147,9 @@ onUnmounted(() => {
 })
 /** 与 region:nearby-spots 的 --cell-deg 一致（仅用于署名文案） */
 const CELL_DEG = 0.25
-/** 目录排序：名称（zh 拼音 / en 首字母）或鸟种数；一级二级共用 */
-const sortMode = ref<'name' | 'count'>('name')
+/** 目录排序：名称（zh 拼音 / en 首字母）或鸟种数；一级二级共用。
+ *  2026-11-01 用户定：默认**按鸟种数**（先看哪些地方鸟多）。 */
+const sortMode = ref<'name' | 'count'>('count')
 /** 深链还原期间抑制「切国重置省份」的副作用（见 applyQuery） */
 let applyingQuery = false
 /** 进入本页时 URL 是否带显式地区参数（?cc=/?sub=）：带 → 一切以 URL 为准，不做自动定位 */
@@ -818,11 +819,32 @@ function familyOfItem(it: GridItem): FamInfo | null {
 function genusOfSci(nameSci: string): string {
   return nameSci.split(/\s+/)[0] ?? ''
 }
+/**
+ * 属的中文提示名（仅中文界面）：取该属成员中文名的**公共尾字**（至多 2 字）+「属」。
+ * 依据中文鸟类命名惯例——同属中文俗名几乎必含同一个类群字（柳莺属=「柳莺」、鸫属=「鸫」、
+ * 斑鸠属=「斑鸠」）。推导不出（成员不足/无中文名/尾字不一致）就回退学名，绝不硬造。
+ */
+function genusZhLabel(items: GridItem[]): string {
+  if (!isZhLocale.value) return ''
+  const names = items.map((it) => it.name).filter((n) => /[\u4e00-\u9fff]/.test(n))
+  if (names.length < 2) return ''
+  const first = names[0]
+  if (!first) return ''
+  let suffix = ''
+  for (let len = 1; len <= Math.min(2, first.length); len++) {
+    const s = first.slice(-len)
+    if (names.every((n) => n.endsWith(s))) suffix = s
+    else break
+  }
+  return suffix ? `${suffix}属` : ''
+}
 interface StatRow {
   key: string
   name: string
   sci: string
   n: number
+  /** 其中已标记「认识」的种数（我已认识子标签的堆叠条/灰黑区分用） */
+  known: number
   /** 该科/属下的鸟种（继承地区列表的记录数降序）——点行名展开「地区版名录」 */
   items: GridItem[]
 }
@@ -849,13 +871,20 @@ function bucketize(items: GridItem[]): StatGroup {
         : t('region.pvStatsUnknown')
       sci = fam?.famSci ?? ''
     }
-    const row = m.get(key) ?? { key, name, sci, n: 0, items: [] }
+    const row = m.get(key) ?? { key, name, sci, n: 0, known: 0, items: [] }
     row.n += 1
+    if (isMastered(it.slug)) row.known += 1
     row.items.push(it)
     m.set(key, row)
   }
   // 全量列出（2026-11-01 用户定）：不再有「其他」聚合，1 种的小科也正常占一行、可展开
   const rows = [...m.values()].sort((a, b) => b.n - a.n || a.key.localeCompare(b.key))
+  if (statsGroupBy.value === 'genus') {
+    for (const r of rows) {
+      const zh = genusZhLabel(r.items)
+      if (zh) r.name = zh
+    }
+  }
   return { rows, total: items.length }
 }
 /** 展开的行（地区版名录）：local:科key / known:科key / local:__other__:科key */
@@ -863,16 +892,20 @@ const expandedStat = ref('')
 function toggleStatRow(key: string) {
   expandedStat.value = expandedStat.value === key ? '' : key
 }
-const localStats = computed(() => bucketize(gridItems.value))
-/** 数据面板左右子标签（2026-10-31 用户定：该地鸟种 / 我已认识 左右切换，不再上下堆叠） */
+const localStats = computed(() => {
+  void masteryVersion.value // 标记「认识」后条形与黑灰列表即时重算
+  return bucketize(gridItems.value)
+})
+/** 数据面板左右子标签（该地鸟种 / 我已认识 左右切换）；两页共用同一份地区分组 */
 const statsSection = ref<'local' | 'known'>('local')
 watch(statsSection, () => {
   expandedStat.value = ''
 })
+/** 当前地区内已标记的种数（>0 才显示「我已认识」标签） */
+const knownTotal = computed(() => localStats.value.rows.reduce((sum, r) => sum + r.known, 0))
 const activeSection = computed(() =>
-  statsSection.value === 'known' && masteredStats.value.total > 0 ? 'known' : 'local',
+  statsSection.value === 'known' && knownTotal.value > 0 ? 'known' : 'local',
 )
-const activeGroup = computed(() => (activeSection.value === 'known' ? masteredStats.value : localStats.value))
 /**
  * 占上一级对比值（2026-10-31 用户定）：上海-中国 / 台湾-中国 / 新加坡-亚洲 / xx-全球。
  * 中国的上级口径 = 大陆+港澳台**并集**（GBIF 里 TW/HK/MO 是独立国家码，不能漏算）；
@@ -909,11 +942,6 @@ const regionRatio = computed(() => {
   if (!parentN) return null
   const pct = (den: number) => (den ? Math.round((num / den) * 1000) / 10 : 0)
   return { parentName, parentPct: pct(parentN), globalPct: pct(unionOf(Object.keys(idx))) }
-})
-/** 已熟识构成：masteryVersion 参与依赖，标记后立即重算 */
-const masteredStats = computed(() => {
-  void masteryVersion.value
-  return bucketize(gridItems.value.filter((it) => isMastered(it.slug)))
 })
 const statPct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0)
 /** 条形按「组内最大计数」缩放（总量的百分比对几十个科来说全是不满一格的小点，不可读） */
@@ -1781,7 +1809,7 @@ function pickProvince(code: string) {
                   {{ t('region.pvStatsLocal') }}
                 </button>
                 <button
-                  v-if="masteredStats.total > 0"
+                  v-if="knownTotal > 0"
                   type="button"
                   role="tab"
                   class="sort-btn"
@@ -1817,9 +1845,9 @@ function pickProvince(code: string) {
             <p v-if="regionRatio" class="pvs-ratio muted">
               {{ t('region.pvRatio', { parent: regionRatio.parentName, pct: regionRatio.parentPct, global: regionRatio.globalPct }) }}
             </p>
-            <p class="pvs-cap">{{ t('region.count', { n: activeGroup.total }) }}</p>
+            <p class="pvs-cap">{{ t('region.count', { n: localStats.total }) }}</p>
             <div class="pvs-bars">
-              <template v-for="r in activeGroup.rows" :key="r.key">
+              <template v-for="r in localStats.rows" :key="r.key">
                 <div class="pvs-row">
                   <button
                     type="button"
@@ -1833,13 +1861,23 @@ function pickProvince(code: string) {
                     {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
                   </button>
                   <span class="pvs-track">
-                    <span class="pvs-fill" :class="{ mastered: activeSection === 'known' }" :style="{ width: `${statPct(r.n, barMaxOf(activeGroup))}%` }"></span>
+                    <!-- 我已认识：黄段=已认识 / 灰段=待认识；该地鸟种：整段绿 -->
+                    <template v-if="activeSection === 'known'">
+                      <span class="pvs-fill mastered" :style="{ width: `${statPct(r.known, barMaxOf(localStats))}%` }"></span>
+                      <span class="pvs-fill todo" :style="{ width: `${statPct(r.n - r.known, barMaxOf(localStats))}%` }"></span>
+                    </template>
+                    <span v-else class="pvs-fill" :style="{ width: `${statPct(r.n, barMaxOf(localStats))}%` }"></span>
                   </span>
-                  <span class="pvs-n muted">{{ r.n }}</span>
+                  <span class="pvs-n muted">{{ activeSection === 'known' ? `${r.known}/${r.n}` : r.n }}</span>
                 </div>
-                <!-- 点科/属名展开：该组在当前地区的全部鸟种（地区版名录），链接到物种页 -->
+                <!-- 点科/属名展开：该组在当前地区的全部鸟种（按记录数排序；我已认识里黑=已认识/灰=待认识） -->
                 <div v-if="expandedStat === r.key" class="pvs-species">
-                  <RouterLink v-for="it in r.items" :key="it.slug" :to="`/species/${it.slug}`">
+                  <RouterLink
+                    v-for="it in r.items"
+                    :key="it.slug"
+                    :class="{ todo: activeSection === 'known' && !isMastered(it.slug) }"
+                    :to="`/species/${it.slug}`"
+                  >
                     {{ it.name }}
                   </RouterLink>
                 </div>
@@ -2594,9 +2632,10 @@ function pickProvince(code: string) {
   color: #fff;
 }
 .preview-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  /* 顶部单行内的普通流式元素（2026-11-01 用户反馈：absolute 钉在右上会压住「更改」）
+   */
+  position: static;
+  flex: none;
   display: inline-flex;
   padding: 4px;
   border: none;
@@ -2985,6 +3024,12 @@ function pickProvince(code: string) {
 }
 .pvs-fill.other {
   background: #c9d3cd;
+}
+.pvs-fill.todo {
+  background: #d7e0db; /* 待认识：比已认识的黄更浅的灰绿 */
+}
+.pvs-species a.todo {
+  color: #9aa8a1; /* 未认识：灰（已认识保持常规黑） */
 }
 .pvs-fill.mastered {
   background: #e0a800; /* 与灯泡黄一致 */
