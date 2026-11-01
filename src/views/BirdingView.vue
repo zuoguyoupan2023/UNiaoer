@@ -27,6 +27,7 @@ import {
   countriesInContinent,
   continentOf,
   countryStats,
+  COUNTRIES_BY_CONTINENT,
   filterCountries,
   presentContinents,
   REGION_LABEL_KEY,
@@ -201,7 +202,10 @@ function applyQuery() {
   if (typeof q.sub === 'string') province.value = q.sub
   explicitRegionOnEntry = (!!q.cc && typeof q.cc === 'string') || (!!q.sub && typeof q.sub === 'string')
   // `?preview=1`：外部入口（首页「预习模式」/「我的」页「去预习」）直达预习浮窗；一次性参数，不写回 URL
-  if (q.preview === '1') previewOpen.value = true
+  if (q.preview === '1') {
+    previewOpen.value = true
+    void ensureCatalogIndex() // 同上：拼音行
+  }
   // `watch(selected)` 会重置省份 —— 深链里 cc+sub 同时给出时必须抑制一次，
   // 否则 `?cc=US&sub=US-CA` 的省份会被清掉（刷新/分享还原残缺）。
   applyingQuery = true
@@ -621,8 +625,15 @@ const previewMastered = computed(() => {
   void masteryVersion.value
   return previewCurrent.value ? isMastered(previewCurrent.value.slug) : false
 })
+/** 拼音行（仅中文界面、且有中文名时显示；名录页同源 py 字段） */
+const previewPinyin = computed(() => {
+  const cur = previewCurrent.value
+  if (!cur || !currentLocale().startsWith('zh')) return ''
+  return catalogIndex.value?.get(cur.slug)?.py ?? ''
+})
 function openPreview() {
   previewOpen.value = true
+  void ensureCatalogIndex() // 预习右栏的拼音行需要名录 py 字段
 }
 function closePreview() {
   previewOpen.value = false
@@ -767,6 +778,8 @@ const statsGroupBy = ref<'family' | 'genus'>('family')
 interface FamInfo {
   famSci: string
   famZh: string
+  /** 中文名拼音（名录页同源 catalog.json 的 py 字段；无中文名的种为空） */
+  py: string
 }
 const catalogIndex = ref<Map<string, FamInfo> | null>(null)
 let catalogIndexLoading = false
@@ -780,7 +793,8 @@ async function ensureCatalogIndex() {
       const m = new Map<string, FamInfo>()
       for (const o of d.orders)
         for (const f of o.families)
-          for (const s of f.species) m.set(s.id, { famSci: f.sci, famZh: f.zh ?? '' })
+          for (const s of f.species)
+            m.set(s.id, { famSci: f.sci, famZh: f.zh ?? '', py: s.py ?? '' })
       catalogIndex.value = m
     }
   } catch {
@@ -796,7 +810,7 @@ function familyOfItem(it: GridItem): FamInfo | null {
   const cat = catalogIndex.value?.get(it.slug)
   if (cat) return cat
   const sp = it.bankId ? speciesById(it.bankId) : undefined
-  return sp?.family ? { famSci: sp.family, famZh: '' } : null
+  return sp?.family ? { famSci: sp.family, famZh: '', py: '' } : null
 }
 function genusOfSci(nameSci: string): string {
   return nameSci.split(/\s+/)[0] ?? ''
@@ -840,9 +854,11 @@ function bucketize(items: GridItem[]): StatGroup {
     m.set(key, row)
   }
   const rows = [...m.values()].sort((a, b) => b.n - a.n || a.key.localeCompare(b.key))
-  // 前 9 名直展鸟种列表；其余合并成「其他」——两百多个科在小浮窗里没有可读性
-  const top = rows.slice(0, 9)
-  const rest = rows.slice(9)
+  // 阈值制（2026-10-31 用户定）：≥10 种的科单独列出（属维度 ≥3——属在单地区很少上两位数），
+  // 其余小科/小属归入「其他」（可展开按组查看）。30 多种的大科绝不再被折叠。
+  const threshold = statsGroupBy.value === 'family' ? 10 : 3
+  const top = rows.filter((r) => r.n >= threshold)
+  const rest = rows.filter((r) => r.n < threshold)
   const otherN = rest.reduce((s, r) => s + r.n, 0)
   return { rows: top, other: { n: otherN, subRows: rest }, total: items.length }
 }
@@ -852,6 +868,52 @@ function toggleStatRow(key: string) {
   expandedStat.value = expandedStat.value === key ? '' : key
 }
 const localStats = computed(() => bucketize(gridItems.value))
+/** 数据面板左右子标签（2026-10-31 用户定：该地鸟种 / 我已认识 左右切换，不再上下堆叠） */
+const statsSection = ref<'local' | 'known'>('local')
+watch(statsSection, () => {
+  expandedStat.value = ''
+})
+const activeSection = computed(() =>
+  statsSection.value === 'known' && masteredStats.value.total > 0 ? 'known' : 'local',
+)
+const activeGroup = computed(() => (activeSection.value === 'known' ? masteredStats.value : localStats.value))
+/**
+ * 占上一级对比值（2026-10-31 用户定）：上海-中国 / 台湾-中国 / 新加坡-亚洲 / xx-全球。
+ * 中国的上级口径 = 大陆+港澳台**并集**（GBIF 里 TW/HK/MO 是独立国家码，不能漏算）；
+ * 国家无省级选择时上一级 = 所属大洲；大洲的上级 = 全球。分母用区系层物种并集（mergedIndex）。
+ */
+const regionRatio = computed(() => {
+  const num = localStats.value.total
+  const idx = mergedIndex.value
+  if (!num || !idx) return null
+  const unionOf = (codes: string[]) => new Set(codes.flatMap((cc) => idx[cc] ?? [])).size
+  let parentName = ''
+  let parentN = 0
+  if (province.value) {
+    const cc = province.value.split('-')[0]!
+    if (cc === 'CN') {
+      parentName = t('region.parentCN')
+      parentN = unionOf(['CN', 'HK', 'MO', 'TW'])
+    } else {
+      parentName = countryName(cc)
+      parentN = unionOf([cc])
+    }
+  } else if (selected.value) {
+    if (selected.value === 'HK' || selected.value === 'MO' || selected.value === 'TW') {
+      parentName = t('region.parentCN')
+      parentN = unionOf(['CN', 'HK', 'MO', 'TW'])
+    } else {
+      const cont = continentOf(selected.value)
+      if (cont) {
+        parentName = t(`region.continents.${cont}`)
+        parentN = unionOf(COUNTRIES_BY_CONTINENT[cont])
+      }
+    }
+  }
+  if (!parentN) return null
+  const pct = (den: number) => (den ? Math.round((num / den) * 1000) / 10 : 0)
+  return { parentName, parentPct: pct(parentN), globalPct: pct(unionOf(Object.keys(idx))) }
+})
 /** 已熟识构成：masteryVersion 参与依赖，标记后立即重算 */
 const masteredStats = computed(() => {
   void masteryVersion.value
@@ -1438,8 +1500,10 @@ function pickProvince(code: string) {
           aria-modal="true"
           :aria-label="t('region.previewMode')"
         >
-          <!-- 顶部：两个标签页（预习模式 / 数据）+ 关闭。英文用 Data（避免与 /stats 统计页混淆） -->
-          <div class="pv-tabs-row">
+          <!-- 顶部单行（2026-10-31 用户定：高度再压）——标签 + 地区摘要/更改 + ×。
+               地区条在两个标签页共享（同一 selected/province 状态源，改一处两边同变）；
+               英文用 Data（避免与 /stats 统计页混淆） -->
+          <div class="pv-topbar">
             <div class="pv-tabs" role="tablist" :aria-label="t('region.previewMode')">
               <button
                 type="button"
@@ -1462,6 +1526,17 @@ function pickProvince(code: string) {
                 {{ t('region.pvStats') }}
               </button>
             </div>
+            <div class="pv-region-inline">
+              <strong class="pv-region-value">{{ selectionLabel }}</strong>
+              <button
+                type="button"
+                class="pv-region-toggle"
+                :aria-expanded="pvRegionOpen"
+                @click="pvRegionOpen = !pvRegionOpen"
+              >
+                {{ pvRegionOpen ? t('region.done') : t('region.pvRegionChange') }}
+              </button>
+            </div>
             <button
               type="button"
               class="preview-close"
@@ -1472,22 +1547,6 @@ function pickProvince(code: string) {
             </button>
           </div>
 
-          <!-- 地区条：**两个标签页共享**（同一状态源 selected/province，改一处两边同变）。
-               2026-10-31 用户反馈：× 已移到标签行右端不再与「更改」重合；字号加大 -->
-          <div class="pv-region">
-            <span class="pv-region-current">
-              <span class="pv-region-cap">{{ t('region.pick') }}</span>
-              <strong class="pv-region-value">{{ selectionLabel }}</strong>
-            </span>
-            <button
-              type="button"
-              class="pv-region-toggle"
-              :aria-expanded="pvRegionOpen"
-              @click="pvRegionOpen = !pvRegionOpen"
-            >
-              {{ pvRegionOpen ? t('region.done') : t('region.pvRegionChange') }}
-            </button>
-          </div>
           <!-- 展开时：**整个浮窗**就是选区面板（2026-10-31 用户反馈：选区不能挤在小滚动条里），
                鸟内容暂时让位；大洲手风琴 → 国家（带 GBIF 种数）→ 所选国家下方省 chips。
                与看图/听音介绍页的选区逻辑同构；选择驱动整个观鸟页与列表联动 -->
@@ -1556,8 +1615,11 @@ function pickProvince(code: string) {
               </button>
               <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
               <div class="pv-side">
+                <!-- 右对齐三行：拼音（仅中文界面且有中文名）/ 中文名（或英文名）/ 学名；
+                     名字与学名都缺时只剩学名一行 -->
                 <div class="pv-title">
-                  <p class="pv-name">{{ previewCurrent.name }}</p>
+                  <p v-if="previewPinyin" class="pv-py">{{ previewPinyin }}</p>
+                  <p v-if="previewCurrent.name !== previewCurrent.nameSci" class="pv-name">{{ previewCurrent.name }}</p>
                   <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
                 </div>
                 <button
@@ -1709,8 +1771,31 @@ function pickProvince(code: string) {
                两组条形：① 本地鸟种科/属构成 ② 已认识鸟的构成（无数据隐藏）。
                地区条在两个标签页上方共享（同一 selected/province 状态源） -->
           <div v-else class="pv-stats">
+            <!-- 左右子标签（2026-10-31 用户定）：该地鸟种 / 我已认识（无熟识数据时不出现） -->
             <div class="pvs-head">
-              <p class="pvs-title">{{ t('region.pvStatsTitle') }}</p>
+              <div class="sort" role="tablist" :aria-label="t('region.pvStatsTitle')">
+                <button
+                  type="button"
+                  role="tab"
+                  class="sort-btn"
+                  :class="{ active: activeSection === 'local' }"
+                  :aria-selected="activeSection === 'local'"
+                  @click="statsSection = 'local'"
+                >
+                  {{ t('region.pvStatsLocal') }}
+                </button>
+                <button
+                  v-if="masteredStats.total > 0"
+                  type="button"
+                  role="tab"
+                  class="sort-btn"
+                  :class="{ active: activeSection === 'known' }"
+                  :aria-selected="activeSection === 'known'"
+                  @click="statsSection = 'known'"
+                >
+                  {{ t('region.pvStatsMine') }}
+                </button>
+              </div>
               <div class="sort" role="group" :aria-label="t('region.pvStatsTitle')">
                 <button
                   type="button"
@@ -1732,70 +1817,72 @@ function pickProvince(code: string) {
                 </button>
               </div>
             </div>
-            <p class="pvs-cap">
-              {{ t('region.pvStatsLocal') }} · {{ t('region.count', { n: localStats.total }) }}
+            <!-- 占上一级对比值（上海-中国含港澳台 / 台湾-中国 / 新加坡-亚洲 / xx-全球） -->
+            <p v-if="regionRatio" class="pvs-ratio muted">
+              {{ t('region.pvRatio', { parent: regionRatio.parentName, pct: regionRatio.parentPct, global: regionRatio.globalPct }) }}
             </p>
+            <p class="pvs-cap">{{ t('region.count', { n: activeGroup.total }) }}</p>
             <div class="pvs-bars">
-              <template v-for="r in localStats.rows" :key="r.key">
-                <div class="pvs-row" :class="{ open: expandedStat === `local:${r.key}` }">
+              <template v-for="r in activeGroup.rows" :key="r.key">
+                <div class="pvs-row">
                   <button
                     type="button"
                     class="pvs-name"
                     :class="{ genus: statsGroupBy === 'genus' }"
                     :title="r.sci"
-                    :aria-expanded="expandedStat === `local:${r.key}`"
-                    @click="toggleStatRow(`local:${r.key}`)"
+                    :aria-expanded="expandedStat === r.key"
+                    @click="toggleStatRow(r.key)"
                   >
-                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `local:${r.key}` }" :size="11" aria-hidden="true" />
+                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === r.key }" :size="11" aria-hidden="true" />
                     {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
                   </button>
                   <span class="pvs-track">
-                    <span class="pvs-fill" :style="{ width: `${statPct(r.n, barMaxOf(localStats))}%` }"></span>
+                    <span class="pvs-fill" :class="{ mastered: activeSection === 'known' }" :style="{ width: `${statPct(r.n, barMaxOf(activeGroup))}%` }"></span>
                   </span>
                   <span class="pvs-n muted">{{ r.n }}</span>
                 </div>
                 <!-- 点科/属名展开：该组在当前地区的全部鸟种（地区版名录），链接到物种页 -->
-                <div v-if="expandedStat === `local:${r.key}`" class="pvs-species">
+                <div v-if="expandedStat === r.key" class="pvs-species">
                   <RouterLink v-for="it in r.items" :key="it.slug" :to="`/species/${it.slug}`">
                     {{ it.name }}
                   </RouterLink>
                 </div>
               </template>
-              <template v-if="localStats.other.n">
+              <template v-if="activeGroup.other.n">
                 <div class="pvs-row">
                   <button
                     type="button"
                     class="pvs-name"
-                    :aria-expanded="expandedStat === 'local:__other__'"
-                    @click="toggleStatRow('local:__other__')"
+                    :aria-expanded="expandedStat === '__other__'"
+                    @click="toggleStatRow('__other__')"
                   >
-                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === 'local:__other__' }" :size="11" aria-hidden="true" />
+                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === '__other__' }" :size="11" aria-hidden="true" />
                     {{ t('region.pvStatsOther') }}
                   </button>
                   <span class="pvs-track">
-                    <span class="pvs-fill other" :style="{ width: `${statPct(localStats.other.n, barMaxOf(localStats))}%` }"></span>
+                    <span class="pvs-fill other" :class="{ mastered: activeSection === 'known' }" :style="{ width: `${statPct(activeGroup.other.n, barMaxOf(activeGroup))}%` }"></span>
                   </span>
-                  <span class="pvs-n muted">{{ localStats.other.n }}</span>
+                  <span class="pvs-n muted">{{ activeGroup.other.n }}</span>
                 </div>
-                <!-- 「其他」展开：按科/属分组（本地区的小科林立），组内再点开看鸟 -->
-                <template v-if="expandedStat === 'local:__other__'">
-                  <template v-for="sub in localStats.other.subRows" :key="sub.key">
+                <!-- 「其他」展开：阈值之下的小科/小属，组内再点开看鸟 -->
+                <template v-if="expandedStat === '__other__'">
+                  <template v-for="sub in activeGroup.other.subRows" :key="sub.key">
                     <div class="pvs-row sub">
                       <button
                         type="button"
                         class="pvs-name"
                         :class="{ genus: statsGroupBy === 'genus' }"
                         :title="sub.sci"
-                        :aria-expanded="expandedStat === `local:__other__:${sub.key}`"
-                        @click="toggleStatRow(`local:__other__:${sub.key}`)"
+                        :aria-expanded="expandedStat === `__other__:${sub.key}`"
+                        @click="toggleStatRow(`__other__:${sub.key}`)"
                       >
-                        <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `local:__other__:${sub.key}` }" :size="11" aria-hidden="true" />
+                        <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `__other__:${sub.key}` }" :size="11" aria-hidden="true" />
                         {{ sub.name }}<em v-if="sub.sci && statsGroupBy === 'family' && sub.name !== sub.sci">{{ sub.sci }}</em>
                       </button>
                       <span></span>
                       <span class="pvs-n muted">{{ sub.n }}</span>
                     </div>
-                    <div v-if="expandedStat === `local:__other__:${sub.key}`" class="pvs-species">
+                    <div v-if="expandedStat === `__other__:${sub.key}`" class="pvs-species">
                       <RouterLink v-for="it in sub.items" :key="it.slug" :to="`/species/${it.slug}`">
                         {{ it.name }}
                       </RouterLink>
@@ -1804,79 +1891,6 @@ function pickProvince(code: string) {
                 </template>
               </template>
             </div>
-            <!-- 已认识构成：仅当前地区内有已标记鸟时出现（无用户数据不渲染）；同样可展开看鸟 -->
-            <template v-if="masteredStats.total > 0">
-              <p class="pvs-cap">
-                {{ t('region.filterMastered') }} · {{ t('region.count', { n: masteredStats.total }) }}
-              </p>
-              <div class="pvs-bars">
-                <template v-for="r in masteredStats.rows" :key="r.key">
-                  <div class="pvs-row">
-                    <button
-                      type="button"
-                      class="pvs-name"
-                      :class="{ genus: statsGroupBy === 'genus' }"
-                      :title="r.sci"
-                      :aria-expanded="expandedStat === `known:${r.key}`"
-                      @click="toggleStatRow(`known:${r.key}`)"
-                    >
-                      <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `known:${r.key}` }" :size="11" aria-hidden="true" />
-                      {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
-                    </button>
-                    <span class="pvs-track">
-                      <span class="pvs-fill mastered" :style="{ width: `${statPct(r.n, barMaxOf(masteredStats))}%` }"></span>
-                    </span>
-                    <span class="pvs-n muted">{{ r.n }}</span>
-                  </div>
-                  <div v-if="expandedStat === `known:${r.key}`" class="pvs-species">
-                    <RouterLink v-for="it in r.items" :key="it.slug" :to="`/species/${it.slug}`">
-                      {{ it.name }}
-                    </RouterLink>
-                  </div>
-                </template>
-                <template v-if="masteredStats.other.n">
-                  <div class="pvs-row">
-                    <button
-                      type="button"
-                      class="pvs-name"
-                      :aria-expanded="expandedStat === 'known:__other__'"
-                      @click="toggleStatRow('known:__other__')"
-                    >
-                      <ChevronRight class="pvs-caret" :class="{ open: expandedStat === 'known:__other__' }" :size="11" aria-hidden="true" />
-                      {{ t('region.pvStatsOther') }}
-                    </button>
-                    <span class="pvs-track">
-                      <span class="pvs-fill other" :style="{ width: `${statPct(masteredStats.other.n, barMaxOf(masteredStats))}%` }"></span>
-                    </span>
-                    <span class="pvs-n muted">{{ masteredStats.other.n }}</span>
-                  </div>
-                  <template v-if="expandedStat === 'known:__other__'">
-                    <template v-for="sub in masteredStats.other.subRows" :key="sub.key">
-                      <div class="pvs-row sub">
-                        <button
-                          type="button"
-                          class="pvs-name"
-                          :class="{ genus: statsGroupBy === 'genus' }"
-                          :title="sub.sci"
-                          :aria-expanded="expandedStat === `known:__other__:${sub.key}`"
-                          @click="toggleStatRow(`known:__other__:${sub.key}`)"
-                        >
-                          <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `known:__other__:${sub.key}` }" :size="11" aria-hidden="true" />
-                          {{ sub.name }}<em v-if="sub.sci && statsGroupBy === 'family' && sub.name !== sub.sci">{{ sub.sci }}</em>
-                        </button>
-                        <span></span>
-                        <span class="pvs-n muted">{{ sub.n }}</span>
-                      </div>
-                      <div v-if="expandedStat === `known:__other__:${sub.key}`" class="pvs-species">
-                        <RouterLink v-for="it in sub.items" :key="it.slug" :to="`/species/${it.slug}`">
-                          {{ it.name }}
-                        </RouterLink>
-                      </div>
-                    </template>
-                  </template>
-                </template>
-              </div>
-            </template>
             <p class="pvs-note muted">{{ t('region.pvStatsNote') }}</p>
           </div>
 
@@ -2583,12 +2597,22 @@ function pickProvince(code: string) {
   box-shadow: var(--shadow);
   text-align: left;
 }
-.pv-tabs-row {
+.pv-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   margin-bottom: 6px;
+}
+.pv-tabs {
+  flex: none;
+}
+.pv-region-inline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 .pv-tabs {
   display: inline-flex;
@@ -2692,6 +2716,16 @@ function pickProvince(code: string) {
 }
 .pv-title {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* 名字/学名右对齐（2026-10-31 用户定） */
+  text-align: right;
+}
+.pv-py {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--text-light);
 }
 .pv-name {
   margin: 0;
@@ -2880,11 +2914,14 @@ function pickProvince(code: string) {
 
 /* ── 预习浮窗 · 数据面板（信息流内的展开节，2026-10-31 用户反馈后改版）── */
 .pv-stats {
-  /* 数据标签页：占满地区条之下的全部空间，滚动在自身 */
+  /* 数据标签页：占满顶行之下的全部空间，滚动在自身；
+     右侧内边距给滚动条让位——数字不再被遮（2026-10-31 用户反馈） */
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   margin-bottom: 4px;
+  padding-right: 10px;
+  scrollbar-gutter: stable;
   text-align: left;
 }
 .pvs-head {
@@ -2899,6 +2936,10 @@ function pickProvince(code: string) {
   font-size: 0.9rem;
   flex: 1;
   min-width: 0;
+}
+.pvs-ratio {
+  margin: 6px 0;
+  font-size: 0.72rem;
 }
 .pvs-cap {
   margin: 8px 0 6px;
@@ -3011,34 +3052,14 @@ function pickProvince(code: string) {
 }
 
 /* ── 预习浮窗 · 地区选择（2026-10-31）：与看图/听音选区同构（摘要 + 大洲手风琴 → 国家 → 省 chips） ── */
-.pv-region {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 6px;
-  padding: 4px 10px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #f7faf8;
-}
-.pv-region-current {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-.pv-region-cap {
-  flex-shrink: 0;
-  font-size: 0.72rem;
-  color: var(--text-light);
-}
 .pv-region-value {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
+  text-align: right;
 }
 .pv-region-toggle {
   flex-shrink: 0;

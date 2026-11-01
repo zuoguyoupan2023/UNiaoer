@@ -526,13 +526,18 @@ export const messages = {
     pvAudio: '鸣声 {n}',
     pvStats: '数据',
     pvStatsTitle: '鸟种构成',
+    // 左右子标签（2026-10-31）：该地鸟种 / 我已认识（无熟识数据时不出现）
+    pvStatsLocal: '该地鸟种',
+    pvStatsMine: '我已认识',
     pvStatsFamily: '科',
     pvStatsGenus: '属',
     pvStatsOther: '其他',
     pvStatsUnknown: '未归类',
-    pvStatsLocal: '本地鸟种',
+    // 占上一级对比值：中国口径 = 大陆+港澳台并集（GBIF 里 TW/HK/MO 是独立国家码）
+    parentCN: '中国（含港澳台）',
+    pvRatio: '占{parent}的 {pct}% · 占全球 {global}%',
     pvStatsNote:
-      '统计当前所选地区（含省级筛选）的鸟种，分类取自 AviList 名录；条形长度按该组最大计数缩放。点科/属名展开该组鸟种（地区版名录），「其他」展开后按科/属分组；「已认识」一节仅在标记过后出现。',
+      '统计当前所选地区（含省级筛选）的鸟种，分类取自 AviList 名录；≥10 种的科单独列出（属维度 ≥3），其余归入「其他」（可再展开）；条形按该组最大计数缩放。「我已认识」只统计当前地区内的熟识鸟——你在其他地区认识的鸟不计入（例如在云南认识的鸟不会出现在上海清单）。',
     hotspotEmpty: '该地区暂无观鸟点数据',
     hotspotOnEbird: '在 eBird 查看该热点',
     hotspotOfCountry: '（全国 {n} 个）',
