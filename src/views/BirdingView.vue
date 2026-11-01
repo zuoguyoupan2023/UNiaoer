@@ -15,7 +15,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { BarChart3, ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X, ZoomIn } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X, ZoomIn } from 'lucide-vue-next'
 import CatalogPanel from '@/components/CatalogPanel.vue'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
@@ -628,7 +628,7 @@ function closePreview() {
   previewOpen.value = false
   // 面板态一并复位：下次打开回到鸟内容（灯箱/数据面板/选区面板不残留）
   lightboxUrl.value = ''
-  statsOpen.value = false
+  pvTab.value = 'preview'
   pvRegionOpen.value = false
   clearHold()
   stopSharedAudio()
@@ -762,7 +762,7 @@ const hasExtraMedia = computed(() => extraImages.value.length > 0 || extraAudios
  * 科/属分布——只在当前地区内有已熟记鸟时出现（没有用户数据就不显示）。
  * 分类来源：AviList 名录 catalog.json（slug → 科，覆盖 ~99%）；骨架种兜底 bank 的
  * family 字段；再无则「未归类」。属直接取学名首词。 */
-const statsOpen = ref(false)
+const pvTab = ref<'preview' | 'stats'>('preview')
 const statsGroupBy = ref<'family' | 'genus'>('family')
 interface FamInfo {
   famSci: string
@@ -788,15 +788,8 @@ async function ensureCatalogIndex() {
   }
   catalogIndexLoading = false
 }
-watch(statsOpen, (open) => {
-  if (!open) return
-  void ensureCatalogIndex()
-  // 面板在信息流内：展开后把它滚进视野（不抢占浮窗，鸟内容还在上面）
-  void nextTick(() => {
-    document
-      .querySelector('.pv-stats')
-      ?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
-  })
+watch(pvTab, (tab) => {
+  if (tab === 'stats') void ensureCatalogIndex()
 })
 const isZhLocale = computed(() => currentLocale().startsWith('zh'))
 function familyOfItem(it: GridItem): FamInfo | null {
@@ -813,8 +806,16 @@ interface StatRow {
   name: string
   sci: string
   n: number
+  /** 该科/属下的鸟种（继承地区列表的记录数降序）——点行名展开「地区版名录」 */
+  items: GridItem[]
 }
-function bucketize(items: GridItem[]): { rows: StatRow[]; other: number; total: number } {
+interface StatGroup {
+  rows: StatRow[]
+  /** 前 9 名之外的聚合：展开后按科/属分组（小科林立，直接平铺 285 种没法看） */
+  other: { n: number; subRows: StatRow[] }
+  total: number
+}
+function bucketize(items: GridItem[]): StatGroup {
   const m = new Map<string, StatRow>()
   for (const it of items) {
     let key: string
@@ -833,15 +834,22 @@ function bucketize(items: GridItem[]): { rows: StatRow[]; other: number; total: 
         : t('region.pvStatsUnknown')
       sci = fam?.famSci ?? ''
     }
-    const row = m.get(key) ?? { key, name, sci, n: 0 }
+    const row = m.get(key) ?? { key, name, sci, n: 0, items: [] }
     row.n += 1
+    row.items.push(it)
     m.set(key, row)
   }
   const rows = [...m.values()].sort((a, b) => b.n - a.n || a.key.localeCompare(b.key))
-  // 只画前 9 条，其余合并成「其他」——两百多个科在小浮窗里没有可读性
+  // 前 9 名直展鸟种列表；其余合并成「其他」——两百多个科在小浮窗里没有可读性
   const top = rows.slice(0, 9)
-  const other = rows.slice(9).reduce((s, r) => s + r.n, 0)
-  return { rows: top, other, total: items.length }
+  const rest = rows.slice(9)
+  const otherN = rest.reduce((s, r) => s + r.n, 0)
+  return { rows: top, other: { n: otherN, subRows: rest }, total: items.length }
+}
+/** 展开的行（地区版名录）：local:科key / known:科key / local:__other__:科key */
+const expandedStat = ref('')
+function toggleStatRow(key: string) {
+  expandedStat.value = expandedStat.value === key ? '' : key
 }
 const localStats = computed(() => bucketize(gridItems.value))
 /** 已熟识构成：masteryVersion 参与依赖，标记后立即重算 */
@@ -851,7 +859,7 @@ const masteredStats = computed(() => {
 })
 const statPct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0)
 /** 条形按「组内最大计数」缩放（总量的百分比对几十个科来说全是不满一格的小点，不可读） */
-const barMaxOf = (s: { rows: StatRow[]; other: number }) => Math.max(s.rows[0]?.n ?? 0, s.other, 1)
+const barMaxOf = (s: StatGroup) => Math.max(s.rows[0]?.n ?? 0, s.other.n, 1)
 
 const provinceSources = computed(() =>
   (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
@@ -1430,17 +1438,42 @@ function pickProvince(code: string) {
           aria-modal="true"
           :aria-label="t('region.previewMode')"
         >
-          <button
-            type="button"
-            class="preview-close"
-            :aria-label="t('common.close')"
-            @click="closePreview"
-          >
-            <X :size="18" />
-          </button>
+          <!-- 顶部：两个标签页（预习模式 / 数据）+ 关闭。英文用 Data（避免与 /stats 统计页混淆） -->
+          <div class="pv-tabs-row">
+            <div class="pv-tabs" role="tablist" :aria-label="t('region.previewMode')">
+              <button
+                type="button"
+                role="tab"
+                class="pv-tab"
+                :class="{ active: pvTab === 'preview' }"
+                :aria-selected="pvTab === 'preview'"
+                @click="pvTab = 'preview'"
+              >
+                {{ t('region.previewMode') }}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="pv-tab"
+                :class="{ active: pvTab === 'stats' }"
+                :aria-selected="pvTab === 'stats'"
+                @click="pvTab = 'stats'"
+              >
+                {{ t('region.pvStats') }}
+              </button>
+            </div>
+            <button
+              type="button"
+              class="preview-close"
+              :aria-label="t('common.close')"
+              @click="closePreview"
+            >
+              <X :size="18" />
+            </button>
+          </div>
 
-          <!-- 地区选择：已选摘要 +「更改」展开（大洲手风琴 → 国家 → 省 chips），
-               与看图/听音介绍页的选区逻辑同构；选择驱动整个观鸟页与列表联动 -->
+          <!-- 地区条：**两个标签页共享**（同一状态源 selected/province，改一处两边同变）。
+               2026-10-31 用户反馈：× 已移到标签行右端不再与「更改」重合；字号加大 -->
           <div class="pv-region">
             <span class="pv-region-current">
               <span class="pv-region-cap">{{ t('region.pick') }}</span>
@@ -1501,12 +1534,28 @@ function pickProvince(code: string) {
             </div>
           </div>
 
-          <template v-else>
+          <template v-else-if="pvTab === 'preview'">
           <template v-if="previewCurrent">
             <div class="pv-body">
             <div class="pv-head">
-              <!-- 名称行在最上（2026-10-31 用户反馈：名字/学名/播放必须一眼可见），大图其下 -->
-              <div class="pv-title-row">
+              <!-- 图左文右（2026-10-31 用户定：右侧上方=名字/学名，右侧下方=喇叭；最大限度省高度）。
+                   点击图进灯箱看原分辨率 -->
+              <button
+                v-if="previewImageMain"
+                type="button"
+                class="pv-photo"
+                :aria-label="t('region.pvZoom')"
+                @click="openLightbox(previewImageFull)"
+              >
+                <img
+                  :src="previewImageMain"
+                  alt=""
+                  @error="onThumbError(previewCurrent.slug)"
+                />
+                <span class="pv-zoom"><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvZoom') }}</span>
+              </button>
+              <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
+              <div class="pv-side">
                 <div class="pv-title">
                   <p class="pv-name">{{ previewCurrent.name }}</p>
                   <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
@@ -1524,22 +1573,6 @@ function pickProvince(code: string) {
                   <Volume2 v-else :size="16" aria-hidden="true" />
                 </button>
               </div>
-              <!-- 大图：占满浮窗宽（4:3），点击进灯箱看原分辨率 -->
-              <button
-                v-if="previewImageMain"
-                type="button"
-                class="pv-photo"
-                :aria-label="t('region.pvZoom')"
-                @click="openLightbox(previewImageFull)"
-              >
-                <img
-                  :src="previewImageMain"
-                  alt=""
-                  @error="onThumbError(previewCurrent.slug)"
-                />
-                <span class="pv-zoom"><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvZoom') }}</span>
-              </button>
-              <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
             </div>
 
             <!-- 展开区：其余图/音一起展开、一起折叠（一个开关） -->
@@ -1598,88 +1631,6 @@ function pickProvince(code: string) {
               :name-sci="previewCurrent.nameSci"
             />
 
-            <!-- 数据面板：信息流内的展开节（2026-10-31 用户反馈：不再抢占整个浮窗）。
-                 底部筛选行的「数据」按钮开关；打开后自动滚进视野，× 收起。
-                 两组条形：① 本地鸟种科/属构成 ② 已认识鸟的构成（无数据隐藏） -->
-            <div v-if="statsOpen" class="pv-stats">
-              <div class="pvs-head">
-                <p class="pvs-title">{{ t('region.pvStatsTitle') }}</p>
-                <div class="sort" role="group" :aria-label="t('region.pvStatsTitle')">
-                  <button
-                    type="button"
-                    class="sort-btn"
-                    :class="{ active: statsGroupBy === 'family' }"
-                    :aria-pressed="statsGroupBy === 'family'"
-                    @click="statsGroupBy = 'family'"
-                  >
-                    {{ t('region.pvStatsFamily') }}
-                  </button>
-                  <button
-                    type="button"
-                    class="sort-btn"
-                    :class="{ active: statsGroupBy === 'genus' }"
-                    :aria-pressed="statsGroupBy === 'genus'"
-                    @click="statsGroupBy = 'genus'"
-                  >
-                    {{ t('region.pvStatsGenus') }}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  class="pvs-close"
-                  :aria-label="t('region.pvMediaCollapse')"
-                  @click="statsOpen = false"
-                >
-                  <X :size="16" />
-                </button>
-              </div>
-              <p class="pvs-cap">
-                {{ t('region.pvStatsLocal') }} · {{ t('region.count', { n: localStats.total }) }}
-              </p>
-              <div class="pvs-bars">
-                <div v-for="r in localStats.rows" :key="r.key" class="pvs-row">
-                  <span class="pvs-name" :class="{ genus: statsGroupBy === 'genus' }" :title="r.sci">
-                    {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
-                  </span>
-                  <span class="pvs-track">
-                    <span class="pvs-fill" :style="{ width: `${statPct(r.n, barMaxOf(localStats))}%` }"></span>
-                  </span>
-                  <span class="pvs-n muted">{{ r.n }}</span>
-                </div>
-                <div v-if="localStats.other" class="pvs-row">
-                  <span class="pvs-name">{{ t('region.pvStatsOther') }}</span>
-                  <span class="pvs-track">
-                    <span class="pvs-fill other" :style="{ width: `${statPct(localStats.other, barMaxOf(localStats))}%` }"></span>
-                  </span>
-                  <span class="pvs-n muted">{{ localStats.other }}</span>
-                </div>
-              </div>
-              <!-- 已认识构成：仅当前地区内有已标记鸟时出现（无用户数据不渲染） -->
-              <template v-if="masteredStats.total > 0">
-                <p class="pvs-cap">
-                  {{ t('region.filterMastered') }} · {{ t('region.count', { n: masteredStats.total }) }}
-                </p>
-                <div class="pvs-bars">
-                  <div v-for="r in masteredStats.rows" :key="r.key" class="pvs-row">
-                    <span class="pvs-name" :class="{ genus: statsGroupBy === 'genus' }" :title="r.sci">
-                      {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
-                    </span>
-                    <span class="pvs-track">
-                      <span class="pvs-fill mastered" :style="{ width: `${statPct(r.n, barMaxOf(masteredStats))}%` }"></span>
-                    </span>
-                    <span class="pvs-n muted">{{ r.n }}</span>
-                  </div>
-                  <div v-if="masteredStats.other" class="pvs-row">
-                    <span class="pvs-name">{{ t('region.pvStatsOther') }}</span>
-                    <span class="pvs-track">
-                      <span class="pvs-fill other" :style="{ width: `${statPct(masteredStats.other, barMaxOf(masteredStats))}%` }"></span>
-                    </span>
-                    <span class="pvs-n muted">{{ masteredStats.other }}</span>
-                  </div>
-                </div>
-              </template>
-              <p class="pvs-note muted">{{ t('region.pvStatsNote') }}</p>
-            </div>
             </div><!-- /.pv-body：信息区独立滚动 -->
 
             <!-- 熟记 + 上下张 + 筛选固定在浮窗底部（2026-10-31 用户定），
@@ -1692,7 +1643,7 @@ function pickProvince(code: string) {
               @click="togglePreviewMastery"
             >
               <Lightbulb class="bulb" :size="20" aria-hidden="true" />
-              <span>{{ previewMastered ? t('region.masteryKnown') : t('region.masteryUnknown') }}</span>
+              <span>{{ t('region.masteryAction') }}</span>
             </button>
 
             <div class="pv-nav">
@@ -1751,19 +1702,183 @@ function pickProvince(code: string) {
             >
               {{ t('region.filterMastered') }}
             </button>
-            <!-- 数据面板开关：本地鸟种 + 已熟识的科/属构成（2026-10-31） -->
-            <button
-              type="button"
-              class="sort-btn pv-stats-btn"
-              :class="{ active: statsOpen }"
-              :aria-pressed="statsOpen"
-              @click="statsOpen = !statsOpen"
-            >
-              <BarChart3 :size="12" aria-hidden="true" />
-              {{ t('region.pvStats') }}
-            </button>
           </div>
           </template>
+
+          <!-- ── 标签页 2：数据（en 用 Data，避免与 /stats 统计页混淆）──────────
+               两组条形：① 本地鸟种科/属构成 ② 已认识鸟的构成（无数据隐藏）。
+               地区条在两个标签页上方共享（同一 selected/province 状态源） -->
+          <div v-else class="pv-stats">
+            <div class="pvs-head">
+              <p class="pvs-title">{{ t('region.pvStatsTitle') }}</p>
+              <div class="sort" role="group" :aria-label="t('region.pvStatsTitle')">
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: statsGroupBy === 'family' }"
+                  :aria-pressed="statsGroupBy === 'family'"
+                  @click="statsGroupBy = 'family'"
+                >
+                  {{ t('region.pvStatsFamily') }}
+                </button>
+                <button
+                  type="button"
+                  class="sort-btn"
+                  :class="{ active: statsGroupBy === 'genus' }"
+                  :aria-pressed="statsGroupBy === 'genus'"
+                  @click="statsGroupBy = 'genus'"
+                >
+                  {{ t('region.pvStatsGenus') }}
+                </button>
+              </div>
+            </div>
+            <p class="pvs-cap">
+              {{ t('region.pvStatsLocal') }} · {{ t('region.count', { n: localStats.total }) }}
+            </p>
+            <div class="pvs-bars">
+              <template v-for="r in localStats.rows" :key="r.key">
+                <div class="pvs-row" :class="{ open: expandedStat === `local:${r.key}` }">
+                  <button
+                    type="button"
+                    class="pvs-name"
+                    :class="{ genus: statsGroupBy === 'genus' }"
+                    :title="r.sci"
+                    :aria-expanded="expandedStat === `local:${r.key}`"
+                    @click="toggleStatRow(`local:${r.key}`)"
+                  >
+                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `local:${r.key}` }" :size="11" aria-hidden="true" />
+                    {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
+                  </button>
+                  <span class="pvs-track">
+                    <span class="pvs-fill" :style="{ width: `${statPct(r.n, barMaxOf(localStats))}%` }"></span>
+                  </span>
+                  <span class="pvs-n muted">{{ r.n }}</span>
+                </div>
+                <!-- 点科/属名展开：该组在当前地区的全部鸟种（地区版名录），链接到物种页 -->
+                <div v-if="expandedStat === `local:${r.key}`" class="pvs-species">
+                  <RouterLink v-for="it in r.items" :key="it.slug" :to="`/species/${it.slug}`">
+                    {{ it.name }}
+                  </RouterLink>
+                </div>
+              </template>
+              <template v-if="localStats.other.n">
+                <div class="pvs-row">
+                  <button
+                    type="button"
+                    class="pvs-name"
+                    :aria-expanded="expandedStat === 'local:__other__'"
+                    @click="toggleStatRow('local:__other__')"
+                  >
+                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === 'local:__other__' }" :size="11" aria-hidden="true" />
+                    {{ t('region.pvStatsOther') }}
+                  </button>
+                  <span class="pvs-track">
+                    <span class="pvs-fill other" :style="{ width: `${statPct(localStats.other.n, barMaxOf(localStats))}%` }"></span>
+                  </span>
+                  <span class="pvs-n muted">{{ localStats.other.n }}</span>
+                </div>
+                <!-- 「其他」展开：按科/属分组（本地区的小科林立），组内再点开看鸟 -->
+                <template v-if="expandedStat === 'local:__other__'">
+                  <template v-for="sub in localStats.other.subRows" :key="sub.key">
+                    <div class="pvs-row sub">
+                      <button
+                        type="button"
+                        class="pvs-name"
+                        :class="{ genus: statsGroupBy === 'genus' }"
+                        :title="sub.sci"
+                        :aria-expanded="expandedStat === `local:__other__:${sub.key}`"
+                        @click="toggleStatRow(`local:__other__:${sub.key}`)"
+                      >
+                        <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `local:__other__:${sub.key}` }" :size="11" aria-hidden="true" />
+                        {{ sub.name }}<em v-if="sub.sci && statsGroupBy === 'family' && sub.name !== sub.sci">{{ sub.sci }}</em>
+                      </button>
+                      <span></span>
+                      <span class="pvs-n muted">{{ sub.n }}</span>
+                    </div>
+                    <div v-if="expandedStat === `local:__other__:${sub.key}`" class="pvs-species">
+                      <RouterLink v-for="it in sub.items" :key="it.slug" :to="`/species/${it.slug}`">
+                        {{ it.name }}
+                      </RouterLink>
+                    </div>
+                  </template>
+                </template>
+              </template>
+            </div>
+            <!-- 已认识构成：仅当前地区内有已标记鸟时出现（无用户数据不渲染）；同样可展开看鸟 -->
+            <template v-if="masteredStats.total > 0">
+              <p class="pvs-cap">
+                {{ t('region.filterMastered') }} · {{ t('region.count', { n: masteredStats.total }) }}
+              </p>
+              <div class="pvs-bars">
+                <template v-for="r in masteredStats.rows" :key="r.key">
+                  <div class="pvs-row">
+                    <button
+                      type="button"
+                      class="pvs-name"
+                      :class="{ genus: statsGroupBy === 'genus' }"
+                      :title="r.sci"
+                      :aria-expanded="expandedStat === `known:${r.key}`"
+                      @click="toggleStatRow(`known:${r.key}`)"
+                    >
+                      <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `known:${r.key}` }" :size="11" aria-hidden="true" />
+                      {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
+                    </button>
+                    <span class="pvs-track">
+                      <span class="pvs-fill mastered" :style="{ width: `${statPct(r.n, barMaxOf(masteredStats))}%` }"></span>
+                    </span>
+                    <span class="pvs-n muted">{{ r.n }}</span>
+                  </div>
+                  <div v-if="expandedStat === `known:${r.key}`" class="pvs-species">
+                    <RouterLink v-for="it in r.items" :key="it.slug" :to="`/species/${it.slug}`">
+                      {{ it.name }}
+                    </RouterLink>
+                  </div>
+                </template>
+                <template v-if="masteredStats.other.n">
+                  <div class="pvs-row">
+                    <button
+                      type="button"
+                      class="pvs-name"
+                      :aria-expanded="expandedStat === 'known:__other__'"
+                      @click="toggleStatRow('known:__other__')"
+                    >
+                      <ChevronRight class="pvs-caret" :class="{ open: expandedStat === 'known:__other__' }" :size="11" aria-hidden="true" />
+                      {{ t('region.pvStatsOther') }}
+                    </button>
+                    <span class="pvs-track">
+                      <span class="pvs-fill other" :style="{ width: `${statPct(masteredStats.other.n, barMaxOf(masteredStats))}%` }"></span>
+                    </span>
+                    <span class="pvs-n muted">{{ masteredStats.other.n }}</span>
+                  </div>
+                  <template v-if="expandedStat === 'known:__other__'">
+                    <template v-for="sub in masteredStats.other.subRows" :key="sub.key">
+                      <div class="pvs-row sub">
+                        <button
+                          type="button"
+                          class="pvs-name"
+                          :class="{ genus: statsGroupBy === 'genus' }"
+                          :title="sub.sci"
+                          :aria-expanded="expandedStat === `known:__other__:${sub.key}`"
+                          @click="toggleStatRow(`known:__other__:${sub.key}`)"
+                        >
+                          <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `known:__other__:${sub.key}` }" :size="11" aria-hidden="true" />
+                          {{ sub.name }}<em v-if="sub.sci && statsGroupBy === 'family' && sub.name !== sub.sci">{{ sub.sci }}</em>
+                        </button>
+                        <span></span>
+                        <span class="pvs-n muted">{{ sub.n }}</span>
+                      </div>
+                      <div v-if="expandedStat === `known:__other__:${sub.key}`" class="pvs-species">
+                        <RouterLink v-for="it in sub.items" :key="it.slug" :to="`/species/${it.slug}`">
+                          {{ it.name }}
+                        </RouterLink>
+                      </div>
+                    </template>
+                  </template>
+                </template>
+              </div>
+            </template>
+            <p class="pvs-note muted">{{ t('region.pvStatsNote') }}</p>
+          </div>
 
           <!-- 灯箱：点任意处关闭（preview-mask 用 @click.self，不会误关浮窗） -->
           <div
@@ -2462,11 +2577,42 @@ function pickProvince(code: string) {
   /* 固定高度：切换鸟种时浮窗不再随内容增减而重新居中跳动（2026-10-29 用户反馈） */
   height: min(620px, 86vh);
   overflow-y: auto;
-  padding: 16px;
+  padding: 12px;
   border-radius: var(--radius);
   background: #fff;
   box-shadow: var(--shadow);
   text-align: left;
+}
+.pv-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.pv-tabs {
+  display: inline-flex;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: #fff;
+}
+.pv-tab {
+  padding: 4px 12px;
+  border: none;
+  background: #fff;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pv-tab + .pv-tab {
+  border-left: 2px solid var(--border);
+}
+.pv-tab.active {
+  background: var(--primary);
+  color: #fff;
 }
 .preview-close {
   position: absolute;
@@ -2492,15 +2638,21 @@ function pickProvince(code: string) {
   padding: 0 2px;
 }
 .pv-head {
-  /* 大图 + 名称行纵排（2026-10-31 用户定：图像占更大宽高，点击看大图） */
-  padding-right: 28px; /* 给右上角关闭按钮让位 */
+  /* 图左文右（2026-10-31 用户定）：右侧上方=名字/学名，右侧下方=喇叭按钮 */
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
 }
 .pv-photo {
   position: relative;
   display: block;
-  width: 100%;
+  flex: none;
+  /* 图左文右布局：约一半宽，4:3；点击进灯箱看原分辨率 */
+  width: 52%;
+  max-width: 210px;
+  margin: 0;
   aspect-ratio: 4 / 3;
-  max-height: 300px;
+  align-self: flex-start;
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
@@ -2531,11 +2683,12 @@ function pickProvince(code: string) {
   font-size: 0.66rem;
   pointer-events: none;
 }
-.pv-title-row {
+.pv-side {
+  /* 右侧列：名字/学名在上，喇叭按钮压到底部 */
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 .pv-title {
   min-width: 0;
@@ -2543,7 +2696,7 @@ function pickProvince(code: string) {
 .pv-name {
   margin: 0;
   font-weight: 700;
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   line-height: 1.3;
 }
 .pv-sci {
@@ -2556,13 +2709,13 @@ function pickProvince(code: string) {
   position: static;
   width: 34px;
   height: 34px;
+  margin-top: auto;
   margin-left: auto;
   flex: none;
 }
 .pv-facts {
-  margin-top: 10px;
-  /* 特征/生境内容长短不一：给最小高度，减少熟记按钮的位置跳动 */
-  min-height: 150px;
+  margin-top: 8px;
+  /* 底部按钮组已固定（2026-10-31），不再需要最小高度防跳动；内容短时让信息区紧凑 */
 }
 .pv-master {
   display: flex;
@@ -2571,48 +2724,52 @@ function pickProvince(code: string) {
   gap: 8px;
   /* 宽度随内容，不铺满整行（2026-10-29 用户反馈） */
   width: fit-content;
-  margin: 12px auto 0;
-  padding: 9px 20px;
+  margin: 8px auto 0;
+  padding: 4px 16px;
   border: 2px solid var(--border);
   border-radius: 999px;
   background: #fff;
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.16s ease;
 }
 .pv-master .bulb {
-  color: var(--text-light);
+  /* 未认识：灰色灯泡（2026-10-31 用户定：按钮永远只写「认识」，状态用样式表达） */
+  color: #b8c4bd;
 }
 .pv-master:hover {
   border-color: var(--primary-light);
 }
 .pv-master.known {
-  border-color: #ffd600;
-  background: #fffbe6;
+  border-color: #f59e0b;
+  background: #fff8ec;
+  color: #92580a;
+  font-weight: 700;
 }
 .pv-master.known .bulb {
-  /* 已熟记：灯泡内填充核辐射警示黄 */
-  fill: #ffd600;
-  color: #c98a00;
+  /* 已认识：橙色灯泡，填充 + 发光 */
+  fill: #f59e0b;
+  color: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.75));
 }
 .pv-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 6px;
 }
 .pv-step {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 6px 10px;
+  padding: 3px 9px;
   border: 2px solid var(--border);
   border-radius: 999px;
   background: #fff;
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   cursor: pointer;
 }
 .pv-step:disabled {
@@ -2624,7 +2781,7 @@ function pickProvince(code: string) {
 }
 .pv-pos {
   font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 .pv-empty {
   margin: 18px 0;
@@ -2635,16 +2792,10 @@ function pickProvince(code: string) {
   justify-content: center;
   /* 固定高度浮窗内：筛选行锚在底部 */
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 8px;
 }
 /* 「数据」按钮 = 筛选行的第 4 段（无圆角无独立边框，与前三段无缝相连——
    2026-10-31 用户反馈：弧线丑陋）。图标对齐由 inline-flex 提供 */
-.pv-stats-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 /* ── 预习浮窗 · 展开区（其余图/音）与大图灯箱 ──────────────────── */
 .pv-extra {
   margin-top: 8px;
@@ -2689,9 +2840,9 @@ function pickProvince(code: string) {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 100%;
-  margin-top: 8px;
-  padding: 6px 10px;
+  width: 66%;
+  margin: 6px auto 0;
+  padding: 2px 8px;
   border: 2px dashed var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
@@ -2729,11 +2880,11 @@ function pickProvince(code: string) {
 
 /* ── 预习浮窗 · 数据面板（信息流内的展开节，2026-10-31 用户反馈后改版）── */
 .pv-stats {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  background: #f7faf8;
+  /* 数据标签页：占满地区条之下的全部空间，滚动在自身 */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin-bottom: 4px;
   text-align: left;
 }
 .pvs-head {
@@ -2748,19 +2899,6 @@ function pickProvince(code: string) {
   font-size: 0.9rem;
   flex: 1;
   min-width: 0;
-}
-.pvs-close {
-  display: inline-flex;
-  padding: 4px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-light);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.pvs-close:hover {
-  color: var(--text);
 }
 .pvs-cap {
   margin: 8px 0 6px;
@@ -2781,13 +2919,54 @@ function pickProvince(code: string) {
   font-size: 0.76rem;
 }
 .pvs-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   min-width: 0;
+  padding: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pvs-name:hover {
+  color: var(--primary);
 }
 .pvs-name.genus {
   font-style: italic;
+}
+.pvs-caret {
+  flex-shrink: 0;
+  color: var(--text-light);
+  transition: transform 0.15s ease;
+}
+.pvs-caret.open {
+  transform: rotate(90deg);
+}
+.pvs-row.sub .pvs-name {
+  padding-left: 12px;
+}
+/* 展开的「地区版名录」：该科/属下全部鸟种，链接到物种页 */
+.pvs-species {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: -2px 0 4px;
+  padding: 2px 8px 4px 22px;
+  font-size: 0.74rem;
+  line-height: 1.8;
+}
+.pvs-species a {
+  color: var(--text);
+}
+.pvs-species a:hover {
+  color: var(--primary);
+  text-decoration: underline;
 }
 .pvs-name em {
   font-style: italic;
@@ -2836,9 +3015,9 @@ function pickProvince(code: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding: 7px 10px;
+  gap: 10px;
+  margin-bottom: 6px;
+  padding: 4px 10px;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: #f7faf8;
@@ -2863,7 +3042,7 @@ function pickProvince(code: string) {
 }
 .pv-region-toggle {
   flex-shrink: 0;
-  padding: 4px 12px;
+  padding: 3px 10px;
   border: 2px solid var(--border);
   border-radius: 999px;
   background: #fff;
