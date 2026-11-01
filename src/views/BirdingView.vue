@@ -906,6 +906,15 @@ const knownTotal = computed(() => localStats.value.rows.reduce((sum, r) => sum +
 const activeSection = computed(() =>
   statsSection.value === 'known' && knownTotal.value > 0 ? 'known' : 'local',
 )
+/** 我已认识页按熟识数降序（用户认识的科浮到顶），该地鸟种页保持地区构成序 */
+const activeRows = computed(() => {
+  const rows = localStats.value.rows
+  if (activeSection.value !== 'known') return rows
+  return [...rows].sort(
+    (a, b) => b.known - a.known || b.n - a.n || a.key.localeCompare(b.key),
+  )
+})
+const statsMax = computed(() => barMaxOf(localStats.value))
 /**
  * 占上一级对比值（2026-10-31 用户定）：上海-中国 / 台湾-中国 / 新加坡-亚洲 / xx-全球。
  * 中国的上级口径 = 大陆+港澳台**并集**（GBIF 里 TW/HK/MO 是独立国家码，不能漏算）；
@@ -944,8 +953,19 @@ const regionRatio = computed(() => {
   return { parentName, parentPct: pct(parentN), globalPct: pct(unionOf(Object.keys(idx))) }
 })
 const statPct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0)
-/** 条形按「组内最大计数」缩放（总量的百分比对几十个科来说全是不满一格的小点，不可读） */
+/** 条形按「组内最大计数」线性缩放（该地鸟种页用） */
 const barMaxOf = (s: StatGroup) => s.rows[0]?.n ?? 1
+/**
+ * 我已认识页的对数刻度（2026-11-01 用户定）：与 stats 页同式 log10(n+1)/log10(top+1)。
+ * 线性下 2/107 只占 2% 根本看不见；对数下 ≈24%。top 随地区/维度动态取本组最大科，不僵硬。
+ */
+const barPct = (n: number, max: number) => {
+  if (n <= 0 || max <= 0) return 0
+  return Math.round((Math.log10(n + 1) / Math.log10(max + 1)) * 1000) / 10
+}
+/** 灰段（待认识）= 科体量（log）− 已认识（log），对数空间内相减 */
+const barRemPct = (total: number, known: number, max: number) =>
+  Math.max(0, Math.round((barPct(total, max) - barPct(known, max)) * 10) / 10)
 
 const provinceSources = computed(() =>
   (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
@@ -1847,7 +1867,7 @@ function pickProvince(code: string) {
             </p>
             <p class="pvs-cap">{{ t('region.count', { n: localStats.total }) }}</p>
             <div class="pvs-bars">
-              <template v-for="r in localStats.rows" :key="r.key">
+              <template v-for="r in activeRows" :key="r.key">
                 <div class="pvs-row">
                   <button
                     type="button"
@@ -1861,12 +1881,12 @@ function pickProvince(code: string) {
                     {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
                   </button>
                   <span class="pvs-track">
-                    <!-- 我已认识：黄段=已认识 / 灰段=待认识；该地鸟种：整段绿 -->
+                    <!-- 我已认识：对数刻度，黄=已认识（0 时不渲染）/灰=科体量余量；该地鸟种：线性绿 -->
                     <template v-if="activeSection === 'known'">
-                      <span class="pvs-fill mastered" :style="{ width: `${statPct(r.known, barMaxOf(localStats))}%` }"></span>
-                      <span class="pvs-fill todo" :style="{ width: `${statPct(r.n - r.known, barMaxOf(localStats))}%` }"></span>
+                      <span v-if="r.known > 0" class="pvs-fill mastered" :style="{ width: `${barPct(r.known, statsMax)}%` }"></span>
+                      <span v-if="r.n - r.known > 0" class="pvs-fill todo" :style="{ width: `${barRemPct(r.n, r.known, statsMax)}%` }"></span>
                     </template>
-                    <span v-else class="pvs-fill" :style="{ width: `${statPct(r.n, barMaxOf(localStats))}%` }"></span>
+                    <span v-else class="pvs-fill" :style="{ width: `${statPct(r.n, statsMax)}%` }"></span>
                   </span>
                   <span class="pvs-n muted">{{ activeSection === 'known' ? `${r.known}/${r.n}` : r.n }}</span>
                 </div>
@@ -3020,7 +3040,6 @@ function pickProvince(code: string) {
   height: 100%;
   border-radius: 999px;
   background: var(--primary);
-  min-width: 2px;
 }
 .pvs-fill.other {
   background: #c9d3cd;
