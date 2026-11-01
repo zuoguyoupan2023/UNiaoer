@@ -537,7 +537,7 @@ export const messages = {
     parentCN: '中国（含港澳台）',
     pvRatio: '占{parent}的 {pct}% · 占全球 {global}%',
     pvStatsNote:
-      '统计当前所选地区（含省级筛选）的鸟种，分类取自 AviList 名录；≥10 种的科单独列出（属维度 ≥3），其余归入「其他」（可再展开）；条形按该组最大计数缩放。「我已认识」只统计当前地区内的熟识鸟——你在其他地区认识的鸟不计入（例如在云南认识的鸟不会出现在上海清单）。',
+      '「我已认识」只统计当前地区内已标记的鸟。',
     hotspotEmpty: '该地区暂无观鸟点数据',
     hotspotOnEbird: '在 eBird 查看该热点',
     hotspotOfCountry: '（全国 {n} 个）',
@@ -844,7 +844,6 @@ export const messages = {
       terrestrial: '陆禽',
       // 2026-10-31：该行常显，无查证依据时明确说明
       none: '暂无查证依据',
-      note: '生活型只收录经人工查证、有出处的鸟种；未查证的不显示、也不推断（查证表持续扩充中）。',
     },
     // 六类型的含义（点击「生活型」行展开）
     group6Desc: {

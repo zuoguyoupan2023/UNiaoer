@@ -629,7 +629,8 @@ const previewMastered = computed(() => {
 const previewPinyin = computed(() => {
   const cur = previewCurrent.value
   if (!cur || !currentLocale().startsWith('zh')) return ''
-  return catalogIndex.value?.get(cur.slug)?.py ?? ''
+  const info = catalogIndex.value?.get(cur.slug)
+  return info?.pyTone || info?.py || ''
 })
 function openPreview() {
   previewOpen.value = true
@@ -780,6 +781,8 @@ interface FamInfo {
   famZh: string
   /** 中文名拼音（名录页同源 catalog.json 的 py 字段；无中文名的种为空） */
   py: string
+  /** 带调分词拼音（显示用，「bái tóu bēi」；构建期 pyTone 字段） */
+  pyTone: string
 }
 const catalogIndex = ref<Map<string, FamInfo> | null>(null)
 let catalogIndexLoading = false
@@ -794,7 +797,7 @@ async function ensureCatalogIndex() {
       for (const o of d.orders)
         for (const f of o.families)
           for (const s of f.species)
-            m.set(s.id, { famSci: f.sci, famZh: f.zh ?? '', py: s.py ?? '' })
+            m.set(s.id, { famSci: f.sci, famZh: f.zh ?? '', py: s.py ?? '', pyTone: s.pyTone ?? '' })
       catalogIndex.value = m
     }
   } catch {
@@ -810,7 +813,7 @@ function familyOfItem(it: GridItem): FamInfo | null {
   const cat = catalogIndex.value?.get(it.slug)
   if (cat) return cat
   const sp = it.bankId ? speciesById(it.bankId) : undefined
-  return sp?.family ? { famSci: sp.family, famZh: '', py: '' } : null
+  return sp?.family ? { famSci: sp.family, famZh: '', py: '', pyTone: '' } : null
 }
 function genusOfSci(nameSci: string): string {
   return nameSci.split(/\s+/)[0] ?? ''
@@ -825,8 +828,6 @@ interface StatRow {
 }
 interface StatGroup {
   rows: StatRow[]
-  /** 前 9 名之外的聚合：展开后按科/属分组（小科林立，直接平铺 285 种没法看） */
-  other: { n: number; subRows: StatRow[] }
   total: number
 }
 function bucketize(items: GridItem[]): StatGroup {
@@ -853,14 +854,9 @@ function bucketize(items: GridItem[]): StatGroup {
     row.items.push(it)
     m.set(key, row)
   }
+  // 全量列出（2026-11-01 用户定）：不再有「其他」聚合，1 种的小科也正常占一行、可展开
   const rows = [...m.values()].sort((a, b) => b.n - a.n || a.key.localeCompare(b.key))
-  // 阈值制（2026-10-31 用户定）：≥10 种的科单独列出（属维度 ≥3——属在单地区很少上两位数），
-  // 其余小科/小属归入「其他」（可展开按组查看）。30 多种的大科绝不再被折叠。
-  const threshold = statsGroupBy.value === 'family' ? 10 : 3
-  const top = rows.filter((r) => r.n >= threshold)
-  const rest = rows.filter((r) => r.n < threshold)
-  const otherN = rest.reduce((s, r) => s + r.n, 0)
-  return { rows: top, other: { n: otherN, subRows: rest }, total: items.length }
+  return { rows, total: items.length }
 }
 /** 展开的行（地区版名录）：local:科key / known:科key / local:__other__:科key */
 const expandedStat = ref('')
@@ -921,7 +917,7 @@ const masteredStats = computed(() => {
 })
 const statPct = (n: number, total: number) => (total ? Math.round((n / total) * 1000) / 10 : 0)
 /** 条形按「组内最大计数」缩放（总量的百分比对几十个科来说全是不满一格的小点，不可读） */
-const barMaxOf = (s: StatGroup) => Math.max(s.rows[0]?.n ?? 0, s.other.n, 1)
+const barMaxOf = (s: StatGroup) => s.rows[0]?.n ?? 1
 
 const provinceSources = computed(() =>
   (provinceIndex.value?.sources ?? []).map((s) => s.name).join(' · '),
@@ -1848,48 +1844,6 @@ function pickProvince(code: string) {
                   </RouterLink>
                 </div>
               </template>
-              <template v-if="activeGroup.other.n">
-                <div class="pvs-row">
-                  <button
-                    type="button"
-                    class="pvs-name"
-                    :aria-expanded="expandedStat === '__other__'"
-                    @click="toggleStatRow('__other__')"
-                  >
-                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === '__other__' }" :size="11" aria-hidden="true" />
-                    {{ t('region.pvStatsOther') }}
-                  </button>
-                  <span class="pvs-track">
-                    <span class="pvs-fill other" :class="{ mastered: activeSection === 'known' }" :style="{ width: `${statPct(activeGroup.other.n, barMaxOf(activeGroup))}%` }"></span>
-                  </span>
-                  <span class="pvs-n muted">{{ activeGroup.other.n }}</span>
-                </div>
-                <!-- 「其他」展开：阈值之下的小科/小属，组内再点开看鸟 -->
-                <template v-if="expandedStat === '__other__'">
-                  <template v-for="sub in activeGroup.other.subRows" :key="sub.key">
-                    <div class="pvs-row sub">
-                      <button
-                        type="button"
-                        class="pvs-name"
-                        :class="{ genus: statsGroupBy === 'genus' }"
-                        :title="sub.sci"
-                        :aria-expanded="expandedStat === `__other__:${sub.key}`"
-                        @click="toggleStatRow(`__other__:${sub.key}`)"
-                      >
-                        <ChevronRight class="pvs-caret" :class="{ open: expandedStat === `__other__:${sub.key}` }" :size="11" aria-hidden="true" />
-                        {{ sub.name }}<em v-if="sub.sci && statsGroupBy === 'family' && sub.name !== sub.sci">{{ sub.sci }}</em>
-                      </button>
-                      <span></span>
-                      <span class="pvs-n muted">{{ sub.n }}</span>
-                    </div>
-                    <div v-if="expandedStat === `__other__:${sub.key}`" class="pvs-species">
-                      <RouterLink v-for="it in sub.items" :key="it.slug" :to="`/species/${it.slug}`">
-                        {{ it.name }}
-                      </RouterLink>
-                    </div>
-                  </template>
-                </template>
-              </template>
             </div>
             <p class="pvs-note muted">{{ t('region.pvStatsNote') }}</p>
           </div>
@@ -2613,6 +2567,7 @@ function pickProvince(code: string) {
   gap: 6px;
   flex: 1;
   min-width: 0;
+  margin-right: 4px; /* 与右上角 × 拉开距离，避免误触（2026-11-01 用户反馈） */
 }
 .pv-tabs {
   display: inline-flex;

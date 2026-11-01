@@ -18,6 +18,13 @@ const CHAR_OVERRIDES = new Map([
   ['䴉', 'huan'], // 朱䴉(ibis,「鹮」的异体)
 ])
 
+/** 显示用带调读音补丁(与 CHAR_OVERRIDES 同源;读音据通行鸟类名录)。 */
+const DISPLAY_OVERRIDES = new Map([
+  ['䳍', 'gōng'],
+  ['䳭', 'jí'],
+  ['䴉', 'huán'],
+])
+
 /** 汉字判定:URO + 扩展 A + 扩展 B–H(含鸟名偶用的扩展区字,如 U+317D0 的「𱟐」类) */
 const HAN = /[\u3400-\u4dbf\u4e00-\u9fff\u{20000}-\u{323af}]/u
 
@@ -72,4 +79,35 @@ export function pinyinKey(name, onUnknown) {
   }
   if (unknown.length && onUnknown) onUnknown(unknown)
   return out
+}
+
+/**
+ * 中文名 → **带调、分词**的拼音显示串（2026-10-31 预习浮窗用）。
+ * 「白头鹎」→ "bái tóu bēi"（排序键 py 是无声调连写,不适合展示）。
+ * 与 pinyinKey 同源同坑:CHAR_OVERRIDES 的字走 DISPLAY_OVERRIDES 带调版;
+ * 未收录字回调上报;无汉字返回空串。
+ * @param {string} name 中文名
+ * @param {(chars: string[]) => void} [onUnknown] 无法读音的汉字回调
+ * @returns {string} 空格分词、带声调符号的拼音;失败/无汉字为空串
+ */
+export function pinyinDisplay(name, onUnknown) {
+  const chars = [...String(name || '').normalize('NFC')].filter((ch) => HAN.test(ch))
+  if (!chars.length) return ''
+  const text = chars.join('')
+  const unknown = []
+  const parts = pinyin(text, { toneType: 'symbol', type: 'array', nonZh: 'removed' })
+  const out = []
+  const push = (i, ch) => {
+    const override = DISPLAY_OVERRIDES.get(ch)
+    if (override) {
+      out.push(override)
+      return
+    }
+    const syl = parts.length === chars.length ? parts[i] : pinyin(ch, { toneType: 'symbol', type: 'array', nonZh: 'removed' })[0]
+    if (typeof syl === 'string' && /[a-z]/.test(syl)) out.push(syl)
+    else unknown.push(ch)
+  }
+  for (let i = 0; i < chars.length; i++) push(i, chars[i])
+  if (unknown.length && onUnknown) onUnknown(unknown)
+  return out.join(' ')
 }

@@ -17,6 +17,8 @@ export interface CatalogSpecies {
   zh?: string
   /** 拼音排序键（构建期预计算；无中文名或含未收录字时缺失） */
   py?: string
+  /** 带调分词拼音（显示用，「bái tóu bēi」；构建期 pinyinDisplay 生成） */
+  pyTone?: string
   /** 常见度档位（1 最常见 … 5 稀有；无值时缺失） */
   cm?: number
   image: boolean

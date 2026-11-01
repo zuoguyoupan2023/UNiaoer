@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { toAssetBuckets, toMeta, splitLargeBuckets } from './lib/manifest-layers.mjs'
 import { loadGbifUsageKeys } from './lib/gbif-keys.mjs'
 import { buildClassTable } from './lib/class-taxonomy.mjs'
-import { pinyinKey } from './lib/pinyin-key.mjs'
+import { pinyinDisplay, pinyinKey } from './lib/pinyin-key.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -144,6 +144,9 @@ function buildCatalog(poolEntries, idx) {
       rec.zh = sp.nameZh
       const py = pinyinKey(sp.nameZh, onUnknown)
       if (py) rec.py = py
+      // 带调分词拼音（显示用，「bái tóu bēi」；2026-10-31 预习浮窗拼音行）
+      const pyTone = pinyinDisplay(sp.nameZh, onUnknown)
+      if (pyTone) rec.pyTone = pyTone
     }
     const cm = optInt(sp.commonness)
     if (cm) rec.cm = cm

@@ -532,7 +532,7 @@ const en: typeof zhMessages = {
     parentCN: 'China (incl. HK/MO/TW)',
     pvRatio: '{pct}% of {parent} · {global}% of world',
     pvStatsNote:
-      'Counts species of the selected region (province filter applies); taxonomy from the AviList catalog; families with 10+ species are listed separately (3+ for genera), the rest go under Others (expandable); bars scale to the group max. My known only counts species marked within the selected region — birds you know from other regions are excluded (e.g. species you learned in Yunnan do not appear in the Shanghai list).',
+      'My known counts only species marked within the selected region.',
     hotspotEmpty: 'No birding spots for this region yet',
     hotspotOnEbird: 'View this hotspot on eBird',
     hotspotOfCountry: '({n} nationwide)',
@@ -751,7 +751,6 @@ const en: typeof zhMessages = {
       climber: 'Climber',
       terrestrial: 'Terrestrial bird',
       none: 'Not yet verified',
-      note: 'Lifestyle groups are shown only for species with manually verified records; unverified species are omitted, never guessed (the table keeps growing).',
     },
     group6Desc: {
       swimmer: 'Web-footed swimmers that feed on open water, such as ducks and geese, grebes and cormorants.',

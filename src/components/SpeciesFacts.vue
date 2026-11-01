@@ -43,7 +43,7 @@ const groupLabel = computed(() =>
  * 2026-10-31 用户定：该行**常显**——没有查证依据的鸟显示「暂无查证依据」而非整行消失
  * （用户问"为什么有的鸟六类型完全没有"）；点击行展开六类的含义说明 + 覆盖口径注记。
  */
-const GROUP6_LIST = ['swimmer', 'wader', 'woodland', 'raptor', 'climber', 'terrestrial'] as const
+const group6List = computed(() => props.profile?.group6 ?? [])
 const group6Label = computed(() => {
   const gs = props.profile?.group6
   if (!gs || !gs.length) return ''
@@ -112,17 +112,23 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
       </template>
       <dt>{{ t('species.group6.label') }}</dt>
       <dd>
-        <button type="button" class="g6-toggle" :aria-expanded="g6Open" @click="g6Open = !g6Open">
-          <span :class="{ none: !group6Label }">{{ group6Label || t('species.group6.none') }}</span>
+        <!-- 只解释该鸟自己的类型（2026-11-01 用户定）：点开只出这一两只的含义，不铺六类全表 -->
+        <button
+          v-if="group6List.length"
+          type="button"
+          class="g6-toggle"
+          :aria-expanded="g6Open"
+          @click="g6Open = !g6Open"
+        >
+          <span>{{ group6Label }}</span>
           <ChevronDown class="chev" :class="{ open: g6Open }" :size="13" aria-hidden="true" />
         </button>
-        <!-- 点击展开六类含义（含覆盖口径注记，解释"为什么有的鸟没有"） -->
-        <div v-if="g6Open" class="g6-legend">
-          <p v-for="g in GROUP6_LIST" :key="g" class="g6-item">
+        <span v-else class="g6-none">{{ t('species.group6.none') }}</span>
+        <div v-if="g6Open && group6List.length" class="g6-legend">
+          <p v-for="g in group6List" :key="g" class="g6-item">
             <strong>{{ t(`species.group6.${g}`) }}</strong>
             <span>{{ t(`species.group6Desc.${g}`) }}</span>
           </p>
-          <p class="g6-note muted">{{ t('species.group6.note') }}</p>
         </div>
       </dd>
       <template v-if="migrationLabel">
@@ -225,7 +231,7 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
 .g6-toggle:hover span:not(.none) {
   text-decoration: underline;
 }
-.g6-toggle .none {
+.g6-none {
   color: var(--text-light);
 }
 .g6-toggle .chev {
@@ -257,11 +263,6 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
 .g6-item strong {
   color: var(--primary-dark);
   font-size: 0.78rem;
-}
-.g6-note {
-  margin: 4px 0 0;
-  font-size: 0.68rem;
-  line-height: 1.6;
 }
 .countries {
   margin-top: 4px;
