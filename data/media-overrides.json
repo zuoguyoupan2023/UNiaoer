@@ -499,7 +499,7 @@
       ]
     },
     "sibirionetta-formosa": {
-      "_reason": "2026-11-02 用户反馈「花脸鸭的图看不清，不合适做题目」。取证（逐张看图）：image-1（obs 258891519 / Fern Sibley Wexler）是手机远摄截图，鸟仅占画面中央一小块、严重模糊且上下带截图黑边，而它正是题目首图（D1 img_url）；image-5（obs 81157597 / hugnature）是开阔水面远景，花脸鸭仅数十像素且与赤颈鸭、红嘴鸥混杂。image-2（Paul Werner Süss，雄鸟站枝，羽色特征清晰）、image-3（김대환/이선미，雄鸟展翅+雌鸟同框）、image-4（fangchen，雄鸟近景侧身）三张合格且特征清楚。处置：停用 1/5，把 2/3/4 三张重新取材到从未占用的 key image-6/7/8（顺序=Paul Werner→김대환→fangchen），首图由 image-1 变为 image-6。之所以重新物化而非直接挪旧 key：管线按索引复用素材，排除前面的图会错位，直接重排会覆盖 image-1/2/3 这些已发布 URL（干跑实测，违反 SOP 铁律 1）。旧 1–5 对象保留在 R2 备查。",
+      "_reason": "2026-11-02 用户反馈「花脸鸭的图看不清，不合适做题目」。取证（逐张看图）：image-1（obs 258891519 / Fern Sibley Wexler）是手机远摄截图，鸟仅占画面中央一小块、严重模糊且上下带截图黑边，而它正是题目首图（D1 img_url）；image-5（obs 81157597 / hugnature）是开阔水面远景，花脸鸭仅数十像素且与赤颈鸭、红嘴鸥混杂。image-2（Paul Werner Süss，雄鸟站枝，羽色特征清晰）、image-3（김대환/이선미，雄鸟展翅+雌鸟同框）、image-4（fangchen，雄鸟近景侧身）三张合格且特征清楚。处置：停用 1/5，把 2/3/4 三张重新取材到从未占用的 key image-6/7/8（顺序=Paul Werner→김대환→fangchen），另补 2 张新图（obs 261253086 莲子／obs 286495375 Hiroki Shudo，均 2048px、冰面站姿与阳光侧身）作为 image-9/10，凑足与其他物种一致的 5 张；首图由 image-1 变为 image-6。之所以重新物化而非直接挪旧 key：管线按索引复用素材，排除前面的图会错位，直接重排会覆盖 image-1/2/3 这些已发布 URL（干跑实测，违反 SOP 铁律 1）。旧 1–5 对象保留在 R2 备查。",
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/464604149/large.jpg",
         "https://www.inaturalist.org/observations/258891519",
@@ -547,6 +547,22 @@
           "source": "iNaturalist",
           "sourceUrl": "https://www.inaturalist.org/observations/340753218",
           "sourceId": "620163064"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/469320395/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) 莲子, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/261253086",
+          "sourceId": "469320395"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/515057258/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Hiroki Shudo, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/286495375",
+          "sourceId": "515057258"
         }
       ]
     }
