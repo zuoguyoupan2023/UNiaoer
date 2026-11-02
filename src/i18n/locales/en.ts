@@ -1270,6 +1270,12 @@ const en: typeof zhMessages = {
       desc: 'Flip & match · photo ↔ name · stopwatch, no time limit',
       descAudio: 'Flip & match · sound ↔ name · stopwatch, no time limit',
     },
+    // 099 S1 (standalone mode, S1_ENABLED=false, not live yet; copy is a placeholder until launch)
+    s1: {
+      label: 'S1 Look-alike Challenge',
+      desc: '6 options · all from one colour group (e.g. "red-tailed") · 15s limit · options hidden for 2s',
+      descAudio: '6 options · all from one colour group (e.g. "red-tailed") · 25s limit · options hidden for 2s',
+    },
   },
   badges: {
     series: {

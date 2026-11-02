@@ -29,6 +29,9 @@ const WHITELIST = [
   // ⚠️ 临时预览页（2026-10-09，A3 新手池实测用，用完即删）：一次性诊断界面，不值得投入 i18n。
   // 删除时同步移除本条目（见该文件头部"删除清单"）。
   { file: 'views/DevStarterPreviewView.vue', line: 0, reason: '临时实测页（A3），用完即删' },
+  // 099 第一批（2026-11-03）：名字解析受控词表——颜色/部位字表是纯数据（nameTokens.ts），
+  // 只参与干扰项分组运算，任何一字都不渲染到 UI；docs/099 §2.6.2 有词级对应表。
+  { file: 'core/nameTokens.ts', line: 0, reason: '099 名字 token 受控词表（纯数据非文案）' },
 ]
 
 const CJK = /[\u4e00-\u9fff\u3400-\u4dbf]/

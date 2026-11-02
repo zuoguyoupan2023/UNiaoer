@@ -6,6 +6,7 @@ import {
   buildQuestions,
   buildInputQuestions,
   buildNameQuestions,
+  buildSimilarQuestions,
   filterByNameMode,
   speciesPlayable,
 } from '@/core/questionEngine'
@@ -439,13 +440,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       } else {
         regionTiers = (await loadGlobalTierMap().catch(() => null))?.tiers ?? null
       }
-      // 087 §4.8 + 089 §6 + 092：L6=名字→图/音；L7=图/音→输入；L8=记忆翻牌配对。
-      // 同一介绍页/赛制/池子语义，仅玩法分支。
-      // 097（2026-10-29 用户定：L6/L7 取满）：L6/L8 的引擎不接 regionTiers 参数，
+      // 087 §4.8 + 089 §6 + 092 + 099：L6=名字→图/音；L7=图/音→输入；L8=记忆翻牌配对；
+      // S1(9)=相似种挑战（经典形态、严格同组，独立模式不上架，docs/099 §3.2）。
+      // 同一介绍页/赛制/池子语义，仅模式分支。
+      // 097（2026-10-29 用户定：L6/L7 取满）：L6/L8/L9 的引擎不接 regionTiers 参数，
       // 但"选了省就不能出省外的鸟"对所有档位成立 → 在这里先做**表内剔除**（不筛常见度），
       // 与介绍页计数（regionScopeInfo）同口径。L7 走 buildInputQuestions 自带 regionTiers，
       // 且 TIERS[7].commonness 已改取满（十档制 [1-10]）。
-      if ((tier.value === 6 || tier.value === 8) && regionTiers?.size) {
+      if ((tier.value === 6 || tier.value === 8 || tier.value === 9) && regionTiers?.size) {
         speciesForBuild = speciesForBuild.filter((sp) => regionTiers.has(sp.id))
       }
       const qs =
@@ -481,7 +483,18 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
                     buildStats.v = s
                   },
                 })
-              : await buildQuestions(speciesForBuild, {
+              : tier.value === 9 && type === 'image'
+                ? await buildSimilarQuestions(speciesForBuild, {
+                    type,
+                    count,
+                    speciesPool,
+                    locale: currentLocale(),
+                    nameMode: nameMode.value,
+                    onStats: (s) => {
+                      buildStats.v = s
+                    },
+                  })
+                : await buildQuestions(speciesForBuild, {
             type,
             count,
             tier: tier.value,
@@ -574,7 +587,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
     sessionRound.value += 1
     pendingContinue.value = true
     // 092：记忆挑战鸟（tier=8）不参与自适应升降——suggestTier 只懂 1–5，
-    // 从 L8 出发会把"再来一轮"降到别的档，玩法直接变了。其它档位行为不变。
+    // 从 L8 出发会把"再来一轮"降到别的档，模式直接变了。其它档位行为不变。
     if (useSettingsStore().adaptiveTier && tier.value !== 8) {
       const s = await tierSuggestion(mode.value, tier.value)
       tier.value = s.tier

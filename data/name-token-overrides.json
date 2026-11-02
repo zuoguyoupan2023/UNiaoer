@@ -1,0 +1,4 @@
+{
+  "_comment": "099 §3.8：名字 token 的人工修正表。键 = 物种 slug（catalog.json/manifest-meta 的 id）。三类不一致：①解析误切/漏配 ②名字与图像不符（历史俗名误称）③名字与注释不符（图像侧走 057 model-label-overrides + 000-SOP，本表只管名字 token）。add/remove 用 [canonical色, canonical部位] 二元组（色见 src/core/nameTokens.ts CANONICAL_COLORS 11 色；部位见 CANONICAL_PARTS 或 '全身'）。条目必须带 reason（不一致类型 + 出处，对齐 000-SOP 取证要求）。第三批（视觉归类，用户 2026-11-03 定）条目加 \"src\": \"visual\"。优先级：overrides > 解析器。",
+  "_note": "校验：validateOverrides（src/core/nameTokens.ts）在 npm test 里跑——speciesId 存在 / token 在受控词表 / add-remove 不冲突 / reason 非空。修改流程：加条目 → 本地重建/自测 → git commit 由用户决定（铁律 8/9）。"
+}

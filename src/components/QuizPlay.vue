@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { TIMEOUT, useQuizStore, type RegimeCounts } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
@@ -10,7 +10,7 @@ import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
 import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
-import { L8_ENABLED, TIER_LIST, TIERS } from '@/core/difficulty'
+import { L8_ENABLED, S1_ENABLED, TIER_LIST, TIERS, isSpecialModeTier } from '@/core/difficulty'
 import { useMediaGate } from '@/composables/useMediaGate'
 import type { TierSuggestion } from '@/core/adaptive'
 import {
@@ -64,6 +64,7 @@ import SpeciesGallery from './SpeciesGallery.vue'
 
 const props = defineProps<{ type: MediaType }>()
 const router = useRouter()
+const route = useRoute()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
@@ -219,8 +220,22 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
 // L8 未上线（difficulty.L8_ENABLED）时忽略已存的第八档：介绍页没有该按钮，
 // 不回退会直接出现 L8 盘面选择并可开轮。2 = quiz store 默认档。
+// S1（9，docs/099）同规则：未上架（S1_ENABLED=false）时忽略已存的第九档。
 const restoredTier = savedTier.value ?? quiz.tier
-const tier = ref<Tier>(restoredTier === 8 && !L8_ENABLED ? 2 : restoredTier)
+const tier = ref<Tier>(
+  restoredTier === 8 && !L8_ENABLED ? 2 : restoredTier === 9 && !S1_ENABLED ? 2 : restoredTier,
+)
+// 隐藏档测试直达（docs/099 §7.4）：?tier=8 / ?tier=9 进入未上架档位——
+// 介绍页无按钮（TIER_LIST 不含），此入口不写设置（不 persist），正常用户不可见。
+// S1 仅看图：颜色/花纹是视觉维度，听音无意义（docs/099 §3.2）
+const queryTier = Number(route.query.tier)
+if (queryTier === 8 || (queryTier === 9 && props.type === 'image')) tier.value = queryTier
+/** 介绍页档位卡：隐藏测试档被 ?tier 直达选中时把它的卡片也显示出来（否则无选中态，看不出生效） */
+const introTierList = computed<(typeof TIER_LIST)[number][]>(() => {
+  const t = tier.value
+  if ((t === 8 && !L8_ENABLED) || (t === 9 && !S1_ENABLED)) return [...TIER_LIST, TIERS[t]]
+  return TIER_LIST
+})
 /** D5：介绍页的档位推荐提示（用户手动改档后清除） */
 const adaptiveHint = ref<TierSuggestion | null>(null)
 // 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）
@@ -521,8 +536,9 @@ async function initIntro() {
     quiz.regime = vis[0]!.id
     persistRegime(quiz.regime)
   }
-  // D5 自适应难度：按最近表现推荐档位（不改用户记忆的档位以外的行为；手动可改回）
-  if (settings.adaptiveTier) {
+  // D5 自适应难度：按最近表现推荐档位（不改用户记忆的档位以外的行为；手动可改回）。
+  // 隐藏测试档（?tier=8/9，docs/099 §7.4）不做自适应——推荐会把测试档覆盖回常规档。
+  if (settings.adaptiveTier && TIER_LIST.some((t) => t.tier === tier.value)) {
     try {
       const s = await quiz.tierSuggestion(props.type, tier.value)
       if (s.change !== 'stay') {
@@ -832,8 +848,8 @@ async function begin() {
   })
   if (quiz.error || !quiz.questions.length) return // 错误区接管
   if (quiz.tier === 8) return // 记忆挑战鸟：盘面素材由 QuizPlayMemory 自预热（缩略图）
-  preloadQuestions(quiz.questions, 0, quiz.tier >= 6 ? 2 : 4)
-  if (quiz.tier >= 6) return // L6/L7 的计时起点由各自答题组件挂载时启动
+  preloadQuestions(quiz.questions, 0, isSpecialModeTier(quiz.tier) ? 2 : 4)
+  if (isSpecialModeTier(quiz.tier)) return // L6/L7 的计时起点由各自答题组件挂载时启动（S1=9 走经典计时）
   beginQuestionTiming()
   updateInterference()
 }
@@ -946,7 +962,7 @@ function updateInterference() {
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
-  if (quiz.pendingContinue && quiz.questions.length > 0 && quiz.tier >= 6) {
+  if (quiz.pendingContinue && quiz.questions.length > 0 && isSpecialModeTier(quiz.tier)) {
     // 087 §4.8：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
     // QuizPlayName 消费（计时/预载由它做），经典链路不碰。
     started.value = true
@@ -977,7 +993,7 @@ onUnmounted(() => {
 watch(
   () => quiz.index,
   (i) => {
-    if (quiz.tier >= 6) return // 087 §4.8/089：L6/L7 由各自答题组件自管（计时/预载）
+    if (isSpecialModeTier(quiz.tier)) return // 087 §4.8/089：L6/L7 由各自答题组件自管（计时/预载）；S1(9) 走经典链路
     clearAutoNext()
     cancelledThisQuestion.value = false
     advancedAt = nowMs() // 幽灵点击静默期起点
@@ -990,7 +1006,7 @@ watch(
 watch(
   () => quiz.answered,
   (a) => {
-    if (quiz.tier >= 6) return // 089：L6/L7 的作答反馈/自动切题由各自答题组件管
+    if (isSpecialModeTier(quiz.tier)) return // 089：L6/L7 的作答反馈/自动切题由各自答题组件管；S1(9) 走经典链路
     if (a) {
       stopTimer()
       scheduleAutoNext()
@@ -1008,14 +1024,14 @@ watch(
 watch(
   () => quiz.finished,
   (f) => {
-    // 087 §4.8：L6 的完成跳转由 QuizPlayName 自己做（避免双跳）
-    if (f && quiz.tier < 6) router.push('/result')
+    // 087 §4.8：L6 的完成跳转由 QuizPlayName 自己做（避免双跳）；S1(9) 是经典形态，照常跳转
+    if (f && !isSpecialModeTier(quiz.tier)) router.push('/result')
   },
 )
 
 function onKey(e: KeyboardEvent) {
-  // 087 §4.8：L6 答题中快捷键由 QuizPlayName 处理（它的选项是媒体，键位语义不同）
-  if (quiz.current && quiz.current.tier >= 6) return
+  // 087 §4.8：L6 答题中快捷键由 QuizPlayName 处理（它的选项是媒体，键位语义不同）；S1(9) 走经典键位
+  if (quiz.current && isSpecialModeTier(quiz.current.tier)) return
   // 弹层打开时答题快捷键让位；带修饰键的组合（如 Cmd/Ctrl+A）不是答题意图
   if (showNameModal.value || showReport.value) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -1136,7 +1152,7 @@ function onTouchEnd(e: TouchEvent) {
     <p class="step-cap"><i class="step-no">1</i>{{ t('quiz.stepLevel') }}</p>
     <div class="tiers">
       <button
-        v-for="cfg in TIER_LIST"
+        v-for="cfg in introTierList"
         :key="cfg.tier"
         class="tier"
         :class="{ on: tier === cfg.tier }"
@@ -1146,8 +1162,8 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ tierDescOf(cfg) }}</span>
       </button>
     </div>
-    <!-- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名/学名）——高两档+记忆档显示，不计步骤号 -->
-    <template v-if="tier >= 6">
+    <!-- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名/学名）——高两档+记忆档显示，不计步骤号；S1(9) 经典形态无卷别切换 -->
+    <template v-if="isSpecialModeTier(tier)">
       <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
       <div class="tiers l6-mode">
         <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">

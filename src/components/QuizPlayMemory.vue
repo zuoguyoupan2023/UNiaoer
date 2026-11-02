@@ -3,7 +3,7 @@
  * L8 记忆挑战鸟答题区（docs/092）——**纯答题组件**，与 QuizPlayName/QuizPlayInput 同构：
  * QuizPlay 在 `quiz.tier === 8` 时挂载；介绍页与开轮（quiz.start → buildMemoryQuestions）都在 QuizPlay。
  *
- * 玩法（2026-10-27 用户定稿）：12 对「图/音 ↔ 鸟名」合区 4×6 打乱（窄屏 3×8，对数不变）；
+ * 模式（2026-10-27 用户定稿）：12 对「图/音 ↔ 鸟名」合区 4×6 打乱（窄屏 3×8，对数不变）；
  * 点开两张牌，同物种即配上、永久翻开，配不上盖回（位置不变）。
  *
  * 计分（docs/092 §4）：**纯正计时**——从第一张翻开设表，到最后一对配对成功停表；
@@ -318,7 +318,7 @@ const shortRoundNote = computed(() => {
   return t('memory.shortRound', { built: d.built, want: d.want })
 })
 
-// ---- 署名：12 对素材的合并署名行（许可义务不因玩法改变，铁律 5） ----
+// ---- 署名：12 对素材的合并署名行（许可义务不因模式改变，铁律 5） ----
 const attributions = computed(() => {
   const seen = new Set<string>()
   const list: { source: string; author: string; license: string; href: string }[] = []

@@ -2,6 +2,7 @@ import type { MediaAsset, MediaType, NameMode, Question, Tier } from '@/types'
 import { speciesName, loadSpeciesAssets, type BankSpecies } from './bank'
 import { TIERS, L6_TIERS, L7_TIERS, timeLimitFor, type DistractorStrategy } from './difficulty'
 import { isStarterBird } from './starterBirds'
+import { speciesTokens } from './nameTokens'
 
 /** 072-a 观测：组题过程的计数（只用于诊断，不参与判定） */
 export interface BuildStats {
@@ -81,6 +82,46 @@ export interface DistractorPair {
   name: string
 }
 
+/**
+ * 099 §3.1 nameSimilar 回退链的候选排序（供经典卷与 L6 共用）：
+ * ①同 (色，部位) 组 → ②同色不同部位 → ③同科 → ④其余；桶内各自洗牌。
+ * token 来自中英并集 + overrides（nameTokens.speciesTokens，带缓存）。
+ */
+function orderNameSimilar(target: BankSpecies, others: BankSpecies[]): BankSpecies[] {
+  const targetTokens = speciesTokens(target)
+  const targetKeys = new Set(targetTokens.map((t) => `${t.color}|${t.part}`))
+  const targetColors = new Set(targetTokens.map((t) => t.color))
+
+  const sameGroup: BankSpecies[] = []
+  const sameColor: BankSpecies[] = []
+  const sameFam: BankSpecies[] = []
+  const rest: BankSpecies[] = []
+  for (const s of others) {
+    let placed = false
+    for (const t of speciesTokens(s)) {
+      if (targetKeys.has(`${t.color}|${t.part}`)) {
+        sameGroup.push(s)
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      for (const t of speciesTokens(s)) {
+        if (targetColors.has(t.color)) {
+          sameColor.push(s)
+          placed = true
+          break
+        }
+      }
+    }
+    if (!placed) {
+      if (s.family && s.family === target.family) sameFam.push(s)
+      else rest.push(s)
+    }
+  }
+  return [...shuffle(sameGroup), ...shuffle(sameColor), ...shuffle(sameFam), ...shuffle(rest)]
+}
+
 /** 按策略选出干扰项（去重，不含答案；nameOf 决定选项语种，缺省中文名） */
 export function pickDistractorPairs(
   target: BankSpecies,
@@ -101,6 +142,9 @@ export function pickDistractorPairs(
     ordered = [...shuffledDiff, ...shuffledSame]
   } else if (strategy === 'same') {
     ordered = [...shuffledSame, ...shuffledDiff]
+  } else if (strategy === 'nameSimilar') {
+    // 099 第一批：token 相似优先，同科保留在回退链第③层
+    ordered = orderNameSimilar(target, others)
   } else {
     // mixed：先放 1 个同科，再跨科，最后补同科
     const head = shuffledSame.slice(0, 1)
@@ -440,11 +484,14 @@ export async function buildNameQuestions(
     const answerAssets = assetsOf(answerResolved, type)
     if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 跳过该候选
 
-    // 干扰项候选：同科优先（same），轮内已当过答案的种排后面但不排除（经典卷同语义）
+    // 干扰项候选排序：L6 固定 same（同科优先，081 §7「多选项都是同科鸟」；
+    // 2026-11-03 用户拍板 token 相似不进 L6——那是独立模式 S1（buildSimilarQuestions））。
+    // 轮内已当过答案的种排后面但不排除（经典卷同语义）。
     const others = distractorList.filter((s) => s.id !== answerSp.id)
     const same = shuffle(others.filter((s) => s.family && s.family === answerSp.family))
     const diff = shuffle(others.filter((s) => !(s.family && s.family === answerSp.family)))
-    const candidates = [...same, ...diff]
+    const candidates =
+      cfg.distractor === 'nameSimilar' ? orderNameSimilar(answerSp, others) : [...same, ...diff]
 
     // 分批解析候选素材（分片按桶缓存，跨题复用）；先取需要量的 2 倍补偿取不到的
     const need = cfg.optionCount - 1
@@ -513,6 +560,122 @@ function fillDistractorsInMode(
     picked.push({ id: s.id, name, media: assets[0]! })
   }
   return picked
+}
+
+// ---------------------------------------------------------------------------
+// S1 相似种挑战（docs/099 §3.2 组专项卷；独立模式 tier 9，S1_ENABLED 控制上架——
+// 2026-11-03 用户拍板：token 相似**不混入** L1–L8 任何档位，做成独立模式排在 L8 后）。
+// ---------------------------------------------------------------------------
+
+export interface BuildSimilarOptions {
+  type: MediaType
+  count?: number
+  /** 选项名语种（经典卷同语义；缺省按 locale 推断） */
+  locale?: string
+  /** 卷别（缺省按 locale 推断：'en' → en，否则 zh） */
+  nameMode?: NameMode
+  /**
+   * 赛制选题池（013 §4，与经典卷同语义）：**答案只出池内，干扰项仍取全池同组**
+   * （组内同伴不受池收窄——组是这个模式的前提，收窄组会直接出不了题）。
+   */
+  speciesPool?: ReadonlySet<string>
+  /** 072-a 观测（与经典卷同语义） */
+  onStats?: (s: BuildStats) => void
+}
+
+/**
+ * 构建一轮 S1 题（媒体作题干 → 名字选项，**全部选项来自同一名字 token 组**）。
+ *
+ * 组语义（099 §3.0）：token = 中文名 ∪ 英文名解析 + overrides（含第三批视觉归类），
+ * 按 (色，部位) 精确匹配——「红尾组」= 北红尾鸲/红尾水鸲/红尾鸫…。
+ * 答案资格：当前池内同组同伴 ≥ optionCount-1（含自身 ≥ optionCount）；一鸟多组取最大组。
+ * **严格同组、无回退**（099 §3.2：组内不足 → 该种不出题，宁缺毋滥；这是独立模式的卖点，
+ * 与 nameSimilar 策略的分级回退不同）。
+ * 复用经典卷链路：nameMode 过滤在前（051 S1）、mediaPool、ensureMedia 按需补素材；
+ * 不走地区档位/赛制池/新手池/自适应（独立模式，与 L6 同构）。
+ */
+export async function buildSimilarQuestions(
+  bank: BankSpecies[],
+  opts: BuildSimilarOptions,
+): Promise<Question[]> {
+  const { type, count = 10, locale, nameMode = locale === 'en' ? 'en' : 'zh', onStats } = opts
+  const cfg = TIERS[9]
+  const pool = filterByNameMode(mediaPool(bank, type), nameMode)
+
+  // 组内计数：tokenKey → 池内种列表（一鸟可属多组，进多个桶）
+  const byToken = new Map<string, BankSpecies[]>()
+  for (const s of pool) {
+    for (const t of speciesTokens(s)) {
+      const k = `${t.color}|${t.part}`
+      const list = byToken.get(k)
+      if (list) list.push(s)
+      else byToken.set(k, [s])
+    }
+  }
+
+  // 答案资格：最大组 ≥ optionCount（099 §3.2「组规模 < 门槛不出题」）
+  // 赛制池（013 §4）：答案只出池内；组内同伴仍取全池（本模式前提，见 BuildSimilarOptions）
+  const answerCandidates = opts.speciesPool ? pool.filter((s) => opts.speciesPool!.has(s.id)) : pool
+  interface SimilarPick { answer: BankSpecies; mates: BankSpecies[] }
+  const answerPicks: SimilarPick[] = []
+  const seenIds = new Set<string>()
+  for (const s of answerCandidates) {
+    if (seenIds.has(s.id)) continue
+    seenIds.add(s.id)
+    const tokens = speciesTokens(s)
+    if (!tokens.length) continue
+    let bestMates: BankSpecies[] | null = null
+    for (const t of tokens) {
+      const members = byToken.get(`${t.color}|${t.part}`)!
+      const mates = members.filter((m) => m.id !== s.id)
+      if (mates.length + 1 >= cfg.optionCount && (!bestMates || mates.length > bestMates.length)) {
+        bestMates = mates
+      }
+    }
+    if (bestMates) answerPicks.push({ answer: s, mates: bestMates })
+  }
+
+  const want = Math.min(count, answerPicks.length)
+  onStats?.({ candidates: bank.length, unique: answerPicks.length, enriched: 0, want })
+
+  const questions: Question[] = []
+  const otherType: MediaType = type === 'image' ? 'audio' : 'image'
+  for (const pick of shuffle(answerPicks)) {
+    if (questions.length >= want) break
+    const resolved = await ensureMedia(pick.answer, type)
+    const answerAssets = assetsOf(resolved, type)
+    if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 换下一个候选
+    const answerName = speciesName(resolved, locale)
+    const used = new Set<string>([answerName])
+    const distractors: { id: string; name: string }[] = []
+    for (const mate of shuffle(pick.mates)) {
+      if (distractors.length >= cfg.optionCount - 1) break
+      const name = speciesName(mate, locale)
+      if (!name || used.has(name)) continue // 选项名去重（used 含答案名，经典卷同则）
+      used.add(name)
+      distractors.push({ id: mate.id, name })
+    }
+    if (distractors.length < cfg.optionCount - 1) continue // 去重后不足一个整题 → 换候选
+    const optionPairs = shuffle([{ id: resolved.id, name: answerName }, ...distractors])
+    questions.push({
+      id: `${resolved.id}-${type}-${questions.length}-s1`,
+      tier: 9,
+      type,
+      media: answerAssets[0]!,
+      assets: answerAssets,
+      crossAssets: assetsOf(resolved, otherType),
+      answer: answerName,
+      sci: resolved.nameSci,
+      nameMode,
+      family: resolved.family,
+      options: optionPairs.map((p) => p.name),
+      optionIds: optionPairs.map((p) => p.id),
+      answerMode: 'choice',
+      timeLimitSec: timeLimitFor(cfg, type),
+    })
+    onStats?.({ candidates: bank.length, unique: answerPicks.length, enriched: questions.length, want })
+  }
+  return questions
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,13 @@
 import type { MediaType, Tier } from '@/types'
 
-export type DistractorStrategy = 'cross' | 'mixed' | 'same'
+/**
+ * 干扰项策略：
+ * - cross：跨科优先（易）；mixed：1 同科打头 + 跨科 + 同科补；same：同科为主（L6 语义）。
+ * - nameSimilar：**名字 token 相似优先**（099 §3.1 回退链：同组→同色→同科→其余）。
+ *   ⚠️ 2026-11-03 用户拍板：token 相似**不混入** L1–L8 任何档位——它是独立模式 S1
+ *   （TIERS[9]，见下）。引擎保留该策略供 S1 系模式与未来分组题使用，现有档位零变化。
+ */
+export type DistractorStrategy = 'cross' | 'mixed' | 'same' | 'nameSimilar'
 
 export interface TierConfig {
   tier: Tier
@@ -112,7 +119,7 @@ export const TIERS: Record<Tier, TierConfig> = {
   },
   /**
    * L6 半鸟人（docs/081 §7；README「计划中的题型」；2026-10-24 用户定：**就是难度第六档**，
-   * 与 L1–L5 同列，不做独立题型）。玩法是「名字 → 图/音」（引擎走 buildNameQuestions，
+   * 与 L1–L5 同列，不做独立题型）。模式是「名字 → 图/音」（引擎走 buildNameQuestions，
    * 选项数/限时按题型取 L6_TIERS），本条目供档位按钮/状态栏/结果页标签与类型完备；
    * 其余字段是"代表值"。
    * 097（2026-10-30 十档制）：commonness **取满 [1-10]**——L6 引擎本就不按常见度筛，
@@ -149,7 +156,7 @@ export const TIERS: Record<Tier, TierConfig> = {
    * L8 记忆挑战鸟（docs/092；2026-10-27 定稿）：翻牌配对（第八档）。
    * 12 对「图/音 ↔ 鸟名」合区 4×6 盘面；纯正计时 + 三档评语（memoryRating.ts），
    * 无限时、无选项、不进错题本、不参与称号与徽章（getStats/evaluate* 跳过 tier 8）。
-   * optionCount/distractor/timeLimitSec 为类型完备的代表值，玩法不使用；
+   * optionCount/distractor/timeLimitSec 为类型完备的代表值，模式不使用；
    * 每对只用首选素材（标准照/最佳录音）；常见度全开——难度梯度只在名称体系（zh/en vs sci）。
    * 097（2026-10-30 十档制）：commonness 对齐取满 [1-10]，与"该地鸟种×100%"的计数标注一致。
    */
@@ -160,6 +167,28 @@ export const TIERS: Record<Tier, TierConfig> = {
     optionCount: 2, // 每对 2 张牌；代表值（记忆翻牌无选项）
     distractor: 'same',
     commonness: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // 097 十档制：取满 100%
+    mediaPoolSize: 1,
+  },
+  /**
+   * 9 = S1 相似种挑战（docs/099 §3.2 组专项卷；2026-11-03 用户拍板：**独立模式**，
+   * 排在未发布的 L8 之后，绝不混入 L1–L8 的干扰项策略）。
+   * 模式：经典形态（媒体作题干、名字作选项），但**答案与全部干扰项来自同一名字 token 组**
+   * （同 (色，部位)，如「红尾组」：北红尾鸲/红尾水鸲/红尾鸫…）——严格同组，无同科/同色回退
+   * （要的就是「组内辨认」的难度；组内不足 optionCount 的种不出题）。
+   * 预习闭环：098 预习集（红尾组）→ S1 检验（只考红尾组）。
+   * 无地区档位/赛制池/自适应/新手池（独立模式，与 L6 同构）；限时给足（组内辨认比同科更难）。
+   * 上架走 S1_ENABLED（与 L8_ENABLED 同模式，launch 时改 true 即可）。
+   */
+  9: {
+    tier: 9,
+    labelKey: 'difficulty.s1.label',
+    descKey: 'difficulty.s1.desc',
+    optionCount: 6,
+    distractor: 'nameSimilar', // 代表值：S1 实际走 buildSimilarQuestions 的严格同组选取（不走该字段）
+    timeLimitSec: 15,
+    timeLimitSecAudio: 25,
+    optionRevealSec: 2,
+    commonness: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // 097 十档制：取满 100%（独立模式不做常见度筛选）
     mediaPoolSize: 1,
   },
 }
@@ -173,15 +202,33 @@ export function timeLimitFor(cfg: TierConfig, type: MediaType): number | undefin
 }
 
 /**
+ * 特殊模式档（答题交互由各自嵌入组件自管，不走经典选择链路）：L6 半鸟人 / L7 输入 /
+ * L8 记忆翻牌。**S1（9）是经典选择形态，不算特殊模式**——QuizPlay 里所有「tier >= 6」
+ * 的行为分支（计时起点/续轮/作答反馈/完成跳转/快捷键）一律改用本函数判断，
+ * 否则 tier 9 会被误当成 L6/L7 而不计时、不反馈。
+ */
+export function isSpecialModeTier(t: Tier): boolean {
+  return t === 6 || t === 7 || t === 8
+}
+
+/**
  * L8 记忆挑战鸟正式上线开关（2026-10-28）：
  * - false = 介绍页难度按钮**不上架第八档**（看图/听音同），已存的「上次档位 = 8」
- *   在介绍页回退默认档（QuizPlay）；玩法代码与数据链路全部保留，本地历史里的
+ *   在介绍页回退默认档（QuizPlay）；模式代码与数据链路全部保留，本地历史里的
  *   L8 记录照常显示（不伪造用户数据）。
  * - 正式推出时：改回 true 重新构建即可，无其他改动。
  */
 export const L8_ENABLED = false
 
-/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6；L8 = 092） */
+/**
+ * S1 相似种挑战上架开关（docs/099；2026-11-03 建档）：
+ * - false = 介绍页**不上架**（模式/引擎/配置已就绪，与 L8_ENABLED 同模式）；
+ *   已存的「上次档位 = 9」在介绍页回退默认档（上线时由 QuizIntro 处理，模式照抄 L8）。
+ * - 正式推出时改 true 重新构建即可；UI 接线（QuizIntro/QuizPlay 分支）在 launch 任务里做。
+ */
+export const S1_ENABLED = false
+
+/** 介绍页难度按钮（L6/L7 = 第六/第七档，与 L1–L5 同列；087 §4.8 / 089 §6；L8 = 092；S1 = 099，排在 L8 后） */
 export const TIER_LIST: TierConfig[] = [
   TIERS[1],
   TIERS[2],
@@ -191,6 +238,7 @@ export const TIER_LIST: TierConfig[] = [
   TIERS[6],
   TIERS[7],
   ...(L8_ENABLED ? [TIERS[8]] : []),
+  ...(S1_ENABLED ? [TIERS[9]] : []),
 ]
 
 /**
@@ -231,8 +279,8 @@ export const MEMORY_DEFAULT_BOARD: MemoryBoardKind = 'standard'
 /**
  * L6 半鸟人的分题型配置（docs/081 §7 + README，2026-10-24 修订）：
  *   看图版：6 个图像选项，限时 15s（10→15，用户 2026-10-24 定）；听音版：4 个声音选项，限时 20s。
- * 干扰项策略固定 same（同科为主，「多选项都是同科鸟」）；选项素材都取首选
- * （媒体池大小 1：标准照/最佳录音，识别题不做姿态随机）。
+ * 干扰项策略固定 same（同科为主，「多选项都是同科鸟」；2026-11-03 用户拍板：token 相似
+ * **不进 L6**，见 DistractorStrategy 注释）。选项素材都取首选（媒体池大小 1）。
  */
 export const L6_TIERS: Record<MediaType, { optionCount: number; timeLimitSec: number; distractor: DistractorStrategy }> = {
   image: { optionCount: 6, timeLimitSec: 15, distractor: 'same' },

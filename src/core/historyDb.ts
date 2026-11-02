@@ -741,7 +741,7 @@ function maxStreak(items: RoundItem[]): number {
 /** 汇总统计（活动档；用于徽章判定与"我的"页面） */
 export async function getStats(): Promise<Stats> {
   const [allRounds, wrong] = await Promise.all([listRounds(), getWrongBook()])
-  // 092 记忆挑战鸟（tier=8）：纯计时玩法，不设错题、不参与称号与徽章——
+  // 092 记忆挑战鸟（tier=8）：纯计时模式，不设错题、不参与称号与徽章——
   // 统计里整轮跳过（含轮数/题数/正确率/满分轮/maxTier/跨轮连对/时段徽章），只保留复盘展示。
   const rounds = allRounds.filter((r) => r.tier !== 8)
   const species = new Set<string>()

@@ -7,6 +7,7 @@ import type { MediaAsset } from '@/types'
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn<() => Promise<void>>() }))
 
 vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {}, params: {} }),
   useRouter: () => ({
     push: pushMock,
     replace: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
