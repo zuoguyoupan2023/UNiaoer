@@ -166,8 +166,12 @@ export interface PosterOptions {
 /** 官网地址（二维码默认指向；R35：正式域名 uniaoer.com，已绑定 Pages） */
 export const DEFAULT_SITE_URL = 'https://uniaoer.com'
 
-/** 海报错题区最多展示条数（左右各 4） */
-export const POSTER_WRONG_MAX = 8
+/**
+ * 海报错题区最多展示条数（左右各 5）。
+ * 一轮最多 10 题（quiz 默认 `count: 10`），9:16 画布纵向足够 → 全对时 10 条都能放下；
+ * 旧的 3:4 画布只能放 8 条（2026-11-02 随 9:16 一起扩容）。
+ */
+export const POSTER_WRONG_MAX = 10
 
 /**
  * 本轮素材来源去重（2026-11-02 用户定）：页脚只写**实际用到的**来源。
@@ -197,8 +201,44 @@ export function buildWrongRows(wrong: PosterWrong[], overflowLabel: string): Pos
   return rows
 }
 
-const W = 1080
-const H = 1440
+/**
+ * 海报画布尺寸：**1080×1920（9:16）**。
+ *
+ * 2026-11-02 用户定：原 1080×1440（3:4）在手机上偏瘦长、信息挤在中段。
+ * 9:16 是竖屏原生的满屏比例，纵向多出的 480px 用来放大分数主体、放宽行距，
+ * 并把错题容量从 8 条提到 10 条（一轮最多 10 题，正好能全放下，左右各 5）。
+ */
+export const POSTER_W = 1080
+export const POSTER_H = 1920
+const W = POSTER_W
+const H = POSTER_H
+/**
+ * 纵向版式（9:16）。旧 3:4 用零散绝对 y，改比例时无处下手；这里集中成一张表：
+ * 头部 → 内容主块 → 错题区 → 底部署名/页脚，各段留白随画布加高而放大。
+ * 换回其它比例时只改本表与 POSTER_H 即可。
+ */
+const L = {
+  /** 品牌名 / 日期 / 称号胶囊 */
+  brand: 170,
+  date: 244,
+  chipsTop: 280,
+  /** 顶部左右角标签（模式 / 轮次） */
+  cornerChipTop: 66,
+  /** 含测试内容时的正文块 */
+  intro: 590,
+  title: 760,
+  score: 1040,
+  accuracy: 1170,
+  wrongHeading: 1268,
+  wrongTop: 1340,
+  wrongRowGap: 74,
+  /** 隐藏错题详情时的正文块（内容少 → 整体下移，避免上半空、下半挤） */
+  introCompact: 860,
+  titleCompact: 1030,
+  scoreCompact: 1260,
+  accuracyCompact: 1382,
+} as const
+
 const FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif'
 
 interface Palette {
@@ -342,11 +382,17 @@ function drawSegments(
 const QR_SIZE = 170
 const QR_MARGIN = 36
 const QR_QUIET = 4
+/**
+ * 二维码底部预留高度：码下方还要画「扫码访问官网」一行。
+ * 2026-11-02 发现该行基线固定在 `y + size + 22`，改 9:16 后仍按画布底边算 → 落到画布外被裁；
+ * 现统一由 QR_BOTTOM_PAD 抬起来，并让页脚与它同基线（见 drawPoster 尾部）。
+ */
+const QR_BOTTOM_PAD = 56
 
 function drawQrSlot(ctx: CanvasRenderingContext2D, P: Palette, opts: PosterOptions, strings: PosterStrings) {
   const size = QR_SIZE
   const x = W - QR_MARGIN - size
-  const y = H - QR_MARGIN - size
+  const y = H - QR_BOTTOM_PAD - size
 
   // 用户取消勾选「包含二维码」→ **完全留白**（2026-10-25 用户定）：
   // 原先在二维码位置画 uniaoer.com 域名，但社媒多会因图中出现网址而限流/屏蔽，
@@ -490,9 +536,9 @@ export function drawPoster(
   // 顶部标题（无 emoji、无“鸟语识别”）；昵称前缀 + 佩戴称号/徽章胶囊（R30–R33）
   // 2026-10-25：不含二维码的版本不再放大品牌名（避免社媒判为导流）
   const dateLine = [data.nickname ? `@${data.nickname}` : '', data.date].filter(Boolean).join(' · ')
-  const brandSize = 56
-  drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: brandSize }], W / 2, 118, 'center', box)
-  drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 28 }], W / 2, 184, 'center', box)
+  const brandSize = 64
+  drawSegments(ctx, [{ text: 'UNiaoer', color: P.dark, weight: 800, size: brandSize }], W / 2, L.brand, 'center', box)
+  drawSegments(ctx, [{ text: dateLine, color: P.muted, weight: 400, size: 30 }], W / 2, L.date, 'center', box)
 
   // 佩戴称号/徽章胶囊（R37 放大 + 图标）：无则不占位
   const chips: { label: string; icon: string; kind: 'title' | 'badge' }[] = []
@@ -506,7 +552,7 @@ export function drawPoster(
     const padX = 34
     const gap = 24
     const ch = 84
-    const cy = 208
+    const cy = L.chipsTop
     ctx.font = `700 ${chipText}px ${FONT}`
     const widths = chips.map(
       (c) => padX * 2 + iconSlot + ctx.measureText(c.label).width,
@@ -537,7 +583,7 @@ export function drawPoster(
   ctx.font = `700 32px ${FONT}`
   const bw = ctx.measureText(data.modeLabel).width + 48
   const bx = W - 60 - bw
-  const by = 60
+  const by = L.cornerChipTop
   ctx.fillStyle = P.chipBg
   roundRect(ctx, bx, by, bw, 60, 30)
   ctx.fill()
@@ -551,33 +597,58 @@ export function drawPoster(
     ctx.font = `700 32px ${FONT}`
     const rw = ctx.measureText(rt).width + 48
     ctx.fillStyle = P.chipBg
-    roundRect(ctx, 60, 60, rw, 60, 30)
+    roundRect(ctx, 60, L.cornerChipTop, rw, 60, 30)
     ctx.fill()
     ctx.textAlign = 'center'
     ctx.fillStyle = P.chipText
-    ctx.fillText(rt, 60 + rw / 2, 101)
+    ctx.fillText(rt, 60 + rw / 2, L.cornerChipTop + 41)
   }
 
   // 本轮测试内容（成绩/正确率/错题）：取消勾选时整块不画（只留品牌面）
   if (opts.includeResults !== false) {
+    // 错题行先算出来：**块内容量决定整块下移多少**——全对/错题少时若照旧贴顶部，
+    // 下半屏会空出三四百像素（2026-11-02 截图实测）。这里把「内容底边到页脚还有多少」
+    // 的一半补到顶部留白，全对时也不会头重脚轻。
+    const wrongRows = data.memory ? [] : buildWrongRows(data.wrong, strings.overflow)
+    const perCol = POSTER_WRONG_MAX / 2
+    // 错题**两列**排布（x 左 60 / 右 560）→ 每列行数 = 总条数 ÷ 2。
+    // 2026-11-02 曾误写成 ÷ perCol(=5)，只有 10 条时算出 2 行、居中位移虚高 175px，
+    // 把第 5 行错题顶到右下角二维码上。
+    const colRows = Math.max(1, Math.ceil(wrongRows.length / 2))
+    const contentBottom = data.memory
+      ? L.accuracy
+      : wrongRows.length
+        ? L.wrongTop + (colRows - 1) * L.wrongRowGap
+        : L.wrongTop
+    // 下移上限：**右列错题（x 560–1000）会撞上右下角二维码**，而二维码顶部在
+    // H − QR_BOTTOM_PAD − QR_SIZE。故含二维码时以此为硬边界（2026-11-02 实测溢出）。
+    let contentLimit = H - 70
+    if (opts.includeQr !== false) contentLimit = Math.min(contentLimit, H - QR_BOTTOM_PAD - QR_SIZE - 30)
+    // 有背景署名时还要再让出下方两行署名
+    if (hasImage && opts.bgCredit) contentLimit = Math.min(contentLimit, H - QR_BOTTOM_PAD - 130)
+    const dy = Math.min(200, Math.max(0, (contentLimit - contentBottom) / 2))
+
+    /** 内容块内的纵向位置（dy 统一下移，保持块内相对间距不变） */
+    const at = (v: number) => v + dy
+
     // 正文
-    drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }], W / 2, 540, 'center', box)
+    drawSegments(ctx, [{ text: strings.intro, color: P.muted, weight: 400, size: 42 }], W / 2, at(L.intro), 'center', box)
     if (data.memory) {
       // 092 记忆挑战鸟：**用时 + 评语**，不显示 0–100 分数（docs/092 §4.1/§8.4）——
       // 评语作主标题、大号用时替代 correct/total、副行「N 对全配平」；无错题区。
       drawSegments(
         ctx,
-        [{ text: data.memory.rating, color: P.dark, weight: 800, size: 64 }],
+        [{ text: data.memory.rating, color: P.dark, weight: 800, size: 68 }],
         W / 2,
-        650,
+        at(L.title),
         'center',
         box,
       )
       drawSegments(
         ctx,
-        [{ text: data.memory.time, color: P.accent, weight: 800, size: 150 }],
+        [{ text: data.memory.time, color: P.accent, weight: 800, size: 180 }],
         W / 2,
-        860,
+        at(L.score),
         'center',
         box,
       )
@@ -585,14 +656,14 @@ export function drawPoster(
         ctx,
         [
           // 游戏名称必须出现在海报上（2026-10-27 用户反馈：记忆轮原来只有用时，看不出是什么游戏）
-          { text: data.tierLabel, color: P.dark, weight: 700, size: 28 },
-          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 28 },
+          { text: data.tierLabel, color: P.dark, weight: 700, size: 30 },
+          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 30 },
           ...(data.regionLabel
-            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 30 }]
             : []),
         ],
         W / 2,
-        950,
+        at(L.accuracy),
         'center',
         box,
       )
@@ -600,20 +671,20 @@ export function drawPoster(
       const perfect = data.total > 0 && data.correct === data.total
       drawSegments(
         ctx,
-        [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
+        [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 68 }],
         W / 2,
-        650,
+        at(L.title),
         'center',
         box,
       )
       drawSegments(
         ctx,
         [
-          { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
-          { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
+          { text: String(data.correct), color: P.accent, weight: 800, size: 180 },
+          { text: `/${data.total}`, color: P.muted, weight: 600, size: 52 },
         ],
         W / 2,
-        860,
+        at(L.score),
         'center',
         box,
       )
@@ -623,41 +694,45 @@ export function drawPoster(
       drawSegments(
         ctx,
         [
-          { text: accText, color: P.muted, weight: 500, size: 28 },
+          { text: accText, color: P.muted, weight: 500, size: 30 },
           ...(data.regionLabel
-            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 30 }]
             : []),
         ],
         W / 2,
-        950,
+        at(L.accuracy),
         'center',
         box,
       )
 
-      // 错题回顾（F2：最多 8 条，左右各 4；超出则前 7 + 「这里放不下了」）
-      drawSegments(ctx, [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 28 }], 60, 1010, 'left', box)
-      const rows = buildWrongRows(data.wrong, strings.overflow)
-      if (rows.length === 0) {
+      // 错题回顾（F2：最多 10 条，左右各 5；超出则前 9 + 「这里放不下了」）
+      drawSegments(
+        ctx,
+        [{ text: strings.wrongHeading, color: P.muted, weight: 600, size: 30 }],
+        60,
+        at(L.wrongHeading),
+        'left',
+        box,
+      )
+      if (wrongRows.length === 0) {
         drawSegments(
           ctx,
-          [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 28 }],
+          [{ text: strings.allCorrect, color: P.accent, weight: 400, size: 30 }],
           60,
-          1070,
+          at(L.wrongTop),
           'left',
           box,
         )
       } else {
         const colWidth = 440
-        const rowGap = 48
-        const top = 1058
         ctx.textAlign = 'left'
-        rows.forEach((w, i) => {
-          const x = i < POSTER_WRONG_MAX / 2 ? 60 : 560
-          const y = top + (i % (POSTER_WRONG_MAX / 2)) * rowGap
+        wrongRows.forEach((w, i) => {
+          const x = i < perCol ? 60 : 560
+          const y = at(L.wrongTop) + (i % perCol) * L.wrongRowGap
           if (w.placeholder) {
             drawSegments(
               ctx,
-              [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 25 }],
+              [{ text: `${i + 1}. ${strings.overflow}`, color: P.wrong, weight: 600, size: 27 }],
               x,
               y,
               'left',
@@ -665,12 +740,12 @@ export function drawPoster(
             )
             return
           }
-          const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 26 }
+          const head = { text: `${i + 1}. ${w.answer}`, color: P.dark, weight: 600, size: 28 }
           const mineText = w.timedOut ? strings.timedOut : strings.mistakenAs(w.chosen ?? '—')
-          ctx.font = `600 26px ${FONT}`
+          ctx.font = `600 28px ${FONT}`
           const headW = ctx.measureText(head.text).width
-          const mine = fitText(ctx, mineText, 400, 24, Math.max(60, colWidth - headW - GAP))
-          drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 24 }], x, y, 'left', box)
+          const mine = fitText(ctx, mineText, 400, 26, Math.max(60, colWidth - headW - GAP))
+          drawSegments(ctx, [head, { text: mine, color: P.wrong, weight: 400, size: 26 }], x, y, 'left', box)
         })
       }
     }
@@ -678,34 +753,42 @@ export function drawPoster(
     // 2026-10-25 用户定：取消「包含本组测试内容」= 隐藏**详情**（错题回顾等），
     // 但**分数与题目范围照常显示**——成绩本身是分享主体，隐藏它反而失去海报意义。
     // 092 记忆轮：这里的"分数"就是用时（评语在 includeResults 时作主标题，这里一并显示）。
+    // 无错题区 → 竖直方向仍有大段留白，同样按「内容底边到页脚的一半」上提居中。
+    const compactBottom = L.accuracyCompact
+    let compactLimit = H - 130
+    if (opts.includeQr !== false) compactLimit = Math.min(compactLimit, H - QR_BOTTOM_PAD - QR_SIZE - 30)
+    if (hasImage && opts.bgCredit) compactLimit = Math.min(compactLimit, H - QR_BOTTOM_PAD - 130)
+    const cdy = Math.min(260, Math.max(0, (compactLimit - compactBottom) / 2))
+    const cat = (v: number) => v + cdy
+
     drawSegments(
       ctx,
-      [{ text: strings.intro, color: P.muted, weight: 400, size: 40 }],
+      [{ text: strings.intro, color: P.muted, weight: 400, size: 42 }],
       W / 2,
-      600,
+      cat(L.introCompact),
       'center',
       box,
     )
     if (data.memory) {
       drawSegments(
         ctx,
-        [{ text: `${data.memory.rating} · ${data.memory.time}`, color: P.dark, weight: 800, size: 64 }],
+        [{ text: `${data.memory.rating} · ${data.memory.time}`, color: P.dark, weight: 800, size: 68 }],
         W / 2,
-        700,
+        cat(L.titleCompact),
         'center',
         box,
       )
       drawSegments(
         ctx,
         [
-          { text: data.tierLabel, color: P.dark, weight: 700, size: 28 },
-          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 28 },
+          { text: data.tierLabel, color: P.dark, weight: 700, size: 30 },
+          { text: ` · ${strings.memoryPairsLine(data.memory.pairs)}`, color: P.muted, weight: 500, size: 30 },
           ...(data.regionLabel
-            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 30 }]
             : []),
         ],
         W / 2,
-        960,
+        cat(L.accuracyCompact),
         'center',
         box,
       )
@@ -713,46 +796,50 @@ export function drawPoster(
       const perfect = data.total > 0 && data.correct === data.total
       drawSegments(
         ctx,
-        [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 64 }],
+        [{ text: perfect ? strings.perfectTitle : strings.answeredTitle, color: P.dark, weight: 800, size: 68 }],
         W / 2,
-        700,
+        cat(L.titleCompact),
         'center',
         box,
       )
       drawSegments(
         ctx,
         [
-          { text: String(data.correct), color: P.accent, weight: 800, size: 150 },
-          { text: `/${data.total}`, color: P.muted, weight: 600, size: 44 },
+          { text: String(data.correct), color: P.accent, weight: 800, size: 180 },
+          { text: `/${data.total}`, color: P.muted, weight: 600, size: 52 },
         ],
         W / 2,
-        890,
+        cat(L.scoreCompact),
         'center',
         box,
       )
       drawSegments(
         ctx,
         [
-          { text: strings.accuracyLine, color: P.muted, weight: 500, size: 28 },
+          { text: strings.accuracyLine, color: P.muted, weight: 500, size: 30 },
           ...(data.regionLabel
-            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 28 }]
+            ? [{ text: `· ${data.regionLabel}`, color: P.accent, weight: 700, size: 30 }]
             : []),
         ],
         W / 2,
-        960,
+        cat(L.accuracyCompact),
         'center',
         box,
       )
     }
   }
 
-  // 页脚（左对齐，给右下角二维码让位）
-  // 2026-11-02（用户定）：素材来源按**本轮实际用到的**动态生成——图像版只有 iNaturalist，
-  // 音频版才有 Xeno-canto；两个来源都用则两个都写。取不到来源（旧记录）→ 整行不画。
+/**
+ * 页脚（左对齐，给右下角二维码让位）。
+ * 2026-11-02（用户定）：素材来源按**本轮实际用到的**动态生成——图像版只有 iNaturalist，
+ * 音频版才有 Xeno-canto；两个来源都用则两个都写。取不到来源（旧记录）→ 整行不画。
+ * 基线与二维码下方「扫码访问官网」完全同高，读起来是一条水平线。
+ */
   const sources = data.sources ?? []
   // 不含二维码时整行可以铺满；含二维码必须给右下角的码让位（2026-11-02）
   const footerMaxW =
     opts.includeQr === false ? W - 120 : W - QR_MARGIN - QR_SIZE - 30 - 60 - PAD_X
+  const footerBaseline = H - QR_BOTTOM_PAD + 22
   if (sources.length) {
     drawSegments(
       ctx,
@@ -765,7 +852,7 @@ export function drawPoster(
         },
       ],
       60,
-      H - 30,
+      footerBaseline,
       'left',
       box,
     )
@@ -781,7 +868,7 @@ export function drawPoster(
 /**
  * 背景照片署名（2026-11-02 用户定）：CC 协议要求展示**作者 / 许可证 / 来源**；
  * 同时展示背景图那只鸟的**名字 + 学名**（中文海报显示中文名、英文海报显示英文名，
- * 都没有就只显示学名）。两行，左对齐放在页脚数据来源上方。
+ * 都没有就只显示学名）。两行，左对齐叠在页脚数据来源上方。
  */
 function drawBgCredit(
   ctx: CanvasRenderingContext2D,
@@ -805,12 +892,14 @@ function drawBgCredit(
   // 三行（署名名 / 署名元数据 / 数据来源）在底部叠放，基线间距要够：
   // 每行白底框 = 字号 + 2×PAD_Y 高、框顶在 baseline − 字号×0.78 − PAD_Y，
   // 故相邻基线至少差 39px 才不会压框（2026-11-02 实测 H−96 / H−62 会与页脚重叠）。
+  // 页脚基线是 H−QR_BOTTOM_PAD+22，这里往上依次退 42 / 84，三行互不压框。
+  const footerBaseline = H - QR_BOTTOM_PAD + 22
   if (nameLine) {
     drawSegments(
       ctx,
       [{ text: fitText(ctx, nameLine, 600, 26, maxWidth), color: P.dark, weight: 600, size: 26 }],
       60,
-      H - 116,
+      footerBaseline - 84,
       'left',
       box,
     )
@@ -820,7 +909,7 @@ function drawBgCredit(
       ctx,
       [{ text: fitText(ctx, metaLine, 400, 22, maxWidth), color: P.muted, weight: 400, size: 22 }],
       60,
-      H - 74,
+      footerBaseline - 42,
       'left',
       box,
     )

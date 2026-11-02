@@ -5,6 +5,8 @@ import {
   posterFilename,
   posterSources,
   POSTER_WRONG_MAX,
+  POSTER_W,
+  POSTER_H,
   DEFAULT_SITE_URL,
   type PosterData,
   type PosterStrings,
@@ -135,25 +137,40 @@ describe('海报 · 错题行文案（i18n 插值回归）', () => {
   })
 })
 
+describe('海报 · 画布尺寸（2026-11-02 改 9:16）', () => {
+  it('1080×1920（9:16 竖屏满屏比例）', () => {
+    expect(POSTER_W).toBe(1080)
+    expect(POSTER_H).toBe(1920)
+    expect(POSTER_W / POSTER_H).toBe(9 / 16)
+  })
+
+  it('drawPoster 实际把画布设成该尺寸', () => {
+    const { canvas } = stubCanvas()
+    drawPoster(canvas, posterData([]), { themeId: 'white' }, posterStrings())
+    expect(canvas.width).toBe(POSTER_W)
+    expect(canvas.height).toBe(POSTER_H)
+  })
+})
+
 describe('海报 · 错题区行选取（F2）', () => {
-  it('最多展示 8 条，左右各 4', () => {
-    expect(POSTER_WRONG_MAX).toBe(8)
+  it('最多展示 10 条，左右各 5（9:16 画布扩容，一轮 10 题可全放下）', () => {
+    expect(POSTER_WRONG_MAX).toBe(10)
   })
 
-  it('≤8 条：全部展示，无占位', () => {
-    const rows = buildWrongRows([1, 2, 3, 4, 5, 6, 7, 8].map((n) => wrong(`鸟${n}`)), '溢出')
-    expect(rows).toHaveLength(8)
+  it('≤10 条：全部展示，无占位', () => {
+    const rows = buildWrongRows([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => wrong(`鸟${n}`)), '溢出')
+    expect(rows).toHaveLength(10)
     expect(rows.some((r) => r.placeholder)).toBe(false)
-    expect(rows[7]!.answer).toBe('鸟8')
+    expect(rows[9]!.answer).toBe('鸟10')
   })
 
-  it('>8 条：前 7 条 + 第 8 条占位', () => {
+  it('>10 条：前 9 条 + 第 10 条占位', () => {
     const rows = buildWrongRows(
-      Array.from({ length: 12 }, (_, i) => wrong(`鸟${i + 1}`)),
+      Array.from({ length: 14 }, (_, i) => wrong(`鸟${i + 1}`)),
       '溢出',
     )
-    expect(rows).toHaveLength(8)
-    expect(rows.slice(0, 7).map((r) => r.answer)).toEqual([
+    expect(rows).toHaveLength(10)
+    expect(rows.slice(0, 9).map((r) => r.answer)).toEqual([
       '鸟1',
       '鸟2',
       '鸟3',
@@ -161,9 +178,11 @@ describe('海报 · 错题区行选取（F2）', () => {
       '鸟5',
       '鸟6',
       '鸟7',
+      '鸟8',
+      '鸟9',
     ])
-    expect(rows[7]!.placeholder).toBe(true)
-    expect(rows[7]!.answer).toBe('溢出')
+    expect(rows[9]!.placeholder).toBe(true)
+    expect(rows[9]!.answer).toBe('溢出')
   })
 
   it('0 条：空数组', () => {

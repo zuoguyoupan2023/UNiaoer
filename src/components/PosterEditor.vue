@@ -8,6 +8,8 @@ import {
   loadImage,
   posterFilename,
   renderPosterBlob,
+  POSTER_H,
+  POSTER_W,
   type PosterData,
   type PosterImage,
   type PosterOptions,
@@ -74,8 +76,8 @@ watch(
   },
 )
 
-const W = 1080
-const H = 1440
+const W = POSTER_W
+const H = POSTER_H
 
 onMounted(() => {
   isMobile.value =
