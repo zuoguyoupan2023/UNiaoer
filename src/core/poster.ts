@@ -836,16 +836,22 @@ export function drawPoster(
  * 基线与二维码下方「扫码访问官网」完全同高，读起来是一条水平线。
  */
   const sources = data.sources ?? []
+  // 旧记录可能没有 sources：此时用背景图自己的来源补上，保证 CC 要求的"来源"仍在图里
+  // （新记录里它已包含在 sources 中，posterSources 会去重，不会重复出现）
+  const footerSources =
+    hasImage && opts.bgCredit?.source
+      ? posterSources([...sources, opts.bgCredit.source])
+      : sources
   // 不含二维码时整行可以铺满；含二维码必须给右下角的码让位（2026-11-02）
   const footerMaxW =
     opts.includeQr === false ? W - 120 : W - QR_MARGIN - QR_SIZE - 30 - 60 - PAD_X
   const footerBaseline = H - QR_BOTTOM_PAD + 22
-  if (sources.length) {
+  if (footerSources.length) {
     drawSegments(
       ctx,
       [
         {
-          text: fitText(ctx, strings.sourceLine(sources), 400, 24, footerMaxW),
+          text: fitText(ctx, strings.sourceLine(footerSources), 400, 24, footerMaxW),
           color: P.muted,
           weight: 400,
           size: 24,
@@ -883,8 +889,9 @@ function drawBgCredit(
   const sci = credit.sci?.trim() || ''
   const nameLine = name && sci ? strings.bgCreditName(name, sci) : name || sci
 
-  // 第二行：作者 · 许可证 · 来源（缺哪项就不画哪项）
-  const metaLine = [credit.author, credit.license, credit.source]
+  // 第二行：作者 · 许可证（**不写来源站点**——页脚「数据来源」已经写了，
+  // 同一张图上重复出现「iNaturalist」会显得啰嗦；CC 要求的"来源"由页脚那行承担）
+  const metaLine = [credit.author, credit.license]
     .map((x) => x?.trim() || '')
     .filter(Boolean)
     .join(' · ')

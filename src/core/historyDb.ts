@@ -107,7 +107,10 @@ export interface ArchiveRow {
   id: string
   profileId: string
   name: string
-  /** 建档时的昵称快照：旧档永远用它显示/上海报；改昵称只影响新开局（013 §3.3） */
+  /**
+   * 昵称快照：该档案上海报/署名用的名字。建档时取当前昵称；
+   * 用户改昵称会同步**活动档**（其它档案保留各自快照，切回时仍是当时的名字）。
+   */
   nickname: string
   createdAt: number
 }
@@ -418,8 +421,9 @@ export async function getActiveProfile(): Promise<ProfileRow> {
 
 /**
  * 更新**活动档案**的昵称快照（013 §3.3）。
- * 仅用于首次向导建档时定名；平时的「改昵称」只改 Profile.nickname，
- * 不动已有档案快照（旧档海报/署名保持原昵称，新开局才用新昵称）。
+ * 建档定名时用；用户主动改昵称时也调用它同步**当前活动档**
+ * （2026-11-02 修：只改 Profile 会导致改名后海报/分享仍显示旧名）。
+ * 其它档案保持各自建档时的快照，不受影响。
  */
 export async function setActiveArchiveNickname(nickname: string): Promise<void> {
   const db = await openDb()

@@ -13,6 +13,7 @@ import {
   getStats,
   listArchives,
   renameArchive,
+  setActiveArchiveNickname,
   setProfileNickname,
   type ArchiveRow,
   type ProfileRow,
@@ -116,7 +117,7 @@ async function removeArchive() {
   }
 }
 
-// ---- 用户昵称（R33）：2–12 字符；改「身份」昵称，不改已有档案快照（旧档海报不变） ----
+// ---- 用户昵称（R33）：2–12 字符；改昵称会同步当前档案快照（其它档案保持各自快照） ----
 const editingNickname = ref(false)
 const nicknameDraft = ref('')
 const nicknameMsg = ref('')
@@ -139,11 +140,18 @@ async function saveNickname() {
   }
   settings.nickname = v
   try {
-    await setProfileNickname(v) // 仅身份级；新开局建档时才快照进新档案
+    // 身份级昵称
+    await setProfileNickname(v)
+    // 2026-11-02 修：**同时同步当前活动档案的快照**。
+    // 海报/分享署名取的是档案快照（ResultView 的 archiveNickname 优先于 settings），
+    // 只改身份级会导致「改名后新做的一轮，海报仍是旧名」。
+    // 其它档案保持各自建档时的快照（切回旧档仍显示它当时的名字）。
+    await setActiveArchiveNickname(v)
   } catch {
     /* 降级：仅设备级 */
   }
   if (profile.value) profile.value = { ...profile.value, nickname: v }
+  if (activeArchive.value) activeArchive.value = { ...activeArchive.value, nickname: v }
   editingNickname.value = false
 }
 </script>

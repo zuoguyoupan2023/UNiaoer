@@ -381,7 +381,7 @@ describe('海报 · 背景图署名', () => {
   /** 假 ImageBitmap：只要 width/height 够 computeCover 用 */
   const bg = { width: 800, height: 600 } as unknown as ImageBitmap
 
-  it('有背景图 + bgCredit → 画鸟名/学名/作者/许可证/来源', () => {
+  it('有背景图 + bgCredit → 画鸟名/学名/作者/许可证（来源只在页脚出现一次）', () => {
     const { canvas, texts } = stubCanvas()
     drawPoster(
       canvas,
@@ -395,7 +395,10 @@ describe('海报 · 背景图署名', () => {
     )
     const joined = texts.join('\n')
     expect(joined).toContain('白头鹎（Pycnonotus sinensis）')
-    expect(joined).toContain('葉子 · CC0 · iNaturalist')
+    expect(joined).toContain('葉子 · CC0')
+    // 2026-11-02（用户反馈）：来源站点不能在两处重复出现 → 署名行不写来源
+    expect(joined).not.toContain('葉子 · CC0 · iNaturalist')
+    expect(joined.match(/iNaturalist/g)).toHaveLength(1)
   })
 
   it('没有名称时只画学名（不出现空括号）', () => {
@@ -409,6 +412,23 @@ describe('海报 · 背景图署名', () => {
     const joined = texts.join('\n')
     expect(joined).toContain('Pycnonotus sinensis')
     expect(joined).not.toContain('（）')
+  })
+
+  it('旧记录没有 sources → 页脚用背景图来源补上（CC 的"来源"不丢）', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      posterData([]), // 刻意不传 sources
+      {
+        themeId: 'white',
+        bgImage: bg,
+        bgCredit: { name: '白头鹎', sci: 'Pycnonotus sinensis', author: '葉子', license: 'CC0', source: 'iNaturalist' },
+      },
+      posterStrings(),
+    )
+    const joined = texts.join('\n')
+    expect(joined).toContain('数据来源：iNaturalist')
+    expect(joined.match(/iNaturalist/g)).toHaveLength(1)
   })
 
   it('纯色/内置背景（无 bgImage）→ 不画署名', () => {

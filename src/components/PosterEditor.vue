@@ -82,6 +82,8 @@ const H = POSTER_H
 onMounted(() => {
   isMobile.value =
     typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+  // 首次挂载时若弹层已打开（watch 只在 false→true 变化时触发），也要画出预览
+  if (props.open) nextTick(redraw)
 })
 
 function options(): PosterOptions {
@@ -318,10 +320,11 @@ function dropResults() {
           <canvas
             ref="canvasRef"
             class="preview"
-            :class="{ grab: !!bgImage }"
+            :class="{ grab: !!bgImage, 'pan-lock': !!bgImage }"
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
+            @pointercancel="onPointerUp"
             @pointerleave="onPointerUp"
           ></canvas>
           <p v-if="bgImage" class="drag-hint">{{ t('poster.dragHint') }}</p>
@@ -331,28 +334,31 @@ function dropResults() {
           </div>
         </div>
 
-        <div class="controls">
-          <!-- 背景 -->
-          <div class="group">
-            <div class="group-title">
-              {{ t('poster.background') }}
-              <span v-if="locked" class="lock-tag">{{ t('poster.lockedTag') }}</span>
-            </div>
-            <div class="swatches">
-              <button
-                v-for="b in POSTER_BACKGROUNDS"
-                :key="b.id"
-                class="swatch"
-                :class="{ on: themeId === b.id && !bgImage, disabled: locked, light: b.light }"
-                :style="{ background: b.swatch }"
-                :title="t(b.labelKey)"
-                @click="selectTheme(b.id)"
-              >
-                <span class="swatch-label">{{ t(b.labelKey) }}</span>
-              </button>
-            </div>
-          </div>
+        <!--
+          预设背景：竖排贴在预览右侧（2026-11-02 用户定）。
+          手机上原先色板在下方控件区，手指压在画布上无法滚动——画布为了拖拽背景必须
+          `touch-action:none`。改成右侧竖排后，这条窄带不拦滚动，**在它上面上下滑就能滚面板**，
+          同时换预设只需向右一点，不用滚到下面找色块。
+        -->
+        <div class="rail" role="group" :aria-label="t('poster.background')">
+          <span v-if="locked" class="rail-lock" :title="t('poster.lockedTag')">
+            <Lock :size="12" />
+          </span>
+          <button
+            v-for="b in POSTER_BACKGROUNDS"
+            :key="b.id"
+            class="swatch"
+            :class="{ on: themeId === b.id && !bgImage, disabled: locked, light: b.light }"
+            :style="{ background: b.swatch }"
+            :title="t(b.labelKey)"
+            :aria-label="t(b.labelKey)"
+            @click="selectTheme(b.id)"
+          >
+            <span class="swatch-label">{{ t(b.labelKey) }}</span>
+          </button>
+        </div>
 
+        <div class="controls">
           <!-- 背景照片（仅鸟图版有图） -->
           <div v-if="images.length" class="group">
             <div class="group-title">{{ t('poster.bgPhotos') }}</div>
@@ -511,14 +517,16 @@ function dropResults() {
 }
 .body {
   display: flex;
-  gap: 18px;
+  gap: 14px;
   padding: 18px 20px 20px;
   overflow: auto;
 }
 .preview-wrap {
   position: relative;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  /* 手机：图占主导、靠左；右侧留一条给预设竖排（2026-11-02） */
   width: 340px;
+  min-width: 0;
   max-width: 45vw;
 }
 .preview {
@@ -528,6 +536,45 @@ function dropResults() {
   border: 1px solid var(--border);
   display: block;
   touch-action: none;
+}
+/* 有背景照片时才允许拖拽，此时画布必须吞掉手势（否则滚动会打断拖拽）。
+   没有背景照片时画布不拦滚动，手指压在图上也能正常上下滑。 */
+.preview.pan-lock {
+  touch-action: none;
+}
+.preview:not(.pan-lock) {
+  touch-action: pan-y;
+}
+/*
+ * 预设背景竖排轨道（贴预览右侧，2026-11-02 用户定）。
+ *
+ * **轨道本身不做滚动容器**（overflow: visible / 不限高）：手指或鼠标落在上面时，
+ * 滚动手势直接交给外层面板 `.body`。这是手机体验的关键——画布为了拖拽背景必须
+ * `touch-action:none`，压在图上滚不动；轨道这条窄带就是"能滚"的可触区。
+ * 早先试过给轨道 `overflow-y:auto` + `overscroll-behavior:contain`，实测会把手势吞掉
+ * （内容不满一屏也不外传），比不做还糟。
+ */
+.rail {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 58px;
+  overflow: visible;
+  touch-action: pan-y;
+  padding: 2px 4px 2px 0;
+}
+.rail-lock {
+  position: sticky;
+  top: 0;
+  align-self: center;
+  display: inline-flex;
+  color: #8a6d00;
+  background: #fdf3d8;
+  border-radius: 50%;
+  padding: 4px;
+  z-index: 1;
 }
 .preview.grab {
   cursor: grab;
@@ -608,29 +655,35 @@ function dropResults() {
   padding: 2px 8px;
   border-radius: var(--radius-xs);
 }
-.swatches {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+/* 竖排色块：整条轨道宽 58px，块撑满宽度，场景名压在块底部 */
 .swatch {
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  height: 44px;
+  flex: 0 0 auto;
   border-radius: var(--radius-sm);
-  border: 3px solid #fff;
+  border: 2px solid #fff;
   box-shadow: 0 0 0 1.5px var(--border);
   cursor: pointer;
   transition: transform 0.15s;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 3px;
+  padding: 0 2px 4px;
 }
 .swatch-label {
-  font-size: 0.58rem;
+  /* 轨道只有 48–58px 宽，较长的场景名（Graphite solid）必须允许换行，否则溢出/被裁 */
+  font-size: 0.56rem;
+  line-height: 1.1;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  max-width: 100%;
+}
+/* 纯白/浅色块在白色面板上几乎看不见，边界靠 box-shadow 撑住 */
+.swatch.light {
+  box-shadow: 0 0 0 1.5px #c9d3cf, inset 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 .swatch.light .swatch-label {
   color: #333;
@@ -639,6 +692,8 @@ function dropResults() {
 .swatch:hover:not(.disabled) {
   transform: scale(1.08);
 }
+/* 选中态必须排在 `.swatch.light` 之后（同级 specificity、后写者胜）：
+   否则选「纯白」时高亮环会被浅色块的边框阴影盖掉，看不出哪块被选中。 */
 .swatch.on {
   box-shadow: 0 0 0 3px var(--primary);
 }
@@ -804,12 +859,44 @@ function dropResults() {
   transform: none;
 }
 @media (max-width: 720px) {
+  /*
+   * 手机布局（2026-11-02 用户定）：**图居左、预设竖排居右**，两者并排。
+   * 不能改成 column：画布为了拖拽背景必须 touch-action:none，竖排堆叠后
+   * 手指落在图上就滚不动整个面板（用户反馈的"必须找旁边空白"）。
+   * 右侧窄条 touch-action:pan-y，在那上面上下滑 = 滚动面板，同时能快速换预设。
+   */
   .body {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 12px 16px;
   }
   .preview-wrap {
-    width: 100%;
+    /* flex-basis 必须为 0：画布固有宽度 1080，用 auto 会把宽度撑满、把右侧轨道挤到下一行 */
+    flex: 1 1 0;
+    width: auto;
     max-width: none;
+    min-width: 0;
+  }
+  .rail {
+    /* 手机加窄一点，把宽度尽量留给预览 */
+    width: 48px;
+    align-self: flex-start;
+    gap: 6px;
+    padding: 0 2px 0 0;
+  }
+  .swatch {
+    height: 34px;
+    border-width: 2px;
+  }
+  .swatch-label {
+    font-size: 0.5rem;
+  }
+  /* 控件区单独占满下一行（预览 + 轨道先占第一行） */
+  .controls {
+    flex: 1 0 100%;
+    min-width: 0;
   }
 }
 </style>

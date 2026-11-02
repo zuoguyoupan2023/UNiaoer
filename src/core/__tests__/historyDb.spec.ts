@@ -8,6 +8,7 @@ import {
   exportAllArchives,
   exportCurrentArchive,
   getBadges,
+  getActiveArchive,
   getStats,
   getWrongBook,
   importBackup,
@@ -18,6 +19,8 @@ import {
   removeWrong,
   saveRound,
   saveBadges,
+  setActiveArchiveNickname,
+  setProfileNickname,
   summarizeBackup,
   _resetDb,
   type BackupFileV1,
@@ -272,5 +275,33 @@ describe('historyDb v2 档案隔离（013-A0）', () => {
     expect(a.name.startsWith(today)).toBe(true)
     const names = (await listArchives()).map((x) => x.name)
     expect(new Set(names).size).toBe(names.length)
+  })
+
+  /**
+   * 2026-11-02 用户反馈：在「我的」改名后做一套题，海报仍是旧名字。
+   * 根因：改昵称只改 Profile（身份级），海报取的是**活动档案的快照**且优先级更高。
+   * 现在改名会同步活动档快照；其它档案保持各自快照。
+   */
+  it('改昵称同步活动档案快照（海报取的就是它），其它档案不受影响', async () => {
+    // 建一个当前档案并定名
+    await setActiveArchiveNickname('旧名字')
+    const before = await getActiveArchive()
+    expect(before.nickname).toBe('旧名字')
+
+    // 改名：身份级 + 活动档快照（ProfileView.saveNickname 的两个调用）
+    await setProfileNickname('新名字')
+    await setActiveArchiveNickname('新名字')
+
+    // 海报取 archiveNickname → 必须是新名字
+    expect((await getActiveArchive()).nickname).toBe('新名字')
+
+    // 另一份档案：快照保持它自己的（切回时仍显示当时的名字）
+    const other = await createArchive(undefined, '另一档名字')
+    await activateArchive(other.id)
+    await setProfileNickname('再改一次')
+    await setActiveArchiveNickname('再改一次')
+    // 切回原档 → 该档快照还是"新名字"那次的值（没被后面的改名污染）
+    await activateArchive(before.id)
+    expect((await getActiveArchive()).nickname).toBe('新名字')
   })
 })
