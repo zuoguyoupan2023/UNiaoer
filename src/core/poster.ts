@@ -2,6 +2,7 @@
 import qrcode from 'qrcode-generator'
 import { ICON_NODES, type IconNode } from './iconPaths'
 import { getBackground } from './posterScenes'
+import { cleanAuthor } from './licenseGuard'
 
 export interface PosterWrong {
   answer: string
@@ -889,38 +890,145 @@ function drawBgCredit(
   const sci = credit.sci?.trim() || ''
   const nameLine = name && sci ? strings.bgCreditName(name, sci) : name || sci
 
-  // 第二行：作者 · 许可证（**不写来源站点**——页脚「数据来源」已经写了，
-  // 同一张图上重复出现「iNaturalist」会显得啰嗦；CC 要求的"来源"由页脚那行承担）
-  const metaLine = [credit.author, credit.license]
+  // 第二行：作者 · 许可证。
+  //  · **不写来源站点**——页脚「数据来源」已经写了，同一张图上重复出现「iNaturalist」
+  //    会显得啰嗦；CC 要求的"来源"由页脚那行承担。
+  //  · 作者先过 cleanAuthor：manifest 里存的是 iNat attribution 全文
+  //    （`(c) 名字, some rights reserved (CC BY-NC), uploaded by 名字`）。
+  //    该函数同时剥掉重复的「上传者」——实测 1,946 条带上传者的记录里，
+  //    上传者与创作者**无一例不同人**（2 例仅是 HTML 实体差异），
+  //    故省略上传者不损失任何署名信息（2026-11-02 用户确认）。
+  const authorName = cleanAuthor(credit.author)
+  const metaLine = [authorName, credit.license]
     .map((x) => x?.trim() || '')
     .filter(Boolean)
     .join(' · ')
 
-  // 三行（署名名 / 署名元数据 / 数据来源）在底部叠放，基线间距要够：
-  // 每行白底框 = 字号 + 2×PAD_Y 高、框顶在 baseline − 字号×0.78 − PAD_Y，
-  // 故相邻基线至少差 39px 才不会压框（2026-11-02 实测 H−96 / H−62 会与页脚重叠）。
-  // 页脚基线是 H−QR_BOTTOM_PAD+22，这里往上依次退 42 / 84，三行互不压框。
+  // 署名块自底向上排：页脚 → 元数据行（可能多行）→ 鸟名行。
+  // 每行白底框 = 字号 + 2×PAD_Y 高，故相邻基线要留够 42px 才不压框；
+  // 元数据行数不固定（长机构名会折行），所以**按行数动态上推**鸟名行，
+  // 否则折行会把鸟名盖住（2026-11-02 实测）。
   const footerBaseline = H - QR_BOTTOM_PAD + 22
+  const metaLines = metaLine ? fitCreditLine(ctx, metaLine, maxWidth) : []
+  // 元数据最后一行基线 = 页脚上方 42px；往上每行再退 30px
+  const metaBottom = footerBaseline - 42
+  const nameBaseline = metaBottom - (metaLines.length ? (metaLines.length - 1) * 30 + 42 : 42)
+
   if (nameLine) {
+    const nl = shrinkToFit(ctx, nameLine, 600, 26, 18, maxWidth)
     drawSegments(
       ctx,
-      [{ text: fitText(ctx, nameLine, 600, 26, maxWidth), color: P.dark, weight: 600, size: 26 }],
+      [{ text: nl.text, color: P.dark, weight: 600, size: nl.size }],
       60,
-      footerBaseline - 84,
+      nameBaseline,
       'left',
       box,
     )
   }
-  if (metaLine) {
+  metaLines.forEach((ln, i) => {
     drawSegments(
       ctx,
-      [{ text: fitText(ctx, metaLine, 400, 22, maxWidth), color: P.muted, weight: 400, size: 22 }],
+      [{ text: ln.text, color: P.muted, weight: 400, size: ln.size }],
       60,
-      footerBaseline - 42,
+      metaBottom - (metaLines.length - 1 - i) * 30,
       'left',
       box,
     )
+  })
+}
+
+/**
+ * 署名行排版：单行放得下就缩字号（最小 16px）；仍超宽则按「作者 / 许可证」折成两行，
+ * 必要时再按字符折。许可证必须完整可见（CC 要求），故绝不用省略号砍掉它。
+ */
+function fitCreditLine(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): { text: string; size: number }[] {
+  const single = shrinkMaybe(ctx, text, 22, 16, maxWidth)
+  if (single) return [{ text, size: single }]
+
+  // 折行优先在「 · 」处断开（作者 · 许可证）
+  const parts = text.split(' · ')
+  const lines: string[] = []
+  for (const p of parts) {
+    if (!lines.length) lines.push(p)
+    else if (ctx.measureText(`${lines[lines.length - 1]} · ${p}`).width <= maxWidth && lines.length === 1)
+      lines[0] += ` · ${p}`
+    else lines.push(p)
   }
+  // 每行再确保放得下（超长机构名按字符硬折）
+  const out: { text: string; size: number }[] = []
+  for (const ln of lines.flatMap((l) => wrapByWidth(ctx, l, maxWidth))) {
+    const size = shrinkMaybe(ctx, ln, 22, 16, maxWidth)
+    out.push({ text: ln, size: size ?? 16 }) // 16px 下 wrapByWidth 已保证宽度
+  }
+  return out
+}
+
+/** 能放下就返回可用的最大字号，否则 null */
+function shrinkMaybe(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  max: number,
+  min: number,
+  maxWidth: number,
+): number | null {
+  for (let s = max; s >= min; s--) {
+    ctx.font = `400 ${s}px ${FONT}`
+    if (ctx.measureText(text).width <= maxWidth) return s
+  }
+  return null
+}
+
+/** 按字符折行（先按空格，超过宽度再逐字切），用于超长机构名 */
+function wrapByWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  ctx.font = `400 16px ${FONT}`
+  if (ctx.measureText(text).width <= maxWidth) return [text]
+  const words = text.split(/(\s+)/)
+  const lines: string[] = []
+  let cur = ''
+  for (const w of words) {
+    if (ctx.measureText(cur + w).width <= maxWidth) {
+      cur += w
+      continue
+    }
+    if (cur) lines.push(cur.trim())
+    cur = ''
+    // 单个词本身就超宽 → 逐字切
+    if (ctx.measureText(w).width > maxWidth) {
+      let chunk = ''
+      for (const ch of w) {
+        if (ctx.measureText(chunk + ch).width > maxWidth) {
+          lines.push(chunk)
+          chunk = ch
+        } else chunk += ch
+      }
+      cur = chunk
+    } else cur = w
+  }
+  if (cur.trim()) lines.push(cur.trim())
+  return lines
+}
+
+/**
+ * 缩小字号直到整行放得下（最小 minSize）；到最小仍超宽才用 fitText 截断。
+ * 用于**鸟名行**（名字+学名），截断可接受；作者/许可证行走 fitCreditLine 折行，不截断。
+ */
+function shrinkToFit(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  weight: number,
+  size: number,
+  minSize: number,
+  maxWidth: number,
+): { text: string; size: number } {
+  for (let s = size; s >= minSize; s--) {
+    ctx.font = `${weight} ${s}px ${FONT}`
+    if (ctx.measureText(text).width <= maxWidth) return { text, size: s }
+  }
+  return { text: fitText(ctx, text, weight, minSize, maxWidth), size: minSize }
 }
 
 export function renderPoster(

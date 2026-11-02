@@ -441,4 +441,62 @@ describe('海报 · 背景图署名', () => {
     )
     expect(texts.join('\n')).not.toContain('Pycnonotus sinensis')
   })
+
+  it('iNat attribution 原文 → 只画纯作者名，不出现 uploaded by', () => {
+    const { canvas, texts } = stubCanvas()
+    drawPoster(
+      canvas,
+      posterData([]),
+      {
+        themeId: 'white',
+        bgImage: bg,
+        bgCredit: {
+          name: '花脸鸭',
+          sci: 'Sibirionetta formosa',
+          author: '(c) Paul Werner Süss, some rights reserved (CC BY-NC), uploaded by Paul Werner Süss',
+          license: 'CC-BY-NC',
+          source: 'iNaturalist',
+        },
+      },
+      posterStrings(),
+    )
+    const joined = texts.join('\n')
+    expect(joined).toContain('Paul Werner Süss · CC-BY-NC')
+    expect(joined).not.toContain('uploaded by')
+    expect(joined).not.toContain('some rights reserved')
+  })
+
+  it('超长机构名 → 折行，许可证单独完整可见且不压住鸟名行', () => {
+    const { canvas, drawn } = stubCanvas()
+    drawPoster(
+      canvas,
+      posterData([]),
+      {
+        themeId: 'white',
+        bgImage: bg,
+        bgCredit: {
+          name: '花脸鸭',
+          sci: 'Sibirionetta formosa',
+          author:
+            'Smithsonian Institution, National Museum of Natural History, Department of Vertebrate Zoology, Division of Birds',
+          license: 'CC-BY-NC',
+          source: 'iNaturalist',
+        },
+      },
+      posterStrings(),
+    )
+    const texts = drawn.map((d) => d.text)
+    const joined = texts.join('\n')
+    // 许可证必须完整出现（不能被省略号砍掉）
+    expect(texts).toContain('CC-BY-NC')
+    // 鸟名行在上、署名（作者折行 + 许可证）都在其下方（canvas 里 y 越大越靠下），
+    // 折行后不能反过来盖住鸟名。
+    const nameY = drawn.find((d) => d.text.includes('Sibirionetta formosa'))!.y
+    const metaYs = drawn
+      .filter((d) => d.y > nameY && (d.text.includes('Smithsonian') || d.text === 'CC-BY-NC' || d.text.includes('Division')))
+      .map((d) => d.y)
+    expect(metaYs.length).toBeGreaterThan(0)
+    expect(metaYs.every((y) => y > nameY)).toBe(true)
+    expect(joined).not.toContain('…')
+  })
 })

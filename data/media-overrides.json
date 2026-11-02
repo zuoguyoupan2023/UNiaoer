@@ -497,6 +497,58 @@
           "reportIds": []
         }
       ]
+    },
+    "sibirionetta-formosa": {
+      "_reason": "2026-11-02 用户反馈「花脸鸭的图看不清，不合适做题目」。取证（逐张看图）：image-1（obs 258891519 / Fern Sibley Wexler）是手机远摄截图，鸟仅占画面中央一小块、严重模糊且上下带截图黑边，而它正是题目首图（D1 img_url）；image-5（obs 81157597 / hugnature）是开阔水面远景，花脸鸭仅数十像素且与赤颈鸭、红嘴鸥混杂。image-2（Paul Werner Süss，雄鸟站枝，羽色特征清晰）、image-3（김대환/이선미，雄鸟展翅+雌鸟同框）、image-4（fangchen，雄鸟近景侧身）三张合格且特征清楚。处置：停用 1/5，把 2/3/4 三张重新取材到从未占用的 key image-6/7/8（顺序=Paul Werner→김대환→fangchen），首图由 image-1 变为 image-6。之所以重新物化而非直接挪旧 key：管线按索引复用素材，排除前面的图会错位，直接重排会覆盖 image-1/2/3 这些已发布 URL（干跑实测，违反 SOP 铁律 1）。旧 1–5 对象保留在 R2 备查。",
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/464604149/large.jpg",
+        "https://www.inaturalist.org/observations/258891519",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/133089900/large.jpg",
+        "https://www.inaturalist.org/observations/81157597"
+      ],
+      "rejected": [
+        {
+          "slot": "image-1",
+          "imageUrl": "https://bird.wewalk.world/media/sibirionetta-formosa/image-1.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/258891519",
+          "reason": "手机远摄截图：鸟仅占画面中央一小部分、严重模糊，且上下有截图黑边；此前是题目首图",
+          "reportIds": []
+        },
+        {
+          "slot": "image-5",
+          "imageUrl": "https://bird.wewalk.world/media/sibirionetta-formosa/image-5.full.webp",
+          "sourceUrl": "https://www.inaturalist.org/observations/81157597",
+          "reason": "开阔水面远景：花脸鸭仅数十像素，并与赤颈鸭、红嘴鸥混杂，无法辨认",
+          "reportIds": []
+        }
+      ],
+      "imageKeyBase": 6,
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/336375646/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Paul Werner Süss, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/191707473",
+          "sourceId": "336375646"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/615989727/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) 김대환, 이선미, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/338694259",
+          "sourceId": "615989727"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/620163064/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) fangchen, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/340753218",
+          "sourceId": "620163064"
+        }
+      ]
     }
   }
 }
