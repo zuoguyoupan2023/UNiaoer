@@ -6,14 +6,27 @@ import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import Answereview from '../AnswerReview.vue'
 import zhCN from '@/i18n/locales/zh-CN'
+import type { MediaAsset } from '@/types'
 
 const i18n = createI18n({ legacy: false, locale: 'zh-CN', messages: { 'zh-CN': zhCN } })
 
-function media(url: string, author: string, license: string) {
+/**
+ * 显式标注返回类型 `MediaAsset`：`speciesId` 是必填字段，
+ * 靠对象字面量推断会漏掉它 → `vue-tsc --build`（含 tsconfig.vitest.json）报 TS2741，
+ * **Cloudflare Pages 的 type-check 因此失败、整次部署报废**（2026-11-03 事故）。
+ * 标注类型后，任何必填字段缺失都会在本地 type-check 时暴露。
+ */
+function media(url: string, author: string, license: string): MediaAsset {
   return {
-    url, thumbUrl: url, type: 'image' as const, license, author,
-    source: 'iNaturalist', sourceUrl: 'https://www.inaturalist.org/observations/1',
+    url,
+    thumbUrl: url,
+    type: 'image',
+    license,
+    author,
+    source: 'iNaturalist',
+    sourceUrl: 'https://www.inaturalist.org/observations/1',
     licenseUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
+    speciesId: 'test-species',
   }
 }
 
