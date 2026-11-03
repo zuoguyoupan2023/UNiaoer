@@ -1233,6 +1233,7 @@ export const messages = {
     range30d: '最近 30 天',
     rangeYear: '{year} 年',
     trendEmpty: '该区间暂无记录',
+    trendAvg: '平均 {acc}%',
     trendAria: '每轮正确率趋势',
     legend: '圆点：单轮正确率（悬停看详情） · 绿=看图 / 深绿=听音',
     byTierMode: '按难度 / 模式',

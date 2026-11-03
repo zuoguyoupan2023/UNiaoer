@@ -1235,6 +1235,7 @@ const en: typeof zhMessages = {
     range30d: 'Last 30 days',
     rangeYear: '{year}',
     trendEmpty: 'No records in this range',
+    trendAvg: 'avg {acc}%',
     trendAria: 'Accuracy per round',
     legend: 'Dots: per-round accuracy (hover for details) · green=photo / dark green=sound',
     byTierMode: 'By tier / mode',

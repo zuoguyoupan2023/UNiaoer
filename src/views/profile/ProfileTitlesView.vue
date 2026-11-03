@@ -1,16 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Award, Sparkles } from 'lucide-vue-next'
-import {
-  getBadges,
-  getStats,
-  listRounds,
-  type EarnedBadge,
-  type RoundRecord,
-  type Stats,
-} from '@/core/historyDb'
-import { ALL_SPECIES_TOTAL, BADGES } from '@/core/badges'
+import { Sparkles } from 'lucide-vue-next'
+import { getStats, listRounds, type RoundRecord, type Stats } from '@/core/historyDb'
 import { evaluateTitles, TITLE_TRACKS, type EarnedTitle, type TitleText } from '@/core/titles'
 import { useSettingsStore } from '@/stores/settings'
 import BadgeIcon from '@/components/BadgeIcon.vue'
@@ -19,23 +11,21 @@ const { t } = useI18n()
 const settings = useSettingsStore()
 const stats = ref<Stats | null>(null)
 const rounds = ref<RoundRecord[]>([])
-const earned = ref<Set<string>>(new Set())
 const loading = ref(true)
 const pickerOpen = ref(false)
-const badgePickerOpen = ref(false)
 
 onMounted(async () => {
-  const [s, r, b] = await Promise.all([getStats(), listRounds(), getBadges()])
+  const [s, r] = await Promise.all([getStats(), listRounds()])
   stats.value = s
   rounds.value = r
-  earned.value = new Set((b as EarnedBadge[]).map((x) => x.id))
   loading.value = false
 })
 
 /** 称号文本 → 字符串（chips/选择器用） */
 const textOf = (x: TitleText) => t(x.key, x.params ?? {})
 
-// 称号（009）：由本地数据实时派生；佩戴位存 settings
+// 称号（009）：由本地数据实时派生；佩戴位存 settings。
+// 徽章的佩戴/查看全部在「徽章」页（ProfileBadgesView），本页只管称号。
 const titles = computed<EarnedTitle[]>(() =>
   stats.value ? evaluateTitles(stats.value, rounds.value) : [],
 )
@@ -47,17 +37,6 @@ const wornLabel = computed(() => {
 function wearTitle(trackId: string | null) {
   settings.wornTitle = trackId
   pickerOpen.value = false
-}
-
-/** 佩戴徽章（R31） */
-const wornBadgeLabel = computed(() => {
-  const def = BADGES.find((b) => b.id === settings.wornBadge)
-  return def ? t(def.labelKey, { n: ALL_SPECIES_TOTAL }) : ''
-})
-const earnedBadgeDefs = computed(() => BADGES.filter((b) => earned.value.has(b.id)))
-function wearBadge(id: string | null) {
-  settings.wornBadge = id
-  badgePickerOpen.value = false
 }
 
 /**
@@ -98,72 +77,39 @@ function makeEmptyStats() {
 </script>
 
 <template>
-  <!-- 佩戴区（R32）：当前佩戴的称号与徽章，各自更换 -->
+  <!-- 佩戴区（R32）：当前佩戴的称号；徽章佩戴在「徽章」页 -->
   <section class="card wear-card">
     <h3 class="block-title">{{ t('profile.wearTitle') }}</h3>
     <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
-    <div v-else class="wear-grid">
-      <div class="wear-item">
-        <button class="btn btn-secondary wear-change" @click="pickerOpen = !pickerOpen">
-          {{ pickerOpen ? t('common.collapse') : t('profile.change') }}
-        </button>
-        <div class="wear-line">
-          <Sparkles class="ic" :size="26" />
-          <div class="wear-text">
-            <span class="muted">{{ t('profile.titleLabel') }}</span>
-            <strong>{{ wornLabel || t('profile.notWorn') }}</strong>
-          </div>
-        </div>
-        <div v-if="pickerOpen" class="title-options">
-          <button
-            class="title-opt"
-            :class="{ on: settings.wornTitle === null }"
-            @click="wearTitle(null)"
-          >
-            {{ t('profile.wearNone') }}
-          </button>
-          <button
-            v-for="x in titles"
-            :key="x.trackId"
-            class="title-opt"
-            :class="{ on: settings.wornTitle === x.trackId }"
-            @click="wearTitle(x.trackId)"
-          >
-            <strong>{{ textOf(x.text) }}</strong>
-            <span class="muted">{{ t(x.trackNameKey) }} · Lv.{{ x.level }}</span>
-          </button>
+    <div v-else class="wear-item">
+      <button class="btn btn-secondary wear-change" @click="pickerOpen = !pickerOpen">
+        {{ pickerOpen ? t('common.collapse') : t('profile.change') }}
+      </button>
+      <div class="wear-line">
+        <Sparkles class="ic" :size="26" />
+        <div class="wear-text">
+          <span class="muted">{{ t('profile.titleLabel') }}</span>
+          <strong>{{ wornLabel || t('profile.notWorn') }}</strong>
         </div>
       </div>
-      <div class="wear-item">
-        <button class="btn btn-secondary wear-change" @click="badgePickerOpen = !badgePickerOpen">
-          {{ badgePickerOpen ? t('common.collapse') : t('profile.change') }}
+      <div v-if="pickerOpen" class="title-options">
+        <button
+          class="title-opt"
+          :class="{ on: settings.wornTitle === null }"
+          @click="wearTitle(null)"
+        >
+          {{ t('profile.wearNone') }}
         </button>
-        <div class="wear-line">
-          <Award class="ic" :size="26" />
-          <div class="wear-text">
-            <span class="muted">{{ t('profile.badgeLabel') }}</span>
-            <strong>{{ wornBadgeLabel || t('profile.notWorn') }}</strong>
-          </div>
-        </div>
-        <div v-if="badgePickerOpen" class="title-options">
-          <button
-            class="title-opt"
-            :class="{ on: settings.wornBadge === null }"
-            @click="wearBadge(null)"
-          >
-            {{ t('profile.wearNone') }}
-          </button>
-          <button
-            v-for="b in earnedBadgeDefs"
-            :key="b.id"
-            class="title-opt"
-            :class="{ on: settings.wornBadge === b.id }"
-            @click="wearBadge(b.id)"
-          >
-            <strong>{{ t(b.labelKey, { n: ALL_SPECIES_TOTAL }) }}</strong>
-            <span class="muted">{{ t(`badges.series.${b.series}`) }}</span>
-          </button>
-        </div>
+        <button
+          v-for="x in titles"
+          :key="x.trackId"
+          class="title-opt"
+          :class="{ on: settings.wornTitle === x.trackId }"
+          @click="wearTitle(x.trackId)"
+        >
+          <strong>{{ textOf(x.text) }}</strong>
+          <span class="muted">{{ t(x.trackNameKey) }} · Lv.{{ x.level }}</span>
+        </button>
       </div>
     </div>
   </section>
@@ -208,17 +154,6 @@ function makeEmptyStats() {
 }
 .wear-card {
   margin-bottom: 14px;
-}
-/* ---- 佩戴区（R32） ---- */
-.wear-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-@media (max-width: 520px) {
-  .wear-grid {
-    grid-template-columns: 1fr;
-  }
 }
 .wear-line {
   display: flex;

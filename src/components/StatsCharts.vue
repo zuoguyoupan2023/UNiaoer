@@ -41,6 +41,12 @@ const trend = computed(() => {
     .map((r) => ({ at: r.at, accuracy: r.accuracy, mode: r.mode, tier: r.tier }))
 })
 
+/** 区间平均正确率（按题加权，与下方按档位/模式条形同口径） */
+const trendAvg = computed(() => {
+  const [from, to] = rangeBounds(range.value)
+  return agg(props.rounds.filter((r) => r.at >= from && r.at < to))
+})
+
 function agg(list: RoundRecord[]) {
   const questions = list.reduce((n, r) => n + r.total, 0)
   const correct = list.reduce((n, r) => n + r.correct, 0)
@@ -92,6 +98,11 @@ const trendPts = computed(() =>
   })),
 )
 
+/** 平均线 y 坐标（与数据点同一比例尺） */
+const avgY = computed(
+  () => PAD + ((100 - trendAvg.value.accuracy) * (H - PAD * 2)) / 100,
+)
+
 /** 日期随 locale（015 i18n-4：统一 Intl） */
 function fmtDay(at: number) {
   return new Intl.DateTimeFormat(currentLocale(), { month: 'numeric', day: 'numeric' }).format(at)
@@ -137,6 +148,11 @@ function fmtDay(at: number) {
         <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" :aria-label="t('charts.trendAria')">
           <line v-for="g in [0, 50, 100]" :key="g" :x1="PAD" :x2="W - PAD" :y1="PAD + ((100 - g) * (H - PAD * 2)) / 100" :y2="PAD + ((100 - g) * (H - PAD * 2)) / 100" class="grid" />
           <text v-for="g in [100, 50, 0]" :key="'t' + g" :x="PAD + 2" :y="PAD + ((100 - g) * (H - PAD * 2)) / 100 - 2" class="grid-text">{{ g }}</text>
+          <!-- 区间平均正确率：虚线 + 右端数值 -->
+          <line v-if="trendAvg.rounds" :x1="PAD" :x2="W - PAD" :y1="avgY" :y2="avgY" class="avg-line" />
+          <text v-if="trendAvg.rounds" :x="W - PAD - 2" :y="avgY - 3" text-anchor="end" class="avg-text">
+            {{ t('charts.trendAvg', { acc: trendAvg.accuracy }) }}
+          </text>
           <polyline v-if="trendPts.length > 1" :points="trendPts.map((p) => `${p.x},${p.y}`).join(' ')" class="line" />
           <circle
             v-for="(p, i) in trendPts"
@@ -236,6 +252,17 @@ function fmtDay(at: number) {
 .grid-text {
   font-size: 7px;
   fill: #9fb5aa;
+}
+/* 区间平均正确率（虚线 + 右端标签） */
+.avg-line {
+  stroke: #b0851f;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.avg-text {
+  font-size: 7px;
+  fill: #b0851f;
+  font-weight: 700;
 }
 .line {
   fill: none;
