@@ -2,6 +2,22 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-11-03",
+      "titleZh": "白尾蓝仙鹟:图一与图三已停用,补入雄鸟与雌鸟各一张",
+      "titleEn": "White-tailed Flycatcher: photos 1 and 3 retired, a male and a female photo added",
+      "bodyZh": "白尾蓝仙鹟原图一为环志手持、夜间闪光拍摄的幼鸟照片,原图三是一只辨识特征不清的褐色型雌鸟,两张都不适合作为认鸟题面(其中图一还是出题首图);iNaturalist 上两张都标为本种且为 research grade,标注没问题,是本站取图规则选错了。现补入繁殖羽雄鸟站枝标准照(新首图)与苔藓地面雌鸟照,使用 image-6/7,老缓存不受影响。现在展示 5 张,首图变更需 D1 同步。",
+      "bodyEn": "Photos 1 and 3 of the White-tailed Flycatcher are retired: the first was a brown juvenile photographed in hand with flash during banding, and the third was a brown female-type bird too plain to identify reliably. Neither works as a quiz image, and the first was also the lead image. Both are labelled as this species and are research grade on iNaturalist, so the labels are fine — our picker simply chose unsuitable frames. A breeding-plumage male portrait (new lead) and a female on mossy ground were added using image-6/7, leaving old caches untouched. Five photos are shown now; the lead change needs a D1 sync.",
+      "speciesId": "leucoptilon-concretum"
+    },
+    {
+      "date": "2026-11-03",
+      "titleZh": "白尾海雕:图一已停用,补入栖枝特写",
+      "titleEn": "White-tailed Eagle: distant flight photo retired, perched close-up added",
+      "bodyZh": "白尾海雕原图一是一张远距离飞行照片,主体在画面中占比过小,只看得清轮廓,却是出题与海报的首图。该观察在 iNaturalist 上标注无误、为 research grade,问题在于取图规则选中了主体过小的照片。现补入一张栖枝特写(新首图),鞘翅状褐羽与黄色大喙清晰,使用 image-6,老缓存不受影响。现在展示 5 张,首图变更需 D1 同步。",
+      "bodyEn": "The original lead photo of the White-tailed Eagle was a distant flight shot in which the bird is too small to identify, yet it served as the lead image for quizzes and posters. The observation is correctly labelled and research grade on iNaturalist, so the problem was our picker choosing a frame with too small a subject. A perched close-up showing the pale barred plumage and large yellow bill was added as the new lead using key image-6, leaving old caches untouched. Five photos are shown now; the lead change needs a D1 sync.",
+      "speciesId": "haliaeetus-albicilla"
+    },
+    {
       "date": "2026-11-01",
       "titleZh": "乌燕鸥:无壳蛋图已停用,补入三张成鸟图",
       "titleEn": "Sooty Tern: shell-less egg photo retired, three adult photos added",
