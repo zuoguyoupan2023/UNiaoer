@@ -475,10 +475,21 @@ export async function buildNameQuestions(
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
   /** 已用作答案的物种（轮内去重：同一轮每只鸟最多当一次答案，与经典卷同则） */
   const usedAnswers = new Set<string>()
+  /**
+   * 已用作答案的**名字**（2026-11-03）：全球有 35 对物种共用同一中文名
+   * （AviList 拆种遗留，如 `Cinnyris jugularis` 与 `Cinnyris ornatus` 都叫「黄腹花蜜鸟」），
+   * 只按 id 去重会让同一轮出现两道题干相同的题。名字维度必须一并去重。
+   */
+  const usedAnswerNames = new Set<string>()
 
   for (const answerSp of answerList) {
     if (questions.length >= want) break
     if (usedAnswers.has(answerSp.id)) continue
+    // 同名物种跳过（同一轮题干不得重复，2026-11-03；见 usedAnswerNames 注释）。
+    // 用 nameByMode 而不是 speciesName：L6 的卷别由 nameMode 决定（zh/en/sci），
+    // 去重必须和「题干实际显示的名字」同一口径，否则英文卷/学名卷下会去重失效。
+    const preName = nameByMode(answerSp, nameMode)
+    if (!preName || usedAnswerNames.has(preName)) continue
     // ensureMedia 可能返回带素材的新对象（分片懒加载），必须用它而不是原 species
     const answerResolved = await ensureMedia(answerSp, type)
     const answerAssets = assetsOf(answerResolved, type)
@@ -514,6 +525,7 @@ export async function buildNameQuestions(
     if (picked.length < need) continue // 同卷可播候选不足一个整题的选项数 → 少出一题
 
     usedAnswers.add(answerSp.id)
+    usedAnswerNames.add(preName)
     const optionPairs = shuffle([
       { id: answerSp.id, name: answerName, media: answerAssets[0]! },
       ...picked,
@@ -859,12 +871,26 @@ export async function buildSimilarQuestions(
   // 全部只调权重不排除（详见上方 answerWeight 注释）。
   // 抽取顺序即出题顺序；`weightedSample` 已保证每只鸟都有非零概率。
   const st = loadS1State()
-  // 多抽一些作为「素材取不到」时的替补余量（media-stem 才可能因缺图跳过）
-  const pickedOrder = weightedSample(answerPicks, (p) => answerWeight(p, st), Math.min(answerPicks.length, want * 3))
+  // 多抽一些作为替补余量：两种消耗来源——
+  //   a) media-stem 可能因缺图跳过（`!answerAssets.length`）；
+  //   b) 同名物种去重会跳过（见下方 roundAnswerNames）。
+  // 抽 4 倍（原 3 倍）以覆盖两者叠加，避免「有候选却凑不满题数」。
+  const pickedOrder = weightedSample(answerPicks, (p) => answerWeight(p, st), Math.min(answerPicks.length, want * 4))
 
   const questions: Question[] = []
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
   const nameStem = form === 'name-stem'
+  /**
+   * 本轮已回答过的**名字**（2026-11-03 修）：
+   *
+   * 不能只靠 id 去重——全球有 35 对物种**共用同一个中文名**（AviList 拆种遗留），
+   * 典型如 `Cinnyris jugularis` 与 `Cinnyris ornatus` 都叫「黄腹花蜜鸟」。
+   * 只按 id 去重的话，同一轮里会出现两道题干完全一样的题（用户看到的就是「重复题」）。
+   *
+   * 所以：**同一轮内，答案名不得重复**（同名 → 跳过该候选，继续取下一个）。
+   * 注意这是**题与题之间**的去重，与单题内部干扰项去重（下面的 `used`）是两回事。
+   */
+  const roundAnswerNames = new Set<string>()
   /** 本轮实际出过的答案（落库到跨轮状态用） */
   const usedAnswers: SimilarPick[] = []
   for (const pick of pickedOrder) {
@@ -874,6 +900,9 @@ export async function buildSimilarQuestions(
     if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 换下一个候选
 
     const answerName = speciesName(resolved, locale)
+    if (!answerName) continue
+    if (roundAnswerNames.has(answerName)) continue // 同名物种（如两个「黄腹花蜜鸟」）→ 本轮不再出
+    roundAnswerNames.add(answerName)
     const used = new Set<string>([answerName])
     const distractors: { id: string; name: string; media: MediaAsset }[] = []
     if (!nameStem) {

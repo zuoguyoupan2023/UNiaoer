@@ -311,3 +311,47 @@ describe('S1 选题策略（2026-11-03：降权不排除 / 大组加权 / 组内
     expect(whiteHits).toBeGreaterThan(0)
   })
 })
+
+// ---------------------------------------------------------------------------
+// 2026-11-03 修：同名物种导致「同一轮题干重复」
+//
+// 全球有 35 对物种共用同一中文名（AviList 拆种遗留），典型：
+//   Cinnyris jugularis 与 Cinnyris ornatus 都叫「黄腹花蜜鸟」。
+// 只按 id 去重时，同一轮会出现两道题干完全相同的题（用户实测截图发现）。
+// ---------------------------------------------------------------------------
+describe('轮内题干去重（同名不同种不得重复出题）', () => {
+  beforeEach(() => {
+    clearNameTokenCache()
+    clearColorIndexCache()
+    clearS1PickState()
+  })
+
+  it('S1：两个同名的不同物种，同一轮里只会出现其中一个', async () => {
+    // 同色组里放两对同名物种，各自带足够同伴
+    const bank: BankSpecies[] = [
+      sp('j1', '黄腹花蜜鸟', 'Garden Sunbird', '太阳鸟科'),
+      sp('j2', '黄腹花蜜鸟', 'Ornate Sunbird', '太阳鸟科'), // 同名不同种
+      ...['a1', 'a2', 'a3'].map((id) => sp(id, `黄腹鸟${id}`, `Yellow Bird ${id}`, `科${id}`)),
+    ]
+    const qs = await buildSimilarQuestions(bank, { type: 'image', count: 10 })
+    const stems = qs.map((q) => q.answer)
+    // 关键断言：题干不重复
+    expect(new Set(stems).size).toBe(stems.length)
+    // 且「黄腹花蜜鸟」最多出现一次
+    expect(stems.filter((s) => s === '黄腹花蜜鸟').length).toBeLessThanOrEqual(1)
+  })
+
+  it('L6：同名不同种在同一轮里不会各出一题', async () => {
+    const bank: BankSpecies[] = [
+      sp('j1', '黄腹花蜜鸟', 'Garden Sunbird', '太阳鸟科'),
+      sp('j2', '黄腹花蜜鸟', 'Ornate Sunbird', '太阳鸟科'),
+      ...['a1', 'a2', 'a3', 'a4', 'a5', 'a6'].map((id) =>
+        sp(id, `太阳鸟${id}`, `Sunbird ${id}`, '太阳鸟科'),
+      ),
+    ]
+    const qs = await buildNameQuestions(bank, { type: 'image', count: 10 })
+    const stems = qs.map((q) => q.answer)
+    expect(new Set(stems).size).toBe(stems.length)
+    expect(stems.filter((s) => s === '黄腹花蜜鸟').length).toBeLessThanOrEqual(1)
+  })
+})
