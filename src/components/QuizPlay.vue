@@ -571,6 +571,22 @@ async function initIntro() {
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
 
+/**
+ * 「看名选图」题型（S1 name-stem）：题干就是鸟名，选项是图片。
+ *
+ * 反馈文案必须换成「正确图片：C」而不是「正确答案：黑胸歌鸲」（2026-11-03 用户定）——
+ * 题干已经在最上方写着「黑胸歌鸲」，再说一遍等于零信息；用户真正需要知道的是
+ * **「四张图里哪一张才是它」**，所以答案要以**选项标号**呈现。
+ */
+const answerIsImage = computed(() => !!quiz.current?.stemName)
+/** 正确答案在选项里的标号（A/B/C/D…）；非看名选图或找不到时返回空串 */
+const answerLetter = computed(() => {
+  const q = quiz.current
+  if (!q) return ''
+  const i = q.options.indexOf(q.answer)
+  return i >= 0 ? (['A', 'B', 'C', 'D', 'E', 'F'][i] ?? '') : ''
+})
+
 // ---- 072-a 说明：本组题量不足时**明确告知**（用户 2026-10-22 定：允许不足但说明）----
 const shortRoundNote = computed(() => {
   const d = quiz.lastBuild
@@ -1532,7 +1548,10 @@ function onTouchEnd(e: TouchEvent) {
               <strong v-if="isCorrect">{{ t('quiz.correct') }}</strong>
               <strong v-else-if="timedOut">{{ t('quiz.timeout') }}</strong>
               <strong v-else>{{ t('quiz.wrong') }}</strong>
-              <span>
+              <span v-if="answerIsImage">
+                {{ t('quiz.correctImage', { letter: answerLetter }) }}
+              </span>
+              <span v-else>
                 {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
                   t('quiz.answerSci', { sci: quiz.current.sci })
                 }}
@@ -1562,10 +1581,15 @@ function onTouchEnd(e: TouchEvent) {
         <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> {{ t('quiz.timeout') }}</strong>
         <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> {{ t('quiz.correct') }}</strong>
         <strong v-else><CircleX class="ic" :size="16" /> {{ t('quiz.wrong') }}</strong>
-        {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
-          t('quiz.answerSci', { sci: quiz.current.sci })
-        }}
-        <span class="muted"> · {{ familyOf(quiz.current.family) }}</span>
+        <template v-if="answerIsImage">
+          {{ t('quiz.correctImage', { letter: answerLetter }) }}
+        </template>
+        <template v-else>
+          {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
+            t('quiz.answerSci', { sci: quiz.current.sci })
+          }}
+          <span class="muted"> · {{ familyOf(quiz.current.family) }}</span>
+        </template>
       </div>
 
       <!-- 「不再自动切换」仅在取消本次后出现；彻底手动时出现「自动切换」 -->
@@ -1576,21 +1600,6 @@ function onTouchEnd(e: TouchEvent) {
         <button v-else-if="showEnableBtn" class="btn-mini" type="button" @click="enableAuto">
           <Play class="ic" :size="12" /> {{ t('quiz.enableAuto') }}
         </button>
-      </div>
-
-      <!-- 自动切换浮窗期间隐藏主按钮（避免重复）；取消/手动时恢复显示 -->
-      <div v-if="showInline" class="actions">
-        <button class="btn btn-primary" @click="goNext">
-          {{ nextLabel }}
-          <ArrowRight class="ic" :size="16" />
-        </button>
-      </div>
-      <div v-if="quiz.answered && !autoPending" class="quiz-foot">
-        <span class="foot-hint">
-          <Keyboard class="ic" :size="13" /> {{ t('quiz.footPress') }}
-          <ArrowRight class="ic" :size="12" /> {{ t('quiz.footOrSpace') }} ·
-          <Smartphone class="ic" :size="13" /> {{ t('quiz.footSwipe') }}
-        </span>
       </div>
 
       <!-- 作答后：选项对照（A→鸟名）+ 图片来源（A→作者·许可证），铁律 11。
@@ -1605,7 +1614,7 @@ function onTouchEnd(e: TouchEvent) {
         :chosen="quiz.currentChoice"
       />
 
-      <!-- 署名信息移到卡片最底部，避免干扰（R41）；切换素材后跟随当前素材。
+      <!-- 署名信息（R41）：切换素材后跟随当前素材。
            **S1 看名选图（stemName）一律不显示**（用户 2026-11-03）：
            该题型的 quiz.current.media 是**答案图**，底部署名行等于把「正确答案的图 + 作者」
            直接印在页面上——既是泄题线索，也与本题无关（本题题干是鸟名，页面上没有题面媒体）。
@@ -1616,6 +1625,25 @@ function onTouchEnd(e: TouchEvent) {
         class="quiz-attr"
         :media="displayMedia ?? quiz.current.media"
       />
+
+      <!-- 键盘/滑动提示：信息类内容之后、主按钮之前。 -->
+      <div v-if="quiz.answered && !autoPending" class="quiz-foot">
+        <span class="foot-hint">
+          <Keyboard class="ic" :size="13" /> {{ t('quiz.footPress') }}
+          <ArrowRight class="ic" :size="12" /> {{ t('quiz.footOrSpace') }} ·
+          <Smartphone class="ic" :size="13" /> {{ t('quiz.footSwipe') }}
+        </span>
+      </div>
+
+      <!-- 主按钮放**卡片最末**（2026-11-03 用户定）：
+           顺序 = 反馈信息（选项对照/图片来源/署名）→ 快捷键提示 → 操作按钮，
+           符合从上到下的阅读顺序；自动切换浮窗期间隐藏（避免重复）。 -->
+      <div v-if="showInline" class="actions">
+        <button class="btn btn-primary" @click="goNext">
+          {{ nextLabel }}
+          <ArrowRight class="ic" :size="16" />
+        </button>
+      </div>
     </div>
   </template>
 </template>

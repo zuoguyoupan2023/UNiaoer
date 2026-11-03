@@ -250,6 +250,8 @@ export const messages = {
     wrong: '回答错误',
     timeout: '时间到！',
     correctAnswer: '正确答案：',
+    // 「看名选图」题型：题干已是鸟名，答案要用选项标号（2026-11-03 用户定）
+    correctImage: '正确图片：{letter}',
     answerSci: '（{sci}）',
     // 铁律 11（2026-11-03）：作答后集中展示选项对照与图片来源
     review: {

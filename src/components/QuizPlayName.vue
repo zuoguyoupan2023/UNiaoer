@@ -43,7 +43,10 @@ import OptionMediaList from './OptionMediaList.vue'
 import ProgressBar from './ProgressBar.vue'
 import ReportDialog from './ReportDialog.vue'
 
-defineProps<{ type: MediaType }>()
+// 必须赋给变量：下方 answerIsImage 要用 props.type 判断题型
+// （2026-11-03 bug：只写 defineProps<...>() 不赋值，却在 computed 里引 props.type
+//   → 运行时 ReferenceError，整个 L6 组件挂死、按钮无响应、倒计时不走）
+const props = defineProps<{ type: MediaType }>()
 const router = useRouter()
 const quiz = useQuizStore()
 const settings = useSettingsStore()
@@ -76,6 +79,19 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
 const isCorrect = computed(() => quiz.answered && quiz.currentChoice === quiz.current?.answer)
+
+/**
+ * L6 半鸟人（识图版）同样是「题干是鸟名、选项是图片」，
+ * 所以反馈里的答案必须以**选项标号**呈现（「正确图片：C」），
+ * 而不是重复题干鸟名（2026-11-03 用户定，与 S1 看名选图同口径）。
+ */
+const answerIsImage = computed(() => props.type === 'image')
+const answerLetter = computed(() => {
+  const q = quiz.current
+  if (!q) return ''
+  const i = q.options.indexOf(q.answer)
+  return i >= 0 ? (['A', 'B', 'C', 'D', 'E', 'F'][i] ?? '') : ''
+})
 
 // ---- 072-a 说明：本组题量不足时明确告知 ----
 const shortRoundNote = computed(() => {
@@ -530,7 +546,10 @@ const optionAttributions = computed(() => {
               <strong v-if="isCorrect">{{ t('quiz.correct') }}</strong>
               <strong v-else-if="timedOut">{{ t('quiz.timeout') }}</strong>
               <strong v-else>{{ t('quiz.wrong') }}</strong>
-              <span>
+              <span v-if="answerIsImage">
+                {{ t('quiz.correctImage', { letter: answerLetter }) }}
+              </span>
+              <span v-else>
                 {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
                   t('quiz.answerSci', { sci: quiz.current.sci })
                 }}
@@ -560,10 +579,15 @@ const optionAttributions = computed(() => {
         <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> {{ t('quiz.timeout') }}</strong>
         <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> {{ t('quiz.correct') }}</strong>
         <strong v-else><CircleX class="ic" :size="16" /> {{ t('quiz.wrong') }}</strong>
-        {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
-          t('quiz.answerSci', { sci: quiz.current.sci })
-        }}
-        <span class="muted"> · {{ familyOf(quiz.current.family) }}</span>
+        <template v-if="answerIsImage">
+          {{ t('quiz.correctImage', { letter: answerLetter }) }}
+        </template>
+        <template v-else>
+          {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
+            t('quiz.answerSci', { sci: quiz.current.sci })
+          }}
+          <span class="muted"> · {{ familyOf(quiz.current.family) }}</span>
+        </template>
       </div>
 
       <!-- 「不再自动切换」/「自动切换」 -->
@@ -574,20 +598,6 @@ const optionAttributions = computed(() => {
         <button v-else-if="showEnableBtn" class="btn-mini" type="button" @click="enableAuto">
           <Play class="ic" :size="12" /> {{ t('quiz.enableAuto') }}
         </button>
-      </div>
-
-      <div v-if="showInline" class="actions">
-        <button class="btn btn-primary" @click="goNext">
-          {{ nextLabel }}
-          <ArrowRight class="ic" :size="16" />
-        </button>
-      </div>
-      <div v-if="quiz.answered && !autoPending" class="quiz-foot">
-        <span class="foot-hint">
-          <Keyboard class="ic" :size="13" /> {{ t('quiz.footPress') }}
-          <ArrowRight class="ic" :size="12" /> {{ t('quiz.footOrSpace') }} ·
-          <Smartphone class="ic" :size="13" /> {{ t('quiz.footSwipe') }}
-        </span>
       </div>
 
       <!-- 作答后：选项对照（A→鸟名）+ 图片来源（A→作者·许可证），铁律 11。
@@ -615,6 +625,24 @@ const optionAttributions = computed(() => {
         </template>
       </div>
       <AttributionLine v-else-if="!quiz.answered" class="quiz-attr" :media="quiz.current.media" />
+
+      <!-- 键盘/滑动提示（2026-11-03 用户定）：**放在卡片最底部**（所有信息之后）。
+           之前夹在「下一题」按钮与选项对照之间，会被误读成答案区的一部分。 -->
+      <div v-if="quiz.answered && !autoPending" class="quiz-foot">
+        <span class="foot-hint">
+          <Keyboard class="ic" :size="13" /> {{ t('quiz.footPress') }}
+          <ArrowRight class="ic" :size="12" /> {{ t('quiz.footOrSpace') }} ·
+          <Smartphone class="ic" :size="13" /> {{ t('quiz.footSwipe') }}
+        </span>
+      </div>
+
+      <!-- 主按钮放**卡片最末**（2026-11-03 用户定）：先看反馈信息，最后才是「下一题」。 -->
+      <div v-if="showInline" class="actions">
+        <button class="btn btn-primary" @click="goNext">
+          {{ nextLabel }}
+          <ArrowRight class="ic" :size="16" />
+        </button>
+      </div>
     </div>
   </template>
 </template>

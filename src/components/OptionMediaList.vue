@@ -300,14 +300,11 @@ defineExpose({ pressIndex: pressByKey, stopPlayback })
     grid-template-columns: 1fr;
     gap: 8px;
     max-width: none;
+    /* 行高降一档（一列 4 张，太高就要多滚） */
+    --cell-h: 150px;
   }
   .media-options.audio {
     grid-template-columns: 1fr;
-  }
-  /* 手机一列时进一步压高度：4 张 × (180 + 间距) ≈ 750px，
-     比原来的 4 × 290 少滚近一半（看大图另有 lightbox，不必在列表里放大图）。 */
-  .media-options.image .thumb {
-    max-height: 150px;
   }
 }
 .mopt {
@@ -317,6 +314,9 @@ defineExpose({ pressIndex: pressByKey, stopPlayback })
   border-radius: var(--radius);
   background: #fff;
   overflow: hidden;
+  /* 固定格高（2026-11-03）：所有选项等高，图片用 contain 整张塞进格子，
+     竖图两侧留白、绝不上下溢出。手机上由 .media-options.image 覆盖成 150px。 */
+  height: var(--cell-h, 190px);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
   box-shadow: var(--shadow-sm);
 }
@@ -338,16 +338,21 @@ defineExpose({ pressIndex: pressByKey, stopPlayback })
 
 /* 图片本体：单击 = 看大图（不是作答）；竖向拖拽自然交给页面滚动。
    尺寸（2026-11-03 用户定「图太大，电脑版都要滚」）：
-   - 桌面 2×2 时把整块宽度收在 640px 内并居中，单图高度上限 190px
-     → 两行约 390px，配合题干在 720px 视口内一屏放下（实测 docH≈720）；
-   - 手机一列时高度上限 150px，4 张约 630px，滚动量不到原来一半；
-   - 保持 4/3 为主比例（鸟图上下不易被裁），仅超限高度时才 crop。 */
+   - 桌面 2×2 时把整块宽度收在 640px 内并居中；
+   - 手机一列时用同一套逻辑，行高更小。
+
+   **布局改为「固定格高 + contain」（2026-11-03 用户定）**：
+   原先 `aspect-ratio: 4/3` + `max-height` 会被 height 上限打断比例（311px 宽本该 233 高，
+   被压成 190），于是连横图都出现明显左右留白、图显得又小又空；而 `cover` 又会把竖图裁成
+   横框、只露中段，用户被迫点开大图才看得全（等于绕远路）。
+   现在：格高固定（`.mopt` 给高度），图片 `width/height: 100%` + `object-fit: contain`——
+   **整图永远完整**，横图铺满宽、竖图两侧留白，绝不上下溢出；所有格子等高，排版整齐。 */
 .thumb {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  max-height: 190px;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
+  background: #f2f6f4;
   cursor: zoom-in;
 }
 .zoom-hint {

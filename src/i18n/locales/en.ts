@@ -252,6 +252,8 @@ const en: typeof zhMessages = {
     wrong: 'Wrong',
     timeout: "Time's up!",
     correctAnswer: 'Correct answer: ',
+    // "Name → image" quiz: the stem IS the bird name, so point at the option letter
+    correctImage: 'Correct photo: {letter}',
     answerSci: ' ({sci})',
     // 铁律 11 (2026-11-03): after answering, show the option→name map and image credits together
     review: {
