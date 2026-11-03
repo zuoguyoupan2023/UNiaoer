@@ -105,6 +105,16 @@ export const useQuizStore = defineStore('quiz', () => {
   const chosen = ref<(string | null)[]>([])
   const index = ref(0)
   const loading = ref(false)
+  /**
+   * 加载页最短展示时长（2026-11-03 用户定）：宣传语要能被看到，
+   * 图像类选项题也要有足够准备时间。只补不足部分，不拖慢本来就慢的网络。
+   *
+   * **测试环境为 0**：单测不关心宣传语曝光，也不该为 UI 停留白等 2s
+   * （否则每个 start() 的用例都慢 2 秒，一套测试会拖到分钟级）。
+   */
+  const LOADING_MIN_MS = import.meta.env.MODE === 'test' ? 0 : 2000
+  /** 本轮加载开始时刻（LOADING_MIN_MS 的计时起点，每次 start() 重置） */
+  let startedAtLoad = 0
   const error = ref('')
   /** 072-a 观测：上一轮出题的链路快照（默认 null；仅诊断模式展示） */
   const lastBuild = ref<QuizBuildDiag | null>(null)
@@ -349,6 +359,8 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       (opts.keepSession ? nameMode.value : currentLocale() === 'en' ? 'en' : 'zh')
     // 087 §6.5 + 2026-10-25 全档统一：快照"实际生效"地区（用户所选，任何档位）
     region.value = effectiveRegion(tier.value, useSettingsStore().region)
+    // 加载页最短展示时长的起点（见 finally 里的等待逻辑）
+    startedAtLoad = Date.now()
     loading.value = true
     error.value = ''
     try {
@@ -571,6 +583,15 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       chosen.value = []
       index.value = 0
     } finally {
+      // 加载页**最短展示 2s**（2026-11-03 用户定）：
+      //  ① 宣传语（不要诱拍/不要投喂/不要报点…）要能被看到——原来加载太快，一闪而过；
+      //  ② 给图像类选项题留足准备时间（S1 看名选图/L6 要看 4~6 张图 load 完才开始计时，
+      //     如果占位页一闪而过，用户会觉得"刚点开始就倒计时了"）。
+      // 只补「不足 2s 的部分」，本来就慢的网络不会额外等待。
+      const elapsed = Date.now() - startedAtLoad
+      if (elapsed < LOADING_MIN_MS) {
+        await new Promise((r) => setTimeout(r, LOADING_MIN_MS - elapsed))
+      }
       loading.value = false
     }
   }

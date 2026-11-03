@@ -9,6 +9,7 @@ import { listRounds, setActiveArchiveNickname, setProfileNickname } from '@/core
 import { ambiencePlayer, interferencePlayer } from '@/core/ambience'
 import { AUTO_NEXT_DELAY_WRONG_MS, secondsUntilReveal } from '@/core/pacing'
 import { isLeftSwipe } from '@/core/swipe'
+import { pickEthicsLine } from '@/core/ethicsLines'
 import { diagInputSummary, diagMarkAdvance, diagMarkAnswer, isDiag } from '@/core/diag'
 import { L8_ENABLED, S1_ENABLED, TIER_LIST, TIERS, isSpecialModeTier } from '@/core/difficulty'
 import { useMediaGate } from '@/composables/useMediaGate'
@@ -228,6 +229,15 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
+
+/** 加载占位页的宣传语：每次进入加载态随机换一条，按界面语言显示 */
+const ethicsText = ref(pickEthicsLine(currentLocale()))
+watch(
+  () => quiz.loading,
+  (v) => {
+    if (v) ethicsText.value = pickEthicsLine(currentLocale())
+  },
+)
 // L8 未上线（difficulty.L8_ENABLED）时忽略已存的第八档：介绍页没有该按钮，
 // 不回退会直接出现 L8 盘面选择并可开轮。2 = quiz store 默认档。
 // S1（9，docs/099）同规则：未上架（S1_ENABLED=false）时忽略已存的第九档。
@@ -1398,6 +1408,8 @@ function onTouchEnd(e: TouchEvent) {
         )
       }}
     </p>
+    <!-- 宣传语（2026-11-03）：与上面的进度文案分块，加粗居中。无标题。 -->
+    <p class="ethic-line">{{ ethicsText }}</p>
   </section>
 
   <!-- 出错 -->
@@ -2400,6 +2412,20 @@ function onTouchEnd(e: TouchEvent) {
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
   margin: 0 auto 16px;
+}
+/* 宣传语（2026-11-03）：与功能性进度文案分块——加粗、居中、拉开间距、略大字号。
+   用主色而非灰字，让它读起来是「本项目的主张」，而不是加载说明的一部分。 */
+.placeholder .ethic-line {
+  margin: 26px auto 0;
+  padding-top: 18px;
+  max-width: 30em;
+  border-top: 1px solid var(--border);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--primary);
+  letter-spacing: 0.01em;
 }
 @keyframes spin {
   to {

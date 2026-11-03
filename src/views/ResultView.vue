@@ -23,6 +23,7 @@ import { TIERS } from '@/core/difficulty'
 import { formatMemoryTime, memoryThresholdSec } from '@/core/memoryRating'
 import { persistRound } from '@/core/roundRecorder'
 import { getClientId } from '@/core/anonymousId'
+import { pickEthicsLine } from '@/core/ethicsLines'
 import { accuracyBand, track, trackBatch } from '@/core/metrics'
 import { fetchPublicStats, type PublicStats } from '@/core/publicStats'
 import {
@@ -541,9 +542,12 @@ onMounted(async () => {
  *   3. store 侧 `start()` 另有 `loading` 防重入兜底（见 quiz.ts），双保险。
  */
 const againPending = ref(false)
+/** 准备中显示的宣传语（点击时取一条，按界面语言） */
+const againEthics = ref('')
 async function again() {
   if (againPending.value) return // 双击保护（按钮虽 disabled，键盘/程序触发也挡）
   againPending.value = true
+  againEthics.value = pickEthicsLine(currentLocale())
   try {
     await quiz.nextRound()
     // 087 P0：L6 并入 /quiz/*（介绍页题型步骤），两种题型回到同一路由
@@ -611,6 +615,9 @@ async function again() {
       </RouterLink>
       <!-- 2026-10-30 用户定：删「返回首页」——导航与介绍页返回已覆盖，结果页堆四个按钮过挤 -->
     </div>
+
+    <!-- 准备中：按钮下方展示一条宣传语。无标题。 -->
+    <p v-if="againPending && againEthics" class="ethic-line">{{ againEthics }}</p>
 
     <!-- * 注：紧跟按钮下方（口径与截止时间见脚本注） -->
     <p v-if="tierAvg" class="muted small tier-note">
@@ -818,6 +825,17 @@ async function again() {
   to {
     transform: rotate(360deg);
   }
+}
+/* 宣传语（2026-11-03）：准备中在按钮下方独立成块，加粗居中、主色。
+   与按钮里的「正在准备题目…」功能性文案分开，读起来是主张而非进度说明。 */
+.ethic-line {
+  margin: 14px auto 0;
+  max-width: 30em;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--primary);
 }
 /* 该档位平均句（紧跟正确率行）与按钮下方的 * 注 */
 .tier-avg-line {
