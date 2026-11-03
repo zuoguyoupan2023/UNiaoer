@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { pickDistractorPairs, buildNameQuestions, buildSimilarQuestions } from '../questionEngine'
+import { pickDistractorPairs, buildNameQuestions, buildSimilarQuestions, clearColorIndexCache, clearS1PickState } from '../questionEngine'
 import { clearNameTokenCache } from '../nameTokens'
 import { TIERS, L6_TIERS, TIER_LIST, S1_ENABLED } from '../difficulty'
 import type { BankSpecies } from '../bank'
@@ -120,11 +120,18 @@ describe('档位配置（2026-11-03 用户拍板：token 相似不混入 L1–L8
 })
 
 describe('buildSimilarQuestions（S1 相似种挑战：色类分组，2026-11-03 用户定）', () => {
-  // speciesTokens 按 id 缓存——各用例同 id 不同名会串缓存，先清
-  beforeEach(() => clearNameTokenCache())
+  // speciesTokens 按 id 缓存——各用例同 id 不同名会串缓存，先清。
+  // 2026-11-03：另有色类索引缓存与跨轮选题状态（sessionStorage），一并清，
+  // 否则上一个用例的答案计数会影响本用例的加权随机结果。
+  beforeEach(() => {
+    clearNameTokenCache()
+    clearColorIndexCache()
+    clearS1PickState()
+  })
 
   it('大色类分组：全身或局部有某色都算；同色同部位优先回填', async () => {
     // 白组 7 种：6 只白头（同色同部位）+ 1 只白腹（同色异部位）
+    // 4 选项门槛 = 同色同伴 ≥3，7 种全部够格当答案
     const s1bank: BankSpecies[] = [
       ...['g0', 'g1', 'g2', 'g3', 'g4', 'g5'].map((id) => sp(id, `白头鸟${id}`, `White-headed Bird ${id}`, `科${id}`)),
       sp('c1', '白腹鸟', 'White-bellied Bird', '杂科'),
@@ -134,8 +141,8 @@ describe('buildSimilarQuestions（S1 相似种挑战：色类分组，2026-11-03
     expect(qs.length).toBe(7) // 白组 7 种全部可当答案
     for (const q of qs) {
       expect(q.tier).toBe(9)
-      expect(q.options.length).toBe(6)
-      expect(q.timeLimitSec).toBe(20) // 双题型统一 20s
+      expect(q.options.length).toBe(4)
+      expect(q.timeLimitSec).toBe(10) // 2026-11-03：4 选项 · 10s
       // 选项 ⊆ 白组（c1/g*），杂鸟绝不出现
       for (const id of q.optionIds) expect(id).not.toBe('x1')
       // 同色同部位优先（无条件断言，两种答案情形结论相同）：
@@ -163,7 +170,7 @@ describe('buildSimilarQuestions（S1 相似种挑战：色类分组，2026-11-03
     const q = qs[0]!
     expect(q.answer).toBe('红耳鹎')
     expect(q.options).toContain('红耳鹎二') // 同色同部位优先入选
-    expect(q.options.length).toBe(6)
+    expect(q.options.length).toBe(4)
   })
 
   it('色组不足 optionCount 的种不出题（宁缺毋滥）', async () => {
@@ -201,7 +208,7 @@ describe('buildSimilarQuestions（S1 相似种挑战：色类分组，2026-11-03
     }
   })
 
-  it('看名选图（name-stem）：名字题干 + 6 张图选项，全部带真实素材', async () => {
+  it('看名选图（name-stem）：名字题干 + 4 张图选项，全部带真实素材', async () => {
     const s1bank: BankSpecies[] = [
       ...['g0', 'g1', 'g2', 'g3', 'g4', 'g5'].map((id) => sp(id, `白头鸟${id}`, `White-headed Bird ${id}`, `科${id}`)),
       // 有 token 但无图 → name-stem 跳过（sp() 默认带图，这里显式置空）
@@ -211,16 +218,93 @@ describe('buildSimilarQuestions（S1 相似种挑战：色类分组，2026-11-03
     expect(qs.length).toBeGreaterThan(0)
     for (const q of qs) {
       expect(q.stemName).toBe(q.answer)
-      expect(q.options.length).toBe(6)
-      expect(q.optionsMedia?.length).toBe(6)
+      expect(q.options.length).toBe(4)
+      expect(q.optionsMedia?.length).toBe(4)
       for (const m of q.optionsMedia ?? []) expect(m.url).toBeTruthy()
       for (const id of q.optionIds) expect(id).not.toBe('noimg') // 无图候选被跳过
     }
   })
 
-  it('统一 20s / 0.1s 不隐藏选项（2026-11-03 用户定）', () => {
-    expect(TIERS[9].timeLimitSec).toBe(20)
+  it('4 选项 / 10s / 0.1s 不隐藏选项（2026-11-03 用户定）', () => {
+    expect(TIERS[9].optionCount).toBe(4)
+    expect(TIERS[9].timeLimitSec).toBe(10)
     expect(TIERS[9].optionRevealSec).toBe(0.1)
     expect(TIERS[9].timeLimitSecAudio).toBeUndefined() // S1 仅看图
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 2026-11-03 选题策略：跨轮去重（降权不排除）/ 大组加权 / 组内轮换
+//
+// 这些是**统计性**行为（加权随机），单次抽样无法断言「一定不重复」，
+// 所以用「多轮累积的分布」来验证方向性：被降权的一方出现频次应当降低，但**不为零**。
+// ---------------------------------------------------------------------------
+describe('S1 选题策略（2026-11-03：降权不排除 / 大组加权 / 组内轮换）', () => {
+  beforeEach(() => {
+    clearNameTokenCache()
+    clearColorIndexCache()
+    clearS1PickState()
+  })
+
+  /** 造一个纯白头组（n 只），保证全部够格当答案 */
+  function whiteGroup(n: number): BankSpecies[] {
+    return Array.from({ length: n }, (_, i) =>
+      sp(`w${i}`, `白头鸟${i}`, `White-headed Bird ${i}`, `科${i}`),
+    )
+  }
+
+  it('跨轮去重：刚出过的答案概率下降，但**不会被排除**（仍会出现）', async () => {
+    const bank = whiteGroup(8) // 8 只全部够格（4 选项门槛=同色同伴≥3）
+    // 第 1 轮只出 2 题 → 2 只被标记「刚出过」，另 6 只仍是新面孔，两者都可观察
+    const r1 = await buildSimilarQuestions(bank, { type: 'image', count: 2 })
+    const firstIds = r1.map((q) => q.optionIds[q.options.indexOf(q.answer)]!)
+    expect(firstIds).toHaveLength(2)
+
+    let seenLater = 0
+    let freshLater = 0
+    for (let k = 0; k < 12; k++) {
+      const qs = await buildSimilarQuestions(bank, { type: 'image', count: 2 })
+      for (const q of qs) {
+        const id = q.optionIds[q.options.indexOf(q.answer)]!
+        if (firstIds.includes(id)) seenLater++
+        else freshLater++
+      }
+    }
+    // 关键断言：**降权不等于排除**——第一轮出过的鸟后续仍然出现
+    expect(seenLater).toBeGreaterThan(0)
+    // 且被降权的一方应明显少于新面孔（权重降到 1/2 与 1/3 量级）
+    expect(freshLater).toBeGreaterThan(0)
+    expect(freshLater).toBeGreaterThan(seenLater)
+  })
+
+  it('组内轮换：同一色组连续出题时，答案不会永远是同一只', async () => {
+    const bank = whiteGroup(5)
+    const answers = new Set<string>()
+    for (let k = 0; k < 8; k++) {
+      const qs = await buildSimilarQuestions(bank, { type: 'image', count: 1 })
+      for (const q of qs) answers.add(q.answer)
+    }
+    // 8 轮只出 1 题，5 只候选——轮换生效则至少覆盖 2 只以上
+    expect(answers.size).toBeGreaterThan(1)
+  })
+
+  it('大组加权不会饿死小组：小组的鸟在多轮里仍然出现', async () => {
+    // 大组（白 12 只）+ 另一小组（黑 4 只，刚好够 4 选项门槛）
+    const bank: BankSpecies[] = [
+      ...whiteGroup(12),
+      ...['b0', 'b1', 'b2', 'b3'].map((id) => sp(id, `黑身鸟${id}`, `Black Bird ${id}`, `黑科${id}`)),
+    ]
+    let whiteHits = 0
+    let blackHits = 0
+    for (let k = 0; k < 20; k++) {
+      const qs = await buildSimilarQuestions(bank, { type: 'image', count: 4 })
+      for (const q of qs) {
+        if (q.answer.startsWith('白头')) whiteHits++
+        else if (q.answer.startsWith('黑身')) blackHits++
+      }
+    }
+    // 小组必须有机会（不给它降权），只是概率低于大组
+    expect(blackHits).toBeGreaterThan(0)
+    expect(whiteHits).toBeGreaterThan(0)
   })
 })

@@ -53,6 +53,7 @@ import {
 import { familyDisplay } from '@/i18n/data/family'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
+import AnswerReview from './AnswerReview.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
 import OptionMediaList from './OptionMediaList.vue'
@@ -268,7 +269,13 @@ const visibleRegimes = computed(() => {
   const base = c
     ? REGIMES.filter((r) => c[r.id] > 0)
     : REGIMES.filter((r) => r.id === 'standard' || r.id === 'random')
-  return tier.value === 8 ? base.filter((r) => r.id !== 'revival') : base
+  // 092 L8：记忆翻牌不产生错题，复活赛无意义
+  if (tier.value === 8) return base.filter((r) => r.id !== 'revival')
+  // 099 S1（2026-11-03 用户定）：**纯随机，不走经典赛制**——
+  // S1 的用途是快速刷「XX 鸟有什么特点」，答案池已由色组天然限定；
+  // 再叠加「未练过/复习/巩固/复活」筛选会让组内候选接近空，且与色组随机语义冲突。
+  if (tier.value === 9) return base.filter((r) => r.id === 'random')
+  return base
 })
 function chooseTier(v: Tier) {
   tier.value = v
@@ -1442,6 +1449,10 @@ function onTouchEnd(e: TouchEvent) {
           <LogOut class="ic" :size="13" /> {{ t('quiz.quit') }}
         </button>
         <p class="s1-stem-name">{{ quiz.current.stemName }}</p>
+        <!-- 报错按钮并进题干行（右侧），不单独占一行高度（用户 2026-11-03） -->
+        <button class="report-link s1-report" type="button" @click="openReport">
+          <Flag class="ic" :size="14" /> {{ t('report.button') }}
+        </button>
       </div>
       <template v-else>
         <MediaCard
@@ -1472,8 +1483,9 @@ function onTouchEnd(e: TouchEvent) {
         />
       </template>
 
-      <!-- G1 报错按钮：图/音/答案有问题 → 先本地记录 -->
-      <button class="report-link" type="button" @click="openReport">
+      <!-- G1 报错按钮：图/音/答案有问题 → 先本地记录。
+           S1 看名选图下已移进题干行（.s1-report），此处只在非 S1 渲染。 -->
+      <button v-if="!quiz.current?.stemName" class="report-link" type="button" @click="openReport">
         <Flag class="ic" :size="14" /> {{ t('report.button') }}
       </button>
 
@@ -1488,6 +1500,7 @@ function onTouchEnd(e: TouchEvent) {
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"
         :type="quiz.current.type"
+        hint-key="s1-name"
         @select="onSelectOption"
         @media-settled="onImageSettled"
       />
@@ -1580,8 +1593,29 @@ function onTouchEnd(e: TouchEvent) {
         </span>
       </div>
 
-      <!-- 署名信息移到卡片最底部，避免干扰（R41）；切换素材后跟随当前素材 -->
-      <AttributionLine class="quiz-attr" :media="displayMedia ?? quiz.current.media" />
+      <!-- 作答后：选项对照（A→鸟名）+ 图片来源（A→作者·许可证），铁律 11。
+           **只在「看名选图」显示**（2026-11-03 用户定）——那种题型的选项是纯图片、alt 为空
+           （防泄题，docs/099 §3.2），作答后不补名字，做题人只知道自己错了、不知道 B 是什么鸟。
+           看图选名的选项本来就是文字名，上方选项列表已经给出，再列一遍是重复（铁律 10 不堆文案）。 -->
+      <AnswerReview
+        v-if="quiz.answered && quiz.current?.stemName"
+        :options="quiz.current.options"
+        :options-media="quiz.current.optionsMedia"
+        :answer="quiz.current.answer"
+        :chosen="quiz.currentChoice"
+      />
+
+      <!-- 署名信息移到卡片最底部，避免干扰（R41）；切换素材后跟随当前素材。
+           **S1 看名选图（stemName）一律不显示**（用户 2026-11-03）：
+           该题型的 quiz.current.media 是**答案图**，底部署名行等于把「正确答案的图 + 作者」
+           直接印在页面上——既是泄题线索，也与本题无关（本题题干是鸟名，页面上没有题面媒体）。
+           许可义务由作答后的 AnswerReview 逐项覆盖全部选项图，信息只多不少。
+           非 S1 情形下，作答后改由 AnswerReview 负责，也不渲染。 -->
+      <AttributionLine
+        v-if="!quiz.current?.stemName && !quiz.answered"
+        class="quiz-attr"
+        :media="displayMedia ?? quiz.current.media"
+      />
     </div>
   </template>
 </template>
@@ -2382,15 +2416,32 @@ function onTouchEnd(e: TouchEvent) {
 }
 
 /* ---- 099 S1 看名选图 ---- */
+/* 高度紧张（用户 2026-11-03）：题干区只占「鸟名」本身的高度。
+   退出按钮绝对定位到左上角（与经典卷的图片角标同位），**不再占一整行**；
+   报错按钮同理靠边，不单独占行高。 */
 .s1-stem {
   position: relative;
-  padding: var(--space-3, 12px) 0;
+  padding: 2px 0 0;
   text-align: center;
 }
+.s1-stem .quit-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .s1-stem-name {
-  font-size: 1.7rem;
+  font-size: 1.55rem;
   font-weight: 700;
-  margin: var(--space-4, 16px) 0;
+  /* 左右留出退出按钮的宽度，避免长鸟名与按钮重叠 */
+  margin: 0 72px 8px;
   letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+/* S1 看名选图下「报错」靠右收进同一行，不另起一行 */
+.s1-report {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  margin: 0;
 }
 </style>

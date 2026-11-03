@@ -150,6 +150,11 @@ export const messages = {
     mode: { zh: '中文卷', en: '英文卷', sci: '学名卷' },
     audioHint: '点按播放录音 · 再点同一项作答',
     audioOptionHint: '点按试听',
+    // 2026-11-03：图片选项改为「点右上角勾选框作答，点图看大图」
+    pickThis: '选择 {letter}',
+    // 首次提示（每个模式只弹一次）：指向右上角方框
+    firstHint: '选',
+    viewPhoto: '查看大图',
   },
   // L7 鸟娲·造鸟者（输入题；docs/089 §6.1）
   quiz7: {
@@ -246,6 +251,13 @@ export const messages = {
     timeout: '时间到！',
     correctAnswer: '正确答案：',
     answerSci: '（{sci}）',
+    // 铁律 11（2026-11-03）：作答后集中展示选项对照与图片来源
+    review: {
+      optionsCap: '选项对照',
+      creditsCap: '图片来源',
+      answerTag: '正确答案',
+      chosenTag: '你选的',
+    },
     autoAdvancing: '{sec} 秒后自动进入下一题…',
     cancelAuto: '取消切换',
     disableAuto: '不再自动切换',
@@ -1247,7 +1259,7 @@ export const messages = {
     },
     l4: {
       label: 'L4 专家',
-      desc: '6 个选项 · 同科近缘 · 限时 12s · 前 2s 隐藏选项',
+      desc: '6 个选项 · 同科近缘 · 限时 10s · 前 2s 隐藏选项',
       descAudio: '6 个选项 · 同科近缘 · 限时 22s · 前 2s 隐藏选项',
     },
     l5: {
@@ -1275,17 +1287,17 @@ export const messages = {
     // 双题型统一 20s、optionRevealSec=0.1≈不隐藏。仅看图，descAudio 不会显示）
     s1: {
       label: 'S1 相似种挑战',
-      desc: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 20s',
-      descAudio: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 20s',
+      desc: '4 个选项 · 全部来自同一色组（如「红尾组」）· 限时 10s',
+      descAudio: '4 个选项 · 全部来自同一色组（如「红尾组」）· 限时 10s',
     },
   },
   quiz9: {
     // 099 S1 相似种挑战题型（看图选名 / 看名选图，介绍页选择，统一 20s）
     formCap: 'S1 题型',
     stemMedia: '看图选名',
-    stemMediaHint: '显示鸟图 · 从 6 个名字里选',
+    stemMediaHint: '显示鸟图 · 从 4 个名字里选',
     stemName: '看名选图',
-    stemNameHint: '显示鸟名 · 从 6 张图里选',
+    stemNameHint: '显示鸟名 · 从 4 张图里选',
   },
   badges: {
     series: {

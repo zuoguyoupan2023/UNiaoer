@@ -144,6 +144,17 @@ function send(body: string): void {
       navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'text/plain' }))
       return
     }
+    // 测试隔离（2026-11-03 用户要求）：vitest 下 `import.meta.env.MODE === 'test'`。
+    //
+    // 只堵**这一条** fetch 兜底，不堵上面的 sendBeacon——
+    // 因为 jsdom 默认没有 sendBeacon（实测 undefined），没这道守卫时测试会真的
+    // `fetch('/api/metrics')`（baseURI=localhost:3000），有被本地服务/代理接住、
+    // 污染公开看板的风险；而 `metrics.spec.ts` 是**显式 stub 了 sendBeacon** 来验证
+    // 裁剪逻辑的（假的、不出网），所以那条路要继续放行，否则测试无法覆盖上报本身。
+    //
+    // 生产构建 MODE=production，走到这里的只有「不支持 sendBeacon 的老浏览器」，
+    // 行为不变。
+    if (import.meta.env.MODE === 'test') return
     void fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'text/plain' },

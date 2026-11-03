@@ -603,7 +603,187 @@ export interface BuildSimilarOptions {
  *
  * 复用经典链路：nameMode 过滤在前（051 S1）、mediaPool、ensureMedia；不走地区档位/
  * 自适应/新手池（独立模式，与 L6 同构）；赛制池只收答案（013 §4）。S1 仅看图（入口保证）。
+ *
+ * 选题策略（2026-11-03 用户定，最高原则「刷题辨识鸟」）：
+ * 1. **跨轮去重——降权不排除**：最近几轮出过的答案按次数降权（`1/(1+n)`），
+ *    但不设 0 权重——小组（候选本来就少）永远还有机会，不会因为被刷过就彻底消失。
+ * 2. **大组加权——只加不压**：同色组越大（同伴越多、干扰项越贴切）权重略高，
+ *    但有上限；小组保持基础权重，**不因为它们小就降低**。
+ * 3. **组内轮换**：同一色组里出过的答案降权（与 1 同源，但按「组」维度再叠一层），
+ *    让「红耳组」下次换人做答案，而不是总出红耳鹎。
+ * 三者相乘后 **按权重做加权随机**（不是排序取 Top N）——否则低权重鸟永远轮不到，
+ * 与「不要排除」的要求矛盾。
+ *
+ * 权重状态存在模块级 Map（按 nameMode 分开），并落 sessionStorage 以便刷新后延续；
+ * 只记 id/计数，不含任何用户信息。
  */
+// ---------------------------------------------------------------------------
+// S1 选题：色类索引缓存 + 权重状态（2026-11-03）
+// ---------------------------------------------------------------------------
+
+/** 色类索引：canonical 色 → 种列表；`色|部位` → 种列表 */
+interface ColorIndex {
+  byColor: Map<string, BankSpecies[]>
+  byPair: Map<string, BankSpecies[]>
+  /** 签名：nameMode + 池规模 + 首尾 id，用于判断能否复用 */
+  sig: string
+}
+
+let colorIndexCache: ColorIndex | null = null
+
+/**
+ * 建/取色类索引（带缓存）。
+ *
+ * 为什么要缓存：每轮出题对全池（全球池 11,026 种）遍历建两个 Map，
+ * 虽然只有毫秒级，但完全没必要重复——`speciesTokens` 本身已按 id 缓存，
+ * 这里缓存的是「聚合结果」。
+ *
+ * 签名不含 `opts.speciesPool`（赛制池）：索引建的是**全池**索引，赛制过滤在
+ * `answerCandidates` 那一步做（和改之前一致，语义不变）。
+ */
+function colorIndex(pool: BankSpecies[], nameMode: string): ColorIndex {
+  const first = pool[0]?.id ?? ''
+  const last = pool[pool.length - 1]?.id ?? ''
+  const sig = `${nameMode}|${pool.length}|${first}|${last}`
+  if (colorIndexCache && colorIndexCache.sig === sig) return colorIndexCache
+
+  const byColor = new Map<string, BankSpecies[]>()
+  const byPair = new Map<string, BankSpecies[]>()
+  for (const s of pool) {
+    for (const t of speciesTokens(s)) {
+      const c = byColor.get(t.color)
+      if (c) c.push(s)
+      else byColor.set(t.color, [s])
+      const pk = `${t.color}|${t.part}`
+      const pr = byPair.get(pk)
+      if (pr) pr.push(s)
+      else byPair.set(pk, [s])
+    }
+  }
+  colorIndexCache = { byColor, byPair, sig }
+  return colorIndexCache
+}
+
+/** 清索引缓存（测试用；生产路径池不变则无需失效） */
+export function clearColorIndexCache(): void {
+  colorIndexCache = null
+}
+
+const S1_STATE_KEY = 'uniaoer-s1-pick'
+
+/**
+ * 跨轮选题状态（只记计数，不含用户信息）：
+ * - `recent`: 物种 id → 最近 3 轮内作为答案的次数（用于跨轮去重降权）
+ * - `pairRecent`: `色|部位` → 最近 2 轮内出过的答案 id 列表（用于组内轮换）
+ *
+ * 存在 sessionStorage：刷新页面延续，关标签页即清（不做长期画像，符合 028 隐私口径）。
+ */
+interface S1PickState {
+  recent: Record<string, number>
+  pairRecent: Record<string, string[]>
+}
+
+/** 跨轮去重的窗口：看最近几轮（10 题/轮 → 30 题，足够避免「刚做过又抽到」） */
+const S1_RECENT_WINDOW = 3
+/** 组内轮换的窗口：同组最近 2 轮出过的人降权 */
+const S1_PAIR_WINDOW = 2
+
+function loadS1State(): S1PickState {
+  try {
+    const raw = sessionStorage.getItem(S1_STATE_KEY)
+    if (raw) {
+      const j = JSON.parse(raw) as S1PickState
+      if (j && typeof j === 'object' && j.recent && j.pairRecent) return j
+    }
+  } catch {
+    /* 隐私模式 / 非法 JSON：从头开始，不影响出题 */
+  }
+  return { recent: {}, pairRecent: {} }
+}
+
+function saveS1State(st: S1PickState): void {
+  try {
+    sessionStorage.setItem(S1_STATE_KEY, JSON.stringify(st))
+  } catch {
+    /* 静默：存不下就只是少了跨轮降权，不影响出题 */
+  }
+}
+
+/** 清跨轮状态（测试用） */
+export function clearS1PickState(): void {
+  try {
+    sessionStorage.removeItem(S1_STATE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 计算答案权重（2026-11-03 用户定）。
+ *
+ * 三条策略相乘，**全部只降/只升，绝不置 0**：
+ * 1. 跨轮去重：`1/(1+recentCount)` —— 刚出过 → 低，但永远 > 0。
+ * 2. 组内轮换：该组最近出过此人 → 再乘 `1/2`（同组换人；不在组内则是 1）。
+ * 3. 大组加权：`1 + min(groupSize, CAP) * STEP` —— 只给大组加成，小组保持 1.0，
+ *    不用「小组降权」的写法（那样小组会因候选少+权重低而饿死）。
+ *    但大组加成有上限（CAP），避免红/黑这类超大色组垄断出题。
+ */
+const S1_GROUP_BONUS_CAP = 40
+const S1_GROUP_BONUS_STEP = 0.01 // 上限 1 + 40*0.01 = 1.4
+
+function answerWeight(pick: SimilarPickLike, st: S1PickState): number {
+  const recent = st.recent[pick.answer.id] ?? 0
+  // 1. 跨轮去重（降权不排除）
+  let w = 1 / (1 + recent)
+  // 2. 组内轮换：同组最近出过的答案再降一半
+  const pairList = st.pairRecent[pick.pairKey] ?? []
+  if (pairList.includes(pick.answer.id)) w *= 0.5
+  // 3. 大组加权（只加不压，带封顶）
+  w *= 1 + Math.min(pick.groupSize, S1_GROUP_BONUS_CAP) * S1_GROUP_BONUS_STEP
+  return w
+}
+
+/** 供 answerWeight 用的最小形状（避免把内部 interface 提到模块作用域） */
+interface SimilarPickLike {
+  answer: BankSpecies
+  pairKey: string
+  groupSize: number
+}
+
+/**
+ * 按权重做**加权随机抽取**（不放回），抽 n 个。
+ *
+ * 为什么不用「排序取 Top N」：低权重的鸟会永远轮不到，与「降权但不排除」的要求相反。
+ * 加权随机保证每只鸟都有非零概率，只是刚做过的概率低一些。
+ *
+ * 实现：累加权重 → 每次按剩余权重和取随机点 → 命中即摘除。O(n²) 但 n 通常几十~几百，
+ * 且只在一轮出题时跑一次，可接受；避免为了 O(n log n) 引入额外依赖。
+ */
+function weightedSample<T>(items: T[], weightOf: (t: T) => number, n: number): T[] {
+  const rest = [...items]
+  const out: T[] = []
+  while (out.length < n && rest.length) {
+    let total = 0
+    for (const it of rest) total += weightOf(it)
+    if (total <= 0) {
+      // 理论上不会发生（权重恒 >0）；兜底退化为均匀随机，保证出题不中断
+      out.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]!)
+      continue
+    }
+    let r = Math.random() * total
+    let idx = rest.length - 1
+    for (let i = 0; i < rest.length; i++) {
+      r -= weightOf(rest[i]!)
+      if (r <= 0) {
+        idx = i
+        break
+      }
+    }
+    out.push(rest.splice(idx, 1)[0]!)
+  }
+  return out
+}
+
 export async function buildSimilarQuestions(
   bank: BankSpecies[],
   opts: BuildSimilarOptions,
@@ -619,20 +799,12 @@ export async function buildSimilarQuestions(
   const cfg = TIERS[9]
   const pool = filterByNameMode(mediaPool(bank, type), nameMode)
 
-  // 色类分组：canonical 色 → 池内种列表；色×部位 → 池内种列表（同色同部位优先级用）
-  const byColor = new Map<string, BankSpecies[]>()
-  const byPair = new Map<string, BankSpecies[]>()
-  for (const s of pool) {
-    for (const t of speciesTokens(s)) {
-      const c = byColor.get(t.color)
-      if (c) c.push(s)
-      else byColor.set(t.color, [s])
-      const pk = `${t.color}|${t.part}`
-      const pr = byPair.get(pk)
-      if (pr) pr.push(s)
-      else byPair.set(pk, [s])
-    }
-  }
+  // 色类索引（2026-11-03 优化）：canonical 色 → 池内种列表；色×部位 → 池内种列表。
+  // 按 (nameMode + bank 身份 + pool 规模) 缓存——每轮重建这两个 Map 是纯浪费
+  // （11,026 种 × 平均 2 token ≈ 22,000 次插入，虽然毫秒级但没必要）。
+  // 注意 cache 的是 **bank 引用**：bank 每次 loadBank() 复用同一数组实例，
+  // 长度/首尾 id 一起做签名，能挡住「热更新换了数据但引用没变」的极端情况。
+  const { byColor, byPair } = colorIndex(pool, nameMode)
 
   // 答案资格：存在某色 C，同色（任意部位）同伴 ≥ optionCount-1（2026-11-03 用户定：
   // 「全身或者局部有某个颜色都会出题」）。一鸟多 token 取「同色同部位组最大」的 token
@@ -642,6 +814,10 @@ export async function buildSimilarQuestions(
     answer: BankSpecies
     /** 有序干扰项候选：同色同部位在前，同色异部位/全身在后（桶内已洗牌） */
     mates: BankSpecies[]
+    /** 主组 key（`色|部位`）与同色组大小——供大组加权与组内轮换使用 */
+    pairKey: string
+    color: string
+    groupSize: number
   }
   const answerPicks: SimilarPick[] = []
   const seenIds = new Set<string>()
@@ -650,7 +826,7 @@ export async function buildSimilarQuestions(
     seenIds.add(s.id)
     const tokens = speciesTokens(s)
     if (!tokens.length) continue
-    let best: { mates: BankSpecies[] } | null = null
+    let best: { mates: BankSpecies[]; pairKey: string; color: string; groupSize: number } | null = null
     let bestPair = -1
     let bestColor = -1
     for (const t of tokens) {
@@ -661,21 +837,37 @@ export async function buildSimilarQuestions(
         pairMates.length > bestPair ||
         (pairMates.length === bestPair && colorMates.length > bestColor)
       ) {
-        best = { mates: [...shuffle(pairMates), ...shuffle(colorMates.filter((m) => !pairMates.includes(m)))] }
+        best = {
+          mates: [...shuffle(pairMates), ...shuffle(colorMates.filter((m) => !pairMates.includes(m)))],
+          pairKey: `${t.color}|${t.part}`,
+          color: t.color,
+          // 组大小取「同色组」（出题资格的依据），不是同色同部位组——
+          // 后者可能很小（如「红|耳」只有 2 只），用它加权会让小组被系统性压死。
+          groupSize: colorMates.length + 1,
+        }
         bestPair = pairMates.length
         bestColor = colorMates.length
       }
     }
-    if (best) answerPicks.push({ answer: s, mates: best.mates })
+    if (best) answerPicks.push({ answer: s, ...best })
   }
 
   const want = Math.min(count, answerPicks.length)
   onStats?.({ candidates: bank.length, unique: answerPicks.length, enriched: 0, want })
 
+  // 选题（2026-11-03 用户定）：加权随机——跨轮去重降权 / 组内轮换 / 大组加权，
+  // 全部只调权重不排除（详见上方 answerWeight 注释）。
+  // 抽取顺序即出题顺序；`weightedSample` 已保证每只鸟都有非零概率。
+  const st = loadS1State()
+  // 多抽一些作为「素材取不到」时的替补余量（media-stem 才可能因缺图跳过）
+  const pickedOrder = weightedSample(answerPicks, (p) => answerWeight(p, st), Math.min(answerPicks.length, want * 3))
+
   const questions: Question[] = []
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
   const nameStem = form === 'name-stem'
-  for (const pick of shuffle(answerPicks)) {
+  /** 本轮实际出过的答案（落库到跨轮状态用） */
+  const usedAnswers: SimilarPick[] = []
+  for (const pick of pickedOrder) {
     if (questions.length >= want) break
     const resolved = await ensureMedia(pick.answer, type)
     const answerAssets = assetsOf(resolved, type)
@@ -739,9 +931,61 @@ export async function buildSimilarQuestions(
       answerMode: 'choice',
       timeLimitSec: timeLimitFor(cfg, type),
     })
+    usedAnswers.push(pick)
     onStats?.({ candidates: bank.length, unique: answerPicks.length, enriched: questions.length, want })
   }
+
+  // 落库跨轮状态（只在本轮真出了题时才更新，避免空轮污染）
+  if (usedAnswers.length) {
+    recordS1Usage(st, usedAnswers)
+    saveS1State(st)
+  }
   return questions
+}
+
+/**
+ * 把本轮实际出过的答案写进跨轮状态。
+ *
+ * - `recent`：+1，超过窗口的旧计数整体衰减（每轮把所有计数 -1 并删 0，
+ *   等价于「只记最近 S1_RECENT_WINDOW 轮」，但不需要存时间戳/轮次号）。
+ * - `pairRecent`：按主组 key 追加本轮答案 id，只保留最近 S1_PAIR_WINDOW 轮。
+ */
+/**
+ * 把本轮实际出过的答案写进跨轮状态。
+ *
+ * - `recent`：每轮整体 -1（窗口滑出即归零），再给本轮答案 +1。
+ *   因此某 id 的值 = 「最近 S1_RECENT_WINDOW 轮内作为答案的次数」，上限就是窗口长度。
+ * - `pairRecent`：按主组 key 追加本轮答案 id，只保留最近 S1_PAIR_WINDOW 轮。
+ */
+function recordS1Usage(st: S1PickState, used: SimilarPickLike[]): void {
+  // 1. 整体衰减（窗口滑动）+ 本轮 +1，并夹到窗口上限（防脏数据累计出超大计数）
+  const nextRecent: Record<string, number> = {}
+  for (const [id, n] of Object.entries(st.recent)) {
+    const v = Math.min(n + 1, S1_RECENT_WINDOW) - 1
+    if (v > 0) nextRecent[id] = v
+  }
+  for (const p of used) {
+    nextRecent[p.answer.id] = Math.min((nextRecent[p.answer.id] ?? 0) + 1, S1_RECENT_WINDOW)
+  }
+  st.recent = nextRecent
+
+  // 3. 组内轮换：每轮把各组的「最近出过」前移，只保留最近 N 轮
+  const nextPair: Record<string, string[][]> = {}
+  for (const [k, rounds] of Object.entries(st.pairRecent)) {
+    // 兼容旧格式（string[] → 视作单轮）
+    const asRounds: string[][] = Array.isArray(rounds[0]) ? (rounds as unknown as string[][]) : [rounds as unknown as string[]]
+    const kept = asRounds.slice(0, S1_PAIR_WINDOW - 1)
+    if (kept.length) nextPair[k] = kept
+  }
+  for (const p of used) {
+    const rounds = nextPair[p.pairKey] ?? []
+    rounds.unshift([p.answer.id])
+    nextPair[p.pairKey] = rounds.slice(0, S1_PAIR_WINDOW)
+  }
+  // 拍平成 string[]（保持 sessionStorage 结构简单：组 → 最近 N 轮出现过的 id）
+  st.pairRecent = Object.fromEntries(
+    Object.entries(nextPair).map(([k, rounds]) => [k, rounds.flat()]),
+  )
 }
 
 // ---------------------------------------------------------------------------

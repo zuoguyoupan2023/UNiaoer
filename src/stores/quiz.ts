@@ -348,7 +348,13 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       // A2 赛制选题池（013 §4）：standard=未练过 / review=练过 / reinforce=练对过 /
       // revival=错题本 / random=全库；按「物种 × 媒体类型」记练过（013 P2 粒度）
       // 029 M2：池含全球种（L1–L3 按地区偏好过滤，L4–L5 全球开放），出题用合并后的物种表
-      const poolResult = await computePool(regime.value, type, tier.value)
+      //
+      // 099 S1（2026-11-03 用户定）：**强制纯随机**，不读已存赛制。
+      // UI 已把 S1 的赛制选项收窄到只剩 random，但 `?tier=9` 直达时 settings 里可能还存着
+      // 上一次的 standard/review——不覆盖会得到空池（standardPoolEmpty）或极小池。
+      const effectiveRegime: QuizRegime = tier.value === 9 ? 'random' : regime.value
+      if (tier.value === 9 && regime.value !== 'random') regime.value = 'random'
+      const poolResult = await computePool(effectiveRegime, type, tier.value)
       if (poolResult.errorCode) {
         error.value = poolResult.errorCode
         questions.value = []

@@ -119,8 +119,9 @@ describe('badges · S1 不触发经典徽章（缺陷 2）', () => {
 })
 
 describe('TIERS[9] 配置与文案口径一致（缺陷 4 的守卫）', () => {
-  it('双题型统一 20s、选项≈不隐藏', () => {
-    expect(TIERS[9].timeLimitSec).toBe(20)
+  it('4 选项 / 10s / 选项≈不隐藏（2026-11-03 用户定）', () => {
+    expect(TIERS[9].optionCount).toBe(4)
+    expect(TIERS[9].timeLimitSec).toBe(10)
     expect(TIERS[9].optionRevealSec).toBe(0.1)
     expect(TIERS[9].timeLimitSecAudio).toBeUndefined()
   })

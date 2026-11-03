@@ -174,18 +174,22 @@ export const TIERS: Record<Tier, TierConfig> = {
    * 排在未发布的 L8 之后，绝不混入 L1–L8 的干扰项策略）。
    * 分组（2026-11-03 用户定）：按**大色类**（canonical 11 色）——全身或局部有某色都算；
    * 同色同部位（红耳+红耳）优先于同色异部位（红耳+红身），部位只是优先级不是门槛。
-   * 题型（双形态，介绍页选择，统一 20s）：'media-stem' 看图选名（经典形态）/
-   * 'name-stem' 看名选图（名字题干 + 6 图选项）。**仅看图**——颜色/花纹是视觉维度。
+   * 题型（双形态，介绍页选择，统一 10s）：'media-stem' 看图选名（经典形态）/
+   * 'name-stem' 看名选图（名字题干 + 4 图选项）。**仅看图**——颜色/花纹是视觉维度。
    * 无地区档位/自适应/新手池（独立模式，与 L6 同构）；地区只到国家/洲/全球（省级池太小）。
    * 上架走 S1_ENABLED（与 L8_ENABLED 同模式，launch 时改 true 即可）。
+   *
+   * 098→2026-11-03 用户定：**6 选项 → 4 选项，20s → 12s**。
+   * 理由：出题资格是「同色同伴 ≥ optionCount-1」，门槛从 5 降到 3 会让可出题的鸟成倍增加
+   * （4 元组远多于 6 元组），题目组数显著变多；同时更贴合最高原则「刷题辨识鸟」的快节奏。
    */
   9: {
     tier: 9,
     labelKey: 'difficulty.s1.label',
     descKey: 'difficulty.s1.desc',
-    optionCount: 6,
+    optionCount: 4,
     distractor: 'nameSimilar', // 代表值：S1 实际走 buildSimilarQuestions 的色类分组（不走该字段）
-    timeLimitSec: 20, // 2026-11-03 用户定：双题型统一 20s
+    timeLimitSec: 10, // 2026-11-03 用户定：4 选项 · 10s（原 6 选项 · 20s → 12s → 10s）
     optionRevealSec: 0.1, // 用户定：前 2s 隐藏取消 → 0.1s（≈不隐藏，仅保留机制）
     commonness: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // 097 十档制：取满 100%（独立模式不做常见度筛选）
     mediaPoolSize: 1,

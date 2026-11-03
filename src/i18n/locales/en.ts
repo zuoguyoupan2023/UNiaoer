@@ -153,6 +153,11 @@ const en: typeof zhMessages = {
     mode: { zh: 'Chinese', en: 'English', sci: 'Scientific' },
     audioHint: 'Tap to play · tap the same option again to answer',
     audioOptionHint: 'Tap to listen',
+    // 2026-11-03: image options — tap the checkbox (top-right) to answer; tap the photo to enlarge
+    pickThis: 'Pick {letter}',
+    // First-run hint (shown once per mode): points at the box on the top-right
+    firstHint: 'Pick',
+    viewPhoto: 'View photo',
   },
   // L7 input quiz (docs/089 §6.1)
   quiz7: {
@@ -248,6 +253,13 @@ const en: typeof zhMessages = {
     timeout: "Time's up!",
     correctAnswer: 'Correct answer: ',
     answerSci: ' ({sci})',
+    // 铁律 11 (2026-11-03): after answering, show the option→name map and image credits together
+    review: {
+      optionsCap: 'Options',
+      creditsCap: 'Image credits',
+      answerTag: 'Correct',
+      chosenTag: 'Your pick',
+    },
     autoAdvancing: 'Auto-advancing in {sec}s…',
     cancelAuto: 'Cancel auto',
     disableAuto: 'Stop auto-advance',
@@ -1276,17 +1288,17 @@ const en: typeof zhMessages = {
     // TIERS[9] values: 20s for both forms, optionRevealSec=0.1 so options are effectively visible)
     s1: {
       label: 'S1 Look-alike Challenge',
-      desc: '6 options · all from one colour group (e.g. "red-tailed") · 20s limit',
-      descAudio: '6 options · all from one colour group (e.g. "red-tailed") · 20s limit',
+      desc: '4 options · all from one colour group (e.g. "red-tailed") · 10s limit',
+      descAudio: '4 options · all from one colour group (e.g. "red-tailed") · 10s limit',
     },
   },
   quiz9: {
     // 099 S1 forms (photo→name / name→photo, chosen on the intro page, 20s for both)
     formCap: 'S1 form',
     stemMedia: 'Photo → name',
-    stemMediaHint: 'Shows a photo · pick from 6 names',
+    stemMediaHint: 'Shows a photo · pick from 4 names',
     stemName: 'Name → photo',
-    stemNameHint: 'Shows a name · pick from 6 photos',
+    stemNameHint: 'Shows a name · pick from 4 photos',
   },
   badges: {
     series: {

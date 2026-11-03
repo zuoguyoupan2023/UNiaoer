@@ -38,6 +38,7 @@ import {
 } from 'lucide-vue-next'
 import type { MediaType } from '@/types'
 import AttributionLine from './AttributionLine.vue'
+import AnswerReview from './AnswerReview.vue'
 import OptionMediaList from './OptionMediaList.vue'
 import ProgressBar from './ProgressBar.vue'
 import ReportDialog from './ReportDialog.vue'
@@ -503,6 +504,7 @@ const optionAttributions = computed(() => {
         :answer="quiz.current.answer"
         :chosen="quiz.currentChoice"
         :type="quiz.current.type"
+        hint-key="l6"
         @select="onSelectOption"
         @media-settled="onOptionMediaSettled"
       />
@@ -588,8 +590,22 @@ const optionAttributions = computed(() => {
         </span>
       </div>
 
-      <!-- 署名：选项素材的合并署名行（作答前就在，许可义务不因题型打折） -->
-      <div v-if="optionAttributions.length" class="option-attr">
+      <!-- 作答后：选项对照（A→鸟名）+ 图片来源（A→作者·许可证），铁律 11。
+           L6 识图模式的选项也是**纯图片**（名字是题干，选项上不能放字——泄题），
+           作答后必须补上「A 是什么鸟」，否则做题人只知道错了、不知道别人是什么鸟。
+           上方的 optionAttributions 是**合并去重**的许可行（仍需保留：作答前就显示，
+           履行 CC 署名义务且不泄题）；本块是**逐项对应**，供对照学习。 -->
+      <AnswerReview
+        v-if="quiz.answered && quiz.current"
+        :options="quiz.current.options"
+        :options-media="quiz.current.optionsMedia"
+        :answer="quiz.current.answer"
+        :chosen="quiz.currentChoice"
+      />
+
+      <!-- 署名：选项素材的合并署名行（**作答前**就在，许可义务不因题型打折）。
+           作答后改由 AnswerReview 逐项列出（A→作者），这块合并行会重复，故隐藏（铁律 10）。 -->
+      <div v-if="optionAttributions.length && !quiz.answered" class="option-attr">
         <template v-for="(a, i) in optionAttributions" :key="i">
           <template v-if="i > 0"> · </template>
           <a v-if="a.href" :href="a.href" target="_blank" rel="noopener noreferrer"
@@ -598,7 +614,7 @@ const optionAttributions = computed(() => {
           <span v-else>{{ a.source }} · {{ a.author }} ({{ a.license }})</span>
         </template>
       </div>
-      <AttributionLine v-else class="quiz-attr" :media="quiz.current.media" />
+      <AttributionLine v-else-if="!quiz.answered" class="quiz-attr" :media="quiz.current.media" />
     </div>
   </template>
 </template>
