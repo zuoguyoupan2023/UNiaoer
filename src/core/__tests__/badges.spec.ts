@@ -59,9 +59,12 @@ describe('evaluateBadges（基础）', () => {
   })
 
   it('满分 / 听音 / L4 / 连对 规则', () => {
+    // 「专家挑战」判定已从 `s.maxTier >= 4` 改为「rounds 里真的有 L4 轮次」
+    // （docs/100 §5 缺陷 2：S1 的 maxTier=9 会让没打过 L4 的人白拿）——
+    // 所以这里必须给出真实的 L4 轮次，只塞 maxTier 已不再成立。
     const got = evaluateBadges(
       stats({ rounds: 3, perfectRounds: 1, audioRounds: 1, maxTier: 4, bestStreak: 5 }),
-      [],
+      [round({ tier: 4 })],
       new Set(),
     )
     const ids = got.map((b) => b.id)
@@ -69,6 +72,11 @@ describe('evaluateBadges（基础）', () => {
     expect(ids).toContain('listener')
     expect(ids).toContain('expert')
     expect(ids).toContain('streak')
+  })
+
+  it('「专家挑战」不看 maxTier：只有 S1（tier 9）轮次时不发', () => {
+    const got = evaluateBadges(stats({ rounds: 1, maxTier: 9 }), [round({ tier: 9 })], new Set())
+    expect(got.map((b) => b.id)).not.toContain('expert')
   })
 
   it('已获得的不会重复返回', () => {

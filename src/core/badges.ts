@@ -1,4 +1,5 @@
 import type { RoundRecord, Stats } from './historyDb'
+import { countsInClassicStats } from './difficulty'
 
 export type BadgeSeries = 'starter' | 'advanced' | 'master' | 'hidden'
 
@@ -104,7 +105,11 @@ export const BADGES: BadgeDef[] = [
     icon: 'brain',
     descKey: 'badges.expert.desc',
     series: 'starter',
-    test: (s) => s.maxTier >= 4,
+    // 「专家挑战」= 完成一轮 **L4** 专家难度。
+    // 原先写 `s.maxTier >= 4`：S1（tier 9）会让 maxTier=9 → 没打过 L4 也白拿
+    // （docs/100 §5 缺陷 2）。现在要求 rounds 里**真的有 L4 轮次**，不看 maxTier；
+    // rounds 已由 evaluateBadges 按 countsInClassicStats 过滤，故 S1/L8 不会混入。
+    test: (_s, rounds) => rounds.some((r) => r.tier === 4),
   },
   {
     id: 'beginner-birder',
@@ -364,6 +369,8 @@ export function evaluateBadges(
 ): BadgeDef[] {
   // 092 记忆挑战鸟（tier=8）：恒为"满分轮"，混进 rounds 会误触
   // 「稳定输出」「全档通关」「连续完美」等轮序列徽章——不参与徽章体系，整轮剔除。
-  const rounds = allRounds.filter((r) => r.tier !== 8)
+  // 099 S1（tier=9，docs/100）：独立模式同样剔除——否则 S1 的 maxTier=9 会让
+  // 「专家挑战」（s.maxTier >= 4）在没打过 L4 时白拿（docs/100 §5 缺陷 2）。
+  const rounds = allRounds.filter((r) => countsInClassicStats(r.tier))
   return BADGES.filter((b) => !earnedIds.has(b.id) && b.test(stats, rounds))
 }

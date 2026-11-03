@@ -1227,6 +1227,8 @@ const en: typeof zhMessages = {
     modeImage: 'Photo',
     modeAudio: 'Sound',
     questionsCount: '{correct}/{total} Q',
+    // docs/100 §5 defect 5: standalone modes (L8 memory / S1 similar-species) stay out of the classic tier chart
+    standalone: 'Standalone modes',
     dotTitle: '{day} · {mode} L{tier} · {acc}%',
   },
   difficulty: {
@@ -1270,11 +1272,12 @@ const en: typeof zhMessages = {
       desc: 'Flip & match · photo ↔ name · stopwatch, no time limit',
       descAudio: 'Flip & match · sound ↔ name · stopwatch, no time limit',
     },
-    // 099 S1 (standalone mode, S1_ENABLED=false, not live yet; copy is a placeholder until launch)
+    // 099 S1 (standalone mode, S1_ENABLED=false, not live yet; copy matches the real
+    // TIERS[9] values: 20s for both forms, optionRevealSec=0.1 so options are effectively visible)
     s1: {
       label: 'S1 Look-alike Challenge',
-      desc: '6 options · all from one colour group (e.g. "red-tailed") · 15s limit · options hidden for 2s',
-      descAudio: '6 options · all from one colour group (e.g. "red-tailed") · 25s limit · options hidden for 2s',
+      desc: '6 options · all from one colour group (e.g. "red-tailed") · 20s limit',
+      descAudio: '6 options · all from one colour group (e.g. "red-tailed") · 20s limit',
     },
   },
   quiz9: {

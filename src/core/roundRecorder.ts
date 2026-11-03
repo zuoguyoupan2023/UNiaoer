@@ -11,6 +11,7 @@ import {
 } from './historyDb'
 import { evaluateBadges, type BadgeDef } from './badges'
 import { evaluateTitles, titleTextAt, TITLE_TRACKS, type EarnedTitle } from './titles'
+import { countsInClassicStats } from './difficulty'
 import { track } from './metrics'
 import { isCorrectAnswer } from './nameMatch'
 
@@ -129,8 +130,11 @@ export async function persistRound(quiz: QuizStore): Promise<PersistResult> {
   }
   persisted.add(record.id)
 
-  // 092 记忆挑战鸟：不参与称号与徽章体系——只落库（供复盘列表展示），不做任何判定。
-  if (record.tier === 8) {
+  // 092 记忆挑战鸟（tier=8）+ 099 S1（tier=9，docs/100）：独立模式不参与**经典**
+  // 称号与徽章体系——只落库（供复盘列表展示 / 将来的独立体系），不走下面的经典判定。
+  // 判定统一走 difficulty.countsInClassicStats；将来给 S1 做独立称号/徽章时，
+  // 在这里加 S1 专属分支（而不是把它塞回经典链路）。
+  if (!countsInClassicStats(record.tier)) {
     try {
       await saveRound(record)
       return { badges: [], newTitles: [], record }

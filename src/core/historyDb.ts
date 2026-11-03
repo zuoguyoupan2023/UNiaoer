@@ -9,6 +9,7 @@
  * versionchange 事务只在版本跃迁时执行一次，天然幂等（013 §2.1）。
  */
 import type { MediaType, MemoryRating, NameMode, Tier } from '@/types'
+import { countsInClassicStats } from './difficulty'
 
 export interface RoundItem {
   speciesId: string
@@ -741,9 +742,10 @@ function maxStreak(items: RoundItem[]): number {
 /** 汇总统计（活动档；用于徽章判定与"我的"页面） */
 export async function getStats(): Promise<Stats> {
   const [allRounds, wrong] = await Promise.all([listRounds(), getWrongBook()])
-  // 092 记忆挑战鸟（tier=8）：纯计时模式，不设错题、不参与称号与徽章——
+  // 092 记忆挑战鸟（tier=8）+ 099 S1（tier=9，docs/100）：独立模式不参与经典统计——
   // 统计里整轮跳过（含轮数/题数/正确率/满分轮/maxTier/跨轮连对/时段徽章），只保留复盘展示。
-  const rounds = allRounds.filter((r) => r.tier !== 8)
+  // 判定统一走 difficulty.countsInClassicStats（口径只在那一处改）。
+  const rounds = allRounds.filter((r) => countsInClassicStats(r.tier))
   const species = new Set<string>()
   const correctSpecies = new Set<string>()
   let totalQuestions = 0

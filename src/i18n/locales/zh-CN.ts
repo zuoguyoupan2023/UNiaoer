@@ -1225,6 +1225,8 @@ export const messages = {
     modeImage: '看图',
     modeAudio: '听音',
     questionsCount: '{correct}/{total} 题',
+    // docs/100 §5 缺陷 5：独立模式（L8 记忆挑战鸟 / S1 相似种挑战）不进经典档位图，单独汇总一行
+    standalone: '独立模式',
     dotTitle: '{day} · {mode} L{tier} · {acc}%',
   },
   difficulty: {
@@ -1269,11 +1271,12 @@ export const messages = {
       desc: '翻牌配对 · 鸟图 ↔ 鸟名 · 纯计时不限时',
       descAudio: '翻牌配对 · 鸟声 ↔ 鸟名 · 纯计时不限时',
     },
-    // 099 S1 相似种挑战（独立模式，S1_ENABLED=false 未上架；文案为预置，上架时再校对）
+    // 099 S1 相似种挑战（独立模式，S1_ENABLED=false 未上架；文案按 TIERS[9] 实际值：
+    // 双题型统一 20s、optionRevealSec=0.1≈不隐藏。仅看图，descAudio 不会显示）
     s1: {
       label: 'S1 相似种挑战',
-      desc: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 15s · 前 2s 隐藏选项',
-      descAudio: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 25s · 前 2s 隐藏选项',
+      desc: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 20s',
+      descAudio: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 20s',
     },
   },
   quiz9: {

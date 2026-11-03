@@ -17,7 +17,7 @@ import { fetchOnlinePool } from '@/core/onlinePool'
 import { isDiag } from '@/core/diag'
 import { loadGlobalTierMap, regionTierMap } from '@/core/provinceCommonness'
 import { suggestTier, type TierSuggestion } from '@/core/adaptive'
-import { MEMORY_BOARDS, TIERS } from '@/core/difficulty'
+import { MEMORY_BOARDS, TIERS, countsInClassicStats } from '@/core/difficulty'
 import { getWrongBook, listRounds, type RoundRecord, type WrongEntry } from '@/core/historyDb'
 import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
@@ -589,7 +589,9 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
     pendingContinue.value = true
     // 092：记忆挑战鸟（tier=8）不参与自适应升降——suggestTier 只懂 1–5，
     // 从 L8 出发会把"再来一轮"降到别的档，模式直接变了。其它档位行为不变。
-    if (useSettingsStore().adaptiveTier && tier.value !== 8) {
+    // 099 S1（tier=9，docs/100 §5 缺陷 1）：同理排除。原写法 `!== 8` 漏了 9 →
+    // S1 正确率 ≤50% 时 suggestTier 返回 8，用户「再来一轮」直接掉进 L8 记忆翻牌。
+    if (useSettingsStore().adaptiveTier && countsInClassicStats(tier.value)) {
       const s = await tierSuggestion(mode.value, tier.value)
       tier.value = s.tier
     }

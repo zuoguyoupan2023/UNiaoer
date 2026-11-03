@@ -211,6 +211,33 @@ export function isSpecialModeTier(t: Tier): boolean {
 }
 
 /**
+ * 独立模式档（S1 相似种挑战 = 9，docs/100）：
+ *
+ * S1 是**自成体系的模式**，不参与经典称号 / 徽章 / 统计 / 自适应升降 —— 与 L8 的
+ * 「纯计时不设错题、不参与称号与徽章」同一处理原则，但 S1 的排除是**显式集中**在这里的：
+ * 以前四处（historyDb.getStats / titles.evaluateTitles / badges.evaluateBadges /
+ * roundRecorder.recordRound）各写一遍 `r.tier !== 8`，新增 S1 时漏改一处就会出现
+ * 「自适应把 S1 降到 L8」「S1 蹭到 L4 专家徽章」这类串档（docs/100 §5 缺陷 1/2）。
+ *
+ * **改判口径只改这一个函数**；将来给 S1 做独立体系（独立称号/独立统计页）时，
+ * 在这里分流即可，调用点零改动。
+ *
+ * 注意与 isSpecialModeTier 的区别：那个管**答题交互形态**（L6/L7/L8 有独立答题组件），
+ * S1 走经典选择链路所以**不在**里面；本函数管**统计归属**，与交互形态无关。
+ */
+export function isStandaloneModeTier(t: Tier): boolean {
+  return t === 9
+}
+
+/**
+ * 该档位是否计入经典称号 / 徽章 / 统计（historyDb.getStats、titles、badges 共用）。
+ * L8（记忆翻牌恒满分，混入会凭空抬级）与 S1（独立模式，docs/100）都排除。
+ */
+export function countsInClassicStats(t: Tier): boolean {
+  return !(t === 8 || isStandaloneModeTier(t))
+}
+
+/**
  * L8 记忆挑战鸟正式上线开关（2026-10-28）：
  * - false = 介绍页难度按钮**不上架第八档**（看图/听音同），已存的「上次档位 = 8」
  *   在介绍页回退默认档（QuizPlay）；模式代码与数据链路全部保留，本地历史里的

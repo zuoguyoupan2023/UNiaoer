@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { BarChart3, TrendingUp } from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
 import type { RoundRecord } from '@/core/historyDb'
-import { TIERS } from '@/core/difficulty'
+import { TIERS, countsInClassicStats } from '@/core/difficulty'
 import { currentLocale } from '@/i18n'
 
 const { t } = useI18n()
@@ -52,11 +52,23 @@ function agg(list: RoundRecord[]) {
   }
 }
 
+/**
+ * 按档位拆分（docs/100 §5 缺陷 5）：**只列经典档 1–7**。
+ * L8（8）与 S1（9）是独立模式，不占经典档位行——S1 的归属单独在 standaloneRounds
+ * 里统计，将来做 S1 独立统计页时从这里取数，不要塞回本列表（否则经典档图会被
+ * 「没见过 L4 却有 S1」的行打乱）。
+ */
 const byTier = computed(() =>
   ([1, 2, 3, 4, 5, 6, 7] as Tier[])
     .map((tier) => ({ key: tier, label: t(TIERS[tier].labelKey), ...agg(props.rounds.filter((r) => r.tier === tier)) }))
     .filter((x) => x.rounds > 0),
 )
+
+/** 独立模式轮次（L8 / S1）——不进经典档位图，仅在页面底部汇总一行，避免「数据凭空消失」 */
+const standaloneRounds = computed(() => {
+  const list = props.rounds.filter((r) => !countsInClassicStats(r.tier))
+  return list.length ? { roundCount: list.length, ...agg(list) } : null
+})
 
 const byMode = computed(() =>
   (['image', 'audio'] as MediaType[])
@@ -153,6 +165,18 @@ function fmtDay(at: number) {
         </div>
         <span class="bar-val">{{ row.accuracy }}%</span>
         <span class="bar-n muted">{{ t('charts.questionsCount', { correct: row.correct, total: row.questions }) }}</span>
+      </div>
+      <!-- 独立模式（L8 记忆挑战鸟 / S1 相似种挑战）不计入经典档位，单独一行汇总，
+           避免「打过但图表里看不到」的数据凭空消失（docs/100 §5 缺陷 5） -->
+      <div v-if="standaloneRounds" class="bar-row standalone">
+        <span class="bar-label">{{ t('charts.standalone') }}</span>
+        <div class="bar-track">
+          <div class="bar" :style="{ width: standaloneRounds.accuracy + '%' }"></div>
+        </div>
+        <span class="bar-val">{{ standaloneRounds.accuracy }}%</span>
+        <span class="bar-n muted">
+          {{ t('charts.questionsCount', { correct: standaloneRounds.correct, total: standaloneRounds.questions }) }}
+        </span>
       </div>
     </div>
   </section>
@@ -267,5 +291,14 @@ function fmtDay(at: number) {
   flex: 0 0 70px;
   font-size: 0.7rem;
   text-align: right;
+}
+/* 独立模式汇总行（L8/S1）：与经典档位用一条上分隔线隔开，不做成「另一个档位」的样子 */
+.bar-row.standalone {
+  margin-top: 6px;
+  padding-top: 11px;
+  border-top: 1px dashed #d5e5dd;
+}
+.bar-row.standalone .bar-label {
+  color: var(--muted, #6b7c74);
 }
 </style>

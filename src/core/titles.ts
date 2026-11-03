@@ -4,6 +4,7 @@
  * T0 段位的 levelScore 算法来自 008 §3：逐题加权（难度 × 模式 × 时间衰减）。
  */
 import type { RoundRecord, Stats } from './historyDb'
+import { countsInClassicStats } from './difficulty'
 
 export interface TitleLevel {
   threshold: number
@@ -40,6 +41,9 @@ export interface EarnedTitle {
 // ---- T0 段位：水平分（008 §3） ----
 
 // 档位权重：答对高档位的题在水平分里更值钱。L6=2.4 · L7=2.6（2026-10-24 用户定）
+// **只有经典档 1–7 有值**：L8（8）与 S1（9）是独立模式，evaluateTitles 已用
+// countsInClassicStats 把它们的轮次剔除，这里不需要也不应给它们配权重
+// （若将来 S1 要独立段位，在 S1 自己的核算里定权重，别混进这张表）。
 const TIER_FACTOR: Record<number, number> = { 1: 0.6, 2: 1.0, 3: 1.4, 4: 1.8, 5: 2.0, 6: 2.4, 7: 2.6 }
 const MODE_FACTOR: Record<string, number> = { image: 1.0, audio: 1.2 }
 
@@ -186,7 +190,9 @@ export const TITLE_TRACKS: TitleTrackDef[] = [
 export function evaluateTitles(stats: Stats, allRounds: RoundRecord[]): EarnedTitle[] {
   // 092 记忆挑战鸟（tier=8）：不参与称号体系——levelScore/物种聚合混入记忆轮
   // 会凭空抬级（恒满分 + 恒新增物种），整轮剔除。
-  const rounds = allRounds.filter((r) => r.tier !== 8)
+  // 099 S1（tier=9，docs/100）：独立模式同样剔除——S1 将来有自己的独立体系，
+  // 不再借用经典七轨（用户 2026-11-03 决定）。判定统一走 countsInClassicStats。
+  const rounds = allRounds.filter((r) => countsInClassicStats(r.tier))
   const out: EarnedTitle[] = []
   for (const track of TITLE_TRACKS) {
     const value = track.metric(stats, rounds)
