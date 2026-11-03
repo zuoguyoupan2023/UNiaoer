@@ -324,6 +324,16 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       nameMode?: NameMode
     } = {},
   ) {
+    // 防重入（2026-11-03 事故）：`start()` 是异步的（loadBank / computePool / ensureMedia）。
+    // 结果页「再来一轮」按钮连点 N 下 → N 个 start() 并发跑 → 每一轮完成都覆盖 `questions`，
+    // 用户看到「第一组刚显示，第二组又来了…」。
+    // 这里直接拒绝重入：**已在准备中就直接返回**，让第一次调用独占。
+    if (loading.value) {
+      if (import.meta.env.DEV) {
+        console.warn('[quiz.start] 已在准备题目中，忽略本次重复调用（防连点）')
+      }
+      return
+    }
     mode.value = type
     if (opts.tier) tier.value = opts.tier
     if (!opts.keepSession) {

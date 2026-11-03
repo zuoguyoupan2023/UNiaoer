@@ -528,10 +528,29 @@ onMounted(async () => {
   wornBadgeIcon.value = wornBadgeDef?.icon ?? ''
 })
 
+/**
+ * 「再来一轮」（2026-11-03 修）：
+ *
+ * 原实现是 `await nextRound()` **再** `router.push` —— 准备期间（loadBank + computePool +
+ * 出题 + 取素材，线上可达数秒）用户停在结果页**看不到任何反馈**，以为没点上就继续点，
+ * 于是并发开出多组、互相覆盖（用户实测：「第一组刚显示，第二组又来了…」）。
+ *
+ * 现在：
+ *   1. `againPending` 立即置 true → 按钮禁用 + 显示「正在准备题目」，**第一次点击就有反馈**；
+ *   2. 准备完再跳转；无论成功失败都复位（失败时用户可重试）。
+ *   3. store 侧 `start()` 另有 `loading` 防重入兜底（见 quiz.ts），双保险。
+ */
+const againPending = ref(false)
 async function again() {
-  await quiz.nextRound()
-  // 087 P0：L6 并入 /quiz/*（介绍页题型步骤），两种题型回到同一路由
-  router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
+  if (againPending.value) return // 双击保护（按钮虽 disabled，键盘/程序触发也挡）
+  againPending.value = true
+  try {
+    await quiz.nextRound()
+    // 087 P0：L6 并入 /quiz/*（介绍页题型步骤），两种题型回到同一路由
+    router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
+  } finally {
+    againPending.value = false
+  }
 }
 </script>
 
@@ -581,7 +600,11 @@ async function again() {
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" @click="again">{{ t('result.again') }}</button>
+      <!-- 准备中：禁用 + 换文案，让第一次点击立刻有反馈（否则用户以为没点上会连点） -->
+      <button class="btn btn-primary" :disabled="againPending" @click="again">
+        <span v-if="againPending" class="spin" aria-hidden="true"></span>
+        {{ againPending ? t('quiz.preparing') : t('result.again') }}
+      </button>
       <button class="btn btn-secondary" @click="showPoster = true">{{ t('result.makePoster') }}</button>
       <RouterLink class="btn btn-secondary" to="/stats">
         <BarChart3 class="ic" :size="16" /> {{ t('result.viewStats') }}
@@ -774,6 +797,27 @@ async function again() {
 }
 .actions .btn {
   flex: 0 0 auto;
+}
+/* 「再来一轮」准备中：按钮内小转圈（与 quiz 页 placeholder 的 spinner 同视觉语言） */
+.actions .btn .spin {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: resSpin 0.7s linear infinite;
+}
+.actions .btn:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+@keyframes resSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 /* 该档位平均句（紧跟正确率行）与按钮下方的 * 注 */
 .tier-avg-line {
