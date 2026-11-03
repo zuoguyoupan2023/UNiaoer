@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { Manifest, BankSpecies } from '@/core/bank'
+import { L6_TIERS } from '@/core/difficulty'
 
 function asset(id: string, url: string, type: 'image' | 'audio') {
   return {
@@ -72,7 +73,7 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     wrongBookMock.mockResolvedValue([])
   })
 
-  it('start tier=6：题干是名字、选项带素材、限时/选项数按题型（图 6 选项 15s）', async () => {
+  it('start tier=6：题干是名字、选项带素材、限时/选项数按题型（图 4 选项 10s）', async () => {
     const quiz = useQuizStore()
     await quiz.start('image', { tier: 6 })
     expect(quiz.error).toBe('')
@@ -82,20 +83,21 @@ describe('quiz store · L6 第六档（start tier=6）', () => {
     for (const q of quiz.questions) {
       expect(q.tier).toBe(6)
       expect(q.answerMode).toBe('choice')
-      expect(q.timeLimitSec).toBe(15)
+      // 引用配置常量，避免改配置就要改测试（2026-11-03：看图 6→4 选项、15→10s）
+      expect(q.timeLimitSec).toBe(L6_TIERS.image.timeLimitSec)
       expect(q.optionsMedia?.length).toBe(q.options.length)
-      expect(q.options.length).toBe(6)
+      expect(q.options.length).toBe(L6_TIERS.image.optionCount)
       expect(q.options).toContain(q.answer)
     }
   })
 
-  it('听音版 L6：4 选项、20s', async () => {
+  it('听音版 L6：4 选项、16s', async () => {
     const quiz = useQuizStore()
     await quiz.start('audio', { tier: 6 })
     expect(quiz.error).toBe('')
     for (const q of quiz.questions) {
-      expect(q.timeLimitSec).toBe(20)
-      expect(q.options.length).toBe(4)
+      expect(q.timeLimitSec).toBe(L6_TIERS.audio.timeLimitSec)
+      expect(q.options.length).toBe(L6_TIERS.audio.optionCount)
       for (const m of q.optionsMedia ?? []) expect(m.type).toBe('audio')
     }
   })

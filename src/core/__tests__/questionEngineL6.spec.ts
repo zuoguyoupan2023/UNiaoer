@@ -59,7 +59,8 @@ describe('buildNameQuestions（L6 半鸟人）', () => {
     for (const q of qs) {
       expect(q.tier).toBe(6)
       expect(q.answerMode).toBe('choice')
-      expect(q.timeLimitSec).toBe(15)
+      // 引用配置常量而不是写死数字：L6 限时改过（15→10s，2026-11-03），硬编码会让改配置就得改测试
+      expect(q.timeLimitSec).toBe(L6_TIERS.image.timeLimitSec)
       expect(q.options.length).toBe(L6_TIERS.image.optionCount)
       expect(q.optionsMedia?.length).toBe(q.options.length)
       expect(q.options).toContain(q.answer)

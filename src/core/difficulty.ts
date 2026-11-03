@@ -129,9 +129,9 @@ export const TIERS: Record<Tier, TierConfig> = {
     tier: 6,
     labelKey: 'difficulty.l6.label',
     descKey: 'difficulty.l6.desc',
-    optionCount: 6,
+    optionCount: 6, // 代表值同步 L6_TIERS（看图 6）
     distractor: 'same',
-    timeLimitSec: 15,
+    timeLimitSec: 15, // 代表值取看图档；听音 20s 见 L6_TIERS.audio
     commonness: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // 097 十档制：取满 100%
     mediaPoolSize: 1,
   },
@@ -313,6 +313,14 @@ export const MEMORY_DEFAULT_BOARD: MemoryBoardKind = 'standard'
  * **不进 L6**，见 DistractorStrategy 注释）。选项素材都取首选（媒体池大小 1）。
  */
 export const L6_TIERS: Record<MediaType, { optionCount: number; timeLimitSec: number; distractor: DistractorStrategy }> = {
+  // 2026-11-03 用户最终决定：**恢复原始难度参数**。
+  // 曾短暂试过「看图 4 选项 10s / 听音 16s」（对齐 S1 的快节奏），但 L6 的定位是
+  // **「半鸟人」高难关**（6 个同科近缘选项就是要难），缩到 4 选项会削弱它的梯度。
+  // 快节奏刷题由 S1 承担，L6 保持难度。→ 看图 6 选项 15s / 听音 4 选项 20s。
+  //
+  // ⚠️ 唯一保留的改进是**计时起点**（不是难度参数）：
+  //   看图 = 等选项图 load 完（useMediaGate，1s 兜底）；
+  //   听音 = 等第一次点播（audio-started）——不惩罚带宽与「还没开始听」。
   image: { optionCount: 6, timeLimitSec: 15, distractor: 'same' },
   audio: { optionCount: 4, timeLimitSec: 20, distractor: 'same' },
 }

@@ -37,7 +37,17 @@ const props = defineProps<{
   hintKey?: string
 }>()
 
-const emit = defineEmits<{ select: [value: string]; 'media-settled': [ok: boolean] }>()
+const emit = defineEmits<{
+  select: [value: string]
+  'media-settled': [ok: boolean]
+  /**
+   * 听音版：**首次真正开始播放**时发出（2026-11-03）。
+   * 用途：L6 听音题的计时不能从切题就开始（用户还没听到声音就被扣时间），
+   * 而要等「第一次听到声音」——父组件收到本事件后再启动倒计时。
+   * 只在第一次发出（`audioStarted` 标记），后续切换试听不再重复。
+   */
+  'audio-started': []
+}>()
 
 const { t } = useI18n()
 
@@ -107,6 +117,8 @@ function closeZoom() {
 
 // ---- 听音版：共享 Audio 元素（点按播放 / 再点作答） ----
 const playingUrl = ref<string | null>(null)
+/** 本组件是否已经「首次开播」过（只用来决定是否发 audio-started，不重复发） */
+let audioStarted = false
 let audio: HTMLAudioElement | null = null
 
 onMounted(() => {
@@ -164,6 +176,11 @@ function pressIndex(i: number) {
   audio.play().catch(() => {
     playingUrl.value = null
   })
+  // 首次真正开播 → 通知父组件可以开始计时（L6 听音题）
+  if (!audioStarted) {
+    audioStarted = true
+    emit('audio-started')
+  }
 }
 
 /** 作答后停掉试听（父组件在 answered 变化时调用） */

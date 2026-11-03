@@ -138,7 +138,14 @@ let tick: number | undefined
 /** 媒体就绪门：选项图就是题面，图没出来不该开始倒数 */
 const gate = useMediaGate()
 
-/** 本题必须等齐的媒体数：看图=选项图数（题干是名字，无图）；听音=0（点按试听才出声） */
+/**
+ * 本题必须等齐的媒体数（决定何时开始计时）：
+ * - **看图** = 选项图数（题干是名字，无图）→ 全部 load 后（或 1s 兜底）才开始倒计时；
+ * - **听音** = 0 → mediaGate 立即放行，但计时**不立刻开始**：
+ *   听音题在设计上是「点按某项试听」，没有统一的预载时机，
+ *   所以由 `audioStarted` 标记控制——**用户第一次点按播放时才开始倒数**
+ *   （2026-11-03：与「加载完/听到声音才计时」同一原则，不惩罚「还没听就被扣时间」）。
+ */
 function gateCount(): number {
   const q = quiz.current
   if (!q || q.type !== 'image') return 0
@@ -183,21 +190,40 @@ function startTimer() {
   }, 1000)
 }
 
-/** 每题起点：选项图未就绪时冻结计时（等 load / 1s 兜底） */
+/**
+ * 每题起点（2026-11-03 统一为「真正可用才开始计时」）：
+ * - **看图**：等选项图全部 load（1s 兜底）→ gate 就绪后 startTimer；
+ * - **听音**：没有统一的预载时机（靠点按试听），所以**等第一次开播**
+ *   （`onAudioStarted`）才 startTimer。在此之前倒计时保持冻结在原值。
+ */
 function beginTiming() {
   const first = quiz.current?.optionsMedia?.find((m) => m.thumbUrl || m.url)
   gate.reset(gateCount(), true, first?.thumbUrl ?? first?.url ?? null)
-  if (gate.ready.value) startTimer()
-  else resetTimer()
+  if (gate.ready.value) {
+    // 听音题：gate 立即就绪（count=0），但要等开播才起表——先冻住
+    if (quiz.current?.type === 'audio') resetTimer()
+    else startTimer()
+  } else {
+    resetTimer()
+  }
 }
 
-// 门禁放行即开始计时
+/** 门禁放行即开始计时（看图路径；听音走 onAudioStarted） */
 watch(
   () => gate.ready.value,
   (ok) => {
-    if (ok && !quiz.answered) startTimer()
+    if (!ok || quiz.answered) return
+    if (quiz.current?.type === 'audio') resetTimer() // 听音：等开播，先冻住
+    else startTimer()
   },
 )
+
+/** 听音题首次开播 → 正式起表（只触发一次，由 OptionMediaList 的 audioStarted 保证） */
+function onAudioStarted() {
+  if (quiz.answered) return
+  if (timeLeft.value === null) return // 已结束（如超时）
+  startTimer()
+}
 
 // ---- D2 自动下一题 / R43 浮窗与取消（与经典卷同款） ----
 const autoPending = ref(false)
@@ -523,6 +549,7 @@ const optionAttributions = computed(() => {
         hint-key="l6"
         @select="onSelectOption"
         @media-settled="onOptionMediaSettled"
+        @audio-started="onAudioStarted"
       />
 
       <!-- G1 报错按钮 -->

@@ -106,7 +106,9 @@ describe('档位配置（2026-11-03 用户拍板：token 相似不混入 L1–L8
   })
 
   it('L6 仍 same：token 组员不改变 L6 的同科优先', async () => {
-    // 答案锁定 target；同科无色种 5 只 + 跨科同 token 组员 5 只 → L6 干扰项全来自同科
+    // 答案锁定 target；同科无色种 5 只 + 跨科同 token 组员 5 只 → L6 干扰项全来自同科。
+    // L6 看图 2026-11-03 改为 4 选项（干扰项 3 个），所以不断言「5 个全入选」，
+    // 而是断言本质：**干扰项数量按配置、且全部来自同科**（跨科同 token 的 g* 一个都不该出现）。
     const l6bank: BankSpecies[] = [
       target,
       ...['f1', 'f2', 'f3', 'f4', 'f5'].map((id) => sp(id, `鹎科鸟${id}`, `Bulbul ${id}`, '鹎科')),
@@ -115,7 +117,8 @@ describe('档位配置（2026-11-03 用户拍板：token 相似不混入 L1–L8
     const qs = await buildNameQuestions(l6bank, { type: 'image', count: 1, speciesPool: new Set(['target']) })
     expect(qs.length).toBe(1)
     const distractorIds = qs[0]!.optionIds.filter((id) => id !== 'target')
-    expect(distractorIds.sort()).toEqual(['f1', 'f2', 'f3', 'f4', 'f5'])
+    expect(distractorIds).toHaveLength(L6_TIERS.image.optionCount - 1)
+    expect(distractorIds.every((id) => id.startsWith('f'))).toBe(true)
   })
 })
 
