@@ -68,15 +68,36 @@ const router = useRouter()
 const quiz = useQuizStore()
 const { t } = useI18n()
 
-const hasResult = computed(() => quiz.total > 0)
-const modeLabel = computed(() => (quiz.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
+/**
+ * 结果页快照（2026-11-03）：进页那一刻的成绩与题目，模板只读快照、不读 store 活值。
+ *
+ * 「再来一轮」改为先跳转、在答题页里 start()（见 again()），而 start() 会把 chosen
+ * 清成全 null、整体重建 questions——结果页若读活值，准备期会当场"变成 0 分"：
+ * 评语闪成「别灰心…」（msg0）、逐题回顾全变「未作答」（用户实测 10/10 满分仍出现）。
+ * questions/chosen 在 start() 里是整体替换而非原地改，浅拷贝即与旧轮安全脱钩。
+ */
+const snap = (() => ({
+  mode: quiz.mode,
+  tier: quiz.tier,
+  region: quiz.region,
+  accuracy: quiz.accuracy,
+  correctCount: quiz.correctCount,
+  total: quiz.total,
+  sessionRound: quiz.sessionRound,
+  overallAccuracy: quiz.overallAccuracy,
+  memoryResult: quiz.memoryResult,
+  questions: [...quiz.questions],
+  chosen: [...quiz.chosen],
+}))()
+const hasResult = snap.total > 0
+const modeLabel = computed(() => (snap.mode === 'audio' ? t('nav.audioQuiz') : t('nav.imageQuiz')))
 /**
  * 092 记忆挑战鸟：结果页不显示 0–100 分数，改为**用时 + 评语**（docs/092 §4.1/§8.4）。
  * 数据源是 quiz.memoryResult（QuizPlayMemory 完成时写入；刷新结果页后仍在 store 内）。
  */
-const isMemory = computed(() => quiz.tier === 8)
+const isMemory = computed(() => snap.tier === 8)
 const memoryInfo = computed(() => {
-  const m = quiz.memoryResult
+  const m = snap.memoryResult
   if (!m) return null
   return {
     time: formatMemoryTime(m.durationMs),
@@ -86,17 +107,17 @@ const memoryInfo = computed(() => {
 })
 /** 记忆轮的三档阈值提示（让玩家一眼看到「离下一档还差多少秒」，docs/092 §4.2；按盘面对数取阈值） */
 const memoryThresholds = computed(() => {
-  const { genius, awesome } = memoryThresholdSec(quiz.memoryResult?.pairs)
+  const { genius, awesome } = memoryThresholdSec(snap.memoryResult?.pairs)
   return t('memory.thresholds', { a: genius, b: awesome })
 })
 /** 087 §6.5：本轮生效地区角标（全球不显示，避免噪音）；省名要省级索引，懒加载不阻塞 */
 const provinceIndex = ref<ProvinceIndex | null>(null)
 const regionBadge = computed(() =>
-  quiz.region && quiz.region !== 'ALL'
-    ? regionDisplayName(quiz.region, currentLocale(), (k) => t(k), provinceIndex.value)
+  snap.region && snap.region !== 'ALL'
+    ? regionDisplayName(snap.region, currentLocale(), (k) => t(k), provinceIndex.value)
     : '',
 )
-const tierLabel = computed(() => t(TIERS[quiz.tier].labelKey))
+const tierLabel = computed(() => t(TIERS[snap.tier].labelKey))
 /**
  * 该档位匿名平均正确率（2026-10-29 用户要求，表述定为「{档位}水平测试的平均正确率是: X% *」）。
  * 数据来自 `/api/stats/public` 的 `accuracyByTier`（076 精确口径，全时段 Σcorrect/Σtotal）；
@@ -108,7 +129,7 @@ const tierAvg = computed(() => {
   if (isMemory.value) return null // 记忆挑战恒 12/12，无正确率语义
   const list = tierStats.value?.accuracyByTier
   if (!list?.length) return null
-  const hit = list.find((x) => x.tier === String(quiz.tier))
+  const hit = list.find((x) => x.tier === String(snap.tier))
   return hit && Number.isFinite(hit.mean) ? hit : null
 })
 /** 注脚的「数据截止到」时间 = 聚合快照时间（Worker generatedAt，本地时区） */
@@ -129,7 +150,7 @@ const statsCutoff = computed(() => {
  * 海报必须声明范围，否则「中国上海看图版 L7」与「全球版」无法区分）。
  */
 const posterRegionLabel = computed(() =>
-  regionDisplayName(quiz.region, currentLocale(), (k) => t(k), provinceIndex.value),
+  regionDisplayName(snap.region, currentLocale(), (k) => t(k), provinceIndex.value),
 )
 /** 科名「拉丁名+本地名」组合（015 #2） */
 const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
@@ -323,7 +344,7 @@ function profileOf(q: Question) {
 }
 
 const message = computed<{ icon: Component; text: string }>(() => {
-  const p = quiz.accuracy
+  const p = snap.accuracy
   if (p === 100) return { icon: Trophy, text: t('result.msg100') }
   if (p >= 80) return { icon: Star, text: t('result.msg80') }
   if (p >= 60) return { icon: ThumbsUp, text: t('result.msg60') }
@@ -337,8 +358,8 @@ const textOf = (x: TitleText) => t(x.key, x.params ?? {})
 const posterData = computed<PosterData>(() => {
   const wrong: PosterWrong[] = isMemory.value
     ? []
-    : quiz.questions
-        .map((q, i) => ({ q, chosen: quiz.chosen[i] ?? null }))
+    : snap.questions
+        .map((q, i) => ({ q, chosen: snap.chosen[i] ?? null }))
         .filter(({ q, chosen }) => chosen !== q.answer)
         .map(({ q, chosen }) => ({
           answer: nameOf(q),
@@ -346,15 +367,15 @@ const posterData = computed<PosterData>(() => {
           timedOut: chosen === TIMEOUT,
         }))
   return {
-    modeLabel: quiz.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
+    modeLabel: snap.mode === 'audio' ? t('mode.audioRound') : t('mode.imageRound'),
     tierLabel: tierLabel.value,
     regionLabel: posterRegionLabel.value,
-    correct: quiz.correctCount,
-    total: quiz.total,
-    accuracy: quiz.accuracy,
+    correct: snap.correctCount,
+    total: snap.total,
+    accuracy: snap.accuracy,
     date: new Intl.DateTimeFormat(currentLocale()).format(new Date()),
-    round: quiz.sessionRound,
-    overallAccuracy: quiz.overallAccuracy,
+    round: snap.sessionRound,
+    overallAccuracy: snap.overallAccuracy,
     wornTitle: wornTitleText.value ? textOf(wornTitleText.value) : undefined,
     wornTitleIcon: wornTitleIcon.value || undefined,
     wornBadge: wornBadgeLabel.value || undefined,
@@ -362,7 +383,7 @@ const posterData = computed<PosterData>(() => {
     nickname: archiveNickname.value || settings.nickname || undefined,
     // 2026-11-02（用户定）：页脚数据来源按本轮实际素材生成——图像版只有 iNaturalist，
     // 音频版才有 Xeno-canto；两个来源都用则两个都写（见 posterSources）。
-    sources: posterSources(quiz.questions.map((q) => q.media?.source)),
+    sources: posterSources(snap.questions.map((q) => q.media?.source)),
     // 092 记忆挑战鸟：海报画 评语 + 用时，不画分数/错题
     ...(memoryInfo.value
       ? {
@@ -380,7 +401,7 @@ const posterData = computed<PosterData>(() => {
 const posterImages = computed<PosterImage[]>(() => {
   const seen = new Set<string>()
   const out: PosterImage[] = []
-  quiz.questions.forEach((q, i) => {
+  snap.questions.forEach((q, i) => {
     const url = q.media?.url
     if (q.type !== 'image' || !url || seen.has(url)) return
     seen.add(url)
@@ -395,7 +416,7 @@ const posterImages = computed<PosterImage[]>(() => {
       author: q.media.author,
       license: q.media.license,
       source: q.media.source,
-      wrong: quiz.chosen[i] !== q.answer,
+      wrong: snap.chosen[i] !== q.answer,
     })
   })
   return out
@@ -419,7 +440,7 @@ function galleryPoolOf(q: Question): { images: MediaAsset[]; audios: MediaAsset[
 }
 
 onMounted(async () => {
-  if (!hasResult.value) {
+  if (!hasResult) {
     router.replace('/')
     return
   }
@@ -436,7 +457,7 @@ onMounted(async () => {
   }
   // 029 M1:core 只带首图首音;回顾画廊的完整素材按需加载(按桶合并,一轮题通常落在少数几个桶)
   void Promise.all(
-    quiz.questions.map((q) => {
+    snap.questions.map((q) => {
       const id = q.media?.speciesId
       return id ? loadSpeciesAssets(id).catch(() => null) : null
     }),
@@ -530,16 +551,17 @@ onMounted(async () => {
 })
 
 /**
- * 「再来一轮」（2026-11-03 修）：
+ * 「再来一轮」（2026-11-03 二次修：先跳转，答题页里准备）：
  *
- * 原实现是 `await nextRound()` **再** `router.push` —— 准备期间（loadBank + computePool +
- * 出题 + 取素材，线上可达数秒）用户停在结果页**看不到任何反馈**，以为没点上就继续点，
- * 于是并发开出多组、互相覆盖（用户实测：「第一组刚显示，第二组又来了…」）。
+ * 旧实现 `await nextRound()` **再** `router.push`，有两个问题：
+ *   ① 准备期（loadBank + computePool + 出题 + 最短 2s 垫底）用户停在结果页，
+ *      只有按钮转圈 + 一行宣传语，QuizPlay 的 loading 页（大转圈 + 宣传语）永远看不到；
+ *   ② start() 会清空 chosen/重建 questions，结果页上的成绩曾被当场清零
+ *      （10/10 满分也闪现「别灰心…」，现由快照兜底，见 snap）。
  *
- * 现在：
- *   1. `againPending` 立即置 true → 按钮禁用 + 显示「正在准备题目」，**第一次点击就有反馈**；
- *   2. 准备完再跳转；无论成功失败都复位（失败时用户可重试）。
- *   3. store 侧 `start()` 另有 `loading` 防重入兜底（见 quiz.ts），双保险。
+ * 现在：置 `pendingNextRound` 意图标记 → 立即跳转 → QuizPlay 挂载时消费标记、
+ * 就地跑 nextRound()，loading 页承接整个准备期（含 2s 最短展示 + 宣传语 + 素材预热）。
+ * `againPending` 只保留为跳转瞬间的按钮反馈；跳转失败时清标记，用户可重试。
  */
 const againPending = ref(false)
 /** 准备中显示的宣传语（点击时取一条，按界面语言） */
@@ -548,10 +570,13 @@ async function again() {
   if (againPending.value) return // 双击保护（按钮虽 disabled，键盘/程序触发也挡）
   againPending.value = true
   againEthics.value = pickEthicsLine(currentLocale())
+  quiz.pendingNextRound = true
   try {
-    await quiz.nextRound()
     // 087 P0：L6 并入 /quiz/*（介绍页题型步骤），两种题型回到同一路由
-    router.push(quiz.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
+    const failure = await router.push(snap.mode === 'audio' ? '/quiz/audio' : '/quiz/image')
+    if (failure) quiz.pendingNextRound = false
+  } catch {
+    quiz.pendingNextRound = false
   } finally {
     againPending.value = false
   }
@@ -574,10 +599,10 @@ async function again() {
     </template>
     <template v-else>
       <div class="score">
-        <span class="num">{{ quiz.correctCount }}</span>
-        <span class="den">/ {{ quiz.total }}</span>
+        <span class="num">{{ snap.correctCount }}</span>
+        <span class="den">/ {{ snap.total }}</span>
       </div>
-      <p class="muted">{{ t('result.accuracyLabel', { acc: quiz.accuracy }) }}</p>
+      <p class="muted">{{ t('result.accuracyLabel', { acc: snap.accuracy }) }}</p>
       <!-- 该档位匿名平均，紧跟正确率一行（* 注在按钮下方；2026-10-30 用户定：链到统计看板的
            超链接删除——下方 actions 已有「查看统计」按钮，重复入口） -->
       <p v-if="tierAvg" class="tier-avg-line">
@@ -683,13 +708,13 @@ async function again() {
     <h3>{{ t('result.review') }}</h3>
     <ol>
       <li
-        v-for="(q, i) in quiz.questions"
+        v-for="(q, i) in snap.questions"
         :key="q.id"
-        :class="{ ok: isMemory || quiz.chosen[i] === q.answer }"
+        :class="{ ok: isMemory || snap.chosen[i] === q.answer }"
       >
         <div class="line">
           <CircleCheck
-            v-if="isMemory || quiz.chosen[i] === q.answer"
+            v-if="isMemory || snap.chosen[i] === q.answer"
             class="mark ok"
             :size="16"
           />
@@ -698,7 +723,7 @@ async function again() {
           <span class="muted">{{ q.sci }} · {{ familyOf(q.family) }}</span>
         </div>
         <div v-if="!isMemory" class="muted small">
-          {{ t('result.yourChoice', { choice: choiceOf(q, quiz.chosen[i] ?? null) }) }}
+          {{ t('result.yourChoice', { choice: choiceOf(q, snap.chosen[i] ?? null) }) }}
         </div>
         <AttributionLine :media="q.media" />
         <!-- C3：回顾该鸟的其它图/音（可放大、可试听）；029 M1:core 只带首图首音,其余按需从 assets 分片补齐 -->

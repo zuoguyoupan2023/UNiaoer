@@ -23,6 +23,7 @@ import { useSettingsStore } from './settings'
 import { currentLocale } from '@/i18n'
 import { effectiveRegion, isContinentCode } from '@/core/region'
 import { isCorrectAnswer, loadNameVariants } from '@/core/nameMatch'
+import { preloadQuestions } from '@/core/mediaLoader'
 
 /** 超时未作答的标记（区别于 null=未作答） */
 export const TIMEOUT = '__timeout__'
@@ -125,6 +126,12 @@ export const useQuizStore = defineStore('quiz', () => {
   const sessionTotal = ref(0)
   /** 标记"从结果页继续下一轮"，供 QuizPlay 跳过介绍页直接开始 */
   const pendingContinue = ref(false)
+  /**
+   * 「再来一轮」意图标记（2026-11-03 改：先跳转再准备）：ResultView 置位后立即跳转，
+   * QuizPlay 挂载时消费并就地跑 nextRound()——loading 页（含宣传语与 2s 最短展示）
+   * 承接整个准备期，素材预热也在 loading 期并行（见 start() 尾部）。
+   */
+  const pendingNextRound = ref(false)
 
   /** 本轮来源（落库标记，隐藏徽章/称号统计用，R28） */
   const source = ref<'normal' | 'wrong-practice'>('normal')
@@ -577,6 +584,14 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       index.value = 0
       roundId.value = newRoundId()
       startedAt.value = Date.now()
+      // 素材预热与 2s 垫底**并行**（2026-11-03 用户定）：题面一旦建好就把首 4 题的
+      // 图/音（含 L6/S1 的选项图，图取缩略图）发出去下载，让 loading 页的等待时间
+      // 同时也在拉素材，而不是纯白等。fire-and-forget 不阻塞 start()；
+      // 组件挂载后的 preloadQuestions 重复调用会被 mediaLoader 的 preloaded 集合去重。
+      // L8 记忆挑战鸟例外——盘面缩略图由 QuizPlayMemory 自行预热。
+      if (tier.value !== 8) {
+        void preloadQuestions(qs, 0, tier.value >= 6 ? 2 : 4)
+      }
     } catch (e) {
       error.value = e instanceof BankError ? e.code : 'unknown'
       questions.value = []
@@ -673,6 +688,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
     sessionCorrect.value = 0
     sessionTotal.value = 0
     pendingContinue.value = false
+    pendingNextRound.value = false
     regime.value = 'standard'
     source.value = 'normal'
     escapedQuit.value = false
@@ -705,6 +721,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
     sessionCorrect,
     sessionTotal,
     pendingContinue,
+    pendingNextRound,
     regime,
     source,
     escapedQuit,

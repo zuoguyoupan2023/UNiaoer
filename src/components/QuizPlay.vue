@@ -229,13 +229,21 @@ const familyOf = (fam: string) => familyDisplay(fam, currentLocale())
 
 // 从结果页「再来一轮」进入时，跳过介绍页直接续答（D4）
 const started = ref(quiz.pendingContinue && quiz.questions.length > 0)
+/**
+ * 本组件就地准备中（2026-11-03 改：先跳转再准备）：挂载时消费 store 的
+ * `pendingNextRound` 意图标记并跑 nextRound()，期间用 building 让 loading 占位
+ * 立即可见（nextRound 内部先做自适应档位等异步步骤，quiz.loading 要到 start()
+ * 才置 true，若无 building 会闪一帧旧题面）。
+ */
+const building = ref(false)
 
 /** 加载占位页的宣传语：每次进入加载态随机换一条，按界面语言显示 */
 const ethicsText = ref(pickEthicsLine(currentLocale()))
 watch(
-  () => quiz.loading,
-  (v) => {
-    if (v) ethicsText.value = pickEthicsLine(currentLocale())
+  [building, () => quiz.loading],
+  ([b, l], [pb, pl]) => {
+    // 仅在"进入加载态"的边沿换一条（building 置位或 loading 升 true），结束边沿不动
+    if ((b && !pb) || (l && !pl)) ethicsText.value = pickEthicsLine(currentLocale())
   },
 )
 // L8 未上线（difficulty.L8_ENABLED）时忽略已存的第八档：介绍页没有该按钮，
@@ -1015,6 +1023,34 @@ function updateInterference() {
 
 onMounted(() => {
   document.addEventListener('keydown', onKey)
+  // 「再来一轮」先跳转再准备（2026-11-03）：ResultView 只置 pendingNextRound 就跳转，
+  // 准备期由本页的 loading 占位承接（大转圈 + 宣传语 + 2s 最短展示 + 素材预热并行）。
+  // 收尾与 begin() 一致：预载/计时/干扰音按档位分支；错误交给下方出错区。
+  if (quiz.pendingNextRound) {
+    quiz.pendingNextRound = false
+    started.value = true
+    building.value = true
+    // 从结果页续轮也是"测试开始"：环境鸟鸣停播
+    ambiencePlayer.stop()
+    void (async () => {
+      try {
+        await quiz.nextRound()
+      } finally {
+        building.value = false
+      }
+      if (quiz.error || !quiz.questions.length) return // 错误区接管
+      if (quiz.tier === 8) return // 记忆挑战鸟：盘面素材由 QuizPlayMemory 自预热（缩略图）
+      preloadQuestions(quiz.questions, 0, isSpecialModeTier(quiz.tier) ? 2 : 4)
+      if (isSpecialModeTier(quiz.tier)) {
+        // L6/L7：pendingContinue 留给嵌入的 QuizPlayName/QuizPlayInput 消费（计时/预载自管）
+        return
+      }
+      quiz.pendingContinue = false // 经典链路（含 S1）就地消费续轮标记
+      beginQuestionTiming()
+      updateInterference()
+    })()
+    return
+  }
   if (quiz.pendingContinue && quiz.questions.length > 0 && isSpecialModeTier(quiz.tier)) {
     // 087 §4.8：L6 的「再来一轮」——started 跳过介绍页，pendingContinue 留给嵌入的
     // QuizPlayName 消费（计时/预载由它做），经典链路不碰。
@@ -1393,8 +1429,9 @@ function onTouchEnd(e: TouchEvent) {
     <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
 
-  <!-- 加载中（092：记忆挑战不预取后续题；图/音文案各自分开，绝不混写） -->
-  <section v-else-if="quiz.loading" class="card center placeholder">
+  <!-- 加载中（092：记忆挑战不预取后续题；图/音文案各自分开，绝不混写）。
+       building =「再来一轮」先跳转后准备的就地准备态（2026-11-03），与 quiz.loading 同视图 -->
+  <section v-else-if="quiz.loading || building" class="card center placeholder">
     <div class="spinner"></div>
     <h2>{{ t(quiz.tier === 8 ? 'quiz.preparingMemory' : 'quiz.preparing') }}</h2>
     <p class="muted">
