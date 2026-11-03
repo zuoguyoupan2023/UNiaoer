@@ -113,9 +113,13 @@ export function isContinentCode(v: string | null | undefined): v is ContinentCod
  * 推翻此前按档位分流的两版设计）。本函数退化为纯归一化（大写、空→ALL）；
  * tier 形参保留以兼容既有调用点，不再参与逻辑。
  */
-export function effectiveRegion(_tier: number, chosen: string): string {
+export function effectiveRegion(tier: number, chosen: string): string {
   const v = String(chosen || '').trim().toUpperCase()
-  return v || 'ALL'
+  if (!v) return 'ALL'
+  // 099 S1（tier 9，2026-11-03 用户定）：颜色组需要大池，省级太小 →
+  // 地区只到国家/洲/全球；省级选择自动回退所属国家（省码形如 CN-11）。
+  if (tier === 9 && v.includes('-')) return v.split('-')[0]!
+  return v
 }
 
 /**

@@ -115,6 +115,11 @@ export interface Question {
    * 经典题（媒体作题干、名字作选项）不设该字段。
    */
   optionsMedia?: MediaAsset[]
+  /**
+   * S1 看名选图（docs/099 §3.2）：题干是名字（文本），选项是 optionsMedia 里的图；
+   * 经典题（媒体作题干）与 L6（由 QuizPlayName 自管渲染）不设该字段。
+   */
+  stemName?: string
   answerMode: AnswerMode
   timeLimitSec?: number
   /** 051 S1：本轮选项/答案使用的命名体系（供错题本、海报与 046 分区统计复现语义） */

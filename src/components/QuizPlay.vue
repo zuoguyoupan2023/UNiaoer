@@ -55,6 +55,7 @@ import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
 import MediaCard from './MediaCard.vue'
 import OptionList from './OptionList.vue'
+import OptionMediaList from './OptionMediaList.vue'
 import QuizPlayMemory from './QuizPlayMemory.vue'
 import QuizPlayName from './QuizPlayName.vue'
 import QuizPlayInput from './QuizPlayInput.vue'
@@ -157,6 +158,14 @@ const memoryBoard = computed<'standard' | 'compact'>({
   get: () => settings.memoryBoardSize ?? 'standard',
   set: (v) => {
     settings.memoryBoardSize = v
+  },
+})
+
+/** 099 S1 题型（介绍页选择，settings 持久化）：'media-stem' 看图选名 / 'name-stem' 看名选图 */
+const s1Form = computed<'media-stem' | 'name-stem'>({
+  get: () => settings.s1Form ?? 'media-stem',
+  set: (v) => {
+    settings.s1Form = v
   },
 })
 
@@ -915,7 +924,18 @@ const networkNote = computed(() => {
 function beginQuestionTiming() {
   timerBegun.value = false
   // 图：等 image-settled（1s 兜底）；音：等 audio-play，缓冲多久等多久（不设兜底）
-  gate.reset(1, props.type === 'image', quiz.current?.media?.url)
+  // S1 看名选图（099）：题干是名字，6 张选项图就是题面 → 等全部就绪（同 L6 的 gate 口径）
+  if (quiz.current?.stemName) {
+    const optMedia = quiz.current.optionsMedia ?? []
+    const first = optMedia.find((m) => m.thumbUrl || m.url)
+    gate.reset(
+      optMedia.filter((m) => m.thumbUrl || m.url).length,
+      true,
+      first?.thumbUrl ?? first?.url ?? null,
+    )
+  } else {
+    gate.reset(1, props.type === 'image', quiz.current?.media?.url)
+  }
   // 听音：音频可能永远播不出来（文件坏/解码失败），10s 后放行并记为失败
   if (props.type === 'audio') gate.armStall()
   resetTimer() // 冻结在满值，等就绪信号
@@ -1162,6 +1182,20 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ tierDescOf(cfg) }}</span>
       </button>
     </div>
+    <!-- 099 S1 题型（看图选名 / 看名选图）——仅 S1 且看图页显示（2026-11-03 用户定） -->
+    <template v-if="tier === 9 && props.type === 'image'">
+      <p class="step-cap l6-mode-cap">{{ t('quiz9.formCap') }}</p>
+      <div class="tiers l6-mode">
+        <button type="button" class="tier" :class="{ on: s1Form === 'media-stem' }" @click="s1Form = 'media-stem'">
+          <strong>{{ t('quiz9.stemMedia') }}</strong>
+          <span>{{ t('quiz9.stemMediaHint') }}</span>
+        </button>
+        <button type="button" class="tier" :class="{ on: s1Form === 'name-stem' }" @click="s1Form = 'name-stem'">
+          <strong>{{ t('quiz9.stemName') }}</strong>
+          <span>{{ t('quiz9.stemNameHint') }}</span>
+        </button>
+      </div>
+    </template>
     <!-- 089 §6.1/6.2 + 092：L6/L7/L8 作答模式（语言名/学名）——高两档+记忆档显示，不计步骤号；S1(9) 经典形态无卷别切换 -->
     <template v-if="isSpecialModeTier(tier)">
       <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
@@ -1266,8 +1300,12 @@ function onTouchEnd(e: TouchEvent) {
                   <strong>{{ regionLabel(opt.code) }}</strong>
                   <span class="count">{{ opt.n }}</span>
                 </button>
-                <!-- 087 P0-3：省级 chips 内联在所选国家正下方（层级即所见；083 收起名单照旧生效） -->
-                <div v-if="opt.code === selectedCountry && provinceChoices.length" class="provinces inline">
+                <!-- 087 P0-3：省级 chips 内联在所选国家正下方（层级即所见；083 收起名单照旧生效）。
+                     S1（099）不显示省级——颜色组需要大池，地区只到国家/洲/全球（effectiveRegion 同时做省→国家回退） -->
+                <div
+                  v-if="tier !== 9 && opt.code === selectedCountry && provinceChoices.length"
+                  class="provinces inline"
+                >
                   <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
                   <div class="prov-wrap">
                     <button
@@ -1398,39 +1436,63 @@ function onTouchEnd(e: TouchEvent) {
       @touchend="onTouchEnd"
       @pointerdown.capture="onPointerDownCapture"
     >
-      <MediaCard
-        :key="quiz.current.id"
-        :type="displayType"
-        :media="displayMedia ?? quiz.current.media"
-        :autoplay="quiz.current.type === 'audio' && quiz.index >= 1 && settings.autoplayAudio"
-        :autoplay-delay="settings.autoplayDelayMs"
-        :show-attribution="false"
-        @audio-play="onQuestionAudioPlay"
-        @image-settled="onImageSettled"
-      >
-        <template #media-corner>
-          <button class="quit-corner" type="button" @click="quitRound">
-            <LogOut class="ic" :size="13" /> {{ t('quiz.quit') }}
-          </button>
-        </template>
-      </MediaCard>
+      <!-- S1 看名选图（099）：题干是名字文本；无题面媒体、无同种画廊（画廊会泄露答案） -->
+      <div v-if="quiz.current?.stemName" class="s1-stem">
+        <button class="quit-corner" type="button" @click="quitRound">
+          <LogOut class="ic" :size="13" /> {{ t('quiz.quit') }}
+        </button>
+        <p class="s1-stem-name">{{ quiz.current.stemName }}</p>
+      </div>
+      <template v-else>
+        <MediaCard
+          :key="quiz.current.id"
+          :type="displayType"
+          :media="displayMedia ?? quiz.current.media"
+          :autoplay="quiz.current.type === 'audio' && quiz.index >= 1 && settings.autoplayAudio"
+          :autoplay-delay="settings.autoplayDelayMs"
+          :show-attribution="false"
+          @audio-play="onQuestionAudioPlay"
+          @image-settled="onImageSettled"
+        >
+          <template #media-corner>
+            <button class="quit-corner" type="button" @click="quitRound">
+              <LogOut class="ic" :size="13" /> {{ t('quiz.quit') }}
+            </button>
+          </template>
+        </MediaCard>
 
-      <!-- C3 同种多素材（R8）：查看并切换该鸟的其它图/音（含跨类型；L1 也展示全部） -->
-      <SpeciesGallery
-        :images="galleryImages"
-        :audios="galleryAudios"
-        :active-url="displayMedia?.url"
-        mode="select"
-        :label="t('gallery.title')"
-        @select="selected = $event"
-      />
+        <!-- C3 同种多素材（R8）：查看并切换该鸟的其它图/音（含跨类型；L1 也展示全部） -->
+        <SpeciesGallery
+          :images="galleryImages"
+          :audios="galleryAudios"
+          :active-url="displayMedia?.url"
+          mode="select"
+          :label="t('gallery.title')"
+          @select="selected = $event"
+        />
+      </template>
 
       <!-- G1 报错按钮：图/音/答案有问题 → 先本地记录 -->
       <button class="report-link" type="button" @click="openReport">
         <Flag class="ic" :size="14" /> {{ t('report.button') }}
       </button>
 
+      <!-- S1 看名选图（099）：选项是**纯图片**（复用 L6 的 OptionMediaList）。
+           图片下不放名字、img alt 为空——题干是名字时，选项上任何文字都是泄题。
+           名字只在作答后的反馈（正确答案 + 学名）出现；media-settled 直接喂 mediaGate。 -->
+      <OptionMediaList
+        v-if="quiz.current?.stemName"
+        :key="quiz.current.id"
+        :options="quiz.current.options"
+        :options-media="quiz.current.optionsMedia ?? []"
+        :answer="quiz.current.answer"
+        :chosen="quiz.currentChoice"
+        :type="quiz.current.type"
+        @select="onSelectOption"
+        @media-settled="onImageSettled"
+      />
       <OptionList
+        v-else
         :key="quiz.current.id"
         :options="quiz.current.options"
         :answer="quiz.current.answer"
@@ -2317,5 +2379,18 @@ function onTouchEnd(e: TouchEvent) {
 }
 .report-link:hover {
   color: var(--primary);
+}
+
+/* ---- 099 S1 看名选图 ---- */
+.s1-stem {
+  position: relative;
+  padding: var(--space-3, 12px) 0;
+  text-align: center;
+}
+.s1-stem-name {
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin: var(--space-4, 16px) 0;
+  letter-spacing: 0.02em;
 }
 </style>

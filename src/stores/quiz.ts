@@ -487,6 +487,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
                 ? await buildSimilarQuestions(speciesForBuild, {
                     type,
                     count,
+                    form: useSettingsStore().s1Form,
                     speciesPool,
                     locale: currentLocale(),
                     nameMode: nameMode.value,

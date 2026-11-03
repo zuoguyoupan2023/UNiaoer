@@ -170,13 +170,13 @@ export const TIERS: Record<Tier, TierConfig> = {
     mediaPoolSize: 1,
   },
   /**
-   * 9 = S1 相似种挑战（docs/099 §3.2 组专项卷；2026-11-03 用户拍板：**独立模式**，
+   * 9 = S1 相似种挑战（docs/099 §3.2；2026-11-03 用户拍板：**独立模式**，
    * 排在未发布的 L8 之后，绝不混入 L1–L8 的干扰项策略）。
-   * 模式：经典形态（媒体作题干、名字作选项），但**答案与全部干扰项来自同一名字 token 组**
-   * （同 (色，部位)，如「红尾组」：北红尾鸲/红尾水鸲/红尾鸫…）——严格同组，无同科/同色回退
-   * （要的就是「组内辨认」的难度；组内不足 optionCount 的种不出题）。
-   * 预习闭环：098 预习集（红尾组）→ S1 检验（只考红尾组）。
-   * 无地区档位/赛制池/自适应/新手池（独立模式，与 L6 同构）；限时给足（组内辨认比同科更难）。
+   * 分组（2026-11-03 用户定）：按**大色类**（canonical 11 色）——全身或局部有某色都算；
+   * 同色同部位（红耳+红耳）优先于同色异部位（红耳+红身），部位只是优先级不是门槛。
+   * 题型（双形态，介绍页选择，统一 20s）：'media-stem' 看图选名（经典形态）/
+   * 'name-stem' 看名选图（名字题干 + 6 图选项）。**仅看图**——颜色/花纹是视觉维度。
+   * 无地区档位/自适应/新手池（独立模式，与 L6 同构）；地区只到国家/洲/全球（省级池太小）。
    * 上架走 S1_ENABLED（与 L8_ENABLED 同模式，launch 时改 true 即可）。
    */
   9: {
@@ -184,10 +184,9 @@ export const TIERS: Record<Tier, TierConfig> = {
     labelKey: 'difficulty.s1.label',
     descKey: 'difficulty.s1.desc',
     optionCount: 6,
-    distractor: 'nameSimilar', // 代表值：S1 实际走 buildSimilarQuestions 的严格同组选取（不走该字段）
-    timeLimitSec: 15,
-    timeLimitSecAudio: 25,
-    optionRevealSec: 2,
+    distractor: 'nameSimilar', // 代表值：S1 实际走 buildSimilarQuestions 的色类分组（不走该字段）
+    timeLimitSec: 20, // 2026-11-03 用户定：双题型统一 20s
+    optionRevealSec: 0.1, // 用户定：前 2s 隐藏取消 → 0.1s（≈不隐藏，仅保留机制）
     commonness: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // 097 十档制：取满 100%（独立模式不做常见度筛选）
     mediaPoolSize: 1,
   },

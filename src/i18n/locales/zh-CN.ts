@@ -1276,6 +1276,14 @@ export const messages = {
       descAudio: '6 个选项 · 全部来自同一色组（如「红尾组」）· 限时 25s · 前 2s 隐藏选项',
     },
   },
+  quiz9: {
+    // 099 S1 相似种挑战题型（看图选名 / 看名选图，介绍页选择，统一 20s）
+    formCap: 'S1 题型',
+    stemMedia: '看图选名',
+    stemMediaHint: '显示鸟图 · 从 6 个名字里选',
+    stemName: '看名选图',
+    stemNameHint: '显示鸟名 · 从 6 张图里选',
+  },
   badges: {
     series: {
       starter: '入门',

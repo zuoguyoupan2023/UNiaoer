@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { pickDistractorPairs, buildNameQuestions, buildSimilarQuestions } from '../questionEngine'
+import { clearNameTokenCache } from '../nameTokens'
 import { TIERS, L6_TIERS, TIER_LIST, S1_ENABLED } from '../difficulty'
 import type { BankSpecies } from '../bank'
 import type { MediaAsset } from '@/types'
@@ -118,24 +119,54 @@ describe('档位配置（2026-11-03 用户拍板：token 相似不混入 L1–L8
   })
 })
 
-describe('buildSimilarQuestions（S1 相似种挑战，严格同组）', () => {
-  it('答案与全部选项来自同一 (色,部位) 组；tier=9', async () => {
+describe('buildSimilarQuestions（S1 相似种挑战：色类分组，2026-11-03 用户定）', () => {
+  // speciesTokens 按 id 缓存——各用例同 id 不同名会串缓存，先清
+  beforeEach(() => clearNameTokenCache())
+
+  it('大色类分组：全身或局部有某色都算；同色同部位优先回填', async () => {
+    // 白组 7 种：6 只白头（同色同部位）+ 1 只白腹（同色异部位）
     const s1bank: BankSpecies[] = [
       ...['g0', 'g1', 'g2', 'g3', 'g4', 'g5'].map((id) => sp(id, `白头鸟${id}`, `White-headed Bird ${id}`, `科${id}`)),
-      sp('x1', '杂鸟', 'Misc Bird', '杂科'),
-      sp('c1', '白腹鸟', 'White-bellied Bird', '杂科'), // 同色异部位——组不够 6，不当答案也不进选项
+      sp('c1', '白腹鸟', 'White-bellied Bird', '杂科'),
+      sp('x1', '杂鸟', 'Misc Bird', '杂科'), // 无白 token，永不入题
     ]
-    const qs = await buildSimilarQuestions(s1bank, { type: 'image', count: 1 })
-    expect(qs.length).toBe(1)
-    const q = qs[0]!
-    expect(q.tier).toBe(9)
-    expect(q.options.length).toBe(6)
-    const names = new Set(q.options)
-    expect(names.size).toBe(6)
-    for (const n of names) expect(n.startsWith('白头鸟')).toBe(true) // 全部来自 (白,头) 组
+    const qs = await buildSimilarQuestions(s1bank, { type: 'image', count: 10 })
+    expect(qs.length).toBe(7) // 白组 7 种全部可当答案
+    for (const q of qs) {
+      expect(q.tier).toBe(9)
+      expect(q.options.length).toBe(6)
+      expect(q.timeLimitSec).toBe(20) // 双题型统一 20s
+      // 选项 ⊆ 白组（c1/g*），杂鸟绝不出现
+      for (const id of q.optionIds) expect(id).not.toBe('x1')
+      // 同色同部位优先（无条件断言，两种答案情形结论相同）：
+      // 白头鸟答案 → 主 token 是最大的同色同部位组，其余选项全在 g*；
+      // 白腹鸟答案 → 无同部位同伴，其余选项全由色组回填（也是 g*）。
+      // 答案自身的 id 也在 optionIds 里，单独放行。
+      const answerId = q.optionIds[q.options.indexOf(q.answer)] ?? ''
+      expect(q.optionIds.every((id) => id === answerId || id.startsWith('g'))).toBe(true)
+    }
   })
 
-  it('组内不足 optionCount 的种不出题（宁缺毋滥，无回退）', async () => {
+  it('同色同部位不足 → 同色异部位回填（红耳鹎和红身放一起也可）', async () => {
+    const s1bank: BankSpecies[] = [
+      sp('target', '红耳鹎', 'Red-whiskered Bulbul', '鹎科'),
+      sp('pair1', '红耳鹎二', 'Red-whiskered Bulbul 2', '鹎科'), // 唯一同色同部位同伴
+      ...['b1', 'b2', 'b3', 'b4', 'b5'].map((id) => sp(id, `红身鸟${id}`, `Red Bird ${id}`, `科${id}`)), // (红,全身)
+    ]
+    // speciesPool 锁定答案为红耳鹎（色组 7 种都可当答案，shuffle 会抽别人）
+    const qs = await buildSimilarQuestions(s1bank, {
+      type: 'image',
+      count: 1,
+      speciesPool: new Set(['target']),
+    })
+    expect(qs.length).toBe(1)
+    const q = qs[0]!
+    expect(q.answer).toBe('红耳鹎')
+    expect(q.options).toContain('红耳鹎二') // 同色同部位优先入选
+    expect(q.options.length).toBe(6)
+  })
+
+  it('色组不足 optionCount 的种不出题（宁缺毋滥）', async () => {
     const smallBank: BankSpecies[] = [
       sp('a1', '白头鸟', 'White-headed Bird', '甲科'),
       sp('a2', '白头鸟二', 'White-headed Bird 2', '乙科'),
@@ -155,29 +186,41 @@ describe('buildSimilarQuestions（S1 相似种挑战，严格同组）', () => {
     for (const id of qs[0]!.optionIds) expect(id).not.toBe('noen')
   })
 
-  it('一鸟多组取最大组；同名去重后不足整题则换候选', async () => {
-    // g* 组 7 只（白,头）；dup 组 2 只（白,翅）
-    const s1bank: BankSpecies[] = ['g0', 'g1', 'g2', 'g3', 'g4', 'g5', 'g6'].map((id) => sp(id, `白头鸟${id}`, `White-headed Bird ${id}`, `科${id}`))
-    const qs = await buildSimilarQuestions(s1bank, { type: 'audio', count: 3 })
-    expect(qs.length).toBe(3)
-    for (const q of qs) {
-      expect(q.options.length).toBe(6)
-      expect(q.timeLimitSec).toBe(TIERS[9].timeLimitSecAudio)
-    }
-  })
-
-  it('speciesPool：答案只出池内，干扰项仍取全池同组（013 §4 同构）', async () => {
+  it('speciesPool：答案只出池内，干扰项仍取全池同色（013 §4 同构）', async () => {
     const s1bank: BankSpecies[] = [
       ...['g0', 'g1', 'g2', 'g3', 'g4', 'g5'].map((id) => sp(id, `白头鸟${id}`, `White-headed Bird ${id}`, `科${id}`)),
-      sp('x1', '白头圈外', 'White-headed Outsider', '外科'), // 同组但不在赛制池
+      sp('x1', '白头圈外', 'White-headed Outsider', '外科'), // 同色但不在赛制池
     ]
     const pool = new Set(['g0', 'g1', 'g2', 'g3', 'g4', 'g5'])
     const qs = await buildSimilarQuestions(s1bank, { type: 'image', count: 10, speciesPool: pool })
     expect(qs.length).toBeGreaterThan(0)
     for (const q of qs) {
       const answerIdx = q.options.indexOf(q.answer)
-      expect(pool.has(q.optionIds[answerIdx] ?? '')).toBe(true) // 答案必在池内（x1 绝不作答案）
-      for (const id of q.optionIds) expect(id === 'x1' || pool.has(id)).toBe(true) // 选项 ⊆ 池 ∪ 同组圈外
+      expect(pool.has(q.optionIds[answerIdx] ?? '')).toBe(true) // 答案必在池内
+      for (const id of q.optionIds) expect(id === 'x1' || pool.has(id)).toBe(true) // 选项 ⊆ 池 ∪ 同色圈外
     }
+  })
+
+  it('看名选图（name-stem）：名字题干 + 6 张图选项，全部带真实素材', async () => {
+    const s1bank: BankSpecies[] = [
+      ...['g0', 'g1', 'g2', 'g3', 'g4', 'g5'].map((id) => sp(id, `白头鸟${id}`, `White-headed Bird ${id}`, `科${id}`)),
+      // 有 token 但无图 → name-stem 跳过（sp() 默认带图，这里显式置空）
+      { ...sp('noimg', '白头无图', 'White-headed Noimg', '科x'), image: null, images: [] },
+    ]
+    const qs = await buildSimilarQuestions(s1bank, { type: 'image', count: 2, form: 'name-stem' })
+    expect(qs.length).toBeGreaterThan(0)
+    for (const q of qs) {
+      expect(q.stemName).toBe(q.answer)
+      expect(q.options.length).toBe(6)
+      expect(q.optionsMedia?.length).toBe(6)
+      for (const m of q.optionsMedia ?? []) expect(m.url).toBeTruthy()
+      for (const id of q.optionIds) expect(id).not.toBe('noimg') // 无图候选被跳过
+    }
+  })
+
+  it('统一 20s / 0.1s 不隐藏选项（2026-11-03 用户定）', () => {
+    expect(TIERS[9].timeLimitSec).toBe(20)
+    expect(TIERS[9].optionRevealSec).toBe(0.1)
+    expect(TIERS[9].timeLimitSecAudio).toBeUndefined() // S1 仅看图
   })
 })

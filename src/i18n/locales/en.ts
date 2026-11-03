@@ -1277,6 +1277,14 @@ const en: typeof zhMessages = {
       descAudio: '6 options · all from one colour group (e.g. "red-tailed") · 25s limit · options hidden for 2s',
     },
   },
+  quiz9: {
+    // 099 S1 forms (photo→name / name→photo, chosen on the intro page, 20s for both)
+    formCap: 'S1 form',
+    stemMedia: 'Photo → name',
+    stemMediaHint: 'Shows a photo · pick from 6 names',
+    stemName: 'Name → photo',
+    stemNameHint: 'Shows a name · pick from 6 photos',
+  },
   badges: {
     series: {
       starter: 'Starter',

@@ -53,6 +53,8 @@ interface Persisted {
    * 'compact' = 6 对（3×4）**实验性缩小盘**——用户试玩"是否应该降级"，结论前保留。
    */
   memoryBoardSize?: 'standard' | 'compact'
+  /** S1 相似种挑战题型（099；2026-11-03 用户定）：'media-stem' 看图选名 / 'name-stem' 看名选图 */
+  s1Form?: 'media-stem' | 'name-stem'
   /** D5 自适应难度：按最近表现自动升降档（默认开） */
   adaptiveTier?: boolean
   /** 029 M2:出题地区偏好（ISO 3166-1 alpha-2；'ALL'=不按地区过滤）。L1-L3 生效 */
@@ -132,6 +134,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const nameMode8Image = ref<'default' | 'sci'>(saved.nameMode8Image ?? 'default')
   const nameMode8Audio = ref<'default' | 'sci'>(saved.nameMode8Audio ?? 'default')
   const memoryBoardSize = ref<'standard' | 'compact'>(saved.memoryBoardSize ?? 'standard')
+  /** S1 题型（099）：默认看图选名 */
+  const s1Form = ref<'media-stem' | 'name-stem'>(saved.s1Form ?? 'media-stem')
   /** L6 半鸟人卷别（docs/085 D-2：switch 切换，'default' 跟随界面语言 / 'sci' 学名卷） */
   /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
@@ -176,6 +180,7 @@ export const useSettingsStore = defineStore('settings', () => {
       nameMode8Image,
       nameMode8Audio,
       memoryBoardSize,
+      s1Form,
       adaptiveTier,
       region,
       regionSource,
@@ -212,6 +217,7 @@ export const useSettingsStore = defineStore('settings', () => {
             nameMode8Image: nameMode8Image.value,
             nameMode8Audio: nameMode8Audio.value,
             memoryBoardSize: memoryBoardSize.value,
+            s1Form: s1Form.value,
             adaptiveTier: adaptiveTier.value,
             region: region.value,
             regionSource: regionSource.value,
@@ -252,6 +258,7 @@ export const useSettingsStore = defineStore('settings', () => {
     nameMode8Image,
     nameMode8Audio,
     memoryBoardSize,
+    s1Form,
     adaptiveTier,
     region,
     regionSource,

@@ -563,20 +563,25 @@ function fillDistractorsInMode(
 }
 
 // ---------------------------------------------------------------------------
-// S1 相似种挑战（docs/099 §3.2 组专项卷；独立模式 tier 9，S1_ENABLED 控制上架——
+// S1 相似种挑战（docs/099 §3.2；独立模式 tier 9，S1_ENABLED 控制上架——
 // 2026-11-03 用户拍板：token 相似**不混入** L1–L8 任何档位，做成独立模式排在 L8 后）。
 // ---------------------------------------------------------------------------
 
 export interface BuildSimilarOptions {
   type: MediaType
   count?: number
-  /** 选项名语种（经典卷同语义；缺省按 locale 推断） */
+  /**
+   * 题型（2026-11-03 用户定，介绍页选择，双题型统一 20s）：
+   * - 'media-stem' 看图选名：媒体作题干、名字作选项（经典形态）；
+   * - 'name-stem' 看名选图：名字作题干、6 张图作选项（全部选项需真实图片素材）。
+   */
+  form?: 'media-stem' | 'name-stem'
   locale?: string
   /** 卷别（缺省按 locale 推断：'en' → en，否则 zh） */
   nameMode?: NameMode
   /**
-   * 赛制选题池（013 §4，与经典卷同语义）：**答案只出池内，干扰项仍取全池同组**
-   * （组内同伴不受池收窄——组是这个模式的前提，收窄组会直接出不了题）。
+   * 赛制选题池（013 §4，与经典卷同语义）：**答案只出池内，干扰项仍取全池同色**
+   * （色组是这个模式的前提，收窄色组会直接出不了题）。
    */
   speciesPool?: ReadonlySet<string>
   /** 072-a 观测（与经典卷同语义） */
@@ -584,39 +589,60 @@ export interface BuildSimilarOptions {
 }
 
 /**
- * 构建一轮 S1 题（媒体作题干 → 名字选项，**全部选项来自同一名字 token 组**）。
+ * 构建一轮 S1 题（docs/099 §3.2）。
  *
- * 组语义（099 §3.0）：token = 中文名 ∪ 英文名解析 + overrides（含第三批视觉归类），
- * 按 (色，部位) 精确匹配——「红尾组」= 北红尾鸲/红尾水鸲/红尾鸫…。
- * 答案资格：当前池内同组同伴 ≥ optionCount-1（含自身 ≥ optionCount）；一鸟多组取最大组。
- * **严格同组、无回退**（099 §3.2：组内不足 → 该种不出题，宁缺毋滥；这是独立模式的卖点，
- * 与 nameSimilar 策略的分级回退不同）。
- * 复用经典卷链路：nameMode 过滤在前（051 S1）、mediaPool、ensureMedia 按需补素材；
- * 不走地区档位/赛制池/新手池/自适应（独立模式，与 L6 同构）。
+ * 分组（2026-11-03 用户定）：按**大色类**（canonical 11 色）——答案只要有一个颜色 C 的
+ * 同色同伴 ≥ optionCount-1（全身或局部有 C 都算）即可出题；干扰项**同色同部位优先**
+ * （红耳鹎和其他红耳的放一起），不足用同色异部位/全身回填（红耳和红身体放一起也可）。
+ * 部位只是优先级不是门槛——太细的色×部位组不做出题门槛（预习侧才按色×部位细分，099 §3.9）。
+ *
+ * 题型：
+ * - media-stem：只有答案需要素材（经典链路）；
+ * - name-stem：答案与全部选项都要真实图片（ensureMedia 逐个解析，无图候选跳过、
+ *   同色组后续补位；整组凑不满 optionCount 张图 → 该答案不出题，宁少一题不发空题）。
+ *
+ * 复用经典链路：nameMode 过滤在前（051 S1）、mediaPool、ensureMedia；不走地区档位/
+ * 自适应/新手池（独立模式，与 L6 同构）；赛制池只收答案（013 §4）。S1 仅看图（入口保证）。
  */
 export async function buildSimilarQuestions(
   bank: BankSpecies[],
   opts: BuildSimilarOptions,
 ): Promise<Question[]> {
-  const { type, count = 10, locale, nameMode = locale === 'en' ? 'en' : 'zh', onStats } = opts
+  const {
+    type,
+    count = 10,
+    form = 'media-stem',
+    locale,
+    nameMode = locale === 'en' ? 'en' : 'zh',
+    onStats,
+  } = opts
   const cfg = TIERS[9]
   const pool = filterByNameMode(mediaPool(bank, type), nameMode)
 
-  // 组内计数：tokenKey → 池内种列表（一鸟可属多组，进多个桶）
-  const byToken = new Map<string, BankSpecies[]>()
+  // 色类分组：canonical 色 → 池内种列表；色×部位 → 池内种列表（同色同部位优先级用）
+  const byColor = new Map<string, BankSpecies[]>()
+  const byPair = new Map<string, BankSpecies[]>()
   for (const s of pool) {
     for (const t of speciesTokens(s)) {
-      const k = `${t.color}|${t.part}`
-      const list = byToken.get(k)
-      if (list) list.push(s)
-      else byToken.set(k, [s])
+      const c = byColor.get(t.color)
+      if (c) c.push(s)
+      else byColor.set(t.color, [s])
+      const pk = `${t.color}|${t.part}`
+      const pr = byPair.get(pk)
+      if (pr) pr.push(s)
+      else byPair.set(pk, [s])
     }
   }
 
-  // 答案资格：最大组 ≥ optionCount（099 §3.2「组规模 < 门槛不出题」）
-  // 赛制池（013 §4）：答案只出池内；组内同伴仍取全池（本模式前提，见 BuildSimilarOptions）
+  // 答案资格：存在某色 C，同色（任意部位）同伴 ≥ optionCount-1（2026-11-03 用户定：
+  // 「全身或者局部有某个颜色都会出题」）。一鸟多 token 取「同色同部位组最大」的 token
+  // 作主组（红耳优先于红身），平局取色组更大者。
   const answerCandidates = opts.speciesPool ? pool.filter((s) => opts.speciesPool!.has(s.id)) : pool
-  interface SimilarPick { answer: BankSpecies; mates: BankSpecies[] }
+  interface SimilarPick {
+    answer: BankSpecies
+    /** 有序干扰项候选：同色同部位在前，同色异部位/全身在后（桶内已洗牌） */
+    mates: BankSpecies[]
+  }
   const answerPicks: SimilarPick[] = []
   const seenIds = new Set<string>()
   for (const s of answerCandidates) {
@@ -624,15 +650,23 @@ export async function buildSimilarQuestions(
     seenIds.add(s.id)
     const tokens = speciesTokens(s)
     if (!tokens.length) continue
-    let bestMates: BankSpecies[] | null = null
+    let best: { mates: BankSpecies[] } | null = null
+    let bestPair = -1
+    let bestColor = -1
     for (const t of tokens) {
-      const members = byToken.get(`${t.color}|${t.part}`)!
-      const mates = members.filter((m) => m.id !== s.id)
-      if (mates.length + 1 >= cfg.optionCount && (!bestMates || mates.length > bestMates.length)) {
-        bestMates = mates
+      const colorMates = (byColor.get(t.color) ?? []).filter((m) => m.id !== s.id)
+      if (colorMates.length + 1 < cfg.optionCount) continue
+      const pairMates = (byPair.get(`${t.color}|${t.part}`) ?? []).filter((m) => m.id !== s.id)
+      if (
+        pairMates.length > bestPair ||
+        (pairMates.length === bestPair && colorMates.length > bestColor)
+      ) {
+        best = { mates: [...shuffle(pairMates), ...shuffle(colorMates.filter((m) => !pairMates.includes(m)))] }
+        bestPair = pairMates.length
+        bestColor = colorMates.length
       }
     }
-    if (bestMates) answerPicks.push({ answer: s, mates: bestMates })
+    if (best) answerPicks.push({ answer: s, mates: best.mates })
   }
 
   const want = Math.min(count, answerPicks.length)
@@ -640,23 +674,52 @@ export async function buildSimilarQuestions(
 
   const questions: Question[] = []
   const otherType: MediaType = type === 'image' ? 'audio' : 'image'
+  const nameStem = form === 'name-stem'
   for (const pick of shuffle(answerPicks)) {
     if (questions.length >= want) break
     const resolved = await ensureMedia(pick.answer, type)
     const answerAssets = assetsOf(resolved, type)
     if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 换下一个候选
+
     const answerName = speciesName(resolved, locale)
     const used = new Set<string>([answerName])
-    const distractors: { id: string; name: string }[] = []
-    for (const mate of shuffle(pick.mates)) {
-      if (distractors.length >= cfg.optionCount - 1) break
-      const name = speciesName(mate, locale)
-      if (!name || used.has(name)) continue // 选项名去重（used 含答案名，经典卷同则）
-      used.add(name)
-      distractors.push({ id: mate.id, name })
+    const distractors: { id: string; name: string; media: MediaAsset }[] = []
+    if (!nameStem) {
+      // 看图选名：干扰项只要名字（同色同部位优先序已在 pick.mates 里）
+      for (const mate of pick.mates) {
+        if (distractors.length >= cfg.optionCount - 1) break
+        const name = speciesName(mate, locale)
+        if (!name || used.has(name)) continue // 选项名去重（used 含答案名，经典卷同则）
+        used.add(name)
+        distractors.push({ id: mate.id, name, media: answerAssets[0]! })
+      }
+      if (distractors.length < cfg.optionCount - 1) continue // 去重后不足一个整题 → 换候选
+    } else {
+      // 看名选图：每个选项都要真实图片——分批解析（同 L6：一次多取补偿取不到的），
+      // 无图候选跳过、同色组后续补位；整组凑不满 → 该答案不出题
+      const need = cfg.optionCount - 1
+      let cursor = 0
+      while (distractors.length < need && cursor < pick.mates.length) {
+        const batch = pick.mates.slice(cursor, cursor + (need - distractors.length) * 2)
+        cursor += batch.length
+        const resolvedList = await Promise.all(batch.map((sp) => ensureMedia(sp, type)))
+        for (const mate of resolvedList) {
+          if (distractors.length >= need) break
+          const name = speciesName(mate, locale)
+          if (!name || used.has(name)) continue
+          const imgs = assetsOf(mate, type)
+          if (!imgs.length) continue // 无图候选 → 跳过
+          used.add(name)
+          distractors.push({ id: mate.id, name, media: imgs[0]! })
+        }
+      }
+      if (distractors.length < need) continue // 整组凑不满 6 张图 → 不出题（宁少一题不发空题）
     }
-    if (distractors.length < cfg.optionCount - 1) continue // 去重后不足一个整题 → 换候选
-    const optionPairs = shuffle([{ id: resolved.id, name: answerName }, ...distractors])
+
+    const optionPairs = shuffle([
+      { id: resolved.id, name: answerName, media: answerAssets[0]! },
+      ...distractors.map((d) => ({ id: d.id, name: d.name, media: d.media })),
+    ])
     questions.push({
       id: `${resolved.id}-${type}-${questions.length}-s1`,
       tier: 9,
@@ -670,6 +733,9 @@ export async function buildSimilarQuestions(
       family: resolved.family,
       options: optionPairs.map((p) => p.name),
       optionIds: optionPairs.map((p) => p.id),
+      ...(nameStem
+        ? { stemName: answerName, optionsMedia: optionPairs.map((p) => p.media) }
+        : {}),
       answerMode: 'choice',
       timeLimitSec: timeLimitFor(cfg, type),
     })
