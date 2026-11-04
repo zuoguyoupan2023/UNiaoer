@@ -1238,8 +1238,9 @@ const en: typeof zhMessages = {
     trendEmpty: 'No records in this range',
     trendAria: 'Accuracy per round',
     legend: 'Dots: per-round accuracy (hover for details) · green=photo / dark green=sound',
-    maDotTitle: '{day} · mean of last {span} recorded days: {acc}%',
-    legendMa: 'Gold curve: 3-day moving average over days with records (gaps skipped)',
+    maDotTitle: '{day} · mean of last 3 recorded days: {acc}%',
+    legendMa:
+      'Gold curve: 3-day moving average over days with records (gaps skipped; the first 2 days cannot be averaged, so nothing is drawn)',
     byTierMode: 'By tier / mode',
     modeImage: 'Photo',
     modeAudio: 'Sound',

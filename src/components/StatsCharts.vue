@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp } from 'lucide-vue-next'
 import type { MediaType, Tier } from '@/types'
 import type { RoundRecord } from '@/core/historyDb'
 import { TIERS, countsInClassicStats } from '@/core/difficulty'
+import { movingAverage } from '@/core/statsChart'
 import { currentLocale } from '@/i18n'
 
 const { t } = useI18n()
@@ -109,100 +110,74 @@ function fmtDay(at: number) {
  * 改成类似股市均线的**平滑曲线**：以「有记录的日子」为步长，每个点的值是
  * **最近 3 个有记录日**的按题加权正确率，然后把这些点连成平滑弧线。
  *
- * 为什么按「有记录的日子」而不是「自然日」：多数人不会每天做题，
- * 按自然日做 3 日均线会在没记录的日子直接断掉（或需要补插值编造数据）；
- * 用户明确要求「过去 3 个有记录的日期（中间有可能是间断的）」，即跳过空档。
+ * 归一化说明：
+ *  · 按「有记录的日子」而不是「自然日」——多数人不会每天做题，按自然日会在空档处
+ *    断裂或需要编造插值；用户要的是「过去 3 个有记录的日期」。
+ *  · 同一天多轮先按题数加权合并成日均值，否则一天两个点会让曲线抖动。
+ *  · **窗口填满 3 个记录日才出第一个点**——不足 3 天拿原始值冒充「3 日均值」是假的。
  *
- * 跨轮次加权：同一天做了两轮就合并成一个点（按题数加权），否则一天两个点会让曲线抖动。
+ * 算法本身在 `core/statsChart.ts` 的 `movingAverage()` 里，有单测覆盖
+ * （`statsChart.spec.ts`：开头不出点 / 空档跳过 / 同日合并 / 滑动移出窗口）。
  */
-interface MaPoint {
-  at: number
-  /** 该点覆盖的日期个数（末尾不足 3 天时为 1 或 2） */
-  span: number
-  accuracy: number
-  /** 该日各轮次在趋势序列里的序号（算均线点的 x 用） */
-  indices: number[]
-}
 
-/** 按「日」聚合成日正确率桶（同一天多轮 → 按题数加权合并），时间正序 */
-interface DayBucket {
-  at: number
-  questions: number
-  correct: number
-  /** 当天所有轮次在趋势序列里的序号（均线点取它们的平均 x，不偏向当天首轮） */
-  indices: number[]
-}
-const dayBuckets = computed<DayBucket[]>(() => {
-  const map = new Map<number, DayBucket>()
-  for (const [i, p] of trend.value.entries()) {
-    const d = new Date(p.at)
-    const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-    const b = map.get(key)
-    if (b) {
-      b.questions += p.total
-      b.correct += p.correct
-      b.indices.push(i)
-    } else {
-      map.set(key, { at: p.at, questions: p.total, correct: p.correct, indices: [i] })
-    }
-  }
-  return [...map.values()].sort((a, b) => a.at - b.at)
-})
-
-/** 3 日移动平均：每个有记录日一个点，取最近 3 个有记录日（含自身）的加权正确率 */
-const maPoints = computed<MaPoint[]>(() => {
-  const days = dayBuckets.value
-  const out: MaPoint[] = []
-  for (let i = 0; i < days.length; i++) {
-    const from = Math.max(0, i - 2) // 3 日窗口：i-2, i-1, i
-    const window = days.slice(from, i + 1)
-    const questions = window.reduce((n, d) => n + d.questions, 0)
-    const correct = window.reduce((n, d) => n + d.correct, 0)
-    out.push({
-      at: days[i]!.at,
-      span: window.length,
-      accuracy: questions ? Math.round((correct / questions) * 100) : 0,
-      indices: days[i]!.indices,
-    })
-  }
-  return out
-})
-
-/** 均线点的 x 坐标：与趋势点共用同一套「按序号均分」的横轴（时间间隔不按真实时长缩放） */
-const maPts = computed(() =>
-  maPoints.value.map((p) => {
-    const n = trend.value.length
+/** 均线点（带屏幕坐标） */
+const maPts = computed(() => {
+  const n = trend.value.length
+  return movingAverage(trend.value, 3).map((p) => {
     // 同一天多轮 → 取当天各轮次的平均序号，均线点落在当天中间而不是偏左
     const idx = p.indices.reduce((a, b) => a + b, 0) / p.indices.length
     const x = n === 1 ? (W - PAD * 2) / 2 + PAD : PAD + (idx * (W - PAD * 2)) / (n - 1)
     return { ...p, x, y: PAD + ((100 - p.accuracy) * (H - PAD * 2)) / 100 }
-  }),
-)
+  })
+})
 
 /**
- * 平滑路径（Catmull-Rom → 三次贝塞尔）。
- * 直接连折线会显得生硬；这里把每段曲线的控制点取相邻点切线，
- * 视觉上就是股价图里那种圆滑的弧线，且**必然穿过每个数据点**（不改变数值）。
+ * 平滑路径：**C1 连续的三次 Hermite 样条**（中心差分取切线）。
+ *
+ * 为什么不用均匀参数化的 Catmull-Rom：均线点的 x 间距**不均匀**——
+ * 同一天有多轮时，均线点落在当天各轮次的平均序号上，间距随当天轮数变化。
+ * 均匀公式（控制点 = 相邻点差 × tension）在不等距处会给出错误的切线，
+ * 视觉上表现为尖角或过冲（之前 11/5→11/6 那段就是尖的）。
+ *
+ * 正确做法是按实际 x 间距缩放切线：
+ *   切线 m_i = (P_{i+1} − P_{i−1}) / (x_{i+1} − x_{i−1})   ← 导数估计
+ *   段 i→i+1 的控制点：c1 = P_i + m_i·dx/3，c2 = P_{i+1} − m_{i+1}·dx/3
+ * 这样曲线必然穿过每个数据点，且在不等距处也是平滑的。
  */
-const maPath = computed(() => {
-  const pts = maPts.value
-  if (pts.length < 2) return ''
-  const k = 0.2 // 切线张力：0 = 折线，0.5 = 很圆；0.2 接近常见均线的柔和度
+const smoothPath = (pts: { x: number; y: number }[]) => {
+  const n = pts.length
+  if (n < 2) return ''
+
+  // 每点的切线斜率（dy/dx）；端点用单侧差分
+  const slope: number[] = []
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)]!
+    const b = pts[Math.min(n - 1, i + 1)]!
+    const dx = b.x - a.x
+    slope.push(dx === 0 ? 0 : (b.y - a.y) / dx)
+  }
+
   const first = pts[0]!
   let d = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`
-  for (let i = 0; i < pts.length - 1; i++) {
+  for (let i = 0; i < n - 1; i++) {
     const p1 = pts[i]!
     const p2 = pts[i + 1]!
-    const p0 = pts[i - 1] ?? p1
-    const p3 = pts[i + 2] ?? p2
-    const c1x = p1.x + (p2.x - p0.x) * k
-    const c1y = p1.y + (p2.y - p0.y) * k
-    const c2x = p2.x - (p3.x - p1.x) * k
-    const c2y = p2.y - (p3.y - p1.y) * k
+    const dx = p2.x - p1.x
+    if (dx <= 0) {
+      // 退化（同 x）：直接连线，避免除零
+      d += ` L ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+      continue
+    }
+    const c1x = p1.x + dx / 3
+    const c1y = p1.y + (slope[i]! * dx) / 3
+    const c2x = p2.x - dx / 3
+    const c2y = p2.y - (slope[i + 1]! * dx) / 3
     d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
   }
   return d
-})
+}
+
+const maPath = computed(() => smoothPath(maPts.value))
 </script>
 
 <template>
@@ -244,17 +219,18 @@ const maPath = computed(() => {
         <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" :aria-label="t('charts.trendAria')">
           <line v-for="g in [0, 50, 100]" :key="g" :x1="PAD" :x2="W - PAD" :y1="PAD + ((100 - g) * (H - PAD * 2)) / 100" :y2="PAD + ((100 - g) * (H - PAD * 2)) / 100" class="grid" />
           <text v-for="g in [100, 50, 0]" :key="'t' + g" :x="PAD + 2" :y="PAD + ((100 - g) * (H - PAD * 2)) / 100 - 2" class="grid-text">{{ g }}</text>
-          <!-- 3 日移动平均（2026-11-04 用户定）：平滑弧线，替代原来的水平虚线 -->
+          <!-- 3 日移动平均（2026-11-04 用户定）：平滑弧线，替代原来的水平虚线。
+               从**第 3 个记录日**起才有线（窗口填满 3 天），前两天的数据不参与假均线 -->
           <path v-if="maPath" :d="maPath" class="ma-line" />
           <circle
             v-for="(p, i) in maPts"
             :key="'ma' + i"
             :cx="p.x"
             :cy="p.y"
-            :r="1.6"
+            :r="2"
             class="ma-dot"
           >
-            <title>{{ t('charts.maDotTitle', { day: fmtDay(p.at), span: p.span, acc: p.accuracy }) }}</title>
+            <title>{{ t('charts.maDotTitle', { day: fmtDay(p.at), acc: p.accuracy }) }}</title>
           </circle>
           <polyline v-if="trendPts.length > 1" :points="trendPts.map((p) => `${p.x},${p.y}`).join(' ')" class="line" />
           <circle
