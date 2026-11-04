@@ -32,19 +32,20 @@ function rangeBounds(r: TrendRange): [number, number] {
   return [new Date(r, 0, 1).getTime(), new Date(r + 1, 0, 1).getTime()]
 }
 
-/** 时间正序的趋势点（按所选区间过滤） */
+/** 时间正序的趋势点（按所选区间过滤）；带上题数/对数，均线按题加权要用 */
 const trend = computed(() => {
   const [from, to] = rangeBounds(range.value)
   return [...props.rounds]
     .filter((r) => r.at >= from && r.at < to)
     .sort((a, b) => a.at - b.at)
-    .map((r) => ({ at: r.at, accuracy: r.accuracy, mode: r.mode, tier: r.tier }))
-})
-
-/** 区间平均正确率（按题加权，与下方按档位/模式条形同口径） */
-const trendAvg = computed(() => {
-  const [from, to] = rangeBounds(range.value)
-  return agg(props.rounds.filter((r) => r.at >= from && r.at < to))
+    .map((r) => ({
+      at: r.at,
+      accuracy: r.accuracy,
+      total: r.total,
+      correct: r.correct,
+      mode: r.mode,
+      tier: r.tier,
+    }))
 })
 
 function agg(list: RoundRecord[]) {
@@ -98,15 +99,110 @@ const trendPts = computed(() =>
   })),
 )
 
-/** 平均线 y 坐标（与数据点同一比例尺） */
-const avgY = computed(
-  () => PAD + ((100 - trendAvg.value.accuracy) * (H - PAD * 2)) / 100,
-)
-
 /** 日期随 locale（015 i18n-4：统一 Intl） */
 function fmtDay(at: number) {
   return new Intl.DateTimeFormat(currentLocale(), { month: 'numeric', day: 'numeric' }).format(at)
 }
+
+/* ── 移动平均线（2026-11-04 用户定）────────────────────────────────────
+ * 原来是一条贯穿全图的**水平虚线**（整个区间一个平均值），信息量太低、看着也呆板。
+ * 改成类似股市均线的**平滑曲线**：以「有记录的日子」为步长，每个点的值是
+ * **最近 3 个有记录日**的按题加权正确率，然后把这些点连成平滑弧线。
+ *
+ * 为什么按「有记录的日子」而不是「自然日」：多数人不会每天做题，
+ * 按自然日做 3 日均线会在没记录的日子直接断掉（或需要补插值编造数据）；
+ * 用户明确要求「过去 3 个有记录的日期（中间有可能是间断的）」，即跳过空档。
+ *
+ * 跨轮次加权：同一天做了两轮就合并成一个点（按题数加权），否则一天两个点会让曲线抖动。
+ */
+interface MaPoint {
+  at: number
+  /** 该点覆盖的日期个数（末尾不足 3 天时为 1 或 2） */
+  span: number
+  accuracy: number
+  /** 该日各轮次在趋势序列里的序号（算均线点的 x 用） */
+  indices: number[]
+}
+
+/** 按「日」聚合成日正确率桶（同一天多轮 → 按题数加权合并），时间正序 */
+interface DayBucket {
+  at: number
+  questions: number
+  correct: number
+  /** 当天所有轮次在趋势序列里的序号（均线点取它们的平均 x，不偏向当天首轮） */
+  indices: number[]
+}
+const dayBuckets = computed<DayBucket[]>(() => {
+  const map = new Map<number, DayBucket>()
+  for (const [i, p] of trend.value.entries()) {
+    const d = new Date(p.at)
+    const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const b = map.get(key)
+    if (b) {
+      b.questions += p.total
+      b.correct += p.correct
+      b.indices.push(i)
+    } else {
+      map.set(key, { at: p.at, questions: p.total, correct: p.correct, indices: [i] })
+    }
+  }
+  return [...map.values()].sort((a, b) => a.at - b.at)
+})
+
+/** 3 日移动平均：每个有记录日一个点，取最近 3 个有记录日（含自身）的加权正确率 */
+const maPoints = computed<MaPoint[]>(() => {
+  const days = dayBuckets.value
+  const out: MaPoint[] = []
+  for (let i = 0; i < days.length; i++) {
+    const from = Math.max(0, i - 2) // 3 日窗口：i-2, i-1, i
+    const window = days.slice(from, i + 1)
+    const questions = window.reduce((n, d) => n + d.questions, 0)
+    const correct = window.reduce((n, d) => n + d.correct, 0)
+    out.push({
+      at: days[i]!.at,
+      span: window.length,
+      accuracy: questions ? Math.round((correct / questions) * 100) : 0,
+      indices: days[i]!.indices,
+    })
+  }
+  return out
+})
+
+/** 均线点的 x 坐标：与趋势点共用同一套「按序号均分」的横轴（时间间隔不按真实时长缩放） */
+const maPts = computed(() =>
+  maPoints.value.map((p) => {
+    const n = trend.value.length
+    // 同一天多轮 → 取当天各轮次的平均序号，均线点落在当天中间而不是偏左
+    const idx = p.indices.reduce((a, b) => a + b, 0) / p.indices.length
+    const x = n === 1 ? (W - PAD * 2) / 2 + PAD : PAD + (idx * (W - PAD * 2)) / (n - 1)
+    return { ...p, x, y: PAD + ((100 - p.accuracy) * (H - PAD * 2)) / 100 }
+  }),
+)
+
+/**
+ * 平滑路径（Catmull-Rom → 三次贝塞尔）。
+ * 直接连折线会显得生硬；这里把每段曲线的控制点取相邻点切线，
+ * 视觉上就是股价图里那种圆滑的弧线，且**必然穿过每个数据点**（不改变数值）。
+ */
+const maPath = computed(() => {
+  const pts = maPts.value
+  if (pts.length < 2) return ''
+  const k = 0.2 // 切线张力：0 = 折线，0.5 = 很圆；0.2 接近常见均线的柔和度
+  const first = pts[0]!
+  let d = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p1 = pts[i]!
+    const p2 = pts[i + 1]!
+    const p0 = pts[i - 1] ?? p1
+    const p3 = pts[i + 2] ?? p2
+    const c1x = p1.x + (p2.x - p0.x) * k
+    const c1y = p1.y + (p2.y - p0.y) * k
+    const c2x = p2.x - (p3.x - p1.x) * k
+    const c2y = p2.y - (p3.y - p1.y) * k
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+  }
+  return d
+})
 </script>
 
 <template>
@@ -148,11 +244,18 @@ function fmtDay(at: number) {
         <svg :viewBox="`0 0 ${W} ${H}`" class="trend" role="img" :aria-label="t('charts.trendAria')">
           <line v-for="g in [0, 50, 100]" :key="g" :x1="PAD" :x2="W - PAD" :y1="PAD + ((100 - g) * (H - PAD * 2)) / 100" :y2="PAD + ((100 - g) * (H - PAD * 2)) / 100" class="grid" />
           <text v-for="g in [100, 50, 0]" :key="'t' + g" :x="PAD + 2" :y="PAD + ((100 - g) * (H - PAD * 2)) / 100 - 2" class="grid-text">{{ g }}</text>
-          <!-- 区间平均正确率：虚线 + 右端数值 -->
-          <line v-if="trendAvg.rounds" :x1="PAD" :x2="W - PAD" :y1="avgY" :y2="avgY" class="avg-line" />
-          <text v-if="trendAvg.rounds" :x="W - PAD - 2" :y="avgY - 3" text-anchor="end" class="avg-text">
-            {{ t('charts.trendAvg', { acc: trendAvg.accuracy }) }}
-          </text>
+          <!-- 3 日移动平均（2026-11-04 用户定）：平滑弧线，替代原来的水平虚线 -->
+          <path v-if="maPath" :d="maPath" class="ma-line" />
+          <circle
+            v-for="(p, i) in maPts"
+            :key="'ma' + i"
+            :cx="p.x"
+            :cy="p.y"
+            :r="1.6"
+            class="ma-dot"
+          >
+            <title>{{ t('charts.maDotTitle', { day: fmtDay(p.at), span: p.span, acc: p.accuracy }) }}</title>
+          </circle>
           <polyline v-if="trendPts.length > 1" :points="trendPts.map((p) => `${p.x},${p.y}`).join(' ')" class="line" />
           <circle
             v-for="(p, i) in trendPts"
@@ -169,6 +272,7 @@ function fmtDay(at: number) {
           </circle>
         </svg>
         <p class="legend muted">{{ t('charts.legend') }}</p>
+        <p v-if="maPts.length > 1" class="legend muted">{{ t('charts.legendMa') }}</p>
       </template>
     </div>
 
@@ -253,16 +357,17 @@ function fmtDay(at: number) {
   font-size: 7px;
   fill: #9fb5aa;
 }
-/* 区间平均正确率（虚线 + 右端标签） */
-.avg-line {
+/* 3 日移动平均线（2026-11-04）：比数据折线细一点、颜色偏暖，作为参考线不与主数据抢视觉 */
+.ma-line {
+  fill: none;
   stroke: #b0851f;
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
 }
-.avg-text {
-  font-size: 7px;
+.ma-dot {
   fill: #b0851f;
-  font-weight: 700;
 }
 .line {
   fill: none;
