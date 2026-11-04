@@ -40,8 +40,11 @@ const groupLabel = computed(() =>
  * 051 S2：生活型六分法。**只渲染有出处的记录**（`profile.group6` 缺失 = 没有依据 = 不显示），
  * 不做推断、不兜底。一个科可跨类 → 用「·」并列。
  *
- * 2026-10-31 用户定：该行**常显**——没有查证依据的鸟显示「暂无查证依据」而非整行消失
- * （用户问"为什么有的鸟六类型完全没有"）；点击行展开六类的含义说明 + 覆盖口径注记。
+ * 2026-11-04 用户定：**无数据时整行不显示**，不再写「暂无查证依据」。
+ * 理由：六分法是习惯分类，本身没有权威表（见 scripts/lib/class-taxonomy.mjs 头注），
+ * 覆盖率只有 6.8%（755/11026）——绝大多数鸟都会挂上这句，而「暂无查证依据」会被读成
+ * 「我们不知道这鸟属于哪类」，实际含义却是「这个分类口径本身没有权威出处可比对」。
+ * 也符合铁律 9：界面不摆解释口径的文案。
  */
 const group6List = computed(() => props.profile?.group6 ?? [])
 const group6Label = computed(() => {
@@ -110,27 +113,30 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
         <dt>{{ t('species.group') }}</dt>
         <dd>{{ groupLabel }}</dd>
       </template>
-      <dt>{{ t('species.group6.label') }}</dt>
-      <dd>
-        <!-- 只解释该鸟自己的类型（2026-11-01 用户定）：点开只出这一两只的含义，不铺六类全表 -->
-        <button
-          v-if="group6List.length"
-          type="button"
-          class="g6-toggle"
-          :aria-expanded="g6Open"
-          @click="g6Open = !g6Open"
-        >
-          <span>{{ group6Label }}</span>
-          <ChevronDown class="chev" :class="{ open: g6Open }" :size="13" aria-hidden="true" />
-        </button>
-        <span v-else class="g6-none">{{ t('species.group6.none') }}</span>
-        <div v-if="g6Open && group6List.length" class="g6-legend">
-          <p v-for="g in group6List" :key="g" class="g6-item">
-            <strong>{{ t(`species.group6.${g}`) }}</strong>
-            <span>{{ t(`species.group6Desc.${g}`) }}</span>
-          </p>
-        </div>
-      </dd>
+      <!-- 生活型六分法：**只有查出出处才显示该行**（2026-11-04 用户定）。
+           无数据时整行不渲染，不写「暂无查证依据」——那句话会被误读成「不知道这鸟是什么类型」，
+           而实际是该分类口径没有权威表（绝大多数鸟都没覆盖到）。 -->
+      <template v-if="group6Label">
+        <dt>{{ t('species.group6.label') }}</dt>
+        <dd>
+          <!-- 只解释该鸟自己的类型（2026-11-01 用户定）：点开只出这一两只的含义，不铺六类全表 -->
+          <button
+            type="button"
+            class="g6-toggle"
+            :aria-expanded="g6Open"
+            @click="g6Open = !g6Open"
+          >
+            <span>{{ group6Label }}</span>
+            <ChevronDown class="chev" :class="{ open: g6Open }" :size="13" aria-hidden="true" />
+          </button>
+          <div v-if="g6Open" class="g6-legend">
+            <p v-for="g in group6List" :key="g" class="g6-item">
+              <strong>{{ t(`species.group6.${g}`) }}</strong>
+              <span>{{ t(`species.group6Desc.${g}`) }}</span>
+            </p>
+          </div>
+        </dd>
+      </template>
       <template v-if="migrationLabel">
         <dt>{{ t('species.migration') }}</dt>
         <dd>{{ migrationLabel }}</dd>
@@ -196,6 +202,11 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
   color: var(--text-light);
   font-weight: 700;
   white-space: nowrap;
+  /* 标签贴住该行**第一行**文字（2026-11-04 用户反馈）。
+     grid 项默认 stretch → dt 高度被拉到和 dd 一样，内部 align-items:center 又把
+     标签居中，于是「分布」这种 dd 会折两行（国家数 + 「查看国家/地区列表」）的行，
+     标签就飘在两行之间的半空高度，看着很难受。改成行首对齐。 */
+  align-self: start;
 }
 .facts-grid dt .ic {
   color: var(--primary);
@@ -228,11 +239,8 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
   cursor: pointer;
   text-align: left;
 }
-.g6-toggle:hover span:not(.none) {
+.g6-toggle:hover span {
   text-decoration: underline;
-}
-.g6-none {
-  color: var(--text-light);
 }
 .g6-toggle .chev {
   flex-shrink: 0;

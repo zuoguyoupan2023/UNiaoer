@@ -536,6 +536,8 @@ export const messages = {
     pvRegionChange: '更改',
     // 预习浮窗：大图灯箱 / 多素材展开 / 数据面板（2026-10-31）
     pvZoom: '查看大图',
+    // 图上的按钮文案（2026-11-04 用户定：只写「查看」，不写「查看大图」）
+    pvView: '查看',
     pvMediaExpand: '展开更多素材（+{n}）',
     pvMediaCollapse: '收起',
     pvAudio: '鸣声 {n}',
@@ -857,7 +859,7 @@ export const messages = {
     },
     iucn: 'IUCN {code}',
     groups: { waterbird: '水鸟', raptor: '猛禽', landbird: '林鸟' },
-    // 051 S2 生活型六分法（习惯分类；仅有出处的记录才显示）
+    // 051 S2 生活型六分法（习惯分类；仅有出处的记录才显示该行，无出处整行不渲染）
     group6: {
       label: '生活型',
       swimmer: '游禽',
@@ -866,8 +868,6 @@ export const messages = {
       raptor: '猛禽',
       climber: '攀禽',
       terrestrial: '陆禽',
-      // 2026-10-31：该行常显，无查证依据时明确说明
-      none: '暂无查证依据',
     },
     // 六类型的含义（点击「生活型」行展开）
     group6Desc: {

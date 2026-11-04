@@ -533,6 +533,7 @@ const en: typeof zhMessages = {
     tabCatalog: 'Catalog',
     pvRegionChange: 'Change',
     pvZoom: 'Full image',
+    pvView: 'View',
     pvMediaExpand: 'More media (+{n})',
     pvMediaCollapse: 'Collapse',
     pvAudio: 'Recording {n}',
@@ -765,7 +766,8 @@ const en: typeof zhMessages = {
     },
     iucn: 'IUCN {code}',
     groups: { waterbird: 'Waterbird', raptor: 'Raptor', landbird: 'Landbird' },
-    // 051 S2 six-way lifestyle grouping (habit classification; rendered only with a cited source)
+    // 051 S2 six-way lifestyle grouping (habit classification; the whole row is
+    // omitted when there is no cited source rather than saying "not yet verified")
     group6: {
       label: 'Lifestyle',
       swimmer: 'Swimmer',
@@ -774,7 +776,6 @@ const en: typeof zhMessages = {
       raptor: 'Raptor',
       climber: 'Climber',
       terrestrial: 'Terrestrial bird',
-      none: 'Not yet verified',
     },
     group6Desc: {
       swimmer: 'Web-footed swimmers that feed on open water, such as ducks and geese, grebes and cormorants.',

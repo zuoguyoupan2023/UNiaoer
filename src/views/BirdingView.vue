@@ -13,12 +13,14 @@
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
+import type { MediaAsset } from '@/types'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X, ZoomIn } from 'lucide-vue-next'
 import CatalogPanel from '@/components/CatalogPanel.vue'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
+import AttributionLine from '@/components/AttributionLine.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { loadBank, loadSpeciesAssets, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
@@ -640,7 +642,7 @@ function openPreview() {
 function closePreview() {
   previewOpen.value = false
   // 面板态一并复位：下次打开回到鸟内容（灯箱/数据面板/选区面板不残留）
-  lightboxUrl.value = ''
+  closeLightbox()
   pvTab.value = 'preview'
   pvRegionOpen.value = false
   clearHold()
@@ -724,13 +726,24 @@ function pvPickProvince(code: string) {
 /* ── 预习浮窗：大图灯箱 + 多素材展开（2026-10-31 用户定）──────────────────
  * meta 名单层不含媒体字段 → 完整图/音走 assets 分片（loadSpeciesAssets，详情页同款）。
  * 主图放大占满浮窗宽、点击进灯箱看原分辨率（xlUrl 优先）；首图首音之外还有素材时
- * 出现一个「展开更多素材」开关——四图四音一起展开、一起折叠。 */
+ * 出现一个「展开更多素材」开关——四图四音一起展开、一起折叠。
+ * 2026-11-04：**每张图 / 每段音都带署名**（作者·许可证·来源）——预习浮窗在展示
+ * CC BY/BY-NC 等素材，署名是许可证义务，折叠时也必须在（见铁律 5、11）。 */
+/**
+ * 灯箱：分开存 URL 与素材对象。
+ * 主图在 assets 分片未就绪时会退回 thumbs 索引的路径拼接——那时只有 URL、没有许可信息，
+ * 于是 `lightboxMedia` 为空，灯箱里就不显示署名（而不是显示半截署名）。
+ */
 const lightboxUrl = ref('')
-function openLightbox(url: string | null | undefined) {
-  if (url) lightboxUrl.value = url
+const lightboxMedia = ref<MediaAsset | null>(null)
+function openLightbox(url: string | null | undefined, media?: MediaAsset | null) {
+  if (!url) return
+  lightboxUrl.value = url
+  lightboxMedia.value = media ?? null
 }
 function closeLightbox() {
   lightboxUrl.value = ''
+  lightboxMedia.value = null
 }
 type SpeciesAssets = Awaited<ReturnType<typeof loadSpeciesAssets>>
 const previewAssets = ref<SpeciesAssets>(null)
@@ -768,6 +781,11 @@ const previewImageFull = computed(() => {
 const extraImages = computed(() => (previewAssets.value?.images ?? []).slice(1, 5))
 const extraAudios = computed(() => (previewAssets.value?.audios ?? []).slice(1, 5))
 const hasExtraMedia = computed(() => extraImages.value.length > 0 || extraAudios.value.length > 0)
+/** 主图 / 首音的**完整素材**（含作者·许可证·来源页）——署名只能从这里取。
+ *  thumbs 索引只有路径段、没有许可信息；assets 分片未就绪时为 null，
+ *  此时不显示署名（而不是显示一条有来源没作者的半截署名）。 */
+const previewImageMainMedia = computed(() => previewAssets.value?.images?.[0] ?? null)
+const previewAudioMedia = computed(() => previewAssets.value?.audios?.[0] ?? null)
 
 /* ── 预习浮窗：数据面板（2026-10-31 用户定）──────────────────────────────
  * 底部筛选行新增「数据」按钮 → 面板占满浮窗（与选区同模式）。两组条形：
@@ -1646,21 +1664,23 @@ function pickProvince(code: string) {
           <template v-if="previewCurrent">
             <div class="pv-body">
             <div class="pv-head">
-              <!-- 图左文右（2026-10-31 用户定：右侧上方=名字/学名，右侧下方=喇叭；最大限度省高度）。
-                   点击图进灯箱看原分辨率 -->
+              <!-- 桌面：图左文右（2026-10-31 用户定：右侧上方=名字/学名）；
+                   竖屏手机：**名字在上、图在下**（2026-11-04 用户定，图可占满整宽）。
+                   两种布局用 CSS 换序（.pv-side order），模板顺序保持一致。
+                   「查看」按钮放图的左下角、喇叭放右下角，都压在图上（见 .pv-photo-acts）。 -->
               <button
                 v-if="previewImageMain"
                 type="button"
                 class="pv-photo"
                 :aria-label="t('region.pvZoom')"
-                @click="openLightbox(previewImageFull)"
+                @click="openLightbox(previewImageFull, previewImageMainMedia)"
               >
                 <img
                   :src="previewImageMain"
                   alt=""
                   @error="onThumbError(previewCurrent.slug)"
                 />
-                <span class="pv-zoom"><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvZoom') }}</span>
+                <span class="pv-zoom"><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvView') }}</span>
               </button>
               <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
               <div class="pv-side">
@@ -1671,6 +1691,7 @@ function pickProvince(code: string) {
                   <p v-if="previewCurrent.name !== previewCurrent.nameSci" class="pv-name">{{ previewCurrent.name }}</p>
                   <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
                 </div>
+                <!-- 桌面：压在右侧栏底部；竖屏手机：绝对定位到图的右下角（见样式里的媒体查询） -->
                 <button
                   v-if="previewAudio"
                   type="button"
@@ -1685,35 +1706,50 @@ function pickProvince(code: string) {
                 </button>
               </div>
             </div>
+            <!-- 首图/首音署名（铁律 5、11：每段展示的素材都要有作者·许可证）。
+                 集中放在头部下方整行——塞进右侧窄栏会折成四五行；图标区分图/音 -->
+            <div v-if="previewImageMainMedia || previewAudioMedia" class="pv-credits">
+              <AttributionLine
+                v-if="previewImageMainMedia"
+                compact
+                :media="previewImageMainMedia"
+              />
+              <AttributionLine v-if="previewAudioMedia" compact :media="previewAudioMedia" />
+            </div>
 
-            <!-- 展开区：其余图/音一起展开、一起折叠（一个开关） -->
+            <!-- 展开区：其余图/音一起展开、一起折叠（一个开关）。
+                 **每条素材都带自己的署名**（铁律 5、11）：图在缩略图正下方，音在试听按钮后 -->
             <div v-if="mediaExpanded && hasExtraMedia" class="pv-extra">
               <div v-if="extraImages.length" class="pv-extra-imgs">
-                <button
-                  v-for="(m, i) in extraImages"
-                  :key="`img-${i}`"
-                  type="button"
-                  class="pv-extra-img"
-                  :aria-label="t('region.pvZoom')"
-                  @click="openLightbox(m.xlUrl ?? m.url)"
-                >
-                  <img :src="m.thumbUrl ?? m.url" alt="" loading="lazy" decoding="async" />
-                </button>
-              </div>
-              <ul v-if="extraAudios.length" class="pv-extra-audios">
-                <li v-for="(m, i) in extraAudios" :key="`aud-${i}`">
+                <figure v-for="(m, i) in extraImages" :key="`img-${i}`" class="pv-extra-img-wrap">
                   <button
                     type="button"
-                    class="card-play"
-                    :class="{ playing: isPlaying(m.url) }"
-                    :aria-label="isPlaying(m.url) ? t('region.stopCall') : t('region.playCall')"
-                    :aria-pressed="isPlaying(m.url)"
-                    @click="playToggle(m.url)"
+                    class="pv-extra-img"
+                    :aria-label="t('region.pvZoom')"
+                    @click="openLightbox(m.xlUrl ?? m.url, m)"
                   >
-                    <VolumeX v-if="isPlaying(m.url)" :size="14" aria-hidden="true" />
-                    <Volume2 v-else :size="14" aria-hidden="true" />
+                    <img :src="m.thumbUrl ?? m.url" alt="" loading="lazy" decoding="async" />
                   </button>
-                  <span class="muted">{{ t('region.pvAudio', { n: i + 2 }) }}</span>
+                  <AttributionLine compact :media="m" />
+                </figure>
+              </div>
+              <ul v-if="extraAudios.length" class="pv-extra-audios">
+                <li v-for="(m, i) in extraAudios" :key="`aud-${i}`" class="pv-extra-audio">
+                  <div class="pv-extra-audio-row">
+                    <button
+                      type="button"
+                      class="card-play"
+                      :class="{ playing: isPlaying(m.url) }"
+                      :aria-label="isPlaying(m.url) ? t('region.stopCall') : t('region.playCall')"
+                      :aria-pressed="isPlaying(m.url)"
+                      @click="playToggle(m.url)"
+                    >
+                      <VolumeX v-if="isPlaying(m.url)" :size="14" aria-hidden="true" />
+                      <Volume2 v-else :size="14" aria-hidden="true" />
+                    </button>
+                    <span class="muted">{{ t('region.pvAudio', { n: i + 2 }) }}</span>
+                  </div>
+                  <AttributionLine compact :media="m" />
                 </li>
               </ul>
             </div>
@@ -1911,7 +1947,8 @@ function pickProvince(code: string) {
             <p class="pvs-note muted">{{ t('region.pvStatsNote') }}</p>
           </div>
 
-          <!-- 灯箱：点任意处关闭（preview-mask 用 @click.self，不会误关浮窗） -->
+          <!-- 灯箱：点任意处关闭（preview-mask 用 @click.self，不会误关浮窗）。
+               原分辨率大图同样要署名（铁律 5）——很多素材只在灯箱里才看清，署名不能丢 -->
           <div
             v-if="lightboxUrl"
             class="pv-lightbox"
@@ -1919,8 +1956,12 @@ function pickProvince(code: string) {
             :aria-label="t('region.pvZoom')"
             @click="closeLightbox"
           >
-            <img :src="lightboxUrl" alt="" />
-          </div>
+            <figure class="pv-lightbox-fig">
+              <img :src="lightboxUrl" alt="" @click.stop />
+              <figcaption v-if="lightboxMedia" class="pv-lightbox-cap" @click.stop>
+                <AttributionLine compact :media="lightboxMedia" />
+              </figcaption>
+            </figure>          </div>
         </div>
       </div>
     </Teleport>
@@ -2714,7 +2755,10 @@ function pickProvince(code: string) {
 }
 .pv-zoom {
   position: absolute;
-  right: 8px;
+  /* 左下角（2026-11-04 用户定：原在右下角，与喇叭位置语义冲突）。
+     桌面端喇叭在右侧栏底部，左下角空着；竖屏手机喇叭移到图的右下角，
+     于是图的两角各一个动作，互不干扰。 */
+  left: 8px;
   bottom: 8px;
   display: inline-flex;
   align-items: center;
@@ -2849,6 +2893,16 @@ function pickProvince(code: string) {
 }
 /* 「数据」按钮 = 筛选行的第 4 段（无圆角无独立边框，与前三段无缝相连——
    2026-10-31 用户反馈：弧线丑陋）。图标对齐由 inline-flex 提供 */
+/* ── 预习浮窗 · 素材署名（2026-11-04）────────────────────────────
+   首图/首音的署名集中放在头部下方一行（塞进右侧窄栏会折成四五行）；
+   展开区的每条素材各自带一条。全部用 AttributionLine 的 compact 变体，
+   字号 0.66rem、无上边距无分隔线——署名要看得见但不必抢戏。 */
+.pv-credits {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
 /* ── 预习浮窗 · 展开区（其余图/音）与大图灯箱 ──────────────────── */
 .pv-extra {
   margin-top: 8px;
@@ -2859,9 +2913,15 @@ function pickProvince(code: string) {
 .pv-extra-imgs {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
+  gap: 6px 8px;
+}
+.pv-extra-img-wrap {
+  margin: 0;
+  min-width: 0;
 }
 .pv-extra-img {
+  display: block;
+  width: 100%;
   padding: 0;
   border: none;
   border-radius: var(--radius-xs);
@@ -2878,12 +2938,17 @@ function pickProvince(code: string) {
 }
 .pv-extra-audios {
   list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   font-size: 0.76rem;
 }
-.pv-extra-audios li {
+.pv-extra-audio {
+  min-width: 0;
+}
+.pv-extra-audio-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2924,11 +2989,43 @@ function pickProvince(code: string) {
   background: rgba(0, 0, 0, 0.85);
   cursor: zoom-out;
 }
-.pv-lightbox img {
+.pv-lightbox-fig {
+  /* 图 + 署名作为一个整体居中；高度只按内容撑开（max-height 兜底），
+     不要去占满整屏——否则署名会被压到屏幕底端、离图很远。 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
   max-width: 100%;
   max-height: 100%;
+  min-height: 0;
+}
+.pv-lightbox img {
+  max-width: 100%;
+  /* 灯箱是 fixed + 16px 内边距；用视口高度减掉留给署名行的空间，
+     不依赖父级百分比高度（父级高度由内容决定，百分比算不出来会把图压没） */
+  max-height: calc(100vh - 120px);
   object-fit: contain;
   border-radius: 6px;
+}
+/* 灯箱署名：深色底上要反白，否则完全看不清（AttributionLine 用的是 --text-light） */
+.pv-lightbox-cap {
+  flex: none;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #dfe8e3;
+}
+.pv-lightbox-cap :deep(a) {
+  color: #fff;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+.pv-lightbox-cap :deep(a:hover) {
+  color: #fff;
+  text-decoration-color: #fff;
 }
 
 /* ── 预习浮窗 · 数据面板（信息流内的展开节，2026-10-31 用户反馈后改版）── */
@@ -3219,6 +3316,46 @@ function pickProvince(code: string) {
     max-width: none;
     height: 82vh;
     border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  /* 预习浮窗 · 竖屏换序（2026-11-04 用户定）：
+     **名字（拼音/学名）在上、图在下并占满整宽**，宽度利用更充分。
+     图左下角 =「查看」，右下角 = 喇叭，两个动作各占一角、都压在图上。 */
+  .pv-head {
+    position: relative; /* 喇叭绝对定位的参照系（对齐到图的右下角） */
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pv-side {
+    order: -1; /* 名字在上：把它提到图之前，模板顺序不动 */
+  }
+  .pv-title {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .pv-photo {
+    width: 100%;
+    max-width: none;
+    align-self: stretch;
+  }
+  .pv-play {
+    /* 撤掉桌面端「压到右侧栏底部」的流式定位，改为钉在图（= .pv-head 底部）的右下角。
+       图上有照片底纹，给白底圆片保证可见；热区放大到 36px 便于点按。 */
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+  .pv-play:hover,
+  .pv-play.playing {
+    background: #fff;
+    color: var(--primary);
   }
 }
 
