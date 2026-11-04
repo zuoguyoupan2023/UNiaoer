@@ -229,8 +229,8 @@ const en: typeof zhMessages = {
     progress: 'Q{n} / {total}',
     shortRound: 'Only {built} of {want} questions — not enough media for this difficulty / region / mode',
     loadingMedia: 'Loading…',
-    networkPoor: 'Several media files failed to load (about {speed} Mbps). We recommend restarting this round on a better connection.',
-    networkPoorUnknown: 'Several media files failed to load. We recommend restarting this round on a better connection.',
+    networkPoor: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
+    networkPoorUnknown: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
     regimePool: '{regime}: {n} candidates',
     /** 097: headline = how many this tier can serve; the note explains the sampling logic
      *  (commonness coverage of local species: 40% / 60% / full 100% for L6-L8). */
@@ -1238,9 +1238,7 @@ const en: typeof zhMessages = {
     trendEmpty: 'No records in this range',
     trendAria: 'Accuracy per round',
     legend: 'Dots: per-round accuracy (hover for details) · green=photo / dark green=sound',
-    maDotTitle: '{day} · mean of last 3 recorded days: {acc}%',
-    legendMa:
-      'Gold curve: 3-day moving average over days with records (gaps skipped; the first 2 days cannot be averaged, so nothing is drawn)',
+    trendAvg: 'avg {acc}%',
     byTierMode: 'By tier / mode',
     modeImage: 'Photo',
     modeAudio: 'Sound',

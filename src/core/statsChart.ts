@@ -71,18 +71,14 @@ export function trimLeadingZeros<T extends { n: number }>(days: T[]): T[] {
   return first < 0 ? [] : days.slice(first)
 }
 
-/* ── 正确率趋势的「N 日移动平均」（2026-11-04）──────────────────────────
- * 用于「我的 → 数据」页的趋势图：把逐轮正确率按**有记录的日期**聚合成日均值，
- * 再对日均值做 N 日滑动平均，得到类似股市均线的参考曲线。
+/* ── 趋势图的「按天聚合」工具（2026-11-05）──────────────────────────────
+ * 把逐轮记录按**本地日**归并成日桶（同一天多轮按题数加权合并）。
+ * 「我的 → 数据」趋势图用它做**横轴日期刻度**：一天一个刻度位，
+ * 每隔几天显示一个日期（组件里控制密度），并取当天的平均序号定位 x。
  *
- * 三条硬规则（都踩过坑）：
- *  1. **窗口必须填满 N 个记录日才出点**。曾经的写法用 `Math.max(0, i - N + 1)`
- *     给开头补位，结果第 1、2 天就画出了「3 日均值」——那不是 3 日均线，是前 1~2 天
- *     的原始值，起点必然剧烈偏摆。现在从第 N 个记录日起画。
- *  2. **按有记录的日子推进，不按自然日**。多数人不会每天做题，按自然日会在空档处
- *     断裂或需要编造插值；用户要的是「过去 3 个有记录的日期」。
- *  3. **同一天多轮先合并**（按题数加权）。否则一天两个点会让曲线抖动，
- *     而且「日均值」应当代表那一天的整体表现，不是其中某一轮。
+ * 历史：2026-11-04~05 曾在此实现过「3 日移动平均曲线」（按天/按轮两个版本都试过），
+ * 2026-11-05 用户定：**回退为区间平均横线**（一条水平虚线 + 数值），均线曲线整体下线。
+ * dailyBuckets 保留，仅供横轴刻度使用。
  */
 
 /** 单轮的输入（只需这几项，方便测试） */
@@ -92,27 +88,29 @@ export interface MaRoundInput {
   correct: number
 }
 
-/** 日均值桶 */
+/** 日均值桶：一天一行 */
 export interface MaDayBucket {
-  /** 当天的代表时间戳（该天首轮的时刻，仅用于排序/显示） */
+  /** 当天代表时间戳（该天首轮的时刻） */
   at: number
   questions: number
   correct: number
-  /** 当天各轮次在原数组里的下标（算 x 坐标用，同日多轮取平均） */
+  /** 当天各轮次在原数组里的下标（均线点取平均序号定位 x） */
   indices: number[]
   accuracy: number
 }
 
-/** 把一个本地日期归一到「当天 0 点」的时间戳（key 用） */
-function dayKey(at: number): number {
+/** 把一个本地时间归到「当天 0 点」的时间戳（按天聚合/横轴刻度的 key） */
+export function localDayStart(at: number): number {
   const d = new Date(at)
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 
-/**
- * 按「日」聚合成日均值桶，时间正序。
- * 同一天多轮按题数加权合并（total 为 0 的轮次不贡献权重，单独存在的日 accuracy 为 0）。
- */
+/** 供模块内使用的别名 */
+function dayKey(at: number): number {
+  return localDayStart(at)
+}
+
+/** 按「日」聚合成日均值桶，时间正序。同一天多轮按题数加权合并 */
 export function dailyBuckets(rounds: MaRoundInput[]): MaDayBucket[] {
   const map = new Map<number, { at: number; questions: number; correct: number; indices: number[] }>()
   rounds.forEach((r, i) => {
@@ -132,36 +130,4 @@ export function dailyBuckets(rounds: MaRoundInput[]): MaDayBucket[] {
       ...b,
       accuracy: b.questions ? Math.round((b.correct / b.questions) * 100) : 0,
     }))
-}
-
-/** 移动平均点 */
-export interface MaPoint {
-  at: number
-  accuracy: number
-  /** 该日各轮次在原数组里的下标 */
-  indices: number[]
-}
-
-/**
- * N 日移动平均：**从第 window 个记录日起出点**（窗口填满才开始）。
- *
- * @param rounds 按时间正序的轮次（调用方负责排序与区间过滤）
- * @param window 窗口大小，默认 3；小于 1 时按 1 处理
- * @returns 均线点（数量 = 记录日数 - window + 1，不足则为空）
- */
-export function movingAverage(rounds: MaRoundInput[], window = 3): MaPoint[] {
-  const w = Math.max(1, Math.floor(window))
-  const days = dailyBuckets(rounds)
-  const out: MaPoint[] = []
-  for (let i = w - 1; i < days.length; i++) {
-    const slice = days.slice(i - w + 1, i + 1)
-    const questions = slice.reduce((n, d) => n + d.questions, 0)
-    const correct = slice.reduce((n, d) => n + d.correct, 0)
-    out.push({
-      at: days[i]!.at,
-      accuracy: questions ? Math.round((correct / questions) * 100) : 0,
-      indices: days[i]!.indices,
-    })
-  }
-  return out
 }

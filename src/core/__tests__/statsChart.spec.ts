@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  dailyBuckets,
   logPct,
   logTicks,
   logTop,
-  movingAverage,
+  dailyBuckets,
   tickLabel,
   trimLeadingZeros,
 } from '../statsChart'
@@ -88,15 +87,14 @@ describe('trimLeadingZeros', () => {
   })
 })
 
-/* ── 正确率趋势的移动平均（2026-11-04）────────────────────────────────
- * 这两条是踩过的坑，必须锁住：
- *  - 窗口没填满就出点 → 「3 日均线」从第 1 天开始画，用户当场发现不对；
- *  - 同一天多轮不合并 → 一天两个点，曲线看着像噪音。
+/* ── dailyBuckets（2026-11-05）：趋势图横轴「一天一个刻度位」的聚合工具。
+ * 曾在此实现过 3 日移动平均曲线，2026-11-05 用户定回退为区间平均横线；
+ * 聚合函数保留给横轴刻度用。这两条语义锁住（合并 / 正序），防止将来误改。
  */
 describe('dailyBuckets', () => {
   const day = (y: number, m: number, d: number, h = 10) => new Date(y, m - 1, d, h).getTime()
 
-  it('同一天多轮按题数加权合并成一个桶', () => {
+  it('同一天多轮按题数加权合并成一个桶（一天一个刻度位）', () => {
     const out = dailyBuckets([
       { at: day(2026, 11, 1, 9), total: 10, correct: 3 },
       { at: day(2026, 11, 1, 20), total: 30, correct: 27 }, // 同日：合并后 30/40
@@ -116,79 +114,8 @@ describe('dailyBuckets', () => {
     ])
     expect(out.map((b) => new Date(b.at).getDate())).toEqual([1, 3, 5])
   })
-})
 
-describe('movingAverage（3 日）', () => {
-  const day = (y: number, m: number, d: number) => new Date(y, m - 1, d, 10).getTime()
-  const r = (at: number, correct: number, total = 10) => ({ at, total, correct })
-
-  it('窗口未满 3 个记录日时不出任何点（不从第一天就开始）', () => {
-    expect(movingAverage([])).toEqual([])
-    expect(movingAverage([r(day(2026, 11, 1), 5)])).toEqual([])
-    expect(movingAverage([r(day(2026, 11, 1), 5), r(day(2026, 11, 2), 7)])).toEqual([])
-  })
-
-  it('恰好 3 个记录日出 1 个点，值为三天加权平均', () => {
-    const out = movingAverage([
-      r(day(2026, 11, 1), 3),
-      r(day(2026, 11, 2), 6),
-      r(day(2026, 11, 3), 9),
-    ])
-    expect(out).toHaveLength(1)
-    // (3 + 6 + 9) / 30 = 60%
-    expect(out[0]!.accuracy).toBe(60)
-    expect(new Date(out[0]!.at).getDate()).toBe(3) // 落在第 3 天
-  })
-
-  it('第 4 天起滑动：窗口只含最近 3 个记录日，最早一天被移出', () => {
-    const out = movingAverage([
-      r(day(2026, 11, 1), 0), // 会被移出
-      r(day(2026, 11, 2), 5),
-      r(day(2026, 11, 3), 7),
-      r(day(2026, 11, 4), 9),
-    ])
-    expect(out).toHaveLength(2)
-    expect(out[0]!.accuracy).toBe(40) // (0+5+7)/30
-    expect(out[1]!.accuracy).toBe(70) // (5+7+9)/30 —— 第 1 天的 0 已不含
-  })
-
-  it('中间有空档时仍按「有记录的日子」推进，不补空白天', () => {
-    // 11-01 / 11-10 / 11-25 三个记录日（中间全无记录）
-    const out = movingAverage([
-      r(day(2026, 11, 1), 0),
-      r(day(2026, 11, 10), 5),
-      r(day(2026, 11, 25), 10),
-    ])
-    expect(out).toHaveLength(1)
-    expect(out[0]!.accuracy).toBe(50) // (0+5+10)/30，三个记录日等权
-    expect(new Date(out[0]!.at).getDate()).toBe(25)
-  })
-
-  it('同一天多轮只推进一天（不会因为一天两轮就提前出点）', () => {
-    const out = movingAverage([
-      r(day(2026, 11, 1), 10, 10),
-      r(day(2026, 11, 2), 10, 10),
-      r(day(2026, 11, 2), 0, 10), // 同日第二轮
-    ])
-    // 只有 2 个记录日 → 不出点
-    expect(out).toEqual([])
-  })
-
-  it('window=1 退化为日均值（每个记录日一个点）', () => {
-    const out = movingAverage(
-      [r(day(2026, 11, 1), 4), r(day(2026, 11, 2), 8)],
-      1,
-    )
-    expect(out.map((p) => p.accuracy)).toEqual([40, 80])
-  })
-
-  it('题数为 0 的轮次不产生 NaN', () => {
-    const out = movingAverage([
-      r(day(2026, 11, 1), 0, 0),
-      r(day(2026, 11, 2), 0, 0),
-      r(day(2026, 11, 3), 0, 0),
-    ])
-    expect(out).toHaveLength(1)
-    expect(out[0]!.accuracy).toBe(0)
+  it('空数组返回空', () => {
+    expect(dailyBuckets([])).toEqual([])
   })
 })

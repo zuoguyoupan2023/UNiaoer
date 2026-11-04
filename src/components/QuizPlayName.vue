@@ -152,13 +152,8 @@ function gateCount(): number {
   return (q.optionsMedia ?? []).filter((m) => (m.thumbUrl || m.url) && m.type === 'image').length
 }
 
-/** 网络失败过多时的提示 */
-const networkNote = computed(() => {
-  const speed = gate.speedMbps.value
-  return speed === null
-    ? t('quiz.networkPoorUnknown')
-    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
-})
+/** 网络失败过多时的提示（2026-11-05 用户定：不再展示网速数值） */
+const networkNote = computed(() => t('quiz.networkPoor'))
 
 function onOptionMediaSettled(ok: boolean) {
   if (ok) gate.markLoaded()
@@ -197,8 +192,7 @@ function startTimer() {
  *   （`onAudioStarted`）才 startTimer。在此之前倒计时保持冻结在原值。
  */
 function beginTiming() {
-  const first = quiz.current?.optionsMedia?.find((m) => m.thumbUrl || m.url)
-  gate.reset(gateCount(), true, first?.thumbUrl ?? first?.url ?? null)
+  gate.reset(gateCount(), true)
   if (gate.ready.value) {
     // 听音题：gate 立即就绪（count=0），但要等开播才起表——先冻住
     if (quiz.current?.type === 'audio') resetTimer()

@@ -300,13 +300,8 @@ function enableAuto() {
 }
 const warnThreshold = computed(() => 5)
 
-/** 媒体加载失败过多时的提示（带实时网速） */
-const networkNote = computed(() => {
-  const speed = gate.speedMbps.value
-  return speed === null
-    ? t('quiz.networkPoorUnknown')
-    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
-})
+/** 媒体加载失败过多时的提示（2026-11-05 用户定：不再展示网速数值） */
+const networkNote = computed(() => t('quiz.networkPoor'))
 
 function quitRound() {
   const n = quiz.answeredCount
@@ -347,7 +342,7 @@ onUnmounted(() => {
 function beginTiming() {
   timerBegun.value = false
   // 图：等 image-settled（1s 兜底）；音：等 audio-play（不设兜底）
-  gate.reset(1, props.type === 'image', currentMedia.value?.url)
+  gate.reset(1, props.type === 'image')
   // 听音：音频可能永远播不出来，10s 后放行并记为失败
   if (props.type === 'audio') gate.armStall()
   stopTimer()

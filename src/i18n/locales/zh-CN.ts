@@ -227,8 +227,8 @@ export const messages = {
     // 072-a：题量不足时明确说明（允许不足但说明）
     shortRound: '本组 {built} 题（标准 {want} 题）：当前难度 · 地区 · 赛制组合下可选素材不足',
     loadingMedia: '加载中…',
-    networkPoor: '素材加载失败较多（当前约 {speed} Mbps）。建议在网络良好时重新开始本轮。',
-    networkPoorUnknown: '素材加载失败较多。建议在网络良好时重新开始本轮。',
+    networkPoor: '图像加载多次失败,建议在网络良好时重新开始做题.',
+    networkPoorUnknown: '图像加载多次失败,建议在网络良好时重新开始做题.',
     regimePool: '{regime}：候选 {n} 种',
     /** 097：主数字 = 本档这一赛制能出多少题；括号标注取数逻辑（该档覆盖该地鸟种的比例：
      *  L1/L4/L5 取最常见 40%、L2/L3 取 60%、L6/L7/L8 取满 100%）。 */
@@ -1233,12 +1233,9 @@ export const messages = {
     range30d: '最近 30 天',
     rangeYear: '{year} 年',
     trendEmpty: '该区间暂无记录',
+    trendAvg: '平均 {acc}%',
     trendAria: '每轮正确率趋势',
     legend: '圆点：单轮正确率（悬停看详情） · 绿=看图 / 深绿=听音',
-    // 3 日移动平均线（2026-11-04）：不再写「平均 XX%」（那是原来那条水平虚线）
-    // 3 日移动平均线（2026-11-04）：窗口填满 3 个记录日才出点，所以数值恒为「近 3 日均值」
-    maDotTitle: '{day} · 近 3 个记录日均值 {acc}%',
-    legendMa: '金色曲线：3 日移动平均（按有记录的日期算，跳过空档；前 2 天不足以平均，不画）',
     byTierMode: '按难度 / 模式',
     modeImage: '看图',
     modeAudio: '听音',

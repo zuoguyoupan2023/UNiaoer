@@ -953,13 +953,8 @@ function onSelectOption(value: string, source: 'click' | 'key' = 'click') {
   quiz.answer(value)
 }
 
-/** 媒体加载失败过多时的提示（带实时网速，帮助判断是不是网络问题） */
-const networkNote = computed(() => {
-  const speed = gate.speedMbps.value
-  return speed === null
-    ? t('quiz.networkPoorUnknown')
-    : t('quiz.networkPoor', { speed: speed.toFixed(1) })
-})
+/** 媒体加载失败过多时的提示（2026-11-05 用户定：不再展示网速数值） */
+const networkNote = computed(() => t('quiz.networkPoor'))
 
 /** 每题计时/干扰的启动点：等题面媒体就绪（图 load / 音开播），网络等待不计时 */
 function beginQuestionTiming() {
@@ -968,14 +963,9 @@ function beginQuestionTiming() {
   // S1 看名选图（099）：题干是名字，6 张选项图就是题面 → 等全部就绪（同 L6 的 gate 口径）
   if (quiz.current?.stemName) {
     const optMedia = quiz.current.optionsMedia ?? []
-    const first = optMedia.find((m) => m.thumbUrl || m.url)
-    gate.reset(
-      optMedia.filter((m) => m.thumbUrl || m.url).length,
-      true,
-      first?.thumbUrl ?? first?.url ?? null,
-    )
+    gate.reset(optMedia.filter((m) => m.thumbUrl || m.url).length, true)
   } else {
-    gate.reset(1, props.type === 'image', quiz.current?.media?.url)
+    gate.reset(1, props.type === 'image')
   }
   // 听音：音频可能永远播不出来（文件坏/解码失败），10s 后放行并记为失败
   if (props.type === 'audio') gate.armStall()
