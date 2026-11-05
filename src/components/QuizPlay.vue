@@ -532,15 +532,18 @@ const currentRegimeCount = computed<number | null>(() => {
  * 2026-11 事故里 R2 分片停留在旧 5 档制，而配置按 10 档算 → 印「×70%」实际是 100%，
  * 硬算值与真实池子脱节且**没有任何报错**。改为实测后，分子分母同源，不可能互相矛盾。
  *
- * 实测结果不是整数（如上海 L1 = 342/481 ≈ 71%），如实显示——
- * 各地区的真实比例本就在 61%–76% 间波动（见 `npm run report:tiers`）。
+ * ⚠️ 2026-11-05 第二次事故（用户报「上海 L1 显示 1259 种 ×81%」）：
+ * 分子**必须用 `counts.random`**（本档全部可出题），不能用 `counts[当前赛制]`。
+ * 因为「标准赛」会排除已练习过的物种——那个数会随做题**递减**，
+ * 拿它除以固定的 baseTotal 会得到一个既不是本地也不是全国、且每天变化的怪数字。
+ * 括号语义是「本档覆盖该地鸟种的几成」，与赛制无关。
  *
  * @returns 整数百分比；分母为 0（档位表缺失）时返回 null → UI 不显示括号，宁缺勿假
  */
 const tierCoveragePct = computed<number | null>(() => {
   const d = regimeCountsData.value
   if (!d || !d.baseTotal) return null
-  const n = d.counts[quiz.regime]
+  const n = d.counts.random // ← 必须是本档全部可出题数，不是当前赛制的可用数
   if (typeof n !== 'number') return null
   return Math.round((n / d.baseTotal) * 100)
 })
@@ -1473,10 +1476,15 @@ function onTouchEnd(e: TouchEvent) {
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
     <!-- 097：主数字 = 本档这一赛制能出多少题（随档位/赛制变化）；括号 = 该数占该地区鸟种数的比例。
-         2026-11-05（docs/105）：百分比改为**实测**（tierCoveragePct = 实际入档数 ÷ 表内可出题物种数），
+         2026-11-05（docs/105）：百分比改为**实测**（tierCoveragePct = 本档可出题数 ÷ 表内可出题物种数），
          不再是「commonness.length / 10」的配置硬算——后者在分片版本漂移时印过「×70%」实为 100%。
-         分母为 0（档位表缺失）时不显示括号，宁缺勿假。 -->
-    <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
+         2026-11-05 二次修复：分子改用 counts.random（见 tierCoveragePct 注释）；
+         档位表没生效（tiersApplied=false）时**整行不显示**——那时的数字是未收窄的全库池，
+         显示出来会变成「上海 1259 种」这种既非本地也非全国的怪数（用户实际报障过）。 -->
+    <p
+      v-if="currentRegimeCount !== null && regimeCountsData?.tiersApplied !== false"
+      class="regime-pool muted small"
+    >
       {{ t(`regime.${quiz.regime}.label`) }}：{{
         tierCoveragePct === null
           ? t('quiz.regimePoolTierNoPct', { n: currentRegimeCount })

@@ -61,7 +61,10 @@ let globalCache: Promise<{ tiers: Map<string, number>; level: 'global' } | null>
  * 返回形态与 regionTierMap 一致（{ tiers, level }），调用方可无差别处理。
  * 加载失败 → null（调用方回退为不收窄，绝不出空）。
  */
-export function loadGlobalTierMap(): Promise<{ tiers: Map<string, number>; level: 'global' } | null> {
+export function loadGlobalTierMap(): Promise<{
+  tiers: Map<string, number>
+  level: 'global'
+} | null> {
   globalCache ??= fetch(GLOBAL_URL)
     .then(async (r) => {
       if (!r.ok) return null
@@ -100,6 +103,19 @@ export function indexVersion(): Promise<string> {
   return versionCache
 }
 
+/**
+ * 版本段转义：**只替换路径里真正非法的字符，保留 `:` `.` `-` `T` `Z`**。
+ *
+ * 为什么不用 `encodeURIComponent`（2026-11-05 事故）：它会把 `generatedAt` 里的
+ * `:` 编成 `%3A`，而 Worker 路由正则只接受 `[A-Za-z0-9._:-]` → 版本路径 404。
+ * 这里的白名单与 Worker 正则**必须保持一致**，改一处要同步另一处。
+ */
+export function safeVersionSegment(v: string): string {
+  return String(v || '')
+    .replace(/[^A-Za-z0-9._:-]/g, '_')
+    .slice(0, 64)
+}
+
 /** 加载某国分片（level: province | country）；失败 → null */
 export function loadRegionCommonnessShard(
   cc: string,
@@ -125,19 +141,33 @@ export function loadRegionCommonnessShard(
         // 实测 Zone 层有一条 4h Cache Rule 会（a）把响应头改写成 max-age=14400、
         // （b）把查询串从缓存键里剔除 → `?v=xxx` 与不带参数命中同一份旧缓存。
         // 路径一定参与缓存键，所以改成 `/api/region-tiers/v/<ver>/<file>`。
-        // 索引里有 `generatedAt`，与分片同一次构建产出，可作版本段；取不到就不带（旧 URL 仍可用）。
+        //
+        // ⚠️ 2026-11-05 事故（本次）：版本段**不能 `encodeURIComponent`**！
+        // `generatedAt` 形如 `2026-10-29T18:57:43.343Z`，编码后 `:` 变成 `%3A`，
+        // 而 Worker 路由正则只接受 `[A-Za-z0-9._:-]` → 路径匹配失败 → 404。
+        // 404 后又**没有回退**到无版本 URL，导致分片彻底拿不到 → 出题池不做档位收窄
+        // → 界面显示「1259 种（×81%）」这种既不是上海也不是中国的数字。
+        // 现在：① 版本段只做最少转义（保留 `:` 等 URL 安全字符）；② 版本路径失败**必须回退**到无版本 URL。
         const verPath = await indexVersion().catch(() => '')
-        const url = verPath ? `${API}/v/${encodeURIComponent(verPath)}/${file}` : `${API}/${file}`
-        return fetch(url, { cache: 'no-cache' })
-          .then(async (r2) => {
-            if (!r2.ok) return null
-            try {
-              return (await r2.json()) as RegionCommonnessShard
-            } catch {
-              return null
-            }
-          })
-          .catch(() => null)
+        const baseFile = `${API}/${file}`
+        const versioned = verPath ? `${API}/v/${safeVersionSegment(verPath)}/${file}` : baseFile
+
+        const tryFetch = (u: string) =>
+          fetch(u, { cache: 'no-cache' })
+            .then(async (r) => {
+              if (!r.ok) return null
+              try {
+                return (await r.json()) as RegionCommonnessShard
+              } catch {
+                return null
+              }
+            })
+            .catch(() => null)
+
+        // 先试版本路径；失败（404/解析失败）→ 回退无版本 URL（Worker 会从分片内容自取版本）
+        return verPath
+          ? tryFetch(versioned).then((hit) => (hit ? hit : tryFetch(baseFile)))
+          : tryFetch(baseFile)
       })
       .catch(() => null)
     shardCache.set(key, p)
@@ -150,7 +180,9 @@ export function loadRegionCommonnessShard(
  * 支持两种形态：国家码 `CN`（无省级细分）与省码 `CN-11`（省级）。
  */
 export function parseRegionKey(region: string): { cc: string; code: string | null } | null {
-  const v = String(region || '').trim().toUpperCase()
+  const v = String(region || '')
+    .trim()
+    .toUpperCase()
   if (!v || v === 'ALL') return null
   const m = v.match(/^([A-Z]{2})(?:-([A-Z0-9]{1,3}))?$/)
   if (!m) return null
@@ -176,7 +208,8 @@ export async function regionTierMap(
     if (map) return { tiers: new Map(Object.entries(map)), level: 'province' }
   }
   const countryShard = await loadRegionCommonnessShard(cc, 'country')
-  if (countryShard?.tiers) return { tiers: new Map(Object.entries(countryShard.tiers)), level: 'country' }
+  if (countryShard?.tiers)
+    return { tiers: new Map(Object.entries(countryShard.tiers)), level: 'country' }
   return null
 }
 
@@ -205,10 +238,7 @@ export function filterByRegionTier(
 }
 
 /** 该物种在该地区的档位（无则 null；供 UI 展示"本地常见度"） */
-export function regionTierOf(
-  tiers: Map<string, number> | null,
-  speciesId: string,
-): number | null {
+export function regionTierOf(tiers: Map<string, number> | null, speciesId: string): number | null {
   const t = tiers?.get(speciesId)
   return Number.isInteger(t) ? (t as number) : null
 }

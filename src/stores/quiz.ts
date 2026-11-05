@@ -94,6 +94,12 @@ export interface RegimeCounts {
    * `baseTotal = 0`（如档位表缺失）时 UI 不显示百分比，宁缺勿假。
    */
   baseTotal: number
+  /**
+   * 档位表是否真的生效（2026-11-05 事故后新增）。
+   * `false` = 分片没拿到（网络/版本路径 404），此时数字是「未收窄的全库/国家池」，
+   * UI 必须**隐藏百分比**并提示，否则会显示既非本地也非全国的怪数字。
+   */
+  tiersApplied: boolean
 }
 
 export const useQuizStore = defineStore('quiz', () => {
@@ -164,8 +170,8 @@ export const useQuizStore = defineStore('quiz', () => {
   const answered = computed(() => currentChoice.value !== null)
   const total = computed(() => questions.value.length)
   // 089 P0-3：中心判分（输入题归一化+变体集合；choice 题等价于旧 === 行为）
-  const correctCount = computed(
-    () => questions.value.reduce((n, q, i) => n + (isCorrectAnswer(q, chosen.value[i]) ? 1 : 0), 0),
+  const correctCount = computed(() =>
+    questions.value.reduce((n, q, i) => n + (isCorrectAnswer(q, chosen.value[i]) ? 1 : 0), 0),
   )
   const accuracy = computed(() =>
     total.value ? Math.round((correctCount.value / total.value) * 100) : 0,
@@ -182,154 +188,166 @@ export const useQuizStore = defineStore('quiz', () => {
     return t ? Math.round(((sessionCorrect.value + correctCount.value) / t) * 100) : 0
   })
 
-/** IndexedDB 不可用（隐私模式等）时按"无练习史"降级，不阻塞出题 */
-async function safeListRounds(): Promise<RoundRecord[]> {
-  try {
-    return await listRounds()
-  } catch {
-    return []
-  }
-}
-async function safeWrongBook(): Promise<WrongEntry[]> {
-  try {
-    return await getWrongBook()
-  } catch {
-    return []
-  }
-}
-
-/**
- * 是否为"新手首轮"（2026-10-09 新手福利）。
- * 判定 = 当前档案**尚无任何已完成轮次**（历史为空）。只影响 L1 首轮的候选池，
- * 之后不再干预（用户定稿："只有第一次做 L1 固定常见鸟"）。
- */
-async function isFirstRoundEver(): Promise<boolean> {
-  return (await safeListRounds()).length === 0
-}
-
-/** D5：按最近表现给出档位建议（图/声隔离；IndexedDB 不可用时保持当前档） */
-async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierSuggestion> {
-  return suggestTier(await safeListRounds(), type, currentTier)
-}
-
-/**
- * S6：出题名单 = **权威层 meta（唯一源）**，不再 core（1,299）+ 全球池（9,545）拼接。
- * 只收「有素材」物种（图/音任一有素材，且未被质量降级 quizExcluded）。
- * 地区过滤（D-029-2）：L1–L3 走地区（元数据按国家区系过滤），L4–L5 全球开放。
- */
-async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
-  const bank = await loadBank()
-  const settings = useSettingsStore()
-  // 2026-10-25 用户定：全档位统一自选地区（省/国家/洲/全球任选，1–7 档同规则）
-  const region = effectiveRegion(tier, settings.region)
-  const regional = await loadRegionalPool(region).catch(() => null)
-  const list = regional ?? bank.species
-  return list.filter((sp) => !sp.quizExcluded && speciesPlayable(sp, type))
-}
-
-/** 各赛制的派生集合（按「物种 × 媒体类型」；computePool 与 regimeCounts 共用） */
-async function poolData(type: MediaType, tier: Tier = 2) {
-  const [species, rounds, wrong] = await Promise.all([
-    mergedSpecies(type, tier),
-    safeListRounds(),
-    safeWrongBook(),
-  ])
-  const withMedia = new Set(species.map((sp) => sp.id))
-  const practiced = new Set<string>()
-  const correctSet = new Set<string>()
-  for (const round of rounds) {
-    for (const it of round.items) {
-      if (it.type !== type || !withMedia.has(it.speciesId)) continue
-      practiced.add(it.speciesId)
-      if (it.correct) correctSet.add(it.speciesId)
+  /** IndexedDB 不可用（隐私模式等）时按"无练习史"降级，不阻塞出题 */
+  async function safeListRounds(): Promise<RoundRecord[]> {
+    try {
+      return await listRounds()
+    } catch {
+      return []
     }
   }
-  const wrongSet = new Set(
-    wrong.map((w) => w.speciesId).filter((id) => withMedia.has(id)),
-  )
-  return { withMedia, practiced, correctSet, wrongSet, species }
-}
+  async function safeWrongBook(): Promise<WrongEntry[]> {
+    try {
+      return await getWrongBook()
+    } catch {
+      return []
+    }
+  }
 
-/**
- * 介绍页口径：该地区**真实**可出题物种池（097 修复）。
- *
- * 原实现只走区系层，`CN-31` 在 `countryOfRegion` 里被塌陷成 `CN`，于是选
- * 「中国·上海」显示的是中国全境的 1,499 种；而实际出题会被省级档位表收窄到
- * 488 种（严格档位后 195 种）——界面数字与真实可达面差 7.7 倍。
- *
- * 这里按出题链路同样的三层收窄（区系 → 档位表排除式 → 命名体系 → 档位），
- * 让所有展示数字都从**同一个池**派生，彼此一致。
- * **只影响展示，不改出题行为**（`computePool` 仍走 `poolData`，保持既有语义）。
- */
-async function regionScopeInfo(type: MediaType, tier: Tier) {
-  const region = effectiveRegion(tier, useSettingsStore().region)
-  const species = await mergedSpecies(type, tier)
-  // 097：所有档位、所有尺度都接档位表收窄——
-  //   国家/省 → 地区档位表（province-commonness）；
-  //   洲/全球 → 全球档位表（global-commonness，全球记录数十等分，097 F）。
-  // 表内剔除（表外 = 本地无记录）+ 常见度档位区间收窄，介绍页数字与实际出题同口径。
-  const usesRegionTiers = region !== 'ALL' && !isContinentCode(region)
-  const rm = usesRegionTiers
-    ? await regionTierMap(region).catch(() => null)
-    : await loadGlobalTierMap().catch(() => null)
-  const tiers = rm?.tiers ?? null
-  const scoped = tiers?.size ? species.filter((sp) => tiers.has(sp.id)) : species
-  const named = filterByNameMode(scoped, nameMode.value)
-  // 常见度收窄只作用于 L1–L5；L6/L7/L8 取满（097 用户定：该地鸟种×100%）
-  const filtersByTier = tier <= 5
-  const allowed = TIERS[tier]?.commonness ?? [1, 2, 3, 4, 5]
-  const tierOf = (sp: BankSpecies) => (tiers?.size ? tiers.get(sp.id) : sp.commonness)
-  const strict = filtersByTier
-    ? named.filter((sp) => allowed.includes(tierOf(sp)!))
-    : named
-  // 严格档位不足一轮时出题会放宽到表内其余档位（buildPool 语义），计数同步放宽
-  const tierPool = filtersByTier && strict.length < 10 ? named : strict
-  return {
-    regionIds: new Set(named.map((sp) => sp.id)),
-    tierIds: new Set(tierPool.map((sp) => sp.id)),
-    regionTotal: named.length,
+  /**
+   * 是否为"新手首轮"（2026-10-09 新手福利）。
+   * 判定 = 当前档案**尚无任何已完成轮次**（历史为空）。只影响 L1 首轮的候选池，
+   * 之后不再干预（用户定稿："只有第一次做 L1 固定常见鸟"）。
+   */
+  async function isFirstRoundEver(): Promise<boolean> {
+    return (await safeListRounds()).length === 0
+  }
+
+  /** D5：按最近表现给出档位建议（图/声隔离；IndexedDB 不可用时保持当前档） */
+  async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierSuggestion> {
+    return suggestTier(await safeListRounds(), type, currentTier)
+  }
+
+  /**
+   * S6：出题名单 = **权威层 meta（唯一源）**，不再 core（1,299）+ 全球池（9,545）拼接。
+   * 只收「有素材」物种（图/音任一有素材，且未被质量降级 quizExcluded）。
+   * 地区过滤（D-029-2）：L1–L3 走地区（元数据按国家区系过滤），L4–L5 全球开放。
+   */
+  async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
+    const bank = await loadBank()
+    const settings = useSettingsStore()
+    // 2026-10-25 用户定：全档位统一自选地区（省/国家/洲/全球任选，1–7 档同规则）
+    const region = effectiveRegion(tier, settings.region)
+    const regional = await loadRegionalPool(region).catch(() => null)
+    const list = regional ?? bank.species
+    return list.filter((sp) => !sp.quizExcluded && speciesPlayable(sp, type))
+  }
+
+  /** 各赛制的派生集合（按「物种 × 媒体类型」；computePool 与 regimeCounts 共用） */
+  async function poolData(type: MediaType, tier: Tier = 2) {
+    const [species, rounds, wrong] = await Promise.all([
+      mergedSpecies(type, tier),
+      safeListRounds(),
+      safeWrongBook(),
+    ])
+    const withMedia = new Set(species.map((sp) => sp.id))
+    const practiced = new Set<string>()
+    const correctSet = new Set<string>()
+    for (const round of rounds) {
+      for (const it of round.items) {
+        if (it.type !== type || !withMedia.has(it.speciesId)) continue
+        practiced.add(it.speciesId)
+        if (it.correct) correctSet.add(it.speciesId)
+      }
+    }
+    const wrongSet = new Set(wrong.map((w) => w.speciesId).filter((id) => withMedia.has(id)))
+    return { withMedia, practiced, correctSet, wrongSet, species }
+  }
+
+  /**
+   * 介绍页口径：该地区**真实**可出题物种池（097 修复）。
+   *
+   * 原实现只走区系层，`CN-31` 在 `countryOfRegion` 里被塌陷成 `CN`，于是选
+   * 「中国·上海」显示的是中国全境的 1,499 种；而实际出题会被省级档位表收窄到
+   * 488 种（严格档位后 195 种）——界面数字与真实可达面差 7.7 倍。
+   *
+   * 这里按出题链路同样的三层收窄（区系 → 档位表排除式 → 命名体系 → 档位），
+   * 让所有展示数字都从**同一个池**派生，彼此一致。
+   * **只影响展示，不改出题行为**（`computePool` 仍走 `poolData`，保持既有语义）。
+   */
+  async function regionScopeInfo(type: MediaType, tier: Tier) {
+    const region = effectiveRegion(tier, useSettingsStore().region)
+    const species = await mergedSpecies(type, tier)
+    // 097：所有档位、所有尺度都接档位表收窄——
+    //   国家/省 → 地区档位表（province-commonness）；
+    //   洲/全球 → 全球档位表（global-commonness，全球记录数十等分，097 F）。
+    // 表内剔除（表外 = 本地无记录）+ 常见度档位区间收窄，介绍页数字与实际出题同口径。
+    const usesRegionTiers = region !== 'ALL' && !isContinentCode(region)
+    const rm = usesRegionTiers
+      ? await regionTierMap(region).catch(() => null)
+      : await loadGlobalTierMap().catch(() => null)
+    const tiers = rm?.tiers ?? null
     /**
-     * 未收窄档位、但已过「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可出题物种数（= 该档位的分母）。
-     *
-     * 2026-11-05 用户定（docs/105）：介绍页括号百分比必须**实测**，不能再按
-     * `TIERS[tier].commonness.length / 10` 硬算——分片版本一漂移，硬算值就会与实际池子
-     * 脱节并说谎（事故：R2 停留 5 档而配置按 10 档算，印「×70%」实际 100%）。
-     * = `tierIds.size / baseTotal`，数字与分母同源，永远不可能互相矛盾。
+     * 档位表是否**真的**用上了。2026-11-05 事故：分片拉取失败（版本路径 404）时
+     * `tiers` 为 null → 不收窄 → 界面把「全库/国家池」当成本地池展示
+     * （上海 L1 显示 1259 种 ×81%，既不是上海也不是中国）。
+     * 这里显式记下，供 UI 判断「括号百分比能不能显示」。
      */
-    baseTotal: named.length,
-  }
-}
-
-/** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
-async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> {
-  const { regionIds, tierIds, regionTotal, baseTotal } = await regionScopeInfo(type, tier)
-  const [rounds, wrong] = await Promise.all([safeListRounds(), safeWrongBook()])
-  const practiced = new Set<string>()
-  const correctSet = new Set<string>()
-  for (const round of rounds) {
-    for (const it of round.items) {
-      if (it.type !== type || !regionIds.has(it.speciesId)) continue
-      practiced.add(it.speciesId)
-      if (it.correct) correctSet.add(it.speciesId)
+    const tiersApplied = !!tiers?.size
+    const scoped = tiersApplied ? species.filter((sp) => tiers!.has(sp.id)) : species
+    const named = filterByNameMode(scoped, nameMode.value)
+    // 常见度收窄只作用于 L1–L5；L6/L7/L8 取满（097 用户定：该地鸟种×100%）
+    const filtersByTier = tier <= 5
+    const allowed = TIERS[tier]?.commonness ?? [1, 2, 3, 4, 5]
+    const tierOf = (sp: BankSpecies) => (tiersApplied ? tiers!.get(sp.id) : sp.commonness)
+    const strict = filtersByTier ? named.filter((sp) => allowed.includes(tierOf(sp)!)) : named
+    // 严格档位不足一轮时出题会放宽到表内其余档位（buildPool 语义），计数同步放宽
+    const tierPool = filtersByTier && strict.length < 10 ? named : strict
+    return {
+      regionIds: new Set(named.map((sp) => sp.id)),
+      tierIds: new Set(tierPool.map((sp) => sp.id)),
+      regionTotal: named.length,
+      /**
+       * 未收窄档位、但已过「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可出题物种数（= 该档位的分母）。
+       *
+       * 2026-11-05 用户定（docs/105）：介绍页括号百分比必须**实测**，不能再按
+       * `TIERS[tier].commonness.length / 10` 硬算——分片版本一漂移，硬算值就会与实际池子
+       * 脱节并说谎（事故：R2 停留 5 档而配置按 10 档算，印「×70%」实际 100%）。
+       * = `tierIds.size / baseTotal`，数字与分母同源，永远不可能互相矛盾。
+       *
+       * **`tiersApplied === false` 时置 0**：此时 `named` 是没收窄的全库/国家池，
+       * 拿它当分母会算出无意义的百分比 → UI 见 0 就不显示括号（宁缺勿假）。
+       */
+      baseTotal: tiersApplied ? named.length : 0,
+      /** 档位表是否真的生效（false = 分片没拿到，界面不应显示百分比） */
+      tiersApplied,
     }
   }
-  // 赛制集合按练习史取，再与当前档位收窄求交 —— 与实际出题链路同序
-  const inTier = (s: Set<string>) => [...s].filter((id) => tierIds.has(id))
-  const wrongSet = new Set(wrong.map((w) => w.speciesId).filter((id) => regionIds.has(id)))
-  return {
-    counts: {
-      standard: inTier(new Set([...tierIds].filter((id) => !practiced.has(id)))).length,
-      review: inTier(practiced).length,
-      reinforce: inTier(correctSet).length,
-      revival: inTier(wrongSet).length,
-      random: tierIds.size,
-    },
-    regionTotal,
-    baseTotal,
-  }
-}
 
-/** 赛制 → 选题池（undefined = 全库随机）；池空返回错误码，由 UI 引导去专项赛/新建档案 */
+  /** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
+  async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> {
+    const { regionIds, tierIds, regionTotal, baseTotal, tiersApplied } = await regionScopeInfo(
+      type,
+      tier,
+    )
+    const [rounds, wrong] = await Promise.all([safeListRounds(), safeWrongBook()])
+    const practiced = new Set<string>()
+    const correctSet = new Set<string>()
+    for (const round of rounds) {
+      for (const it of round.items) {
+        if (it.type !== type || !regionIds.has(it.speciesId)) continue
+        practiced.add(it.speciesId)
+        if (it.correct) correctSet.add(it.speciesId)
+      }
+    }
+    // 赛制集合按练习史取，再与当前档位收窄求交 —— 与实际出题链路同序
+    const inTier = (s: Set<string>) => [...s].filter((id) => tierIds.has(id))
+    const wrongSet = new Set(wrong.map((w) => w.speciesId).filter((id) => regionIds.has(id)))
+    return {
+      counts: {
+        standard: inTier(new Set([...tierIds].filter((id) => !practiced.has(id)))).length,
+        review: inTier(practiced).length,
+        reinforce: inTier(correctSet).length,
+        revival: inTier(wrongSet).length,
+        random: tierIds.size,
+      },
+      regionTotal,
+      baseTotal,
+      tiersApplied,
+    }
+  }
+
+  /** 赛制 → 选题池（undefined = 全库随机）；池空返回错误码，由 UI 引导去专项赛/新建档案 */
   async function computePool(
     r: QuizRegime,
     type: MediaType,
@@ -380,8 +398,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
     // 051 S1：开轮时按当前界面语言确定命名体系（设置页可随时切语言）。
     // 089 §6.2：L6 显式传模式（语言名/学名）；「再来一轮」无显式值时沿用当前卷别。
     nameMode.value =
-      opts.nameMode ??
-      (opts.keepSession ? nameMode.value : currentLocale() === 'en' ? 'en' : 'zh')
+      opts.nameMode ?? (opts.keepSession ? nameMode.value : currentLocale() === 'en' ? 'en' : 'zh')
     // 087 §6.5 + 2026-10-25 全档统一：快照"实际生效"地区（用户所选，任何档位）
     region.value = effectiveRegion(tier.value, useSettingsStore().region)
     // 加载页最短展示时长的起点（见 finally 里的等待逻辑）
@@ -438,9 +455,10 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       // 087 §4.8：L6 也跳过在线池——服务端干扰项无素材当不了选项，且 tier=6 不在 Worker 白名单。
       // 089：L6/L7 都跳过在线池（服务端干扰项无素材；tier 6/7 也不在 Worker 候选白名单）
       const skipOnline = tier.value >= 6
-      const online = opts.keepSession || starterOnly || skipOnline
-        ? null
-        : await fetchOnlinePool(type, tier.value, settings.region)
+      const online =
+        opts.keepSession || starterOnly || skipOnline
+          ? null
+          : await fetchOnlinePool(type, tier.value, settings.region)
 
       let speciesForBuild: BankSpecies[]
       let distractorPool: BankSpecies[] | undefined
@@ -549,20 +567,20 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
                     },
                   })
                 : await buildQuestions(speciesForBuild, {
-            type,
-            count,
-            tier: tier.value,
-            speciesPool,
-            locale: currentLocale(),
-            // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷）
-            nameMode: nameMode.value,
-            distractorPool,
-            regionTiers,
-            starterOnly,
-            onStats: (s) => {
-              buildStats.v = s
-            },
-          })
+                    type,
+                    count,
+                    tier: tier.value,
+                    speciesPool,
+                    locale: currentLocale(),
+                    // 051 S1：界面语言决定命名体系（'en' 界面 → 英文名卷，其余中文名卷）
+                    nameMode: nameMode.value,
+                    distractorPool,
+                    regionTiers,
+                    starterOnly,
+                    onStats: (s) => {
+                      buildStats.v = s
+                    },
+                  })
       // 072-a 观测：把本轮链路与池子大小留痕（不改任何出题行为）。
       // 短轮用 warn（默认就能在控制台看到）；诊断模式下每轮都打一行 info。
       const diag: QuizBuildDiag = {
