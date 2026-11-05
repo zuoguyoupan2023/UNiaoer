@@ -268,6 +268,13 @@ const introTierList = computed<(typeof TIER_LIST)[number][]>(() => {
 })
 /** D5：介绍页的档位推荐提示（用户手动改档后清除） */
 const adaptiveHint = ref<TierSuggestion | null>(null)
+/**
+ * D5 撤销目标：自适应**调整前**用户自己选的档位（2026-11-05 用户定）。
+ *
+ * 只在真的发生自动调整时赋值；用户点「撤销」→ 回到这个档位并清空提示。
+ * 用户手动改档（chooseTier）也会清空它——那时"撤销"已无意义。
+ */
+const adaptivePrevTier = ref<Tier | null>(null)
 // 赛制：介绍页用已存赛制作为初始值（向导/切换都会写入）
 if (savedRegime.value) quiz.regime = savedRegime.value
 
@@ -301,6 +308,8 @@ function chooseTier(v: Tier) {
   tier.value = v
   persistTier(v)
   adaptiveHint.value = null
+  // 用户手动改档 → 撤销目标作废（否则「撤销」会把人送回一个他没选过的档）
+  adaptivePrevTier.value = null
   // 029 M2:档位变化会改变池子(L1-L3 地区过滤 / L4-L5 全球),刷新赛制可用数
   void quiz
     .regimeCounts(props.type, v)
@@ -606,6 +615,9 @@ async function initIntro() {
     try {
       const s = await quiz.tierSuggestion(props.type, tier.value)
       if (s.change !== 'stay') {
+        // 2026-11-05 用户定：撤销必须回到**用户原本自己选的**档位。
+        // 自动调整会 persistTier() 覆盖所存档位，所以必须在覆盖前记下原值。
+        adaptivePrevTier.value = tier.value
         tier.value = s.tier
         persistTier(s.tier)
         adaptiveHint.value = s
@@ -614,6 +626,33 @@ async function initIntro() {
       /* IndexedDB 不可用：保持当前档 */
     }
   }
+}
+
+/**
+ * D5 撤销：回到自适应调整**之前**用户自己选的档位（2026-11-05 用户定）。
+ *
+ * 三个动作缺一不可：
+ *   ① 档位改回原值；② **也写回设置**（否则下次进页面又被覆盖）；
+ *   ③ 清空提示与撤销目标（撤销只能按一次）。
+ */
+function undoAdaptiveTier() {
+  const prev = adaptivePrevTier.value
+  if (prev === null) return
+  tier.value = prev
+  persistTier(prev)
+  adaptiveHint.value = null
+  adaptivePrevTier.value = null
+  void quiz
+    .regimeCounts(props.type, prev)
+    .then((c) => {
+      regimeCountsData.value = c
+      const vis = visibleRegimes.value
+      if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
+        quiz.regime = vis[0]!.id
+        persistRegime(quiz.regime)
+      }
+    })
+    .catch(() => {})
 }
 
 const timedOut = computed(() => quiz.currentChoice === TIMEOUT)
@@ -1431,16 +1470,6 @@ function onTouchEnd(e: TouchEvent) {
         </div>
       </div>
     </div>
-    <p v-if="adaptiveHint" class="adaptive-hint">
-      {{
-        t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
-          n: adaptiveHint.sample,
-          acc: adaptiveHint.accuracy,
-          tier: t(TIERS[adaptiveHint.tier].labelKey),
-        })
-      }}
-    </p>
-
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
     <!-- 097：主数字 = 本档这一赛制能出多少题（随档位/赛制变化）；括号 = 该数占该地区鸟种数的比例。
@@ -1466,6 +1495,23 @@ function onTouchEnd(e: TouchEvent) {
         <span>{{ t(r.hintKey) }}</span>
       </button>
     </div>
+
+    <!-- 2026-11-05 用户定：自适应提示挪到「开始答题」**正上方**（原来夹在地区步骤与
+         形式步骤之间，位置靠中、不显眼）。撤销按钮回到用户自己原先选的档位。 -->
+    <p v-if="adaptiveHint" class="adaptive-hint">
+      <span>
+        {{
+          t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
+            n: adaptiveHint.sample,
+            acc: adaptiveHint.accuracy,
+            tier: t(TIERS[adaptiveHint.tier].labelKey),
+          })
+        }}
+      </span>
+      <button type="button" class="adaptive-undo" @click="undoAdaptiveTier">
+        {{ t('quiz.adaptiveUndo') }}
+      </button>
+    </p>
 
     <button class="btn btn-primary" @click="begin">{{ t('quiz.start') }}</button>
   </section>
@@ -2202,14 +2248,45 @@ function onTouchEnd(e: TouchEvent) {
   }
 }
 .adaptive-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   max-width: 520px;
-  margin: -12px auto 22px;
+  /* 2026-11-05：提示已挪到「开始答题」正上方，不再需要负边距拉扯位置；
+     下方留 12px 与按钮分开，形成「说明 → 操作」的成对布局 */
+  margin: 0 auto 12px;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   background: #eaf4ef;
   color: var(--primary-dark);
   font-size: 0.78rem;
   text-align: center;
+}
+/* 撤销：低频操作，做成文字按钮——不抢「开始答题」的视觉权重 */
+.adaptive-undo {
+  flex: none;
+  padding: 2px 10px;
+  border: 1px solid var(--primary-light);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  cursor: pointer;
+  /* 触摸热区 ≥ 32px（480px 以下再放大到 44px，见下方媒体查询） */
+  min-height: 32px;
+}
+.adaptive-undo:active {
+  background: #dcefe6;
+}
+@media (max-width: 480px) {
+  .adaptive-undo {
+    min-height: 44px;
+    padding: 2px 16px;
+  }
 }
 .tier {
   display: flex;

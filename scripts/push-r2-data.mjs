@@ -80,12 +80,36 @@ if (!files.length) {
   process.exit(1)
 }
 
+/**
+ * 同级索引文件（2026-11-05 事故后补）：
+ *
+ * `public/data/province-commonness.json`（索引：元数据 + sharding 清单）**不在**分片目录里，
+ * 而是目录的**兄弟文件**。此前本脚本只 `readdir(DIR)`，于是「重推分片」永远不会更新索引，
+ * 造成 R2 上索引停在 2026-10-22（58 片 / 621 省码 / 5 档）、分片却是新版的撕裂状态，
+ * 而 `check:tiers` 的 R3 会一直报「索引 ≠ 本地索引」。
+ *
+ * 规则：若 `public/data/<base>.json` 存在，就与分片一起推（同一次操作、同一个确认词），
+ * 避免"分片推了、索引忘了"。这是数据一致性要求，不是可选优化。
+ */
+const sidecar = path.join(path.dirname(DIR), `${base}.json`)
+const sidecarExists = await fs
+  .stat(sidecar)
+  .then((s) => s.isFile())
+  .catch(() => false)
+
 let total = 0
 for (const f of files) total += (await fs.stat(path.join(DIR, f))).size
+const sidecarSize = sidecarExists ? (await fs.stat(sidecar)).size : 0
 console.log(
   `→ ${files.length} 个对象 / ${(total / 1e6).toFixed(2)}MB → R2 ${PREFIX}/` +
     (DRY ? '（--dry：只列清单，不写云端）' : USE_S3 ? '（S3 直传）' : '（wrangler --remote）'),
 )
+if (sidecarExists) {
+  console.log(
+    `→ 附带同级索引 data/${base}.json（${(sidecarSize / 1e3).toFixed(0)}KB）——` +
+      `与分片必须同版本，否则 check:tiers 的 R3 会报撕裂`,
+  )
+}
 
 if (!DRY) {
   let done = 0
@@ -130,7 +154,46 @@ if (!DRY) {
     console.error(`✗ 失败 ${failed.length}：\n  - ${failed.slice(0, 10).join('\n  - ')}`)
     process.exit(1)
   }
+
+  // ── 同级索引：与分片同版本，必须一起推 ──────────────────────────
+  if (sidecarExists) {
+    const key = `data/${base}.json`
+    process.stdout.write(`  ↑ 索引 ${key} … `)
+    try {
+      if (USE_S3) {
+        await R2.put(key, await fs.readFile(sidecar), 'application/json; charset=utf-8')
+      } else {
+        let lastErr = null
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            await execFileP(
+              'npx',
+              [
+                'wrangler', 'r2', 'object', 'put', `${BUCKET}/${key}`,
+                `--file=${sidecar}`,
+                '--content-type=application/json; charset=utf-8',
+                '--remote',
+              ],
+              { cwd: ROOT, timeout: 180_000 },
+            )
+            lastErr = null
+            break
+          } catch (e) {
+            lastErr = e
+            await new Promise((r) => setTimeout(r, 1500 * attempt))
+          }
+        }
+        if (lastErr) throw lastErr
+      }
+      console.log('ok')
+    } catch (e) {
+      console.error(`失败：${String(e?.stderr || e?.message || e).slice(0, 200)}`)
+      console.error('⚠ 分片已上传但索引失败 → R2 处于撕裂状态，重跑本命令即可补齐索引。')
+      process.exit(1)
+    }
+  }
 } else {
   for (const f of files.slice(0, 8)) console.log(`  · ${PREFIX}/${f}`)
   if (files.length > 8) console.log(`  … 其余 ${files.length - 8} 个`)
+  if (sidecarExists) console.log(`  · data/${base}.json（同级索引）`)
 }

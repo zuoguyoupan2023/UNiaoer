@@ -57,9 +57,12 @@ const en: typeof zhMessages = {
     whatBody:
       'An identification trainer for birders: practise naming birds from photos, naming them from recordings, finding media for a name, or typing a name from media. 11,026 species are covered (photos 10,888 / audio 10,356), each item attributed with author, licence and source.',
     playTitle: 'How to answer',
-    playL1: 'L1–L5 are multiple choice: fewer options and tighter time limits as you go up, and L5 adds random interference calls.',
-    playL67: 'L6 asks you to pick the media for a name; L7 asks you to type the name from media — in a common name or a scientific name.',
-    playRegion: 'Scope narrows from global to continent, country and province, preferring locally common birds.',
+    playL1:
+      'L1–L5 are multiple choice: fewer options and tighter time limits as you go up, and L5 adds random interference calls.',
+    playL67:
+      'L6 asks you to pick the media for a name; L7 asks you to type the name from media — in a common name or a scientific name.',
+    playRegion:
+      'Scope narrows from global to continent, country and province, preferring locally common birds.',
     techTitle: 'Tech stack',
     licTitle: 'Data sources and licences',
     licLead:
@@ -74,18 +77,22 @@ const en: typeof zhMessages = {
       colLicense: 'Licence and obligations',
       media: {
         inat: 'Bird photos / some recordings',
-        inatLic: 'Per-item CC (CC0 / BY / BY-NC / BY-ND…); author, licence and link shown for every item; ND served as-is, never transcoded',
+        inatLic:
+          'Per-item CC (CC0 / BY / BY-NC / BY-ND…); author, licence and link shown for every item; ND served as-is, never transcoded',
         xc: 'Bird recordings',
-        xcLic: 'Per-item CC (as stated on the recording page); attributed item by item; ND never transcoded',
+        xcLic:
+          'Per-item CC (as stated on the recording page); attributed item by item; ND never transcoded',
         wn: 'Ambient birdsong / L5 interference calls',
         wnLic: 'Our own recordings, no third-party obligations',
       },
       data: {
         avilist: 'Global bird taxonomy backbone (11,131 species)',
         gbif: 'Distribution / province commonness / seasonality / birding spots / taxon keys',
-        gbifLic: 'Per-dataset CC0 / CC BY / CC BY-NC; dataset DOI and attribution recorded in outputs',
+        gbifLic:
+          'Per-dataset CC0 / CC BY / CC BY-NC; dataset DOI and attribution recorded in outputs',
         ebird: 'Birding spots / region naming',
-        ebirdLic: 'Non-commercial; attribution required; raw data may not be redistributed (only derived results published)',
+        ebirdLic:
+          'Non-commercial; attribution required; raw data may not be redistributed (only derived results published)',
         iso: 'First-level administrative divisions',
         iucn: 'Structured habitats and systems',
         iucnLic: 'Non-commercial; citation required; raw dataset not redistributed',
@@ -101,14 +108,20 @@ const en: typeof zhMessages = {
         osea: 'Photo identification (11,000 classes, local WASM)',
         oseaLic: 'Weights are attribution-only; its GPL-3.0 code is not used by this project',
       },
-      note1: 'Each item follows the licence stated on its own source page; attribution is shown on every question and species page.',
-      note2: 'Licence filtering and attribution live in src/core/licenseGuard.ts and scripts/lib/license.mjs.',
-      note3: 'Identification runs on your device (Web Worker + onnxruntime-web); recordings and photos are never uploaded.',
+      note1:
+        'Each item follows the licence stated on its own source page; attribution is shown on every question and species page.',
+      note2:
+        'Licence filtering and attribution live in src/core/licenseGuard.ts and scripts/lib/license.mjs.',
+      note3:
+        'Identification runs on your device (Web Worker + onnxruntime-web); recordings and photos are never uploaded.',
     },
     privacyTitle: 'Privacy',
-    privacyLocal: 'Round history, wrong-answer book, badges/titles and nickname stay in your browser; nothing is uploaded.',
-    privacyMetrics: 'Anonymous metrics count events only: no cookies, no device fingerprints, no IP/UA stored, and it can be turned off in Settings.',
-    privacyShare: 'Share links are created only when you click, can be revoked at any time, and are not indexed.',
+    privacyLocal:
+      'Round history, wrong-answer book, badges/titles and nickname stay in your browser; nothing is uploaded.',
+    privacyMetrics:
+      'Anonymous metrics count events only: no cookies, no device fingerprints, no IP/UA stored, and it can be turned off in Settings.',
+    privacyShare:
+      'Share links are created only when you click, can be revoked at any time, and are not indexed.',
     contactTitle: 'Follow / Contact',
     contactRepo: 'Repository',
     contactXhs: 'Xiaohongshu (RedNote): 左顾右盼 — ID zuoguyoupan2026',
@@ -188,7 +201,8 @@ const en: typeof zhMessages = {
     rename: 'Rename',
     delete: 'Delete',
     renamePlaceholder: 'Archive name',
-    deleteConfirm: 'Delete archive "{name}" and all its data (rounds / wrong book / badges)? This cannot be undone.',
+    deleteConfirm:
+      'Delete archive "{name}" and all its data (rounds / wrong book / badges)? This cannot be undone.',
     lastOne: 'Keep at least one archive',
   },
   quiz: {
@@ -206,6 +220,8 @@ const en: typeof zhMessages = {
     regionAsk: 'Which region’s birds do you want to challenge?',
     adaptiveUp: 'Raised to “{tier}” based on your last {n} rounds ({acc}% correct)',
     adaptiveDown: 'Lowered to “{tier}” — {acc}% correct across your last {n} rounds',
+    /** 2026-11-05: revert the adaptive change back to the level the user had picked */
+    adaptiveUndo: 'Undo',
     stepRegion: 'Region',
     regionAll: 'Global',
     regionHint: 'Low tiers prioritise species common in the selected region',
@@ -227,10 +243,13 @@ const en: typeof zhMessages = {
     cannotStart: 'Cannot start',
     backHome: 'Back home',
     progress: 'Q{n} / {total}',
-    shortRound: 'Only {built} of {want} questions — not enough media for this difficulty / region / mode',
+    shortRound:
+      'Only {built} of {want} questions — not enough media for this difficulty / region / mode',
     loadingMedia: 'Loading…',
-    networkPoor: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
-    networkPoorUnknown: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
+    networkPoor:
+      'Images failed to load repeatedly. Try restarting the round on a better connection.',
+    networkPoorUnknown:
+      'Images failed to load repeatedly. Try restarting the round on a better connection.',
     regimePool: '{regime}: {n} candidates',
     /** 097: headline = how many this tier can serve.
      *  2026-11-05 (docs/105): {pct} is now **measured** (this tier's actual pool ÷ local species count),
@@ -240,7 +259,8 @@ const en: typeof zhMessages = {
     regimePoolTierNoPct: '{n} species',
     // 072-a observation: diagnostic line (only with ?diag=1)
     diagHead: 'Diag · {tier}{region} · {regime}',
-    diagBody: 'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',
+    diagBody:
+      'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',
     diagPathOnline: 'online({from}) {hits}/{total}',
     diagPathFallback: 'online {hits}/{total}→local',
     diagPathLocal: 'local pool',
@@ -294,7 +314,8 @@ const en: typeof zhMessages = {
     accuracyLabel: 'Accuracy {acc}%',
     tierAvgLine: '{tier} level average accuracy: {avg}% *',
     tierStatsLink: 'See the stats',
-    tierCompareNote: 'Average accuracy comes from consented anonymous data, not all quiz attempts; data as of {time}.',
+    tierCompareNote:
+      'Average accuracy comes from consented anonymous data, not all quiz attempts; data as of {time}.',
     viewStats: 'View stats',
     msg100: "Perfect! You're a true bird whisperer!",
     msg80: 'Excellent! Sharp ID skills!',
@@ -351,7 +372,8 @@ const en: typeof zhMessages = {
     coverageNameBody:
       '{zh} species have a Chinese name (~{pct}%). Long-tail global species often lack a common Chinese name in open data; the UI falls back to English or the scientific name.',
     coverageCatalog: 'Browse the full catalogue (order → family → species)',
-    coverageNote: 'Sources: iNaturalist, Xeno-canto (per-item attribution shown on every question).',
+    coverageNote:
+      'Sources: iNaturalist, Xeno-canto (per-item attribution shown on every question).',
   },
   catalog: {
     title: 'Full catalogue',
@@ -364,8 +386,10 @@ const en: typeof zhMessages = {
     sortTaxo: 'Taxonomy',
     sortPinyin: 'Pinyin',
     sortCommon: 'Commonness',
-    sortPinyinHint: 'Re-sorts families and species within each order (by Chinese-name pinyin). Use the letter bar below to jump.',
-    sortCommonHint: 'Re-sorts families and species within each order: the most commonly seen birds come first.',
+    sortPinyinHint:
+      'Re-sorts families and species within each order (by Chinese-name pinyin). Use the letter bar below to jump.',
+    sortCommonHint:
+      'Re-sorts families and species within each order: the most commonly seen birds come first.',
     jumpLabel: 'Jump by pinyin initial',
     loading: 'Loading catalogue…',
     flags: 'Photo & audio availability',
@@ -388,16 +412,19 @@ const en: typeof zhMessages = {
     locating: 'Locating…',
     preciseDenied:
       'The browser denied location. If no prompt appeared, you probably denied it earlier, or the OS has not given your browser location access: open System Settings → Privacy & Security → Location Services, allow your browser, then set the site permission for Location to Allow.',
-    preciseInsecure: 'This page is not a secure context (http), so the browser blocks geolocation. Use https or localhost.',
+    preciseInsecure:
+      'This page is not a secure context (http), so the browser blocks geolocation. Use https or localhost.',
     preciseUnsupported: 'This browser does not support geolocation.',
     preciseUnavailable:
       'Could not get a fix (device location off, no signal, or timeout). Still using the approximate network location.',
     manualHint: 'You can also pick a country below and retry later.',
-    privacy: 'Privacy: your location is used only to compute distances right here — never uploaded or stored, and this page keeps no record of your coordinates.',
+    privacy:
+      'Privacy: your location is used only to compute distances right here — never uploaded or stored, and this page keeps no record of your coordinates.',
     country: 'Country / region',
     radius: 'Radius',
     radiusKm: 'Within {n} km',
-    needCoords: 'A location is required first — tap “Use my precise location” above, or retry later.',
+    needCoords:
+      'A location is required first — tap “Use my precise location” above, or retry later.',
     empty: 'No qualifying spots within {n} km. Try a larger radius.',
     km: '{n} km',
     speciesN: '{n} species recorded',
@@ -406,7 +433,8 @@ const en: typeof zhMessages = {
     gridNearby: 'This area (1° grid about {km} km away): {r} records · {s} species',
     onEbird: 'View this hotspot on eBird',
     source: 'Data: {sources}',
-    method: 'Derived: only eBird hotspots with at least {min} species recorded, deduplicated on a {cell}° (about {km} km) grid.',
+    method:
+      'Derived: only eBird hotspots with at least {min} species recorded, deduplicated on a {cell}° (about {km} km) grid.',
   },
   // 028 public stats board (docs/028 §3.4)
   stats: {
@@ -425,7 +453,8 @@ const en: typeof zhMessages = {
     accuracyMean: '{mean}% · {n} rounds',
     accuracyNote: 'Weighted average of accuracy data; no personal or bird-species data.',
     earlyBandsTitle: 'Early data (bucketed estimate)',
-    earlyBandsNote: 'Rounds before exact scoring began only have accuracy buckets, estimated from bucket midpoints (≈) — for historical reference only.',
+    earlyBandsNote:
+      'Rounds before exact scoring began only have accuracy buckets, estimated from bucket midpoints (≈) — for historical reference only.',
     sectionBadges: 'Badges earned',
     sectionTitles: 'Titles earned',
     uniqueVisitors: 'Cumulative visits',
@@ -478,7 +507,8 @@ const en: typeof zhMessages = {
     goHome: 'Start a quiz',
     accuracy: '{acc}% correct',
     picked: 'picked “{name}”',
-    footnote: 'This page was published by the sharer. It contains only this round’s questions and media links (media copyright belongs to the original authors; attribution is shown under each item).',
+    footnote:
+      'This page was published by the sharer. It contains only this round’s questions and media links (media copyright belongs to the original authors; attribution is shown under each item).',
     cta: 'Try it yourself',
     sharedTag: 'Shared',
   },
@@ -506,7 +536,8 @@ const en: typeof zhMessages = {
     recordCount: 'GBIF {n} records',
     recordNote:
       'Record counts are GBIF public occurrence records: a country total includes records without a province, while a province total only counts records that map to an ISO subdivision name (the two layers are not additive). Record volume depends on dataset composition — do not compare regions by size.',
-    provinceCoverage: 'Subnational detail covers only {pct}% of GBIF records (unmapped province names are excluded; country totals are unaffected)',
+    provinceCoverage:
+      'Subnational detail covers only {pct}% of GBIF records (unmapped province names are excluded; country totals are unaffected)',
     provinceSource: 'Subnational data source: {sources}',
     notInBank: 'No media yet',
     showMore: 'Show more',
@@ -550,8 +581,7 @@ const en: typeof zhMessages = {
     pvStatsUnknown: 'Unclassified',
     parentCN: 'China (incl. HK/MO/TW)',
     pvRatio: '{pct}% of {parent} · {global}% of world',
-    pvStatsNote:
-      'My known counts only species marked within the selected region.',
+    pvStatsNote: 'My known counts only species marked within the selected region.',
     hotspotEmpty: 'No birding spots for this region yet',
     hotspotOnEbird: 'View this hotspot on eBird',
     hotspotOfCountry: '({n} nationwide)',
@@ -645,34 +675,41 @@ const en: typeof zhMessages = {
     // 028: daily visitors (admin)
     dailyTitle: 'Daily visits (last 30 days)',
     dailyLoad: 'Refresh',
-    dailyNote: 'People per day after IP+UA hash dedup (UTC day); the salt rotates daily, so days cannot be linked.',
-    dailyTotals: 'Total: {visitors} visits · {sessions} sessions · {rounds} rounds · {posters} posters',
+    dailyNote:
+      'People per day after IP+UA hash dedup (UTC day); the salt rotates daily, so days cannot be linked.',
+    dailyTotals:
+      'Total: {visitors} visits · {sessions} sessions · {rounds} rounds · {posters} posters',
     dailyVisitors: '{n} visits',
     dailySessions: '{n} sessions',
     dailyRounds: '{n} rounds',
     dailyPosters: '{n} posters',
     // 073 P0: accuracy by region (admin observation window)
     regionStatsTitle: 'Accuracy by region (observation, not public)',
-    regionStatsNote: 'Basis: the region the user selected (not IP). Estimated from accuracy buckets, with round counts; treat regions under 10 rounds as indicative only.',
+    regionStatsNote:
+      'Basis: the region the user selected (not IP). Estimated from accuracy buckets, with round counts; treat regions under 10 rounds as indicative only.',
     regionStatsLoad: 'Load (last 30 days)',
     regionStatsMeta: 'Data since {since} · {total} rounds',
     regionStatsMissing: '{n} rounds had no region attribute (before it shipped)',
-    regionStatsEmpty: 'No rounds with a region attribute yet (needs the new frontend + post-deploy data).',
+    regionStatsEmpty:
+      'No rounds with a region attribute yet (needs the new frontend + post-deploy data).',
     regionStatsCell: '{mean}% avg · {n} rounds',
     regionAll: 'Global / unspecified',
-    regionStatsMetaExact: 'Data from {from} to {to} (true start of this metric) · window since {window} · {total} rounds',
+    regionStatsMetaExact:
+      'Data from {from} to {to} (true start of this metric) · window since {window} · {total} rounds',
     regionStatsByDay: 'Daily breakdown ({n} days)',
     regionStatsTotal: 'Total (all rounds, incl. unspecified)',
     regionStatsUnspecifiedLabel: 'Global / unspecified (picked "global" only)',
     regionStatsCountryOnly: 'Country only (no province picked)',
-    regionStatsCountryHint: 'Country comparison (includes country-only rounds); provinces are ranked within their own country only.',
+    regionStatsCountryHint:
+      'Country comparison (includes country-only rounds); provinces are ranked within their own country only.',
     // 076: province-level stats (admin observation window)
     provinceStatsTitle: 'Province stats (observation, not public)',
     provinceStatsNote:
       'Basis: province inferred from IP (no IP stored, no city-level location); only users who opted into province-level stats are counted. Hong Kong/Macao/Taiwan are counted as Chinese provinces. Users are deduplicated per day, then summed.',
     provinceStatsLoad: 'Load (last 30 days)',
     provinceStatsMeta: 'Window since {window} · {n} regions',
-    provinceStatsEmpty: 'No data yet: turn on “Allow province-level stats” in Settings (off by default).',
+    provinceStatsEmpty:
+      'No data yet: turn on “Allow province-level stats” in Settings (off by default).',
     provinceStatsCell: '{users} daily users · {visits} visits · {rounds} rounds',
     provinceStatsAcc: '{mean}% avg ({n} rounds)',
     provinceMatrixTitle: 'Province × question region × tier ({n} rows, unfiltered)',
@@ -684,8 +721,10 @@ const en: typeof zhMessages = {
     speciesStatsNote:
       'Per-question stats with no user or province dimension; error rate = wrong / answers (exposure as denominator). Admin is real-time (including today); the public page will use T+1 (up to yesterday) later. Admin does not filter samples; under 10 answers is marked “small sample”.',
     speciesStatsLoad: 'Load (last 30 days)',
-    speciesStatsMeta: 'Window since {window} · updated to {until} · {answers} answers / {species} species',
-    speciesStatsEmpty: 'No per-question data yet (it starts accumulating once the new frontend is live).',
+    speciesStatsMeta:
+      'Window since {window} · updated to {until} · {answers} answers / {species} species',
+    speciesStatsEmpty:
+      'No per-question data yet (it starts accumulating once the new frontend is live).',
     speciesStatsRate: 'wrong {wrong}/{answers} · {rate}%',
     speciesPairsTitle: 'Mistaken as ({n} pairs)',
     speciesPairsCell: '{n} times',
@@ -723,7 +762,8 @@ const en: typeof zhMessages = {
     releasedMsg: 'Released — the media is usable again (next build)',
     quarantineList: 'Quarantine ledger',
     noQuarantine: 'No active quarantine entries',
-    quarantinedMsg: 'Added to quarantine — next build swaps in a replacement, or marks the species display-only',
+    quarantinedMsg:
+      'Added to quarantine — next build swaps in a replacement, or marks the species display-only',
     quarantineHint: 'Use when media is valid but unsuitable as a quiz item (blurry/far/noisy)',
     reopen: 'Reopen',
     status: {
@@ -741,10 +781,12 @@ const en: typeof zhMessages = {
       extinct: 'Extinct (or possibly extinct)',
       order: 'Order: {name}',
       family: 'Family: {name}',
-      noMedia: 'Media for this species is not included yet, so it cannot be used in quizzes; profile data comes from the global taxonomy skeleton (AviList v2025b).',
+      noMedia:
+        'Media for this species is not included yet, so it cannot be used in quizzes; profile data comes from the global taxonomy skeleton (AviList v2025b).',
       countries: 'Recorded distribution ({n} countries/regions, GBIF observation-based)',
       links: 'External references',
-      source: 'Taxonomy & keys: AviList v2025b (CC BY 4.0) · GBIF backbone · eBird; external links for reference only.',
+      source:
+        'Taxonomy & keys: AviList v2025b (CC BY 4.0) · GBIF backbone · eBird; external links for reference only.',
       gbif: 'GBIF',
       avibase: 'Avibase',
       ebird: 'eBird',
@@ -764,7 +806,8 @@ const en: typeof zhMessages = {
       count: '{n} provinces/regions with records',
       showAll: 'Show all {n}',
       collapse: 'Collapse',
-      scaleNote: 'Bar length uses a square-root scale (counts span orders of magnitude); values are GBIF public record counts and are affected by observer effort — compare relatively.',
+      scaleNote:
+        'Bar length uses a square-root scale (counts span orders of magnitude); values are GBIF public record counts and are affected by observer effort — compare relatively.',
       source: 'Province data: {sources}',
     },
     iucn: 'IUCN {code}',
@@ -781,12 +824,17 @@ const en: typeof zhMessages = {
       terrestrial: 'Terrestrial bird',
     },
     group6Desc: {
-      swimmer: 'Web-footed swimmers that feed on open water, such as ducks and geese, grebes and cormorants.',
-      wader: 'Long-legged, long-necked birds that forage while wading on mudflats and shallows, such as herons, sandpipers and cranes.',
-      woodland: 'Birds living mainly in forest and woodland vegetation, such as most passerines and woodpeckers.',
+      swimmer:
+        'Web-footed swimmers that feed on open water, such as ducks and geese, grebes and cormorants.',
+      wader:
+        'Long-legged, long-necked birds that forage while wading on mudflats and shallows, such as herons, sandpipers and cranes.',
+      woodland:
+        'Birds living mainly in forest and woodland vegetation, such as most passerines and woodpeckers.',
       raptor: 'Birds of prey with hooked bills and talons, such as hawks, falcons and owls.',
-      climber: 'Feet adapted to climbing trunks and cliffs, such as woodpeckers, parrots, cuckoos and swifts.',
-      terrestrial: 'Strong-legged birds living mainly on the ground, such as pheasants, doves and ostriches.',
+      climber:
+        'Feet adapted to climbing trunks and cliffs, such as woodpeckers, parrots, cuckoos and swifts.',
+      terrestrial:
+        'Strong-legged birds living mainly on the ground, such as pheasants, doves and ostriches.',
     },
     migrations: {
       resident: 'Resident',
@@ -868,7 +916,8 @@ const en: typeof zhMessages = {
     title: 'Monthly presence',
     peak: 'Peak months: {months}',
     records: 'Based on ~{n} public observation records',
-    rangeSource: 'Residency source: Wang et al. (2021), A dataset on the life-history and ecological traits of Chinese birds',
+    rangeSource:
+      'Residency source: Wang et al. (2021), A dataset on the life-history and ecological traits of Chinese birds',
     hint: 'Intensity = share of observations in that month, normalized across sources (0–100).',
   },
   poster: {
@@ -891,12 +940,16 @@ const en: typeof zhMessages = {
     wrongThumbTitle: '{base} (you missed this one — try it as background?)',
     generateDownload: 'Generate & download poster',
     includeResults: 'Poster includes this round’s results',
-    includeResultsOn: 'The poster will show the quiz scope, score, accuracy and missed items; the QR code opens this round.',
+    includeResultsOn:
+      'The poster will show the quiz scope, score, accuracy and missed items; the QR code opens this round.',
     includeQr: 'Poster includes a QR code',
-    includeQrOff: 'QR code off: the QR slot is left empty (no URL anywhere in the image) for platforms sensitive to outbound links.',
-    includeResultsOff: 'The poster still shows the quiz scope and score; only the missed-item review is hidden.',
+    includeQrOff:
+      'QR code off: the QR slot is left empty (no URL anywhere in the image) for platforms sensitive to outbound links.',
+    includeResultsOff:
+      'The poster still shows the quiz scope and score; only the missed-item review is hidden.',
     noticeTitle: 'The poster and share include this round’s details',
-    noticeBody: 'It will show your score, each correct answer and the wrong options you picked. Uncheck “Poster includes this round’s results” if you would rather not publish them.',
+    noticeBody:
+      'It will show your score, each correct answer and the wrong options you picked. Uncheck “Poster includes this round’s results” if you would rather not publish them.',
     noticeDrop: 'Exclude test details',
     noticeContinue: 'Generate anyway',
     wrongBadgeTitle: 'You missed this one — try it as background?',
@@ -943,7 +996,8 @@ const en: typeof zhMessages = {
     pairsDone: 'All {n} pairs matched',
     complete: 'All pairs matched!',
     shortRound: 'Target {want} pairs: only {built} available in this region/regime.',
-    quitConfirm: 'Pairs are not all matched yet. Quitting discards this round (memory rounds are not saved). Quit?',
+    quitConfirm:
+      'Pairs are not all matched yet. Quitting discards this round (memory rounds are not saved). Quit?',
     notCountedTag: 'Not ranked',
     boardCap: 'Board size',
     boardStd: '12 pairs · Standard',
@@ -985,7 +1039,8 @@ const en: typeof zhMessages = {
     clearData: 'Clear data',
     resetConfirm:
       'Clear ALL data of the current archive (rounds / wrong book / badges)? Only this archive is cleared; others are unaffected. This cannot be undone.',
-    exportDone: 'Exported archive "{name}": {rounds} rounds, {wrong} wrong entries and {badges} badges.',
+    exportDone:
+      'Exported archive "{name}": {rounds} rounds, {wrong} wrong entries and {badges} badges.',
     exportAllDone: 'Exported {archives} archives ({rounds} rounds).',
     importInvalid: 'Import failed: not a valid UNiaoer backup file.',
     importArchiveName: 'Imported archive',
@@ -1013,7 +1068,8 @@ const en: typeof zhMessages = {
     wearTitle: 'Worn',
     titleLabel: 'Title',
     badgeLabel: 'Badge',
-    guideTitle: 'Give yourself a name (2–12 characters) — your rounds will be saved to your archive',
+    guideTitle:
+      'Give yourself a name (2–12 characters) — your rounds will be saved to your archive',
     guideSkip: 'Skip for now',
     notWorn: 'None worn',
     wearNone: 'None',
@@ -1082,7 +1138,8 @@ const en: typeof zhMessages = {
       image: 'By photo',
     },
     hint: {
-      audio: 'A clear 3–15 second clip works best. Heavy background noise or overlapping birds reduces accuracy noticeably.',
+      audio:
+        'A clear 3–15 second clip works best. Heavy background noise or overlapping birds reduces accuracy noticeably.',
       image: 'Pick a clear photo.',
     },
     record: 'Record',
@@ -1090,11 +1147,14 @@ const en: typeof zhMessages = {
     upload: 'Upload audio',
     thinking: 'Identifying…',
     viewSpecies: 'View species',
-    resultsNote: 'Results are for reference only — compare them with the media above and judge for yourself.',
+    resultsNote:
+      'Results are for reference only — compare them with the media above and judge for yourself.',
     genusOnly: 'Only the genus is certain: {genus}. No species-level entry here yet.',
     noMedia: 'This species is in our catalogue, but we have no photos or audio for it yet.',
-    noSpeciesAudio: 'No audio for this species yet — compare the candidates above and judge for yourself.',
-    noSpeciesImage: 'No photo for this species yet — compare the candidates above and judge for yourself.',
+    noSpeciesAudio:
+      'No audio for this species yet — compare the candidates above and judge for yourself.',
+    noSpeciesImage:
+      'No photo for this species yet — compare the candidates above and judge for yourself.',
     band: {
       none: "Didn't catch it — try another clip or another photo.",
       low: 'The model is not very sure. These are the most likely candidates.',
@@ -1109,7 +1169,8 @@ const en: typeof zhMessages = {
     model: {
       need: {
         audio: 'The sound model (BirdNET, CC BY-NC-SA 4.0) downloads on first use — about {mb} MB.',
-        image: 'The photo model (OSEA, weights attribution-only) downloads on first use — about {mb} MB.',
+        image:
+          'The photo model (OSEA, weights attribution-only) downloads on first use — about {mb} MB.',
       },
       downloading: {
         audio: 'Downloading the sound model {pct}%',
@@ -1197,7 +1258,8 @@ const en: typeof zhMessages = {
     cacheNone: 'Nothing to clear',
     cacheUnsupported: 'Cache management is not supported in this browser',
     metricsTitle: 'Anonymous stats',
-    metricsDesc: 'Anonymous stats are only used to understand usage and accuracy per difficulty (to improve questions and UI); no ads, and never linked to a specific person.',
+    metricsDesc:
+      'Anonymous stats are only used to understand usage and accuracy per difficulty (to improve questions and UI); no ads, and never linked to a specific person.',
     metricsWhatTitle: 'What is collected',
     metricsWhat:
       'Date; per-province (only if you enable province stats, e.g. Guangdong) answer counts; question region and difficulty; correct/total per round; for each question the species, right/wrong, and (when wrong) which species it was mistaken for; earned titles/badges; page category. Never linked to “who did which round”.',
@@ -1274,7 +1336,8 @@ const en: typeof zhMessages = {
     l5: {
       label: 'L5 Hell',
       desc: '6 options · close relatives · 10s · options hidden for the first 2s · random interference calls',
-      descAudio: '6 options · close relatives · 20s · options hidden for the first 2s · random interference calls',
+      descAudio:
+        '6 options · close relatives · 20s · options hidden for the first 2s · random interference calls',
     },
     l6: {
       label: 'L6 Half-Birder',
@@ -1351,12 +1414,18 @@ const en: typeof zhMessages = {
     hundredRounds: { label: 'Old Bird', desc: 'Complete 100 rounds' },
     nightOwl: { label: 'Night Owl', desc: 'Finish a round late at night (23:00–1:00)' },
     lark: { label: 'Early Riser', desc: 'Finish a round at dawn (5:00–7:00)' },
-    escapedQuit: { label: 'Change of Heart', desc: 'Almost quit, stayed, and got everything right' },
+    escapedQuit: {
+      label: 'Change of Heart',
+      desc: 'Almost quit, stayed, and got everything right',
+    },
     tripleForgiven: {
       label: 'Third Time Lucky',
       desc: 'Answer correctly after missing the same species 3 times',
     },
-    phoenix: { label: 'Hundred Birds, One Phoenix', desc: 'Full field guide + full sweep (the summit)' },
+    phoenix: {
+      label: 'Hundred Birds, One Phoenix',
+      desc: 'Full field guide + full sweep (the summit)',
+    },
   },
   titles: {
     track: {

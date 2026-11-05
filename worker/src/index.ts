@@ -702,19 +702,35 @@ async function sampleByIds(
  * 出题主线的地区抽样仍走 `/api/questions`（同样读 R2），不依赖本路由。
  *
  * 安全：只允许 `^[A-Z]{2}(\.country)?\.json$`，不做任意 key 代理；
- * 缓存：边缘 1 天（内容更新由重新部署 + `Cache-Control` 过期自然生效）。
+ * 缓存（2026-11-05 修正）：原实现用**固定 cacheKey + 1 天 TTL**，导致重推分片后
+ * 边缘仍返回旧版（实测 CN 卡在 2026-10-24 的 5 档旧分片，而 R2 已是 10 档新版 →
+ * 线上出题口径与「×NN%」标注继续错 24h 以上）。现改为：
+ *   ① cacheKey 带上分片自身的 `generatedAt` —— 内容一换，key 就变，旧缓存自然失效；
+ *   ② 浏览器侧 TTL 降到 300s —— 兜底，避免 CDN 之外的一层（SW/代理）长缓存。
+ * 这样「重推 R2 即生效」，不需要等缓存过期、也不需要 purge。
  */
 async function handleRegionTiers(env: Env, ctx: ExecutionContext, file: string): Promise<Response> {
-  const cache = caches.default
-  const cacheKey = new Request(`https://uniaoer.com/api/region-tiers/${file}`)
-  const hit = await cache.match(cacheKey)
-  if (hit) return hit
   const obj = await env.MEDIA.get(`data/province-commonness/${file}`)
   if (!obj) return json({ error: 'not_found', file }, { status: 404 })
-  const res = new Response(await obj.text(), {
+  const body = await obj.text()
+
+  // 从分片内容取版本号（所有分片都带 generatedAt）；解析失败则退化为 mtime，再不行用 '0'
+  let version = '0'
+  try {
+    version = String(JSON.parse(body)?.generatedAt ?? '') || '0'
+  } catch {
+    version = String(obj.uploaded?.getTime?.() ?? '0')
+  }
+
+  const cache = caches.default
+  const cacheKey = new Request(`https://uniaoer.com/api/region-tiers/${file}?v=${encodeURIComponent(version)}`)
+  const hit = await cache.match(cacheKey)
+  if (hit) return hit
+
+  const res = new Response(body, {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'public, max-age=86400',
+      'cache-control': 'public, max-age=300',
       ...CORS,
     },
   })

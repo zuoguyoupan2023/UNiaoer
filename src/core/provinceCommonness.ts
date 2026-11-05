@@ -106,7 +106,9 @@ export function loadRegionCommonnessShard(
           }
         }
         // 分片只在 R2（不进 git）→ 走 Worker 转发 `/api/region-tiers/<file>`
-        return fetch(`${API}/${file}`)
+        // 2026-11-05：带 `no-cache` 让浏览器每次都向边缘校验。分片版本漂移曾导致
+        // 「R2 已更新、用户端仍按旧 5 档出题」持续一天以上（见 docs/105）。
+        return fetch(`${API}/${file}`, { cache: 'no-cache' })
           .then(async (r2) => {
             if (!r2.ok) return null
             try {

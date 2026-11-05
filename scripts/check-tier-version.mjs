@@ -186,7 +186,9 @@ if (NO_NET) {
         if (remoteIdx.generatedAt !== index.generatedAt) {
           fail(
             `R3 R2 索引 generatedAt ${remoteIdx.generatedAt} ≠ 本地索引 ${index.generatedAt}` +
-              ` → 分片/索引未推齐，跑：node scripts/push-r2-data.mjs --dir public/data/province-commonness --apply`,
+              ` → 分片/索引未推齐。修：node scripts/push-r2-data.mjs --dir public/data/province-commonness --apply` +
+              `（该命令会同时推 373 片与同级索引 data/province-commonness.json；` +
+              `两者必须同版本，否则 R3 永远红）`,
           )
         } else ok(`R3 R2 索引版本一致（${remoteIdx.generatedAt}）`)
       }
