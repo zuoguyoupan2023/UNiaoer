@@ -230,9 +230,14 @@ export const messages = {
     networkPoor: '图像加载多次失败,建议在网络良好时重新开始做题.',
     networkPoorUnknown: '图像加载多次失败,建议在网络良好时重新开始做题.',
     regimePool: '{regime}：候选 {n} 种',
-    /** 097：主数字 = 本档这一赛制能出多少题；括号标注取数逻辑（该档覆盖该地鸟种的比例：
-     *  L1/L4/L5 取最常见 40%、L2/L3 取 60%、L6/L7/L8 取满 100%）。 */
-    regimePoolTier: '可出题 {n} 种（该地鸟种×{pct}%）',
+    /**
+     * 097：主数字 = 本档这一赛制能出多少题。
+     * 2026-11-05（docs/105）：`{pct}` 改为**实测**（本档实际可出题数 ÷ 本地可玩基数），
+     * 不再按配置硬算，所以会出现 71%/81%/90% 这类非整数——如实显示。
+     */
+    regimePoolTier: '可出题 {n} 种（本地可玩种×{pct}%）',
+    /** 分母缺失（档位表加载失败）时的兜底：只说种数，不编百分比 */
+    regimePoolTierNoPct: '可出题 {n} 种',
     // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
     diagHead: '诊断 · {tier}{region} · {regime}',
     diagBody: '赛制池 {pool} · 候选 {cand}→筛后 {after} · 无素材 -{drop} · {path} · 出题 {built}/{want}',

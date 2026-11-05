@@ -304,6 +304,22 @@ async function main() {
     console.error(`❌ --media r2 需要环境变量：${R2.missing.join(', ')}`)
     process.exit(1)
   }
+  /**
+   * 铁律 13（2026-11-05）：`--media r2` 会**直接写 R2**（媒体 + 可能改写 manifest），
+   * 属云端写，必须人审。`--media stage` / `download` 只写本地，不加闸门。
+   * 默认 dry：只打印计划；`--apply` 才真跑，且要求 TTY + 手输确认词。
+   */
+  if (OPT.media === 'r2') {
+    const { guardFromArgs } = await import('./lib/cloud-guard.mjs')
+    await guardFromArgs(args, {
+      op: 'bank r2',
+      summary: '抓取题库并把媒体直传 R2（bank:r2）',
+      targets: [`r2://${process.env.R2_BUCKET || '<bucket>'}/media/`],
+      impact: '线上媒体与题库名单可能同时变化；抓取会消耗源站配额与外网带宽',
+      rollback: '重传旧媒体对象 + 回滚 manifest（git checkout 后 r2:manifest）',
+      dryRunHint: 'npm run bank:r2 -- --dry（只打印计划）',
+    })
+  }
   R2CLIENT = R2
   PUBLIC_BASE = OPT.publicBase
   if (OPT.media === 'stage' && !PUBLIC_BASE) {

@@ -148,6 +148,20 @@
    - 只读排查（`curl`、`SELECT`、`wrangler r2 object get`、`git status`）不受限；
      **任何写操作**（含删除、覆盖、批量导入、purge）都要先问。
    - 违反代价：2026-10 的统计缓存事故、D1 写入额度事故都属「脚本直接跑了」类问题，恢复成本远高于先问一句。
+   - **（2026-11-05 加固）四类操作已加代码级闸门 `scripts/lib/cloud-guard.mjs`**：
+     ① 写 R2、② 写 D1、③ `worker:deploy`、④ `git commit` / `git push`。
+     闸门规则：
+     - **默认 dry-run**：不带 `--apply` 一律只打印计划、不写云端（`push-r2-data` / `push-r2` /
+       `sync:prod` / `bank:r2` 已改）；
+     - **非 TTY 直接拒绝**（退出码 2）：AI 的 Bash 工具、CI、管道、`nohup` 的 stdin 都不是 TTY
+       → **AI 物理上无法代跑云端写**，不依赖自觉；
+     - **TTY 下要求手输确认词**（如 `push province-commonness`）才执行，防手滑并留下交互痕迹。
+     → AI 的正确做法：准备产物 + 打印待执行命令，**由用户在自己的终端里跑**。
+   - **（2026-11-05）分片版本一致性门禁**：`province-commonness/` 只推 R2、不进 git，
+     曾出现「本地/索引是 10 档、R2 停留 5 档」达 7 天无人发现（见 `docs/105`）。
+     - CI 跑 `npm run check:tiers:local`（本地分片清单/档位数/省码数/generatedAt）；
+     - 推 R2 前后与前端发布前，人工跑 `npm run check:tiers`（含 R2 远端比对，抽样 10 国）；
+     - 改动档位产物后必须「重建 → `check:tiers` → 推 R2 → 再跑 `check:tiers` 确认远端一致」。
 
 14. **绝对不要杀用户启动的进程（2026-11-05 用户定，多次违反后成文）。**
     - **`npm run dev`（及任何用户自己起的 server / watch 进程）不许 `kill` / `pkill` / `fuser` /
@@ -170,7 +184,7 @@
 | 抓题库 + 直传 R2（S3 凭证，带远端） | `npm run bank:r2` |
 | 全球增量采集（023 P2：骨架取种 → 台账 `data/manifest-global.json`，断点续跑，不碰主 manifest） | `npm run bank:global -- --media stage --limit N` |
 | **全球 5+5 采集（推荐：一键托管，含批量推送与内存/磁盘看门狗）** | `nohup npm run bank55 &`（并发用 `BANK55_CONCURRENCY=N`，默认 8；观测 `/tmp/bank55-supervisor.log` + `/tmp/bank55.log`）。⚠️ **别再手动起 `build-bank`** —— 监管器会「收养」已跑进程，两套并行会抢同一台账 |
-| 把 `public/media` 传到 R2（wrangler，已内置 `--remote`） | `npm run r2:push` |
+| 把 `public/media` 传到 R2（wrangler，已内置 `--remote`） | `npm run r2:push -- --apply`（默认 dry） |
 | 把 `manifest-meta.json` 传到 R2（`/api/manifest-meta` 读它；`npm run layers` 重算后需重推） | `npm run r2:manifest` |
 | 题库一致性校验（CI 已接入；`--no-net` 跳过抽查） | `npm run check:bank` |
 | 媒体完整性全量检查（`--fix` 从本地重传缺失文件） | `npm run check:media` |
@@ -191,6 +205,10 @@
 | 地区产物校验（结构/署名/无边界几何/观鸟点省码覆盖率地板；CI 用 `-- --no-net`） | `npm run check:region` |
 | 名录产物校验（`catalog.json` 结构/计数/manifest/骨架/拼音键；CI 已接入） | `npm run check:catalog` |
 | manifest 三层产物校验（core/assets/global 与完整层一致；CI 已接入） | `npm run check:layers` |
+| **档位分片版本一致性**（本地：清单/10 档/省码数/generatedAt；CI 已接入） | `npm run check:tiers:local` |
+| **档位分片版本一致性（含 R2 远端比对，抽样 10 国）**——推 R2 前后必跑 | `npm run check:tiers` |
+| **全量地区池核算**（188 国 × L1/L2-3/L4-5/L6+ 池大小与实测百分比；只读） | `npm run report:tiers`（`-- --json` / `-- --country CN,US` / `-- --locale en`） |
+| **推省级档位分片到 R2**（云端写；默认 dry，须 TTY 手输确认词） | `node scripts/push-r2-data.mjs --dir public/data/province-commonness --apply` |
 | 拉 AviList v2025b（全球名录 xlsx → data-cache/taxonomy，gitignore；CC BY 4.0） | `npm run taxonomy:avilist`（`--refresh` 重下） |
 | 抓 Wikidata 中文名（specieswiki 标题反查，断点缓存；CC0） | `npm run taxonomy:wikidata-zh`（`--limit N` 冒烟 / `--refresh` 重抓） |
 | GBIF backbone 批量键位匹配（v2 match → 断点缓存；023 P1-b） | `npm run taxonomy:gbif-match`（`--limit N` 冒烟 / `--refresh` 重抓） |

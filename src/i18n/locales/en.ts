@@ -232,9 +232,12 @@ const en: typeof zhMessages = {
     networkPoor: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
     networkPoorUnknown: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
     regimePool: '{regime}: {n} candidates',
-    /** 097: headline = how many this tier can serve; the note explains the sampling logic
-     *  (commonness coverage of local species: 40% / 60% / full 100% for L6-L8). */
-    regimePoolTier: '{n} playable ({pct}% of local species)',
+    /** 097: headline = how many this tier can serve.
+     *  2026-11-05 (docs/105): {pct} is now **measured** (this tier's actual pool ÷ local playable base),
+     *  not derived from config — hence non-round values like 71% are expected and shown as-is. */
+    regimePoolTier: '{n} playable ({pct}% of playable species)',
+    /** Fallback when the denominator is unavailable (tier shard failed to load): no percentage. */
+    regimePoolTierNoPct: '{n} playable',
     // 072-a observation: diagnostic line (only with ?diag=1)
     diagHead: 'Diag · {tier}{region} · {regime}',
     diagBody: 'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',

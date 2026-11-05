@@ -86,6 +86,14 @@ export interface RegimeCounts {
   counts: Record<QuizRegime, number>
   /** 该地区可玩物种数（区系 → 档位表排除式 → 命名体系，**不收窄档位**；诊断用） */
   regionTotal: number
+  /**
+   * 括号百分比的分母（=「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可玩基数）。
+   *
+   * 2026-11-05 用户定：百分比一律**实测** `counts.random / baseTotal`，不再按
+   * `TIERS.commonness.length / 10` 硬算（事故：分片版本漂移时硬算值会说谎，docs/105）。
+   * `baseTotal = 0`（如档位表缺失）时 UI 不显示百分比，宁缺勿假。
+   */
+  baseTotal: number
 }
 
 export const useQuizStore = defineStore('quiz', () => {
@@ -280,12 +288,21 @@ async function regionScopeInfo(type: MediaType, tier: Tier) {
     regionIds: new Set(named.map((sp) => sp.id)),
     tierIds: new Set(tierPool.map((sp) => sp.id)),
     regionTotal: named.length,
+    /**
+     * 未收窄档位、但已过「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可玩基数（= 该档位的分母）。
+     *
+     * 2026-11-05 用户定（docs/105）：介绍页括号百分比必须**实测**，不能再按
+     * `TIERS[tier].commonness.length / 10` 硬算——分片版本一漂移，硬算值就会与实际池子
+     * 脱节并说谎（事故：R2 停留 5 档而配置按 10 档算，印「×70%」实际 100%）。
+     * = `tierIds.size / baseTotal`，数字与分母同源，永远不可能互相矛盾。
+     */
+    baseTotal: named.length,
   }
 }
 
 /** 各赛制当前可用物种数（UI 据此置灰/隐藏不可用赛制，013 §4） */
 async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> {
-  const { regionIds, tierIds, regionTotal } = await regionScopeInfo(type, tier)
+  const { regionIds, tierIds, regionTotal, baseTotal } = await regionScopeInfo(type, tier)
   const [rounds, wrong] = await Promise.all([safeListRounds(), safeWrongBook()])
   const practiced = new Set<string>()
   const correctSet = new Set<string>()
@@ -308,6 +325,7 @@ async function regimeCounts(type: MediaType, tier: Tier): Promise<RegimeCounts> 
       random: tierIds.size,
     },
     regionTotal,
+    baseTotal,
   }
 }
 

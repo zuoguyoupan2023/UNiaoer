@@ -429,11 +429,23 @@ interface GridItem {
  * S6：名单统一到 bank（权威层 meta，10,844 种，唯一源）。
  * 「已收录」判定用合并后的 playable 字段——名单内任一带素材即算收录（字段名 playable 沿用产物 schema，仅代码标识符）。
  */
-/** 短码 → 物种条目（用于徽标/缩略图；排除质量降级种） */
-const poolByCode = computed<Map<string, BankSpecies>>(() => {
-  const m = new Map<string, BankSpecies>()
+/**
+ * 短码 → 物种条目（用于徽标/缩略图；排除质量降级种）
+ *
+ * 2026-11-05（docs/105 §3.3-B）：**必须一对多**。manifest 里有 6 组 `taxonKey` 重复
+ * （如 `AC1E791E` 同时属于紫水鸡 / 西紫水鸡 / 澳洲紫水鸡，AviList 把同一个 AvibaseID
+ * 分给了拆分后的近缘种）。此前用 `Map<string, BankSpecies>` 后写覆盖 →
+ * 观鸟页网格**丢 5 种、并显示错种**（中国 1,318 条记录的紫水鸡被 5 条记录的石西水鸡顶替）。
+ * 改为数组后，每个短码展开全部物种，再由 `provinceSet` 按物种 id 精确过滤。
+ */
+const poolByCode = computed<Map<string, BankSpecies[]>>(() => {
+  const m = new Map<string, BankSpecies[]>()
   for (const sp of bank.value?.species ?? []) {
-    if (sp.taxonKey && !sp.quizExcluded) m.set(shortCodeOf(sp.taxonKey), sp)
+    if (!sp.taxonKey || sp.quizExcluded) continue
+    const key = shortCodeOf(sp.taxonKey)
+    const arr = m.get(key)
+    if (arr) arr.push(sp)
+    else m.set(key, [sp])
   }
   return m
 })
@@ -448,25 +460,47 @@ const countryGridItems = computed<GridItem[]>(() => {
   const idx = speciesIdx.value
   if (idx) {
     // bank 物种按 taxonKey 短码直查(骨架条目缺失也照常渲染;真实产物中 1299 全在骨架)
-    const codeOfSp = new Map<string, BankSpecies>()
-    for (const s of bank.value?.species ?? []) if (s.taxonKey) codeOfSp.set(shortCodeOf(s.taxonKey), s)
+    // 2026-11-05（docs/105 §3.3-B）：一对多，短码重复时展开全部物种而不是后写覆盖。
+    const codeOfSp = new Map<string, BankSpecies[]>()
+    for (const s of bank.value?.species ?? []) {
+      if (!s.taxonKey) continue
+      const key = shortCodeOf(s.taxonKey)
+      const arr = codeOfSp.get(key)
+      if (arr) arr.push(s)
+      else codeOfSp.set(key, [s])
+    }
     const items: GridItem[] = []
     for (const code of mergedIndex.value[selected.value] ?? []) {
-      let sp: BankSpecies | null | undefined = codeOfSp.get(code)
       const e = idx.byShortCode.get(code) ?? null
-      if (!sp && e) sp = bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
-      if (!e && !sp) continue
-      // 全球池条目(短码直查;骨架条目缺失时也能判定收录)
-      const gp = poolByCode.value.get(code) ?? null
-      const usable = sp ?? gp
-      items.push({
-        slug: usable ? usable.id : slugifySci(e!.nameSci),
-        name: usable ? nameOf(usable) : entryDisplayName(e!, currentLocale()),
-        nameSci: usable?.nameSci ?? e!.nameSci,
-        playable: !!usable,
-        thumb: usable?.image?.thumbUrl || usable?.image?.url || null,
-        bankId: sp?.id ?? null,
-      })
+      // 该短码对应的全部 bank 物种（通常 1 个；冲突组 2–3 个）
+      const bankHits = codeOfSp.get(code) ?? []
+      if (!bankHits.length) {
+        // 没有 bank 命中 → 退回骨架条目（未收录媒体，仅展示）
+        if (!e) continue
+        const sp = bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
+        const gp = poolByCode.value.get(code)?.[0] ?? null
+        const usable = sp ?? gp
+        items.push({
+          slug: usable ? usable.id : slugifySci(e.nameSci),
+          name: usable ? nameOf(usable) : entryDisplayName(e, currentLocale()),
+          nameSci: usable?.nameSci ?? e.nameSci,
+          playable: !!usable,
+          thumb: usable?.image?.thumbUrl || usable?.image?.url || null,
+          bankId: sp?.id ?? null,
+        })
+        continue
+      }
+      // 每个 bank 物种各出一张卡（冲突组不再互相顶替）
+      for (const sp of bankHits) {
+        items.push({
+          slug: sp.id,
+          name: nameOf(sp),
+          nameSci: sp.nameSci,
+          playable: true,
+          thumb: sp.image?.thumbUrl || sp.image?.url || sp.images?.[0]?.thumbUrl || sp.images?.[0]?.url || null,
+          bankId: sp.id,
+        })
+      }
     }
     return [...items].sort((a, b) => collator.value.compare(a.name, b.name))
   }

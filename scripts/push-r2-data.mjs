@@ -21,6 +21,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { loadEnv, mapPool, parseArgs } from './lib/util.mjs'
 import { makeR2 } from './lib/r2.mjs'
+import { guardFromArgs } from './lib/cloud-guard.mjs'
 
 const execFileP = promisify(execFile)
 
@@ -30,14 +31,32 @@ await loadEnv(path.join(ROOT, '.env'))
 const args = parseArgs(process.argv.slice(2))
 const dirArg = String(args.dir || '').trim()
 if (!dirArg) {
-  console.error('用法：node scripts/push-r2-data.mjs --dir public/data/<目录> [--prefix data/<目录>] [--dry]')
+  console.error(
+    '用法：node scripts/push-r2-data.mjs --dir public/data/<目录> [--prefix data/<目录>] [--only A,B] [--apply]\n' +
+      '      默认 dry-run（只打印清单）；加 --apply 才真正写入 R2，且必须在交互式终端里手输确认词。',
+  )
   process.exit(1)
 }
 const DIR = path.resolve(ROOT, dirArg)
 const base = path.basename(DIR)
 const PREFIX = String(args.prefix || `data/${base}`).replace(/^\/+|\/+$/g, '')
 const CONCURRENCY = Math.max(1, Number(args.concurrency) || 8)
-const DRY = !!args.dry
+
+/**
+ * 铁律 13（2026-11-05）：云端写必须人审。
+ * `--apply` 缺省即 dry（默认安全）；真传时要求 TTY + 手输确认词（AI/CI 物理上过不去）。
+ */
+const MODE = await guardFromArgs(args, {
+  op: `push ${base}`,
+  summary: `把 ${path.relative(ROOT, DIR)}/ 下的 .json 推到 R2（${PREFIX}/）`,
+  targets: [`r2://${process.env.R2_BUCKET || '<bucket>'}/${PREFIX}/`],
+  impact:
+    '线上立即读到新产物（档位分片会影响出题池与地区口径）；' +
+    'Worker 侧边缘缓存最长 1 天后全部生效',
+  rollback: '重传上一版同名对象（R2 无版本，覆盖即替换）；或 git checkout 旧产物后重跑本脚本',
+  dryRunHint: `node scripts/push-r2-data.mjs --dir ${path.relative(ROOT, DIR)} --dry`,
+})
+const DRY = MODE === 'dry'
 const ONLY = String(args.only || '').split(',').map((s) => s.trim()).filter(Boolean)
 
 const R2 = makeR2()

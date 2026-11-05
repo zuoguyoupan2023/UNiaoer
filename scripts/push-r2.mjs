@@ -23,6 +23,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { loadEnv, mapPool, parseArgs, sleep } from './lib/util.mjs'
 import { makeR2 } from './lib/r2.mjs'
+import { guardFromArgs } from './lib/cloud-guard.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -34,6 +35,21 @@ if (!bucket) {
   console.error('❌ 缺少 R2_BUCKET（写到 .env）')
   process.exit(1)
 }
+
+/**
+ * 铁律 13（2026-11-05）：媒体全量上传是云端写，必须人审。
+ * `--apply` 缺省即 dry（只统计将上传多少文件）；真跑要求 TTY + 手输确认词。
+ * 注意：媒体上传量大（数万对象），误跑代价高，故闸门文案明确列出 --resume 优先建议。
+ */
+const MODE = await guardFromArgs(args, {
+  op: 'push media',
+  summary: '把 public/media 下的媒体对象上传到 R2（图片/音频）',
+  targets: [`r2://${bucket}/media/`],
+  impact: '线上媒体立即可读；覆盖同名对象会改变用户看到/听到的素材（署名信息随 manifest 走）',
+  rollback: '重传上一版同名对象（R2 无版本）；建议先用 --resume 只补缺失，避免无谓覆盖',
+  dryRunHint: 'npm run r2:push -- --dry',
+})
+const DRY = MODE === 'dry'
 
 const MEDIA_DIR = path.join(ROOT, 'public/media')
 const LOG = path.join(ROOT, 'data-cache/r2-failed.json')
@@ -130,6 +146,14 @@ if (args['retry-failed']) {
   console.log(
     `⬆️  上传 ${rels.length} 个文件到 R2 桶「${bucket}」的 media/ 下（${via}，并发 ${CONCURRENCY}，重试 ${TRIES}${SKIP_EXISTING ? '，跳过已存在' : ''}）…\n`,
   )
+}
+
+// dry-run：只报数量与样例，不碰云端（铁律 13）
+if (DRY) {
+  console.log(`[dry-run] 本次将上传 ${rels.length} 个对象（未写入 R2）。样例：`)
+  for (const r of rels.slice(0, 8)) console.log(`  · ${bucket}/${r}`)
+  if (rels.length > 8) console.log(`  … 其余 ${rels.length - 8} 个`)
+  process.exit(0)
 }
 
 async function uploadOne(rel) {

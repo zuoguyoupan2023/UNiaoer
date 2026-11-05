@@ -36,6 +36,13 @@ jobs:
       - name: Check region data
         run: npm run check:region -- --no-net
 
+      # 2026-11-05 事故（docs/105）：档位分片停留旧 5 档制、前端按 10 档过滤 →
+      # 所有「×70/80/90%」标注失真。这里校验本地分片（清单/档位数/省码数/generatedAt）。
+      # ⚠ 该检查是**纯本地**的：分片只推 R2、不进 git，CI 上无分片时会降级为警告；
+      #    远端一致性需人工跑 `npm run check:tiers`（有网 + R2_PUBLIC_BASE）。
+      - name: Check province tier shards
+        run: npm run check:tiers:local
+
       # 023 P0：全球物种骨架结构 + manifest taxonKey/playable 映射校验（纯本地）
       - name: Check species index
         run: npm run check:index

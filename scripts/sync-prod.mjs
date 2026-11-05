@@ -26,13 +26,37 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { loadEnv, parseArgs, sleep } from './lib/util.mjs'
+import { guard } from './lib/cloud-guard.mjs'
 
 const execFileP = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = parseArgs(process.argv.slice(2))
 const SKIP_R2 = !!args['skip-r2']
 const SKIP_D1 = !!args['skip-d1']
-const DRY = !!args.dry
+/**
+ * 铁律 13（2026-11-05）：本脚本同时写 R2 与 D1，属最高危云端操作。
+ * `--apply` 缺省即 dry；真跑时要求 TTY + 手输确认词。
+ */
+const MODE = await guard({
+  op: args.apply ? 'sync prod' : 'sync prod (dry)',
+  dry: !args.apply || !!args.dry,
+  summary: [
+    SKIP_R2 ? null : '重传 R2 发布通道（manifest-meta / species-distribution / province-commonness 索引 + 全部分片）',
+    SKIP_D1 ? null : '重建 D1 远端读模型（schema.sql + 全量 seed，约 43,410 行写入）',
+  ]
+    .filter(Boolean)
+    .join('；'),
+  targets: [
+    ...(SKIP_R2 ? [] : [`r2://${process.env.R2_BUCKET || '<bucket>'}/data/*`]),
+    ...(SKIP_D1 ? [] : ['D1 uniaoer（species / questions / meta 等派生读模型）']),
+  ],
+  impact:
+    '线上出题与地区口径立即变化；D1 单次写入约占当日额度 43%（单日最多跑 2 次，跑前用 npm run d1:usage 看额度）',
+  rollback:
+    'R2：重传上一版同名对象；D1：用旧 seed 重跑（schema.sql 会 DROP 重建，务必先确认有可回滚的旧 seed）',
+  dryRunHint: 'npm run sync:prod -- --dry',
+})
+const DRY = MODE === 'dry'
 const CHUNK_BYTES = args['chunk-bytes'] ? Number(args['chunk-bytes']) : 2_500_000
 const DB = 'uniaoer'
 
@@ -57,7 +81,12 @@ function step(title) {
 // ─────────────────────────────────────────────
 step('1/5 刷新分层产物（meta / assets）')
 // ─────────────────────────────────────────────
-{
+// 2026-11-05：dry-run 必须**真的只读**。此前 dry 也会跑 writeManifestLayers()，
+// 把 public/data/manifest-meta.json / catalog.json 的 generatedAt 刷成当前时间
+// （内容等价但产生脏 diff），既污染工作区又让「dry 无害」的承诺失真。
+if (DRY) {
+  console.log('  [dry] 跳过：npm run layers（writeManifestLayers 会改写 public/data 产物）')
+} else {
   const { writeManifestLayers } = await import('./build-manifest-layers.mjs')
   const corePaths = [path.join(ROOT, 'data-cache/manifest-core-full.json'), path.join(ROOT, 'public/data/manifest.json')]
   let manifest = null
