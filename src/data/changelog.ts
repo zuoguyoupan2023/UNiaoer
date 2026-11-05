@@ -26,6 +26,118 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-04',
+    zh: {
+      title: '称号与徽章改版',
+      items: [
+        '徽章新增「佩戴」：在徽章页挑一枚随身展示；徽章墙改为网格陈列并标注所属系列',
+        '称号页版式精简',
+        '「我的」页数据看板：走势图改为平滑曲线，显示平均正确率',
+      ],
+    },
+    en: {
+      title: 'Reworked badges and titles',
+      items: [
+        'Badges can now be worn — pick one to display on the badges page; the badge wall is now a labelled grid',
+        'The titles page got a simpler layout',
+        'Profile dashboard: trend charts now draw smooth curves and show your average accuracy',
+      ],
+    },
+  },
+  {
+    date: '2026-11-03',
+    zh: {
+      title: '加载画面与宣传语 · 同名题干修复',
+      items: [
+        '练习开始前的准备过程改为专门加载画面（转圈 + 随机宣传语），素材预热并行进行',
+        '加载等待时随机显示一条观鸟宣传语（如「不要诱拍！不要诱拍！不要诱拍！」），不带任何标题',
+        '修复中文名相同的两个物种出现在同一轮、题干文字完全一样的问题',
+      ],
+    },
+    en: {
+      title: 'Loading screen, ethics lines, duplicate-stem fix',
+      items: [
+        'The round preparation now shows a dedicated loading screen (spinner + a random slogan) while media warms up in parallel',
+        'While waiting, a random birding-ethics line is shown (e.g. “No Baiting! No Baiting! No Baiting!”), with no heading attached',
+        'Fixed one round showing two questions with identical stems when two different species share the same Chinese name',
+      ],
+    },
+  },
+  {
+    date: '2026-11-02',
+    zh: {
+      title: '海报可编辑',
+      items: [
+        '分享海报支持编辑：可从候选背景中挑选并拖动调整构图',
+        '海报自动标注背景图片的鸟名与数据来源',
+      ],
+    },
+    en: {
+      title: 'Editable posters',
+      items: [
+        'Share posters are now editable: pick a background from the candidates and drag to reframe',
+        'The poster credits the background photo with the bird name and source automatically',
+      ],
+    },
+  },
+  {
+    date: '2026-10-31',
+    zh: {
+      title: '观鸟页大改版：名录并入 · 数据面板 · 省级选区',
+      items: [
+        '观鸟页改为三个标签：该地鸟种 / 观鸟点 / 名录——名录不再单独跳页',
+        '每个地区卡提供三种动作：浏览 / 预习模式 / 鸟点',
+        '预习浮窗：换地区、看大图、展开更多素材与鸣声',
+        '数据面板：该地鸟种构成与「我已认识」占比一目了然',
+        '地区选区细化到省级行政区',
+      ],
+    },
+    en: {
+      title: 'Birding page overhaul: catalog built in, data panel, province-level areas',
+      items: [
+        'The birding page now has three tabs — local species / hotspots / catalog — no more separate catalog hop',
+        'Each region card offers three actions: browse / preview / hotspots',
+        'Preview panel: switch region, view photos full-size, unfold more media and sounds',
+        'Data panel: the area’s species makeup and how much you already know, at a glance',
+        'Region selection now goes down to province level',
+      ],
+    },
+  },
+  {
+    date: '2026-10-29',
+    zh: {
+      title: '预习模式',
+      items: [
+        '新增预习模式：按地区把鸟先过一遍——照片、鸣声、大图，再去做题',
+        '预习素材标明作者与许可证',
+      ],
+    },
+    en: {
+      title: 'Preview mode',
+      items: [
+        'New preview mode: go through a region’s birds — photos, sounds, full-size views — before you quiz',
+        'Preview media credits its author and licence',
+      ],
+    },
+  },
+  {
+    date: '2026-10-28',
+    zh: {
+      title: '大众评审页',
+      items: [
+        '新增大众评审页：管理方发布的纠错在此公开陈列，可查看证据并投票',
+        '你提交的纠错被发布后会进入评审页，投票帮助确认处理方式',
+      ],
+    },
+    en: {
+      title: 'Community review page',
+      items: [
+        'New community review page: reports published by the maintainers are listed publicly with their evidence, open for voting',
+        'Once your report is published it appears there; votes help confirm how it gets handled',
+      ],
+    },
+  },
+  {
     date: '2026-10-27',
     zh: {
       title: '报错可留昵称',
@@ -89,6 +201,25 @@ export const CHANGELOG: ChangelogEntry[] = [
         'Removed the nested scrollbars in the region picker — the page scrolls instead; press “Done” to collapse right after picking a continent or country',
         'Taiwan, Hong Kong and Macao now appear as provinces under China instead of standing alongside countries',
         'L6 mode descriptions now read “see the name, choose the photo / sound”',
+      ],
+    },
+  },
+  {
+    date: '2026-10-24',
+    zh: {
+      title: '新档位：L6 半鸟人 · L7 鸟娲·造鸟者',
+      items: [
+        'L6 半鸟人（看名选图 / 看名选音）：题干是鸟名，从 6 张图（限时 10 秒）或 4 段鸣声（限时 25 秒）里选出正确项；干扰项以同科鸟类为主',
+        '中文名卷 / 学名卷可切换，统计按卷别分开记账',
+        'L7 鸟娲·造鸟者：直接输入鸟名作答',
+      ],
+    },
+    en: {
+      title: 'New tiers: L6 Half-Birder and L7 Bird Maker',
+      items: [
+        'L6 “Half-Birder” (name → photo / sound): the stem is a bird name — pick the match from 6 photos (10s) or 4 sounds (25s); distractors are mostly same-family birds',
+        'Switch between Chinese-name and scientific-name papers; stats are kept per paper',
+        'L7 “Bird Maker”: type the bird’s name as your answer',
       ],
     },
   },
