@@ -86,6 +86,20 @@ export function loadRegionCommonnessIndex(): Promise<RegionCommonnessIndex | nul
   return indexCache
 }
 
+/**
+ * 索引里的版本号（`generatedAt`）——用作分片 URL 的**路径版本段**。
+ *
+ * 索引与分片是同一次构建的产物，`generatedAt` 必然一致（`check:tiers` 强制校验）。
+ * 取不到时返回空串 → 调用方退回不带版本的旧 URL（仍可用，只是吃不到路径分桶的好处）。
+ */
+let versionCache: Promise<string> | null = null
+export function indexVersion(): Promise<string> {
+  versionCache ??= loadRegionCommonnessIndex()
+    .then((d) => (typeof d?.generatedAt === 'string' ? d.generatedAt : ''))
+    .catch(() => '')
+  return versionCache
+}
+
 /** 加载某国分片（level: province | country）；失败 → null */
 export function loadRegionCommonnessShard(
   cc: string,
@@ -106,9 +120,15 @@ export function loadRegionCommonnessShard(
           }
         }
         // 分片只在 R2（不进 git）→ 走 Worker 转发 `/api/region-tiers/<file>`
-        // 2026-11-05：带 `no-cache` 让浏览器每次都向边缘校验。分片版本漂移曾导致
-        // 「R2 已更新、用户端仍按旧 5 档出题」持续一天以上（见 docs/105）。
-        return fetch(`${API}/${file}`, { cache: 'no-cache' })
+        //
+        // 2026-11-05（docs/105/106）：**版本必须编进路径**，不能放查询串。
+        // 实测 Zone 层有一条 4h Cache Rule 会（a）把响应头改写成 max-age=14400、
+        // （b）把查询串从缓存键里剔除 → `?v=xxx` 与不带参数命中同一份旧缓存。
+        // 路径一定参与缓存键，所以改成 `/api/region-tiers/v/<ver>/<file>`。
+        // 索引里有 `generatedAt`，与分片同一次构建产出，可作版本段；取不到就不带（旧 URL 仍可用）。
+        const verPath = await indexVersion().catch(() => '')
+        const url = verPath ? `${API}/v/${encodeURIComponent(verPath)}/${file}` : `${API}/${file}`
+        return fetch(url, { cache: 'no-cache' })
           .then(async (r2) => {
             if (!r2.ok) return null
             try {
@@ -201,6 +221,7 @@ export function tierLabelKey(tier: number): string {
 /** 测试用：清空缓存 */
 export function _resetRegionCommonnessCache(): void {
   indexCache = null
+  versionCache = null
   shardCache.clear()
   globalCache = null
 }

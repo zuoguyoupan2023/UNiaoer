@@ -701,40 +701,73 @@ async function sampleByIds(
  *   · 识别页「当地常见度」先验（渐进增强）；· 客户端那层地区档位二次过滤。
  * 出题主线的地区抽样仍走 `/api/questions`（同样读 R2），不依赖本路由。
  *
- * 安全：只允许 `^[A-Z]{2}(\.country)?\.json$`，不做任意 key 代理；
- * 缓存（2026-11-05 修正）：原实现用**固定 cacheKey + 1 天 TTL**，导致重推分片后
- * 边缘仍返回旧版（实测 CN 卡在 2026-10-24 的 5 档旧分片，而 R2 已是 10 档新版 →
- * 线上出题口径与「×NN%」标注继续错 24h 以上）。现改为：
- *   ① cacheKey 带上分片自身的 `generatedAt` —— 内容一换，key 就变，旧缓存自然失效；
- *   ② 浏览器侧 TTL 降到 300s —— 兜底，避免 CDN 之外的一层（SW/代理）长缓存。
- * 这样「重推 R2 即生效」，不需要等缓存过期、也不需要 purge。
+ * 安全：只允许 `^[A-Z]{2}(\.country)?\.json$`，不做任意 key 代理。
+ *
+ * ## 缓存（2026-11-05 三次迭代后的最终方案）
+ *
+ * 事故链（见 docs/105、docs/106）：
+ *   ① 最初 `cacheKey` 固定 + TTL 86400 → 重推分片后边缘仍返回旧版，**CN 卡在 5 档旧分片**；
+ *   ② 改成「cacheKey 带 `?v=generatedAt` + max-age=300」→ **仍然无效**：实测
+ *      `?v=test123` 与不带参数命中同一份缓存，且响应头被改写成 `max-age=14400`。
+ *      根因是 **Zone 层有一条 Dashboard Cache Rule 强制 4h**，它会压过 Worker 声明的
+ *      `max-age`，并且**把查询串从缓存键里剔除**（同一问题在 docs/066 §7.2 已记录过一次）。
+ *   ③ 最终方案 —— 沿用 docs/066 §7.3 验证过的两道防线：
+ *      · **路径分桶**：版本号编进**路径**（`/api/region-tiers/v/<ver>/<file>`），
+ *        路径必然参与缓存键，无论 Zone 规则怎么配，旧桶都喂不到新请求；
+ *      · **`no-store`**：让边缘与本机都不留快照，彻底不给 Zone 规则改写的机会。
+ *      同时保留 Cache API 显式缓存（per-colo），命中时改回 `no-store` 再返回——
+ *      否则 `no-store` 的响应存不进 Cache API（docs/066 §7.3 的同一注意点）。
+ *
+ * 效果：重推分片后**立即生效**，不依赖缓存过期、不需要 purge、不受 Dashboard 规则影响。
  */
-async function handleRegionTiers(env: Env, ctx: ExecutionContext, file: string): Promise<Response> {
+async function handleRegionTiers(
+  env: Env,
+  ctx: ExecutionContext,
+  file: string,
+  /** 路径里的版本段（`/api/region-tiers/v/<ver>/<file>`）；为空=未带版本 */
+  pathVersion = '',
+): Promise<Response> {
   const obj = await env.MEDIA.get(`data/province-commonness/${file}`)
   if (!obj) return json({ error: 'not_found', file }, { status: 404 })
   const body = await obj.text()
 
-  // 从分片内容取版本号（所有分片都带 generatedAt）；解析失败则退化为 mtime，再不行用 '0'
-  let version = '0'
-  try {
-    version = String(JSON.parse(body)?.generatedAt ?? '') || '0'
-  } catch {
-    version = String(obj.uploaded?.getTime?.() ?? '0')
+  // 分片自带 `generatedAt`；解析失败退化为对象 mtime，再不行用 '0'
+  let version = pathVersion
+  if (!version) {
+    try {
+      version = String(JSON.parse(body)?.generatedAt ?? '') || '0'
+    } catch {
+      version = String(obj.uploaded?.getTime?.() ?? '0')
+    }
   }
 
   const cache = caches.default
-  const cacheKey = new Request(`https://uniaoer.com/api/region-tiers/${file}?v=${encodeURIComponent(version)}`)
+  const cacheKey = new Request(`https://uniaoer.com/api/region-tiers/v/${encodeURIComponent(version)}/${file}`)
   const hit = await cache.match(cacheKey)
-  if (hit) return hit
+  if (hit) {
+    // 缓存副本是 `public, max-age=300`（为了能存进 Cache API）→ 对外改回 no-store，
+    // 避免 Zone 规则按 4h 缓存它（2026-11-05 实测的最大坑）
+    const res = new Response(hit.body, hit)
+    res.headers.set('cache-control', 'no-store')
+    return res
+  }
 
   const res = new Response(body, {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      ...CORS,
+    },
+  })
+  // 存入 Cache API 的副本必须可缓存（no-store 的响应存不进去）→ 单独构造一份
+  const forCache = new Response(body, {
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'public, max-age=300',
       ...CORS,
     },
   })
-  ctx.waitUntil(cache.put(cacheKey, res.clone()))
+  ctx.waitUntil(cache.put(cacheKey, forCache))
   return res
 }
 
@@ -2304,8 +2337,13 @@ export default {
         // 039 P1：粗定位（CF request.cf，四舍五入 0.05°；不落库/不进日志）
         if (path === '/api/geo') return handleGeo(request)
         // P1-4B（2026-10-23）：省级档位分片（只推 R2、不进 git）→ 浏览器经本路由读取（边缘缓存 1 天）
-        const tiersMatch = path.match(/^\/api\/region-tiers\/([A-Z]{2}(?:\.country)?\.json)$/)
-        if (tiersMatch) return await handleRegionTiers(env, ctx, tiersMatch[1]!)
+        // 2026-11-05：支持可选的路径版本段 `/api/region-tiers/v/<ver>/<file>`。
+        // 前端优先带版本路径（路径必进缓存键，绕开 Zone 层 4h Cache Rule，见 docs/106）；
+        // 不带版本的旧 URL 仍可用（Worker 自己从分片内容取版本）。
+        const tiersMatch = path.match(
+          /^\/api\/region-tiers\/(?:v\/([A-Za-z0-9._:-]{1,64})\/)?([A-Z]{2}(?:\.country)?\.json)$/,
+        )
+        if (tiersMatch) return await handleRegionTiers(env, ctx, tiersMatch[2]!, tiersMatch[1] ?? '')
         if (path === '/api/questions') return await handleQuestionsCached(request, env, url, ctx)
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
