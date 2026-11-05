@@ -171,7 +171,7 @@
 | 全球增量采集（023 P2：骨架取种 → 台账 `data/manifest-global.json`，断点续跑，不碰主 manifest） | `npm run bank:global -- --media stage --limit N` |
 | **全球 5+5 采集（推荐：一键托管，含批量推送与内存/磁盘看门狗）** | `nohup npm run bank55 &`（并发用 `BANK55_CONCURRENCY=N`，默认 8；观测 `/tmp/bank55-supervisor.log` + `/tmp/bank55.log`）。⚠️ **别再手动起 `build-bank`** —— 监管器会「收养」已跑进程，两套并行会抢同一台账 |
 | 把 `public/media` 传到 R2（wrangler，已内置 `--remote`） | `npm run r2:push` |
-| 把 `manifest.json` 传到 R2（`/api/manifest` 优先读它；重建 manifest 后需重跑） | `npm run r2:manifest` |
+| 把 `manifest-meta.json` 传到 R2（`/api/manifest-meta` 读它；`npm run layers` 重算后需重推） | `npm run r2:manifest` |
 | 题库一致性校验（CI 已接入；`--no-net` 跳过抽查） | `npm run check:bank` |
 | 媒体完整性全量检查（`--fix` 从本地重传缺失文件） | `npm run check:media` |
 | 抓 ISO 3166-2 省级基准清单（021 M2，缓存到 data-cache；本机 jsDelivr 主站不通，脚本自动回退 fastly/gcore 入口） | `npm run region:subdiv` |
@@ -218,13 +218,13 @@
 
 ## 架构速览
 
-- **前端**：Vue 3 + Vite + TS + Pinia；纯静态 SPA，生产优先读 Worker `/api/manifest`（失败回退 `public/data/manifest.json`）。
+- **前端**：Vue 3 + Vite + TS + Pinia；纯静态 SPA，名单源 = 权威名录层 `manifest-meta.json`（先读 Pages 静态 `/data/manifest-meta.json`，失败回退 Worker `/api/manifest-meta` 读 R2）；媒体走 `assets` 分片。`public/data/manifest.json` 与 `/api/manifest` 已退役（P5，86db878）。
   - **SW 缓存失效标记 = 构建期生成的 `data/build.json`（每次部署都变）**。别再用 `manifest-meta.generatedAt`
     当标记：只重建前端/对表产物时它**不变** → 缓存永不清，用户一直看到旧数据
     （2026-10-17 事故：线上产物已修好，浏览器里还是旧的，识别出的白头鹎被误判「暂无素材」）。
   - `/data/model-labels-*`、`data/assets/*` 都是 cache-first，改产物后**必须**确认部署 + 用户端失效。
 - **媒体**：存在 Cloudflare **R2**（`media/<物种id>/…`），经公开域名（r2.dev 或自定义域名）访问。
-- **元数据**：`manifest.json` 仍是主索引；**D1 已启用**（`uniaoer`：species/media/questions，1299 物种 / 12938 媒体）。
+- **元数据**：`manifest-meta.json` 是唯一名单源（11,026 种）；**D1 已启用**（`uniaoer`：species（首图首音内联，11,026 行 = 核心 1,299 + 全球池）/questions；`media` 表 2026-10-08 并入 species 后 DROP）。
 - **后端**：独立 Worker `uniaoer-api`（`worker/`），挂 `uniaoer.com/api/*`：
   `/api/region-tiers/<CC>[.country].json`（省级出题档位分片，读 R2 + 边缘缓存 1 天；分片不进 git）、`/api/health`、`/api/manifest`、`/api/questions`、`/api/media/:id`、`/api/reports`（提交/公开列表/投票）、`/api/reports/:id/vote`、`/api/reports/admin`（受保护）；`XC_API_KEY` 存 Worker secret，`ADMIN_KEY` 存 Worker secret（前端不接触）。
 - **报错/评审（B6）**：前端报错先存本地（`uniaoer-reports`）再上传；`reports`/`report_votes` 在 D1；大众评审页 `/reports`（**仅 `published` 公开**）；管理页 `/admin`（密钥解锁，需 Worker `ADMIN_KEY`）——提交=open 不公开，管理方发布后才公开可投票。
