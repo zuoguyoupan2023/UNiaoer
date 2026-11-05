@@ -318,10 +318,11 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
   border-radius: var(--radius-xs);
   cursor: pointer;
 }
-.letter:hover {
+@media (hover: hover) {
+.letter:hover{
   background: #eaf4ef;
 }
-.empty {
+}.empty {
   margin: 16px 0;
 }
 .err {
@@ -360,10 +361,11 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
   border-radius: var(--radius-xs);
   overflow-wrap: anywhere;
 }
-.item:hover {
+@media (hover: hover) {
+.item:hover{
   background: #f6f8f7;
 }
-/* 行基类 */
+}/* 行基类 */
 .ln {
   min-width: 0;
   line-height: 1.25;
@@ -404,10 +406,11 @@ const lightTotal = computed(() => all.value.filter((e) => e.light.length).length
   color: var(--text-light);
   text-decoration: none;
 }
-.sci:hover {
+@media (hover: hover) {
+.sci:hover{
   text-decoration: underline;
 }
-.plain {
+}.plain {
   color: var(--text-light);
 }
 .en {

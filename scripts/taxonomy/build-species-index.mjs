@@ -2,8 +2,8 @@
  * 023 P0:构建「全球物种骨架」public/data/species-index.json(AviList v2025b,~11k 种,不进 manifest),
  * 并给 manifest.species 增补稳定键 —— 只增不改:
  *   - species[].taxonKey = AvibaseID(AviList 官方稳定概念 ID,独立于命名)
- *   - species[].playable = true(现有 1299 全部可玩;未来媒体分层再细化)
- *   - id / 媒体路径 / 其余字段一律不动;骨架文件与 1299 可玩链路解耦。
+ *   - species[].playable = true(现有 1299 全部有素材;未来媒体分层再细化)
+ *   - id / 媒体路径 / 其余字段一律不动;骨架文件与 1299 有素材链路解耦。
  * 交叉映射:eBird code 直接取 AviList 的 Species_code_Cornell_Lab 列;
  *   backboneTaxonId 现有 1299 沿用 data/taxa.json 口径(manifest.taxonId),其余留待 P1 GBIF 匹配。
  *

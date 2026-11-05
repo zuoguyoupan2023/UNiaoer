@@ -98,10 +98,11 @@
   align-items: center;
   gap: 7px;
 }
-.brand:hover {
+@media (hover: hover) {
+.brand:hover{
   text-decoration: none;
 }
-.brand-icon {
+}.brand-icon {
   color: var(--primary);
 }
 .brand-name {
@@ -146,12 +147,13 @@
      （窄屏靠收紧尺寸 + 横向滚动兜底，见下方 @media） */
   white-space: nowrap;
 }
-.app-nav a:hover {
+@media (hover: hover) {
+.app-nav a:hover{
   background: #eaf4ef;
   color: var(--primary);
   text-decoration: none;
 }
-.app-nav a.router-link-active {
+}.app-nav a.router-link-active {
   background: var(--grad);
   color: #fff;
   box-shadow: 0 10px 20px -10px rgba(45, 106, 79, 0.85);
@@ -169,11 +171,12 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.ambience-btn:hover {
+@media (hover: hover) {
+.ambience-btn:hover{
   background: #eaf4ef;
   color: var(--primary);
 }
-.ambience-btn.on {
+}.ambience-btn.on {
   color: var(--primary);
   /* R30：播放中 15% 放大 → 正常 → 15% 缩小 循环，更醒目 */
   animation: ambience-pulse 1.8s ease-in-out infinite;
@@ -296,10 +299,11 @@
 .app-footer .footer-links a {
   color: var(--text-light);
 }
-.app-footer .footer-links a:hover {
+@media (hover: hover) {
+.app-footer .footer-links a:hover{
   color: var(--primary);
 }
-.app-footer .footer-links .dot {
+}.app-footer .footer-links .dot {
   color: var(--border);
 }
 .app-footer .noncommercial {
@@ -331,11 +335,12 @@
   text-decoration: none;
   cursor: pointer;
 }
-.app-footer .social:hover {
+@media (hover: hover) {
+.app-footer .social:hover{
   color: var(--primary);
   border-color: var(--primary);
 }
-/* 数据来源紧跟在 GitHub 链接右侧（同一行） */
+}/* 数据来源紧跟在 GitHub 链接右侧（同一行） */
 .app-footer .links .src {
   font-size: 0.72rem;
   color: var(--text-light);
@@ -408,20 +413,22 @@
   color: #fff;
   box-shadow: 0 12px 24px -14px rgba(45, 106, 79, 0.95);
 }
-.btn-primary:hover {
+@media (hover: hover) {
+.btn-primary:hover{
   transform: translateY(-2px);
   box-shadow: 0 18px 30px -16px rgba(45, 106, 79, 0.95);
 }
-.btn-secondary {
+}.btn-secondary {
   background: #eaf4ef;
   color: var(--primary);
   border: 1px solid var(--border);
 }
-.btn-secondary:hover {
+@media (hover: hover) {
+.btn-secondary:hover{
   background: #dceee4;
   transform: translateY(-2px);
 }
-
+}
 .muted {
   color: var(--text-light);
   font-size: 0.85rem;

@@ -2,7 +2,7 @@
 /**
  * A3 / S6：构建后一致性校验 —— **权威层 meta + 全量 assets 分片**。
  *   1) 结构：meta.total/stats 与实际一致；id 唯一；基础字段齐备（中文名可缺）。
- *   2) 可玩：meta 的 playableImage/playableAudio 与 assets 分片实际素材一致。
+ *   2) 可用性：meta 的 playableImage/playableAudio 与 assets 分片实际素材一致。
  *   3) 署名与归属：每条素材必须带完整署名（author/license/source/sourceUrl）；
  *      媒体 URL 必须指向 R2 公开域名（防 Pages 构建跑 bank 覆盖成 remote 版）。
  *   4) 抽查：随机抽 N 个 R2 媒体 HEAD 一次，期望 200（--no-net 跳过）。

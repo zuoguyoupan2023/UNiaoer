@@ -569,12 +569,13 @@ watch(
   transition: all 0.18s ease;
   z-index: 2;
 }
-.quit-corner:hover {
+@media (hover: hover) {
+.quit-corner:hover{
   color: var(--wrong);
   border-color: var(--wrong);
   background: #fff;
 }
-
+}
 /* ---- 盘面（2026-10-27 用户定）：
      标准盘 = 桌面 6 列×4 行 / 手机（≤700px）4 列×6 行；
      缩小盘（实验）= 3 列×4 行。目标：整个盘面一屏放得下，卡片宁小勿大。 ---- */
@@ -659,10 +660,11 @@ watch(
   color: rgba(255, 255, 255, 0.5);
   border: 1px solid #1d4a36;
 }
-.mcard:not(.up):not(.matched):hover .face.back {
+@media (hover: hover) {
+.mcard:not(.up):not(.matched):hover .face.back{
   filter: brightness(1.15);
 }
-.back-ic {
+}.back-ic {
   opacity: 0.55;
 }
 /* 正面（翻开） */
@@ -781,7 +783,8 @@ watch(
   text-decoration-color: var(--border);
   text-underline-offset: 2px;
 }
-.option-attr a:hover {
+@media (hover: hover) {
+.option-attr a:hover{
   color: var(--primary);
 }
-</style>
+}</style>

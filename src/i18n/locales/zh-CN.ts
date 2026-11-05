@@ -50,7 +50,7 @@ export const messages = {
     whatTitle: '这是什么',
     whatBody:
       '面向观鸟者的辨识训练应用：看图选名、听音选名、给名字找素材、看素材写名字四个方向都能练。题库覆盖 11,026 种鸟（图片 10,888 / 音频 10,356），每份素材都标注作者、许可与来源。',
-    playTitle: '怎么玩',
+    playTitle: '答题方式',
     playL1: 'L1–L5 选择题：选项数与限时逐档收紧，L5 还会叠加随机鸟鸣干扰。',
     playL67: 'L6 给鸟名选素材、L7 看图/听音写鸟名，可选中文名或学名作答。',
     playRegion: '地区可从全球细化到洲、国家、省，出题会优先取当地的常见鸟。',
@@ -232,10 +232,10 @@ export const messages = {
     regimePool: '{regime}：候选 {n} 种',
     /**
      * 097：主数字 = 本档这一赛制能出多少题。
-     * 2026-11-05（docs/105）：`{pct}` 改为**实测**（本档实际可出题数 ÷ 本地可玩基数），
+     * 2026-11-05（docs/105）：`{pct}` 改为**实测**（本档实际可出题数 ÷ 该地鸟种数），
      * 不再按配置硬算，所以会出现 71%/81%/90% 这类非整数——如实显示。
      */
-    regimePoolTier: '可出题 {n} 种（本地可玩种×{pct}%）',
+    regimePoolTier: '可出题 {n} 种（该地鸟种×{pct}%）',
     /** 分母缺失（档位表加载失败）时的兜底：只说种数，不编百分比 */
     regimePoolTierNoPct: '可出题 {n} 种',
     // 072-a 观测：诊断行（仅 ?diag=1 显示，普通用户看不到）
@@ -473,7 +473,7 @@ export const messages = {
     loading: '正在加载分享内容…',
     notFoundTitle: '这个分享链接不可用',
     notFoundBody: '链接可能已被分享者撤回，或地址有误。',
-    goHome: '去玩一局',
+    goHome: '去答题',
     accuracy: '正确率 {acc}%',
     picked: '认成了「{name}」',
     footnote: '本页内容由分享者主动公开，仅包含该轮题目与媒体链接（媒体版权归原作者，署名见每题下方）。',
@@ -1043,7 +1043,7 @@ export const messages = {
     boardCap: '盘面大小',
     boardStd: '12 对 · 标准',
     boardStdHint: '桌面 6×4 / 手机 4×6 · 正式阈值',
-    boardMini: '6 对 · 缩小试玩',
+    boardMini: '6 对 · 缩小盘',
     boardMiniHint: '3×4 · 独立阈值（实验档，结论后可能移除）',
     rating: {
       genius: '天才鸟！',

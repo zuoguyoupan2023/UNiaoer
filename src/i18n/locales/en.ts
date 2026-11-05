@@ -56,7 +56,7 @@ const en: typeof zhMessages = {
     whatTitle: 'What this is',
     whatBody:
       'An identification trainer for birders: practise naming birds from photos, naming them from recordings, finding media for a name, or typing a name from media. 11,026 species are covered (photos 10,888 / audio 10,356), each item attributed with author, licence and source.',
-    playTitle: 'How it plays',
+    playTitle: 'How to answer',
     playL1: 'L1–L5 are multiple choice: fewer options and tighter time limits as you go up, and L5 adds random interference calls.',
     playL67: 'L6 asks you to pick the media for a name; L7 asks you to type the name from media — in a common name or a scientific name.',
     playRegion: 'Scope narrows from global to continent, country and province, preferring locally common birds.',
@@ -137,7 +137,7 @@ const en: typeof zhMessages = {
     imageRound: 'Photo round',
     audioRound: 'Audio round',
   },
-  // L6 Half-Birder (docs/081 §7): name → photo/sound; play-area copy (L6 is tier 6, no intro of its own)
+  // L6 Half-Birder (docs/081 §7): name → photo/sound; quiz-area copy (L6 is tier 6, no intro of its own)
   quiz6: {
     modeCap: 'Name system',
     // English UI only states English-side wording (no cross-language parentheticals).
@@ -170,8 +170,8 @@ const en: typeof zhMessages = {
     yourAnswer: 'Your answer: {input} ',
   },
   regime: {
-    standard: { label: 'Standard', hint: 'Only species you have not played yet (no repeats)' },
-    review: { label: 'Review', hint: 'Only species you have played (right or wrong)' },
+    standard: { label: 'Standard', hint: 'Only species you have not answered yet (no repeats)' },
+    review: { label: 'Review', hint: 'Only species you have answered (right or wrong)' },
     reinforce: { label: 'Reinforce', hint: 'Only species you answered correctly' },
     revival: { label: 'Revival', hint: 'Only species you missed (wrong book)' },
     random: { label: 'Random', hint: 'Whole bank (repeats allowed)' },
@@ -233,11 +233,11 @@ const en: typeof zhMessages = {
     networkPoorUnknown: 'Images failed to load repeatedly. Try restarting the round on a better connection.',
     regimePool: '{regime}: {n} candidates',
     /** 097: headline = how many this tier can serve.
-     *  2026-11-05 (docs/105): {pct} is now **measured** (this tier's actual pool ÷ local playable base),
+     *  2026-11-05 (docs/105): {pct} is now **measured** (this tier's actual pool ÷ local species count),
      *  not derived from config — hence non-round values like 71% are expected and shown as-is. */
-    regimePoolTier: '{n} playable ({pct}% of playable species)',
+    regimePoolTier: '{n} species ({pct}% of local species)',
     /** Fallback when the denominator is unavailable (tier shard failed to load): no percentage. */
-    regimePoolTierNoPct: '{n} playable',
+    regimePoolTierNoPct: '{n} species',
     // 072-a observation: diagnostic line (only with ?diag=1)
     diagHead: 'Diag · {tier}{region} · {regime}',
     diagBody: 'pool {pool} · cand {cand}→{after} · no-media -{drop} · {path} · built {built}/{want}',
@@ -475,7 +475,7 @@ const en: typeof zhMessages = {
     loading: 'Loading shared round…',
     notFoundTitle: 'This share link is unavailable',
     notFoundBody: 'It may have been revoked by its owner, or the address is wrong.',
-    goHome: 'Play a round',
+    goHome: 'Start a quiz',
     accuracy: '{acc}% correct',
     picked: 'picked “{name}”',
     footnote: 'This page was published by the sharer. It contains only this round’s questions and media links (media copyright belongs to the original authors; attribution is shown under each item).',
@@ -653,7 +653,7 @@ const en: typeof zhMessages = {
     dailyPosters: '{n} posters',
     // 073 P0: accuracy by region (admin observation window)
     regionStatsTitle: 'Accuracy by region (observation, not public)',
-    regionStatsNote: 'Basis: the region the player picked (not IP). Estimated from accuracy buckets, with round counts; treat regions under 10 rounds as indicative only.',
+    regionStatsNote: 'Basis: the region the user selected (not IP). Estimated from accuracy buckets, with round counts; treat regions under 10 rounds as indicative only.',
     regionStatsLoad: 'Load (last 30 days)',
     regionStatsMeta: 'Data since {since} · {total} rounds',
     regionStatsMissing: '{n} rounds had no region attribute (before it shipped)',
@@ -677,7 +677,7 @@ const en: typeof zhMessages = {
     provinceStatsAcc: '{mean}% avg ({n} rounds)',
     provinceMatrixTitle: 'Province × question region × tier ({n} rows, unfiltered)',
     provinceMatrixNote:
-      'Left = player’s province; right = question region (self-selected). Two different bases — never add or merge them. Admin shows all rows; under 10 rounds is marked “small sample”.',
+      'Left = user’s province; right = question region (self-selected). Two different bases — never add or merge them. Admin shows all rows; under 10 rounds is marked “small sample”.',
     provinceStatsSmall: 'small sample',
     // 077: species-level error rates (admin observation window)
     speciesStatsTitle: 'Species error rate (observation, not public)',
@@ -741,7 +741,7 @@ const en: typeof zhMessages = {
       extinct: 'Extinct (or possibly extinct)',
       order: 'Order: {name}',
       family: 'Family: {name}',
-      noMedia: 'Media for this species is not included yet, so it is not playable; profile data comes from the global taxonomy skeleton (AviList v2025b).',
+      noMedia: 'Media for this species is not included yet, so it cannot be used in quizzes; profile data comes from the global taxonomy skeleton (AviList v2025b).',
       countries: 'Recorded distribution ({n} countries/regions, GBIF observation-based)',
       links: 'External references',
       source: 'Taxonomy & keys: AviList v2025b (CC BY 4.0) · GBIF backbone · eBird; external links for reference only.',
@@ -1029,7 +1029,7 @@ const en: typeof zhMessages = {
     poster: 'Share poster',
     title: 'Round history',
     hint: '{n} rounds in total · tap one to review every question',
-    empty: 'No rounds yet — go play one!',
+    empty: 'No rounds yet — start a quiz!',
     showMore: 'Show more',
     wrongPracticeTag: 'wrong-book practice',
     modeImage: 'Photo',
@@ -1043,7 +1043,7 @@ const en: typeof zhMessages = {
     currentHint:
       'Live: a wrong answer adds, a correct one (mastered) removes. History is kept forever.',
     historyHint: 'Every miss, permanently recorded (append-only).',
-    empty: 'No wrong entries — go play!',
+    empty: 'No wrong entries — start a quiz!',
     clearCurrent: 'Clear current book',
     clearConfirm: 'Clear the current wrong book? (History is kept)',
     emptyHistory: 'No wrong history yet.',
@@ -1181,7 +1181,7 @@ const en: typeof zhMessages = {
     adaptiveSwitch:
       'Auto-adjust the level by recent performance (the intro shows the recommended level; you can still change it)',
     adaptiveHint:
-      'When on: the intro recommends a level from your last ~5 rounds, and "Play again" also shifts up/down automatically.',
+      'When on: the intro recommends a level from your last ~5 rounds, and “Answer again” also shifts up/down automatically.',
     ambienceTitle: 'Ambient birdsong',
     ambienceSwitch:
       'Play background birdsong when the app starts; when off, the top-bar speaker stays silent too',
@@ -1203,7 +1203,7 @@ const en: typeof zhMessages = {
       'Date; per-province (only if you enable province stats, e.g. Guangdong) answer counts; question region and difficulty; correct/total per round; for each question the species, right/wrong, and (when wrong) which species it was mistaken for; earned titles/badges; page category. Never linked to “who did which round”.',
     metricsWhyTitle: 'Why',
     metricsWhy:
-      'To measure accuracy of regional bird questions, accuracy per level, and how many people reach each badge/title, then show players’ identification level on the public stats page (aggregates only).',
+      'To measure accuracy of regional bird questions, accuracy per level, and how many people reach each badge/title, then show users’ identification level on the public stats page (aggregates only).',
     metricsNotTitle: 'What is not collected',
     metricsNot:
       'No IP/UA stored, no cookies, no device IDs; never city/county/town/village level, never who you are, what device you use, or how many rounds in total (scores and archives stay on this device); no cross-day linking.',
@@ -1424,12 +1424,12 @@ const en: typeof zhMessages = {
     bankParseFailed:
       'Failed to parse the bank JSON — the file may be corrupted. Re-run `npm run bank`.',
     wrongPoolEmpty:
-      'No usable media of this kind in the wrong book (missing photos/recordings?) — try another mode or play a normal round first',
+      'No usable media of this kind in the wrong book (missing photos/recordings?) — try another mode or start a standard quiz first',
     noImageMedia: 'No usable photo media in the question bank',
     noAudioMedia: 'No usable audio media in the question bank',
     standardPoolEmpty:
-      'Every species in this mode has been played: try Review / Reinforce / Revival, or create a new archive in Profile',
-    poolEmpty: 'Nothing to practice in this regime yet — play a few Standard rounds first',
+      'Every species in this mode has been answered: try Review / Reinforce / Revival, or create a new archive in Profile',
+    poolEmpty: 'Nothing to practice in this regime yet — answer a few Standard rounds first',
   },
 }
 

@@ -433,11 +433,12 @@ async function saveNickname() {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.archive-chip:hover {
+@media (hover: hover) {
+.archive-chip:hover{
   border-color: var(--primary-light);
   color: var(--primary);
 }
-.archive-chip.on {
+}.archive-chip.on {
   background: var(--grad);
   color: #fff;
   border-color: transparent;
@@ -458,8 +459,9 @@ async function saveNickname() {
   border-color: var(--wrong);
   background: #fff;
 }
-.btn-danger:hover {
+@media (hover: hover) {
+.btn-danger:hover{
   background: #fdecee;
   color: var(--wrong);
 }
-</style>
+}</style>

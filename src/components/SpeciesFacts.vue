@@ -239,10 +239,11 @@ const countryList = computed(() => countryNames.value.join(countrySep.value))
   cursor: pointer;
   text-align: left;
 }
-.g6-toggle:hover span {
+@media (hover: hover) {
+.g6-toggle:hover span{
   text-decoration: underline;
 }
-.g6-toggle .chev {
+}.g6-toggle .chev {
   flex-shrink: 0;
   color: var(--text-light);
   transition: transform 0.15s ease;

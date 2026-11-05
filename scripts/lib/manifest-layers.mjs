@@ -221,7 +221,7 @@ export function toAssetBuckets(manifest) {
 
 /**
  * 全球台账(1+1 素材的 manifest-global.json) → 全球池(core 同构,懒加载)。
- * 只收有素材或声明可玩的物种;`layer:'global'` 便于前端区分。
+ * 只收有素材或声明有素材的物种;`layer:'global'` 便于前端区分。
  */
 export function toGlobalPool(manifest) {
   const species = []
@@ -247,7 +247,7 @@ export function toGlobalPool(manifest) {
 /**
  * 050 P1：`toMeta()` —— **唯一权威名录层**。
  *
- * 输入：core 完整 manifest（1,299 种，字段最全）+ 全球台账（9,839 → 可玩 9,545 种），
+ * 输入：core 完整 manifest（1,299 种，字段最全）+ 全球台账（9,839 → 有素材 9,545 种），
  * 输出：10,844 种 × 全部名录字段，**不含任何媒体**（媒体仍在 assets 分片 / 全球池）。
  *
  * 为什么"合并"不会冲突：core 1299 与全球池 9545 **实测零重叠**
@@ -263,7 +263,7 @@ export function toGlobalPool(manifest) {
  */
 export function toMeta(coreManifest, globalLedger, orderOf, usageKeys, classTable) {
   const byId = new Map()
-  // 口径：权威层 = **可玩全集**（至少 1 图或 1 音），与 catalog/global 池同口径（10,844）。
+  // 口径：权威层 = **有素材全集**（至少 1 图或 1 音），与 catalog/global 池同口径（10,844）。
   // 台账里"完全无媒体"的种（实测 294 种）不进权威层——它们没有详情可展示，
   // 仍由 species-index 骨架的轻量详情兜底（属"没有数据"，非缺陷）。
   let skippedNoMedia = 0

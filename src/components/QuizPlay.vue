@@ -154,7 +154,7 @@ const modeHintTier = computed<'L6' | 'L7' | 'L8'>(() =>
 /**
  * 092 + 2026-10-27 用户加：L8 盘面二选一（选中「记忆挑战鸟」档后出现）。
  * standard = 12 对（桌面 6×4 / 手机 4×6，正式阈值）；compact = 6 对 3×4 **实验性缩小盘**
- * （试玩"是否应该降级"，结论后可能移除）。选择持久化在 settings，开轮时 quiz.start 读取。
+ * （实测"是否应该降级"，结论后可能移除）。选择持久化在 settings，开轮时 quiz.start 读取。
  */
 const memoryBoard = computed<'standard' | 'compact'>({
   get: () => settings.memoryBoardSize ?? 'standard',
@@ -500,7 +500,7 @@ const currentRegimeCount = computed<number | null>(() => {
 /**
  * 括号标注用的取数比例 —— **实测值**，不是配置值（2026-11-05 用户定，docs/105）。
  *
- * = 本档实际可出题数 ÷ 该地区「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可玩基数。
+ * = 本档实际可出题数 ÷ 该地区「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可出题物种数。
  *
  * 为什么不再按 `TIERS[tier].commonness.length / 10` 硬算：
  * 2026-11 事故里 R2 分片停留在旧 5 档制，而配置按 10 档算 → 印「×70%」实际是 100%，
@@ -1407,8 +1407,8 @@ function onTouchEnd(e: TouchEvent) {
 
     <!-- 第 3 步 形式（只显示当前可用赛制） -->
     <p class="step-cap"><i class="step-no">3</i>{{ t('quiz.stepForm') }}</p>
-    <!-- 097：主数字 = 本档这一赛制能出多少题（随档位/赛制变化）；括号 = 该数占本地可玩基数的比例。
-         2026-11-05（docs/105）：百分比改为**实测**（tierCoveragePct = 实际入档数 ÷ 表内可玩数），
+    <!-- 097：主数字 = 本档这一赛制能出多少题（随档位/赛制变化）；括号 = 该数占该地区鸟种数的比例。
+         2026-11-05（docs/105）：百分比改为**实测**（tierCoveragePct = 实际入档数 ÷ 表内可出题物种数），
          不再是「commonness.length / 10」的配置硬算——后者在分片版本漂移时印过「×70%」实为 100%。
          分母为 0（档位表缺失）时不显示括号，宁缺勿假。 -->
     <p v-if="currentRegimeCount !== null" class="regime-pool muted small">
@@ -1927,8 +1927,10 @@ function onTouchEnd(e: TouchEvent) {
   font-weight: 700;
   cursor: pointer;
 }
-.region-change:hover {
+@media (hover: hover) {
+.region-change:hover{
   border-color: var(--primary-light);
+}
 }
 /* 自动定位小字（2026-11-01）：auto 模式下在摘要下注明来源 */
 .region-auto {
@@ -2015,8 +2017,10 @@ function onTouchEnd(e: TouchEvent) {
   color: var(--text);
   cursor: pointer;
 }
-.continent-head:hover {
+@media (hover: hover) {
+.continent-head:hover{
   background: #f3fbf7;
+}
 }
 .continent-head .chev {
   color: var(--text-light);
@@ -2180,8 +2184,14 @@ function onTouchEnd(e: TouchEvent) {
 .tier:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
-.tier:hover {
-  border-color: var(--primary-light);
+/* 2026-11-05 iPhone 报障修复：hover 只在真正支持悬停的设备生效。
+   iOS Safari 会在触摸后**保留下 :hover 状态**（sticky hover），而这里的 hover 边框
+   （--primary-light）与选中态（.tier.on，--primary）颜色接近 → 用户看到「L1 和划过的 L2
+   同时是选中状态」，实际只选中了 L1。触摸设备上这条规则整段不生效即可。 */
+@media (hover: hover) {
+  .tier:hover {
+    border-color: var(--primary-light);
+  }
 }
 .tier.on {
   border-color: var(--primary);
@@ -2410,10 +2420,12 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.btn-mini:hover {
+@media (hover: hover) {
+.btn-mini:hover{
   color: var(--primary);
   border-color: var(--primary-light);
   background: #eaf4ef;
+}
 }
 /* 浮窗内的「下一题/查看结果」：宽度贴合文字（不撑满），更醒目 */
 .ct-next {
@@ -2421,11 +2433,13 @@ function onTouchEnd(e: TouchEvent) {
   border-color: var(--primary);
   color: #fff;
 }
-.ct-next:hover {
+@media (hover: hover) {
+.ct-next:hover{
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
   filter: brightness(0.94);
+}
 }
 .quit-corner {
   display: inline-flex;
@@ -2441,10 +2455,12 @@ function onTouchEnd(e: TouchEvent) {
   backdrop-filter: blur(4px);
   transition: all 0.18s ease;
 }
-.quit-corner:hover {
+@media (hover: hover) {
+.quit-corner:hover{
   color: var(--wrong);
   border-color: var(--wrong);
   background: #fff;
+}
 }
 .spinner {
   width: 46px;
@@ -2507,8 +2523,10 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
   vertical-align: middle;
 }
-.report-link:hover {
+@media (hover: hover) {
+.report-link:hover{
   color: var(--primary);
+}
 }
 
 /* ---- 099 S1 看名选图 ---- */

@@ -18,7 +18,7 @@ const bankErrorCode = ref<{ code: string; status?: number; url?: string } | null
 onMounted(async () => {
   try {
     const bank = await loadBank()
-    // 029 M2：优先展示「全量可玩口径」（核心 + 全球,构建期烘焙进 core）；
+    // 029 M2：优先展示「全量可出题口径」（核心 + 全球,构建期烘焙进 core）；
     // 旧部署（无 universe）回退本层统计。
     const u = bank.universe
     stats.value = u
@@ -160,13 +160,14 @@ onMounted(async () => {
   transition: all 0.2s ease;
   box-shadow: var(--shadow-sm);
 }
-.mode-card:hover {
+@media (hover: hover) {
+.mode-card:hover{
   transform: translateY(-3px);
   border-color: var(--primary-light);
   box-shadow: var(--shadow);
   text-decoration: none;
 }
-.mode-icon {
+}.mode-icon {
   color: var(--primary);
   margin-bottom: 2px;
 }
@@ -231,12 +232,13 @@ onMounted(async () => {
   transition: all 0.18s ease;
   min-width: 0;
 }
-.birding-action:hover {
+@media (hover: hover) {
+.birding-action:hover{
   border-color: var(--primary-light);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
 }
-.birding-action .act-ic {
+}.birding-action .act-ic {
   color: var(--primary);
   flex-shrink: 0;
 }

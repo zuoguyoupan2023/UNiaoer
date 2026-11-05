@@ -66,11 +66,12 @@ const SourceIcon = computed(() => (props.media?.type === 'audio' ? AudioLines : 
   text-decoration-color: var(--border);
   text-underline-offset: 2px;
 }
-.attribution a:hover {
+@media (hover: hover) {
+.attribution a:hover{
   color: var(--primary);
   text-decoration-color: var(--primary);
 }
-.attribution.compact {
+}.attribution.compact {
   margin-top: 2px;
   padding-top: 0;
   border-top: none;

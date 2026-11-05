@@ -105,10 +105,16 @@ function state(opt: string): string {
   transition: all 0.18s ease;
   box-shadow: var(--shadow-sm);
 }
-.option:not(:disabled):hover {
-  transform: translateY(-2px);
-  border-color: var(--primary-light);
-  background: #f3fbf7;
+/* 2026-11-05 iPhone 报障修复：hover 只在支持悬停的设备生效。
+   这里的 hover 背景 `#f3fbf7` 与选中态底色**完全相同**，而 iOS 触摸后会残留 hover
+   → 新题的选项看起来「自带已选状态」，但 chosen 仍是 null、不进判定（用户看到的就是这个）。
+   @media (hover: hover) 在 iPhone/iPad/Android 触摸屏上不匹配 → 规则整段不生效。 */
+@media (hover: hover) {
+  .option:not(:disabled):hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-light);
+    background: #f3fbf7;
+  }
 }
 .option:disabled {
   cursor: default;

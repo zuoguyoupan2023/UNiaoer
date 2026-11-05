@@ -228,12 +228,13 @@ const titleOf = (sp: BankSpecies) => speciesNoteText(sp.notes, currentLocale())?
   text-align: left;
   transition: all 0.18s ease;
 }
-.faq-item:hover {
+@media (hover: hover) {
+.faq-item:hover{
   border-color: var(--primary-light);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
 }
-.faq-thumb {
+}.faq-thumb {
   width: 64px;
   height: 52px;
   object-fit: cover;

@@ -183,7 +183,7 @@ export function assetsOf(sp: BankSpecies, type: MediaType): MediaAsset[] {
 }
 
 /**
- * 某物种在该题型下**是否可玩**（有可用媒体）。
+ * 某物种在该题型下**是否有可用素材**（有可用媒体）。
  * S6：名单来自 meta（不含媒体），故先看内联素材，无则看 `playableImage/playableAudio` 标记
  * （构建期已按「有图/有音」烘焙）。真正的素材在 `ensureMedia` 里按需从 assets 分片取。
  */
@@ -193,14 +193,14 @@ export function speciesPlayable(sp: BankSpecies, type: MediaType): boolean {
   return type === 'image' ? sp.playableImage === true : sp.playableAudio === true
 }
 
-/** 题型 → 可玩物种池（092 起导出：memoryEngine 复用同一"可玩"口径） */
+/** 题型 → 有素材物种池（092 起导出：memoryEngine 复用同一"素材可用"口径） */
 export function mediaPool(bank: BankSpecies[], type: MediaType): BankSpecies[] {
   return bank.filter((s) => speciesPlayable(s, type))
 }
 
 /**
  * S6：为出题种补齐素材——内联缺失时按需从 assets 分片取。
- * （092 起导出：memoryEngine.buildMemoryPairs 复用同一"标记可玩但分片缺失则跳过"链路。）
+ * （092 起导出：memoryEngine.buildMemoryPairs 复用同一"标记有素材但分片缺失则跳过"链路。）
  */
 export async function ensureMedia(sp: BankSpecies, type: MediaType): Promise<BankSpecies> {
   if (assetsOf(sp, type).length) return sp
@@ -346,7 +346,7 @@ export async function buildQuestions(bank: BankSpecies[], opts: BuildOptions): P
   // 只保留真正取到素材的种，不足继续往后取；池里实在不够就少出几题（宁可少一题，绝不发空题）。
   const enriched: BankSpecies[] = []
   for (let cursor = 0; cursor < ordered.length && enriched.length < want; ) {
-    // 一次多取几个，补偿"标记可玩但实际无素材"的种
+    // 一次多取几个，补偿"标记有素材但实际无素材"的种
     const batchSize = Math.min(want - enriched.length + 3, ordered.length - cursor)
     const batch = ordered.slice(cursor, cursor + batchSize)
     cursor += batchSize
@@ -493,7 +493,7 @@ export async function buildNameQuestions(
     // ensureMedia 可能返回带素材的新对象（分片懒加载），必须用它而不是原 species
     const answerResolved = await ensureMedia(answerSp, type)
     const answerAssets = assetsOf(answerResolved, type)
-    if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 跳过该候选
+    if (!answerAssets.length) continue // 标记有素材但实际取不到素材 → 跳过该候选
 
     // 干扰项候选排序：L6 固定 same（同科优先，081 §7「多选项都是同科鸟」；
     // 2026-11-03 用户拍板 token 相似不进 L6——那是独立模式 S1（buildSimilarQuestions））。
@@ -897,7 +897,7 @@ export async function buildSimilarQuestions(
     if (questions.length >= want) break
     const resolved = await ensureMedia(pick.answer, type)
     const answerAssets = assetsOf(resolved, type)
-    if (!answerAssets.length) continue // 标记可玩但实际取不到素材 → 换下一个候选
+    if (!answerAssets.length) continue // 标记有素材但实际取不到素材 → 换下一个候选
 
     const answerName = speciesName(resolved, locale)
     if (!answerName) continue

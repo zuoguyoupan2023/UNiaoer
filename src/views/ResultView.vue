@@ -105,7 +105,7 @@ const memoryInfo = computed(() => {
     pairs: m.pairs,
   }
 })
-/** 记忆轮的三档阈值提示（让玩家一眼看到「离下一档还差多少秒」，docs/092 §4.2；按盘面对数取阈值） */
+/** 记忆轮的三档阈值提示（让用户一眼看到「离下一档还差多少秒」，docs/092 §4.2；按盘面对数取阈值） */
 const memoryThresholds = computed(() => {
   const { genius, awesome } = memoryThresholdSec(snap.memoryResult?.pairs)
   return t('memory.thresholds', { a: genius, b: awesome })
@@ -873,10 +873,11 @@ async function again() {
   font-weight: 700;
   text-decoration: underline;
 }
-.tier-avg-link:hover {
+@media (hover: hover) {
+.tier-avg-link:hover{
   text-decoration: underline;
 }
-.tier-note {
+}.tier-note {
   margin: 2px 0 0;
   font-size: 0.72rem;
 }
@@ -939,10 +940,11 @@ async function again() {
   cursor: pointer;
   padding: 2px 4px;
 }
-.btn-link:hover {
+@media (hover: hover) {
+.btn-link:hover{
   color: var(--wrong);
 }
-.share-msg {
+}.share-msg {
   font-size: 0.78rem;
   color: var(--primary);
 }
@@ -989,13 +991,14 @@ async function again() {
   font-weight: 600;
   transition: all 0.18s ease;
 }
-.faq-link:hover {
+@media (hover: hover) {
+.faq-link:hover{
   color: var(--primary);
   border-color: var(--primary-light);
   background: #eaf4ef;
   text-decoration: none;
 }
-.species-facts {
+}.species-facts {
   margin-top: 8px;
 }
 </style>

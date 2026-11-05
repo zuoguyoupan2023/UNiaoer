@@ -815,12 +815,13 @@ const optionAttributions = computed(() => {
   backdrop-filter: blur(4px);
   transition: all 0.18s ease;
 }
-.quit-corner:hover {
+@media (hover: hover) {
+.quit-corner:hover{
   color: var(--wrong);
   border-color: var(--wrong);
   background: #fff;
 }
-.card {
+}.card {
   position: relative;
 }
 .feedback {
@@ -884,10 +885,11 @@ const optionAttributions = computed(() => {
   text-decoration-color: var(--border);
   text-underline-offset: 2px;
 }
-.option-attr a:hover {
+@media (hover: hover) {
+.option-attr a:hover{
   color: var(--primary);
 }
-.quiz-attr {
+}.quiz-attr {
   margin-top: 14px;
 }
 .correct-toast {
@@ -995,23 +997,25 @@ const optionAttributions = computed(() => {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.btn-mini:hover {
+@media (hover: hover) {
+.btn-mini:hover{
   color: var(--primary);
   border-color: var(--primary-light);
   background: #eaf4ef;
 }
-.ct-next {
+}.ct-next {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
 }
-.ct-next:hover {
+@media (hover: hover) {
+.ct-next:hover{
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
   filter: brightness(0.94);
 }
-.report-link {
+}.report-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1024,10 +1028,11 @@ const optionAttributions = computed(() => {
   cursor: pointer;
   vertical-align: middle;
 }
-.report-link:hover {
+@media (hover: hover) {
+.report-link:hover{
   color: var(--primary);
 }
-@keyframes pop {
+}@keyframes pop {
   0% {
     transform: scale(0.96);
     opacity: 0;

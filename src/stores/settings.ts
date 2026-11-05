@@ -50,7 +50,7 @@ interface Persisted {
   nameMode8Audio?: 'default' | 'sci'
   /**
    * L8 盘面大小（092 + 2026-10-27 用户追加）：'standard' = 12 对（6×4/4×6），
-   * 'compact' = 6 对（3×4）**实验性缩小盘**——用户试玩"是否应该降级"，结论前保留。
+   * 'compact' = 6 对（3×4）**实验性缩小盘**——用户实测"是否应该降级"，结论前保留。
    */
   memoryBoardSize?: 'standard' | 'compact'
   /** S1 相似种挑战题型（099；2026-11-03 用户定）：'media-stem' 看图选名 / 'name-stem' 看名选图 */

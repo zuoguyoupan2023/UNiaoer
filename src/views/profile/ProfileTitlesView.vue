@@ -217,10 +217,11 @@ function makeEmptyStats() {
   font-size: 0.85rem;
   transition: all 0.18s ease;
 }
-.title-opt:hover {
+@media (hover: hover) {
+.title-opt:hover{
   border-color: var(--primary-light);
 }
-.title-opt.on {
+}.title-opt.on {
   border-color: var(--primary);
   background: #f3fbf7;
 }

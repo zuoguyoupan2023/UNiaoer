@@ -689,10 +689,11 @@ function dropResults() {
   color: #333;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
-.swatch:hover:not(.disabled) {
+@media (hover: hover) {
+.swatch:hover:not(.disabled){
   transform: scale(1.08);
 }
-/* 选中态必须排在 `.swatch.light` 之后（同级 specificity、后写者胜）：
+}/* 选中态必须排在 `.swatch.light` 之后（同级 specificity、后写者胜）：
    否则选「纯白」时高亮环会被浅色块的边框阴影盖掉，看不出哪块被选中。 */
 .swatch.on {
   box-shadow: 0 0 0 3px var(--primary);

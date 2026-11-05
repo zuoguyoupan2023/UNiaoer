@@ -434,10 +434,11 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
   color: var(--text-light);
   user-select: none;
 }
-.early-bands summary:hover {
+@media (hover: hover) {
+.early-bands summary:hover{
   color: var(--primary);
 }
-.early-bands .ranks {
+}.early-bands .ranks {
   margin-top: 8px;
 }
 .early-bands .muted {

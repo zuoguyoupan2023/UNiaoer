@@ -6,7 +6,7 @@
  * 本模块退化为**在 meta 上做地区过滤**的薄封装（导出名保留以兼容调用方）。
  *
  * 数据来源：
- *   · 名单/可玩标记 —— `manifest-meta.json`（见 meta.ts）
+ *   · 名单/素材可用标记 —— `manifest-meta.json`（见 meta.ts）
  *   · 国家区系 —— `species-distribution.json`（按国短码，249 个国家/地区码）
  */
 import type { BankSpecies } from './bank'

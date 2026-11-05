@@ -215,10 +215,11 @@ function closeZoom() {
   object-fit: cover;
   display: block;
 }
-.sg-thumb:hover {
+@media (hover: hover) {
+.sg-thumb:hover{
   border-color: var(--primary-light);
 }
-.sg-thumb.on {
+}.sg-thumb.on {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px #d8f3dc;
 }
@@ -236,11 +237,12 @@ function closeZoom() {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.sg-audio:hover {
+@media (hover: hover) {
+.sg-audio:hover{
   border-color: var(--primary-light);
   color: var(--primary);
 }
-.sg-audio.on {
+}.sg-audio.on {
   border-color: var(--primary);
   color: var(--primary);
   box-shadow: 0 0 0 2px #d8f3dc;
@@ -302,10 +304,11 @@ function closeZoom() {
   color: #fff;
   cursor: pointer;
 }
-.sg-close:hover {
+@media (hover: hover) {
+.sg-close:hover{
   background: rgba(255, 255, 255, 0.26);
 }
-@keyframes pop {
+}@keyframes pop {
   0% {
     transform: scale(0.96);
     opacity: 0;

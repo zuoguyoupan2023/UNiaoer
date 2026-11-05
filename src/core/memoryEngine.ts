@@ -71,7 +71,7 @@ export async function buildMemoryPairs(
     // ensureMedia 可能返回带素材的新对象（分片懒加载），必须用它而不是原 species
     const resolved = await ensureMedia(sp, type)
     const assets = assetsOf(resolved, type)
-    if (!assets.length) continue // 标记可玩但实际取不到素材 → 跳过该候选
+    if (!assets.length) continue // 标记有素材但实际取不到素材 → 跳过该候选
     const name = nameByMode(sp, nameMode)
     if (!name || usedNames.has(name)) continue
     usedIds.add(sp.id)

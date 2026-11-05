@@ -61,7 +61,7 @@ export interface BankSpecies {
   nameEn?: string
   /** iNat taxon id（稳定主键，manifest v2 起） */
   taxonId?: number
-  /** AviList 稳定概念键（AvibaseID，023 P0 只增字段）；playable=素材可玩的构建期基线 */
+  /** AviList 稳定概念键（AvibaseID，023 P0 只增字段）；playable=素材可用性的构建期基线 */
   taxonKey?: string
   playable?: boolean
   playableImage?: boolean
@@ -104,7 +104,7 @@ export interface Manifest {
   buckets?: string[]
   schemaVersion?: number
   /**
-   * 029 M2 / S6:全量可玩口径（构建期烘焙）。
+   * 029 M2 / S6:全量可出题口径（构建期烘焙）。
    * S6 统一到 meta 后不再区分 core/global（故 coreTotal/globalTotal 可选）。
    */
   universe?: {

@@ -122,10 +122,11 @@ const media = computed<MediaAsset[]>(() => [...images.value, ...audios.value])
   color: var(--text-light);
   margin-bottom: 10px;
 }
-.back:hover {
+@media (hover: hover) {
+.back:hover{
   color: var(--primary);
 }
-.name {
+}.name {
   font-size: 1.2rem;
 }
 .name .sci {

@@ -2041,10 +2041,11 @@ function pickProvince(code: string) {
   cursor: pointer;
   transition: all 0.16s ease;
 }
-.continent-btn:hover {
+@media (hover: hover) {
+.continent-btn:hover{
   border-color: var(--primary-light);
 }
-.continent-btn.active {
+}.continent-btn.active {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
@@ -2142,10 +2143,11 @@ function pickProvince(code: string) {
   font-size: 0.85rem;
   text-align: left;
 }
-.country-btn:hover {
+@media (hover: hover) {
+.country-btn:hover{
   border-color: var(--primary-light);
 }
-.country-btn.active {
+}.country-btn.active {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;
@@ -2318,11 +2320,12 @@ function pickProvince(code: string) {
   font-size: 0.68rem;
   color: var(--text-light);
 }
-.prov-btn:hover {
+@media (hover: hover) {
+.prov-btn:hover{
   border-color: var(--primary-light);
   background: #f7faf8;
 }
-.prov-btn.active {
+}.prov-btn.active {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;
@@ -2376,10 +2379,11 @@ function pickProvince(code: string) {
   cursor: pointer;
   margin-bottom: -2px;
 }
-.panel-tab:hover {
+@media (hover: hover) {
+.panel-tab:hover{
   color: var(--primary);
 }
-.panel-tab.active {
+}.panel-tab.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
 }
@@ -2454,10 +2458,11 @@ function pickProvince(code: string) {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.nearby-toggle:hover {
+@media (hover: hover) {
+.nearby-toggle:hover{
   background: #dceee4;
 }
-.nearby-toggle.on {
+}.nearby-toggle.on {
   background: var(--grad);
   border-color: transparent;
   color: #fff;
@@ -2490,10 +2495,11 @@ function pickProvince(code: string) {
   cursor: pointer;
   text-align: left;
 }
-.hotspot-btn:hover {
+@media (hover: hover) {
+.hotspot-btn:hover{
   border-color: var(--primary-light);
 }
-.hotspot-btn[aria-expanded='true'] {
+}.hotspot-btn[aria-expanded='true'] {
   border-color: var(--primary);
   background: #eaf4ef;
 }
@@ -2553,12 +2559,13 @@ function pickProvince(code: string) {
   color: var(--text);
   transition: all 0.18s ease;
 }
-.species-card:hover {
+@media (hover: hover) {
+.species-card:hover{
   border-color: var(--primary-light);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
 }
-.thumb {
+}.thumb {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
@@ -2620,10 +2627,11 @@ function pickProvince(code: string) {
     animation: none; /* 减少动效偏好：只保留静态高亮 */
   }
 }
-.preview-btn:hover {
+@media (hover: hover) {
+.preview-btn:hover{
   border-color: var(--primary-light);
 }
-.preview-btn[aria-pressed='true'] {
+}.preview-btn[aria-pressed='true'] {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
@@ -2656,10 +2664,11 @@ function pickProvince(code: string) {
   cursor: pointer;
   transition: color 0.15s ease;
 }
-.card-play:hover {
+@media (hover: hover) {
+.card-play:hover{
   color: var(--primary);
 }
-.card-play.playing {
+}.card-play.playing {
   color: var(--primary);
 }
 
@@ -2744,10 +2753,11 @@ function pickProvince(code: string) {
   color: var(--text-light);
   cursor: pointer;
 }
-.preview-close:hover {
+@media (hover: hover) {
+.preview-close:hover{
   color: var(--text);
 }
-/* 信息区独立滚动：不同鸟的信息量差异只影响这里，底部按钮组不动（2026-10-31 用户定） */
+}/* 信息区独立滚动：不同鸟的信息量差异只影响这里，底部按钮组不动（2026-10-31 用户定） */
 .pv-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -2869,10 +2879,11 @@ function pickProvince(code: string) {
   /* 未认识：灰色灯泡（2026-10-31 用户定：按钮永远只写「认识」，状态用样式表达） */
   color: #b8c4bd;
 }
-.pv-master:hover {
+@media (hover: hover) {
+.pv-master:hover{
   border-color: var(--primary-light);
 }
-.pv-master.known {
+}.pv-master.known {
   border-color: #f59e0b;
   background: #fff8ec;
   color: #92580a;
@@ -2907,10 +2918,11 @@ function pickProvince(code: string) {
   opacity: 0.45;
   cursor: default;
 }
-.pv-step:not(:disabled):hover {
+@media (hover: hover) {
+.pv-step:not(:disabled):hover{
   border-color: var(--primary-light);
 }
-.pv-pos {
+}.pv-pos {
   font-variant-numeric: tabular-nums;
   font-size: 0.72rem;
 }
@@ -3002,11 +3014,12 @@ function pickProvince(code: string) {
   font-size: 0.76rem;
   cursor: pointer;
 }
-.pv-media-toggle:hover {
+@media (hover: hover) {
+.pv-media-toggle:hover{
   border-color: var(--primary-light);
   color: var(--text);
 }
-.pv-media-toggle .chev {
+}.pv-media-toggle .chev {
   transition: transform 0.15s ease;
 }
 .pv-media-toggle .chev.open {
@@ -3057,11 +3070,12 @@ function pickProvince(code: string) {
   color: #fff;
   text-decoration-color: rgba(255, 255, 255, 0.4);
 }
-.pv-lightbox-cap :deep(a:hover) {
+@media (hover: hover) {
+.pv-lightbox-cap :deep(a:hover){
   color: #fff;
   text-decoration-color: #fff;
 }
-
+}
 /* ── 预习浮窗 · 数据面板（信息流内的展开节，2026-10-31 用户反馈后改版）── */
 .pv-stats {
   /* 数据标签页：占满顶行之下的全部空间，滚动在自身；
@@ -3125,10 +3139,11 @@ function pickProvince(code: string) {
   text-align: left;
   cursor: pointer;
 }
-.pvs-name:hover {
+@media (hover: hover) {
+.pvs-name:hover{
   color: var(--primary);
 }
-.pvs-name.genus {
+}.pvs-name.genus {
   font-style: italic;
 }
 .pvs-caret {
@@ -3155,11 +3170,12 @@ function pickProvince(code: string) {
 .pvs-species a {
   color: var(--text);
 }
-.pvs-species a:hover {
+@media (hover: hover) {
+.pvs-species a:hover{
   color: var(--primary);
   text-decoration: underline;
 }
-.pvs-name em {
+}.pvs-name em {
   font-style: italic;
   color: var(--text-light);
   margin-left: 4px;
@@ -3227,10 +3243,11 @@ function pickProvince(code: string) {
   font-weight: 700;
   cursor: pointer;
 }
-.pv-region-toggle:hover {
+@media (hover: hover) {
+.pv-region-toggle:hover{
   border-color: var(--primary-light);
 }
-/* 展开时选区占满整个浮窗（2026-10-31 用户反馈）：flex:1 吃掉摘要行之下的全部空间，
+}/* 展开时选区占满整个浮窗（2026-10-31 用户反馈）：flex:1 吃掉摘要行之下的全部空间，
    滚动发生在面板自身；鸟内容此时整体让位（v-else） */
 .pv-region-full {
   flex: 1 1 auto;
@@ -3258,10 +3275,11 @@ function pickProvince(code: string) {
   cursor: pointer;
   text-align: left;
 }
-.pv-continent-head:hover {
+@media (hover: hover) {
+.pv-continent-head:hover{
   border-color: var(--primary-light);
 }
-.pv-continent-head.on {
+}.pv-continent-head.on {
   border-color: var(--primary);
   background: #eaf4ef;
 }
@@ -3292,11 +3310,12 @@ function pickProvince(code: string) {
   cursor: pointer;
   text-align: left;
 }
-.pv-country:hover {
+@media (hover: hover) {
+.pv-country:hover{
   border-color: var(--primary-light);
   background: #f7faf8;
 }
-.pv-country.on {
+}.pv-country.on {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;
@@ -3326,10 +3345,11 @@ function pickProvince(code: string) {
   font-size: 0.74rem;
   cursor: pointer;
 }
-.pv-prov:hover {
+@media (hover: hover) {
+.pv-prov:hover{
   border-color: var(--primary-light);
 }
-.pv-prov.on {
+}.pv-prov.on {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;

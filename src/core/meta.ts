@@ -36,7 +36,7 @@ export interface MetaManifest {
   buckets?: string[]
   /** 053-describe：性状详情层实际存在的桶（空/缺省 = 没有性状分片） */
   traitsBuckets?: string[]
-  /** S6：全量可玩口径（构建期烘焙） */
+  /** S6：全量可出题口径（构建期烘焙） */
   universe?: {
     coreTotal?: number
     globalTotal?: number

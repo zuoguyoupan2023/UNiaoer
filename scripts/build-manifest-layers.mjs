@@ -254,7 +254,7 @@ export async function writeManifestLayers(manifest, opts = {}) {
   /** 附注统计(commonness 合并数等),随 stats 返回 */
   const stats_note = {}
 
-  // 全球采集台账（raw，含 1+1 素材）——S6 起 assets 分片要覆盖**全量可玩种**。
+  // 全球采集台账（raw，含 1+1 素材）——S6 起 assets 分片要覆盖**全量有素材种**。
   let rawLedger = null
   try {
     rawLedger = JSON.parse(await fs.readFile(globalLedger, 'utf8'))
@@ -339,7 +339,7 @@ export async function writeManifestLayers(manifest, opts = {}) {
     } else if (!quiet) {
       console.warn('⚠ 未找到 data-cache/trait-core.json —— 性状核心层跳过（先跑 npm run traits:layers）')
     }
-    // S6：全量可玩口径（不再区分 core/global；FAQ / 首页统计用）
+    // S6：全量可出题口径（不再区分 core/global；FAQ / 首页统计用）
     const withImg = meta.species.filter((s) => s.playableImage === true).length
     const withAud = meta.species.filter((s) => s.playableAudio === true).length
     const uniqueConcepts = new Set(meta.species.map((s) => s.taxonKey).filter(Boolean)).size

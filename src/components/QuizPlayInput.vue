@@ -730,12 +730,13 @@ function onTouchEnd(e: TouchEvent) {
   transition: all 0.18s ease;
   z-index: 2;
 }
-.quit-corner:hover {
+@media (hover: hover) {
+.quit-corner:hover{
   color: var(--wrong);
   border-color: var(--wrong);
   background: #fff;
 }
-.card {
+}.card {
   position: relative;
 }
 /* 作答行：输入框 + 提交 */
@@ -782,12 +783,13 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.btn-mini:hover:not(:disabled) {
+@media (hover: hover) {
+.btn-mini:hover:not(:disabled){
   color: var(--primary);
   border-color: var(--primary-light);
   background: #eaf4ef;
 }
-.btn-mini:disabled {
+}.btn-mini:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -804,10 +806,11 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
   vertical-align: middle;
 }
-.report-link:hover {
+@media (hover: hover) {
+.report-link:hover{
   color: var(--primary);
 }
-.feedback {
+}.feedback {
   margin-top: 16px;
   padding: 15px 18px;
   border-radius: var(--radius);
@@ -949,13 +952,14 @@ function onTouchEnd(e: TouchEvent) {
   border-color: var(--primary);
   color: #fff;
 }
-.ct-next:hover {
+@media (hover: hover) {
+.ct-next:hover{
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
   filter: brightness(0.94);
 }
-@keyframes pop {
+}@keyframes pop {
   0% { transform: scale(0.96); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }

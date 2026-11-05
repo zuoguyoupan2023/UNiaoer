@@ -76,7 +76,7 @@ function hasName(s) {
   return !!s.nameZh
 }
 
-/** 可玩 + 未降级 + 有名字 */
+/** 有素材 + 未降级 + 有名字 */
 const eligible = new Set()
 for (const s of meta.species) {
   if (!s.playableImage) continue
@@ -134,7 +134,7 @@ for (const cc of targets) {
       level: label,
       base,
       pools,
-      /** 实测覆盖率（相对该档位表内可玩种数，不是配置值） */
+      /** 实测覆盖率（相对该档位表内有素材种数，不是配置值） */
       pct: Object.fromEntries(
         TIER_BANDS.map((b) => [b.key, base ? Math.round((pools[b.key] / base) * 100) : 0]),
       ),

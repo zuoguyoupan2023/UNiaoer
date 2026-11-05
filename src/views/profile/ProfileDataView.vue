@@ -387,10 +387,11 @@ async function onFile(e: Event) {
   font-size: 0.92rem;
   color: var(--text);
 }
-.rp-name:hover {
+@media (hover: hover) {
+.rp-name:hover{
   color: var(--primary);
 }
-.rp-type {
+}.rp-type {
   font-size: 0.7rem;
   padding: 1px 7px;
   border-radius: var(--radius-xs);

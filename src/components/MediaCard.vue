@@ -238,11 +238,12 @@ function closeZoom() {
   backdrop-filter: blur(4px);
   transition: all 0.18s ease;
 }
-.zoom-btn:hover {
+@media (hover: hover) {
+.zoom-btn:hover{
   background: #fff;
   border-color: var(--primary-light);
 }
-.skeleton,
+}.skeleton,
 .failed-msg {
   position: absolute;
   inset: 0;
@@ -326,10 +327,11 @@ function closeZoom() {
   color: #fff;
   cursor: pointer;
 }
-.lightbox .close:hover {
+@media (hover: hover) {
+.lightbox .close:hover{
   background: rgba(255, 255, 255, 0.26);
 }
-@keyframes spin {
+}@keyframes spin {
   to {
     transform: rotate(360deg);
   }

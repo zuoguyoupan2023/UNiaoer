@@ -22,7 +22,7 @@ import { diagApiBase } from './diag'
 import { effectiveRegion } from './region'
 
 export interface OnlinePoolResult {
-  /** 目标候选（带完整素材,已按档位/题型/地区/可玩过滤） */
+  /** 目标候选（带完整素材,已按档位/题型/地区/素材可用性过滤） */
   species: BankSpecies[]
   /** 干扰项名字候选（无素材,仅选项用） */
   distractors: BankSpecies[]

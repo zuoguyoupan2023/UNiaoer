@@ -560,10 +560,11 @@ h2.sec {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.choice:hover {
+@media (hover: hover) {
+.choice:hover{
   border-color: var(--primary-light);
 }
-.choice.on {
+}.choice.on {
   border-color: var(--primary);
   background: #f3fbf7;
 }
@@ -627,10 +628,11 @@ h2.sec {
   font-size: 0.88rem;
   transition: all 0.18s ease;
 }
-.track:hover {
+@media (hover: hover) {
+.track:hover{
   border-color: var(--primary-light);
 }
-.track input {
+}.track input {
   width: 16px;
   height: 16px;
   accent-color: var(--primary);

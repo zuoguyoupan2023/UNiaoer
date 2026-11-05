@@ -63,7 +63,7 @@ export function logTicks(top: number): LogTick[] {
 /**
  * 去掉开头连续为 0 的日期（站点上线前的空数据）。
  *
- * 只裁开头：末尾的 0 是「今天还没人玩」，属于真实信息，不能藏。
+ * 只裁开头：末尾的 0 是「今天还没有人作答」，属于真实信息，不能藏。
  * 全为 0 时返回空数组（调用方显示「这段时间还没有记录」）。
  */
 export function trimLeadingZeros<T extends { n: number }>(days: T[]): T[] {

@@ -54,7 +54,7 @@ export interface QuizBuildDiag {
   candidates: number
   /** 过档位/命名/去重后的池大小 */
   afterFilter: number
-  /** 有"可玩"标记但取不到素材而被丢弃的物种数（= 目标数 − 实际取到素材数） */
+  /** 有"素材可用"标记但取不到素材而被丢弃的物种数（= 目标数 − 实际取到素材数） */
   dropped: number
   /** 目标题数 */
   want: number
@@ -78,16 +78,16 @@ export type QuizErrorCode =
  * 顶层声明——store 的 setup 闭包里不能 `export`。
  *
  * 界面只展示 `counts[当前赛制]`（= 本档这一赛制能出多少题）。`regionTotal` 保留给
- * 诊断/留痕（该地区可玩总数，不收窄档位），不参与渲染——GBIF 记录口径与"能练到多少鸟"
+ * 诊断/留痕（该地区可出题物种总数，不收窄档位），不参与渲染——GBIF 记录口径与"能练到多少鸟"
  * 无关，并列展示会被读成数字自相矛盾（docs/097 §6-P1-C）。
  */
 export interface RegimeCounts {
   /** 各赛制在**当前档位收窄后**的可选题数 */
   counts: Record<QuizRegime, number>
-  /** 该地区可玩物种数（区系 → 档位表排除式 → 命名体系，**不收窄档位**；诊断用） */
+  /** 该地区可出题物种数（区系 → 档位表排除式 → 命名体系，**不收窄档位**；诊断用） */
   regionTotal: number
   /**
-   * 括号百分比的分母（=「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可玩基数）。
+   * 括号百分比的分母（=「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可出题物种数）。
    *
    * 2026-11-05 用户定：百分比一律**实测** `counts.random / baseTotal`，不再按
    * `TIERS.commonness.length / 10` 硬算（事故：分片版本漂移时硬算值会说谎，docs/105）。
@@ -214,7 +214,7 @@ async function tierSuggestion(type: MediaType, currentTier: Tier): Promise<TierS
 
 /**
  * S6：出题名单 = **权威层 meta（唯一源）**，不再 core（1,299）+ 全球池（9,545）拼接。
- * 只收「可玩」物种（图/音任一有素材，且未被质量降级 quizExcluded）。
+ * 只收「有素材」物种（图/音任一有素材，且未被质量降级 quizExcluded）。
  * 地区过滤（D-029-2）：L1–L3 走地区（元数据按国家区系过滤），L4–L5 全球开放。
  */
 async function mergedSpecies(type: MediaType, tier: Tier): Promise<BankSpecies[]> {
@@ -251,7 +251,7 @@ async function poolData(type: MediaType, tier: Tier = 2) {
 }
 
 /**
- * 介绍页口径：该地区**真实**可玩池（097 修复）。
+ * 介绍页口径：该地区**真实**可出题物种池（097 修复）。
  *
  * 原实现只走区系层，`CN-31` 在 `countryOfRegion` 里被塌陷成 `CN`，于是选
  * 「中国·上海」显示的是中国全境的 1,499 种；而实际出题会被省级档位表收窄到
@@ -289,7 +289,7 @@ async function regionScopeInfo(type: MediaType, tier: Tier) {
     tierIds: new Set(tierPool.map((sp) => sp.id)),
     regionTotal: named.length,
     /**
-     * 未收窄档位、但已过「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可玩基数（= 该档位的分母）。
+     * 未收窄档位、但已过「区系 ∩ 档位表 ∩ 媒体 ∩ 命名体系」的可出题物种数（= 该档位的分母）。
      *
      * 2026-11-05 用户定（docs/105）：介绍页括号百分比必须**实测**，不能再按
      * `TIERS[tier].commonness.length / 10` 硬算——分片版本一漂移，硬算值就会与实际池子

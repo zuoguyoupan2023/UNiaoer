@@ -400,10 +400,11 @@ async function onCopy(round: RoundRecord) {
   text-align: left;
   transition: background 0.15s ease;
 }
-.round-head:hover {
+@media (hover: hover) {
+.round-head:hover{
   background: #f3fbf7;
 }
-.when {
+}.when {
   font-weight: 700;
   min-width: 130px;
 }

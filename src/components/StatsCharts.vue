@@ -276,11 +276,12 @@ function fmtDay(at: number) {
   cursor: pointer;
   transition: all 0.18s ease;
 }
-.range button:hover {
+@media (hover: hover) {
+.range button:hover{
   border-color: var(--primary-light);
   color: var(--primary);
 }
-.range button.on {
+}.range button.on {
   background: var(--grad);
   color: #fff;
   border-color: transparent;

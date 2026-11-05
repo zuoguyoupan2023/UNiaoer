@@ -247,10 +247,11 @@ async function vote(r: PublicReport, value: 1 | -1) {
   font-size: 1rem;
   color: var(--text);
 }
-a.name:hover {
+@media (hover: hover) {
+a.name:hover{
   color: var(--primary);
 }
-.media {
+}.media {
   text-align: center;
 }
 .media-img {
@@ -356,10 +357,11 @@ a.name:hover {
   font-family: inherit;
   cursor: pointer;
 }
-.vote:hover {
+@media (hover: hover) {
+.vote:hover{
   border-color: var(--primary-light);
 }
-.vote.on {
+}.vote.on {
   border-color: var(--primary);
   background: #eaf4ef;
   color: var(--primary);

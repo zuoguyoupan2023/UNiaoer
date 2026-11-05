@@ -2,14 +2,14 @@
 /**
  * S6 / 050 P4：manifest 分层产物校验（纯本地，不联网）。
  *
- * 架构（S6 起）：**meta 是唯一名单源，assets 覆盖全量可玩种**。
+ * 架构（S6 起）：**meta 是唯一名单源，assets 覆盖全量有素材种**。
  *   - `manifest-meta.json`：权威名录（10,844 种，不含媒体）+ `buckets` 分片索引
  *   - `assets/<bucket>.json`：全量物种的完整素材数组（core 5+5 / 全球 1+1）
  *   - `manifest-core.json`：启动层（1,299 种，core 同构；逐步退役）
  *
  * 校验：
  *   - meta.buckets 与 assets/ 实际文件一一对应（无遗漏/无多余）
- *   - 每个「声明可玩」的 meta 物种，按 resolveBucket(id, meta.buckets) 能找到分片且分片内含该物种、
+ *   - 每个「声明有素材」的 meta 物种，按 resolveBucket(id, meta.buckets) 能找到分片且分片内含该物种、
  *     且素材与其 playableImage/playableAudio 一致
  *   - core 物种首图/首音 === 对应分片 images[0]/audios[0]
  *   - 分片单桶 ≤400KB（DoD）；core ≤1.8MB
@@ -62,7 +62,7 @@ try {
     const entry = buckets[bucketName]?.[sp.id]
     if (!entry) {
       missingInBucket++
-      fail(`物种 ${sp.id} 在分片 ${bucketName} 中缺失（meta 声明可玩）`)
+      fail(`物种 ${sp.id} 在分片 ${bucketName} 中缺失（meta 声明有素材）`)
       continue
     }
     const hasImg = (entry.images?.length || 0) > 0

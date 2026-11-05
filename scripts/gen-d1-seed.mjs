@@ -30,7 +30,7 @@ const readJson = async (p) => JSON.parse(await fs.readFile(p, 'utf8'))
 
 const core = await readJson(CORE_PATH)
 const global = await readJson(GLOBAL_PATH)
-// 只给 meta 里的可玩种灌 D1：meta 排除了“无任何素材”的种（053 §6.0），
+// 只给 meta 里的有素材种灌 D1：meta 排除了“无任何素材”的种（053 §6.0），
 // 否则 check:sync 的 seed_species 会与 meta.total 对不上。
 const meta = await readJson(META_PATH).catch(() => null)
 const allowedIds = meta?.species?.length ? new Set(meta.species.map((s) => s.id)) : null

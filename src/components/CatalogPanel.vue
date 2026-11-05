@@ -324,11 +324,12 @@ const hasAny = (s: CatalogSpecies) => s.image || s.audio
   font-weight: 700;
   cursor: pointer;
 }
-.letter-btn:hover {
+@media (hover: hover) {
+.letter-btn:hover{
   background: var(--primary);
   color: #fff;
 }
-.cat-tree {
+}.cat-tree {
   text-align: left;
   max-width: 720px;
   margin: 0 auto;
@@ -387,11 +388,12 @@ details[open] > summary .cat-caret {
   color: var(--text);
   font-size: 0.82rem;
 }
-.cat-sp-link:hover {
+@media (hover: hover) {
+.cat-sp-link:hover{
   background: #f2f7f4;
   text-decoration: none;
 }
-.cat-sp-names {
+}.cat-sp-names {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -422,7 +424,7 @@ details[open] > summary .cat-caret {
 .fl.no {
   color: #c9d3cd;
 }
-/* 既无图也无音的种（极少数）：整行弱化,提示不可玩 */
+/* 既无图也无音的种（极少数）：整行弱化,提示无素材 */
 .cat-sp.flags-empty .cat-sp-names,
 .cat-sp.flags-empty .cat-sp-sci {
   opacity: 0.7;
