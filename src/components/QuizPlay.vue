@@ -36,7 +36,12 @@ import type { MediaAsset, MediaType, NameMode, QuizRegime, Tier } from '@/types'
 import { loadSpeciesAssets, cachedSpeciesAssets } from '@/core/bank'
 import { currentLocale } from '@/i18n'
 import { loadSpeciesDistribution } from '@/core/speciesIndex'
-import { loadProvincesIndex, provinceSecondLevelEnabled, provincesOf, type ProvinceIndex } from '@/core/provinces'
+import {
+  loadProvincesIndex,
+  provinceSecondLevelEnabled,
+  provincesOf,
+  type ProvinceIndex,
+} from '@/core/provinces'
 import {
   CONTINENTS,
   CONTINENT_LABEL_KEY,
@@ -239,13 +244,10 @@ const building = ref(false)
 
 /** 加载占位页的宣传语：每次进入加载态随机换一条，按界面语言显示 */
 const ethicsText = ref(pickEthicsLine(currentLocale()))
-watch(
-  [building, () => quiz.loading],
-  ([b, l], [pb, pl]) => {
-    // 仅在"进入加载态"的边沿换一条（building 置位或 loading 升 true），结束边沿不动
-    if ((b && !pb) || (l && !pl)) ethicsText.value = pickEthicsLine(currentLocale())
-  },
-)
+watch([building, () => quiz.loading], ([b, l], [pb, pl]) => {
+  // 仅在"进入加载态"的边沿换一条（building 置位或 loading 升 true），结束边沿不动
+  if ((b && !pb) || (l && !pl)) ethicsText.value = pickEthicsLine(currentLocale())
+})
 // L8 未上线（difficulty.L8_ENABLED）时忽略已存的第八档：介绍页没有该按钮，
 // 不回退会直接出现 L8 盘面选择并可开轮。2 = quiz store 默认档。
 // S1（9，docs/099）同规则：未上架（S1_ENABLED=false）时忽略已存的第九档。
@@ -300,14 +302,17 @@ function chooseTier(v: Tier) {
   persistTier(v)
   adaptiveHint.value = null
   // 029 M2:档位变化会改变池子(L1-L3 地区过滤 / L4-L5 全球),刷新赛制可用数
-  void quiz.regimeCounts(props.type, v).then((c) => {
-    regimeCountsData.value = c
-    const vis = visibleRegimes.value
-    if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
-      quiz.regime = vis[0]!.id
-      persistRegime(quiz.regime)
-    }
-  }).catch(() => {})
+  void quiz
+    .regimeCounts(props.type, v)
+    .then((c) => {
+      regimeCountsData.value = c
+      const vis = visibleRegimes.value
+      if (vis.length && !vis.some((r) => r.id === quiz.regime)) {
+        quiz.regime = vis[0]!.id
+        persistRegime(quiz.regime)
+      }
+    })
+    .catch(() => {})
 }
 
 /** 029 M2:地区偏好(L1-L4 生效;L5+ 全球开放;2026-10-24 修订)。
@@ -350,7 +355,10 @@ function toggleContinent(c: Continent) {
   const act = continentClickAction(code, chosenContinent.value, openContinent.value === c)
   if (act.select) {
     regionChoice.value = code
-    void quiz.regimeCounts(props.type, tier.value).then((c2) => (regimeCountsData.value = c2)).catch(() => {})
+    void quiz
+      .regimeCounts(props.type, tier.value)
+      .then((c2) => (regimeCountsData.value = c2))
+      .catch(() => {})
   }
   openContinent.value = act.open ? c : null
 }
@@ -367,7 +375,10 @@ const chosenContinent = computed<ContinentCode | null>(() =>
 function chooseGlobal() {
   regionChoice.value = 'ALL'
   regionPickerOpen.value = false
-  void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
+  void quiz
+    .regimeCounts(props.type, tier.value)
+    .then((c) => (regimeCountsData.value = c))
+    .catch(() => {})
 }
 /** 地区选择面板是否展开（收起时只显示已选摘要） */
 const regionPickerOpen = ref(false)
@@ -421,7 +432,10 @@ function chooseRegion(v: string) {
   // 现在**面板保持展开**（选择结果已在「已选摘要」实时更新），用户可继续换国家/改选洲。
   // 083 的收起名单仍生效：只是不显示省 chips，不影响面板本身。
   regionPickerOpen.value = true
-  void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
+  void quiz
+    .regimeCounts(props.type, tier.value)
+    .then((c) => (regimeCountsData.value = c))
+    .catch(() => {})
 }
 
 /**
@@ -463,7 +477,10 @@ function chooseRegionProvince(code: string) {
   const next = regionProvince.value === code ? '' : code
   regionChoice.value = next || selectedCountry.value
   regionPickerOpen.value = false
-  void quiz.regimeCounts(props.type, tier.value).then((c) => (regimeCountsData.value = c)).catch(() => {})
+  void quiz
+    .regimeCounts(props.type, tier.value)
+    .then((c) => (regimeCountsData.value = c))
+    .catch(() => {})
 }
 /** 当前所选国家（省选择被清空时回退到它） */
 const selectedCountry = computed(() => {
@@ -549,7 +566,8 @@ async function autoRegionDetect(): Promise<boolean> {
       const owner = prov.slice(0, 2)
       // 索引可能比定位响应晚到：直接取 loader（模块级缓存，不会重复请求）
       const idx = provinceData.value ?? (await loadProvincesIndex())
-      if (idx && provinceSecondLevelEnabled(idx, owner) && !!idx.byCountry?.[owner]?.[prov]) next = prov
+      if (idx && provinceSecondLevelEnabled(idx, owner) && !!idx.byCountry?.[owner]?.[prov])
+        next = prov
     }
     if (next === settings.region) return false
     settings.region = next
@@ -878,9 +896,7 @@ const warnThreshold = computed(() => (quiz.current && quiz.current.tier >= 4 ? 3
 function quitRound() {
   const n = quiz.answeredCount
   const msg =
-    n > 0
-      ? t('quiz.quitConfirmDetail', { n, total: quiz.total })
-      : t('quiz.quitConfirmEmpty')
+    n > 0 ? t('quiz.quitConfirmDetail', { n, total: quiz.total }) : t('quiz.quitConfirmEmpty')
   if (!confirm(msg)) {
     // 隐藏徽章"浪子回头"：点了取消留下来继续答（R28）
     quiz.escapedQuit = true
@@ -1257,11 +1273,21 @@ function onTouchEnd(e: TouchEvent) {
     <template v-if="tier === 9 && props.type === 'image'">
       <p class="step-cap l6-mode-cap">{{ t('quiz9.formCap') }}</p>
       <div class="tiers l6-mode">
-        <button type="button" class="tier" :class="{ on: s1Form === 'media-stem' }" @click="s1Form = 'media-stem'">
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: s1Form === 'media-stem' }"
+          @click="s1Form = 'media-stem'"
+        >
           <strong>{{ t('quiz9.stemMedia') }}</strong>
           <span>{{ t('quiz9.stemMediaHint') }}</span>
         </button>
-        <button type="button" class="tier" :class="{ on: s1Form === 'name-stem' }" @click="s1Form = 'name-stem'">
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: s1Form === 'name-stem' }"
+          @click="s1Form = 'name-stem'"
+        >
           <strong>{{ t('quiz9.stemName') }}</strong>
           <span>{{ t('quiz9.stemNameHint') }}</span>
         </button>
@@ -1271,11 +1297,21 @@ function onTouchEnd(e: TouchEvent) {
     <template v-if="isSpecialModeTier(tier)">
       <p class="step-cap l6-mode-cap">{{ t('quiz6.modeCap') }}</p>
       <div class="tiers l6-mode">
-        <button type="button" class="tier" :class="{ on: nameMode67 === 'default' }" @click="nameMode67 = 'default'">
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: nameMode67 === 'default' }"
+          @click="nameMode67 = 'default'"
+        >
           <strong>{{ t('quiz6.modeLang') }}</strong>
           <span>{{ t(`quiz6.modeLangHint${modeHintTier}`) }}</span>
         </button>
-        <button type="button" class="tier" :class="{ on: nameMode67 === 'sci' }" @click="nameMode67 = 'sci'">
+        <button
+          type="button"
+          class="tier"
+          :class="{ on: nameMode67 === 'sci' }"
+          @click="nameMode67 = 'sci'"
+        >
           <strong>{{ t('quiz6.modeSci') }}</strong>
           <span>{{ t(`quiz6.modeSciHint${modeHintTier}`) }}</span>
         </button>
@@ -1307,94 +1343,94 @@ function onTouchEnd(e: TouchEvent) {
     </template>
     <!-- 第 2 步 区域（2026-10-25 全档统一：任何档位任选 省/国家/洲/全球） -->
     <p class="step-cap"><i class="step-no">2</i>{{ t('quiz.stepRegion') }}</p>
-      <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
-      <p class="region-ask">{{ t('quiz.regionAsk') }}</p>
-      <p v-if="tier === 1 && firstRoundEver" class="beginner-hint">
-        <Sparkles class="ic" :size="14" /> {{ t('quiz.beginnerHint') }}
-      </p>
-      <!-- 已选摘要（默认收起）：一眼看出"选了哪儿"；点「更改」才展开选择器 -->
-      <div class="region-summary">
-        <span class="region-current">
-          <span class="region-cap muted small">{{ t('quiz.regionCurrent') }}</span>
-          <strong class="region-value">{{ regionSummary }}</strong>
-        </span>
-        <button
-          type="button"
-          class="region-change"
-          :aria-expanded="regionPickerOpen"
-          @click="regionPickerOpen = !regionPickerOpen"
-        >
-          {{ regionPickerOpen ? t('quiz.regionDone') : t('quiz.regionChange') }}
-        </button>
-      </div>
-      <!-- 自动定位标记（2026-11-01 用户定）：auto 模式下注明来源；「更改」可改并永久退出 auto -->
-      <p v-if="settings.regionSource === 'auto'" class="region-auto muted small">
-        <LocateFixed class="ic" :size="13" /> {{ t('quiz.regionAutoHint') }}
-      </p>
-      <div v-if="regionPickerOpen" class="region-picker">
-        <!-- 2026-10-25（问题 1 修正）：任何档位任选 洲/国家/省/全球。
+    <!-- 087 P0-4：一句简洁的提问，替代干巴巴的步骤名 -->
+    <p class="region-ask">{{ t('quiz.regionAsk') }}</p>
+    <p v-if="tier === 1 && firstRoundEver" class="beginner-hint">
+      <Sparkles class="ic" :size="14" /> {{ t('quiz.beginnerHint') }}
+    </p>
+    <!-- 已选摘要（默认收起）：一眼看出"选了哪儿"；点「更改」才展开选择器 -->
+    <div class="region-summary">
+      <span class="region-current">
+        <span class="region-cap muted small">{{ t('quiz.regionCurrent') }}</span>
+        <strong class="region-value">{{ regionSummary }}</strong>
+      </span>
+      <button
+        type="button"
+        class="region-change"
+        :aria-expanded="regionPickerOpen"
+        @click="regionPickerOpen = !regionPickerOpen"
+      >
+        {{ regionPickerOpen ? t('quiz.regionDone') : t('quiz.regionChange') }}
+      </button>
+    </div>
+    <!-- 自动定位标记（2026-11-01 用户定）：auto 模式下注明来源；「更改」可改并永久退出 auto -->
+    <p v-if="settings.regionSource === 'auto'" class="region-auto muted small">
+      <LocateFixed class="ic" :size="13" /> {{ t('quiz.regionAutoHint') }}
+    </p>
+    <div v-if="regionPickerOpen" class="region-picker">
+      <!-- 2026-10-25（问题 1 修正）：任何档位任选 洲/国家/省/全球。
              洲标题**本身即选择器**：点洲 = 选中该洲 + 在其下展开国家（点国家再展开省）——
              与「点中国 → 下面展开省」同构；不再有「上面一行洲直选 + 下面又一组洲」的重复。 -->
-        <div class="regions">
+      <div class="regions">
+        <button
+          type="button"
+          class="tier region"
+          :class="{ on: regionChoice === 'ALL' }"
+          :title="t('quiz.regionHint')"
+          @click="chooseGlobal"
+        >
+          <strong>{{ t('quiz.regionAll') }}</strong>
+        </button>
+      </div>
+      <p class="continent-cap muted small">{{ t('region.continentsLabel') }}</p>
+      <div class="continents">
+        <div v-for="g in continentGroups" :key="g.key" class="continent">
           <button
             type="button"
-            class="tier region"
-            :class="{ on: regionChoice === 'ALL' }"
-            :title="t('quiz.regionHint')"
-            @click="chooseGlobal"
+            class="continent-head"
+            :class="{ on: chosenContinent === continentCodeOf(g.key) }"
+            :aria-expanded="openContinent === g.key"
+            @click="toggleContinent(g.key)"
           >
-            <strong>{{ t('quiz.regionAll') }}</strong>
+            <span>{{ t(`region.continents.${g.key}`) }}</span>
+            <span class="count">{{ continentSpeciesCount(g.key) }}</span>
+            <span class="chev" aria-hidden="true">{{ openContinent === g.key ? '−' : '+' }}</span>
           </button>
-        </div>
-        <p class="continent-cap muted small">{{ t('region.continentsLabel') }}</p>
-        <div class="continents">
-          <div v-for="g in continentGroups" :key="g.key" class="continent">
-            <button
-              type="button"
-              class="continent-head"
-              :class="{ on: chosenContinent === continentCodeOf(g.key) }"
-              :aria-expanded="openContinent === g.key"
-              @click="toggleContinent(g.key)"
-            >
-              <span>{{ t(`region.continents.${g.key}`) }}</span>
-              <span class="count">{{ continentSpeciesCount(g.key) }}</span>
-              <span class="chev" aria-hidden="true">{{ openContinent === g.key ? '−' : '+' }}</span>
-            </button>
-            <div v-if="openContinent === g.key" class="regions continent-body">
-              <template v-for="opt in g.countries" :key="opt.code">
-                <button
-                  type="button"
-                  class="tier region"
-                  :class="{ on: regionChoice === opt.code || selectedCountry === opt.code }"
-                  @click="chooseRegion(opt.code)"
-                >
-                  <strong>{{ regionLabel(opt.code) }}</strong>
-                  <span class="count">{{ opt.n }}</span>
-                </button>
-                <!-- 087 P0-3：省级 chips 内联在所选国家正下方（层级即所见；083 收起名单照旧生效）。
+          <div v-if="openContinent === g.key" class="regions continent-body">
+            <template v-for="opt in g.countries" :key="opt.code">
+              <button
+                type="button"
+                class="tier region"
+                :class="{ on: regionChoice === opt.code || selectedCountry === opt.code }"
+                @click="chooseRegion(opt.code)"
+              >
+                <strong>{{ regionLabel(opt.code) }}</strong>
+                <span class="count">{{ opt.n }}</span>
+              </button>
+              <!-- 087 P0-3：省级 chips 内联在所选国家正下方（层级即所见；083 收起名单照旧生效）。
                      S1（099）不显示省级——颜色组需要大池，地区只到国家/洲/全球（effectiveRegion 同时做省→国家回退） -->
-                <div
-                  v-if="tier !== 9 && opt.code === selectedCountry && provinceChoices.length"
-                  class="provinces inline"
-                >
-                  <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
-                  <div class="prov-wrap">
-                    <button
-                      v-for="p in provinceChoices"
-                      :key="p.code"
-                      class="prov-pill"
-                      :class="{ on: regionProvince === p.code }"
-                      @click="chooseRegionProvince(p.code)"
-                    >
-                      {{ p.name }}
-                    </button>
-                  </div>
+              <div
+                v-if="tier !== 9 && opt.code === selectedCountry && provinceChoices.length"
+                class="provinces inline"
+              >
+                <span class="prov-cap muted small">{{ t('quiz.regionProvinceCap') }}</span>
+                <div class="prov-wrap">
+                  <button
+                    v-for="p in provinceChoices"
+                    :key="p.code"
+                    class="prov-pill"
+                    :class="{ on: regionProvince === p.code }"
+                    @click="chooseRegionProvince(p.code)"
+                  >
+                    {{ p.name }}
+                  </button>
                 </div>
-              </template>
-            </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
+    </div>
     <p v-if="adaptiveHint" class="adaptive-hint">
       {{
         t(adaptiveHint.change === 'up' ? 'quiz.adaptiveUp' : 'quiz.adaptiveDown', {
@@ -1483,7 +1519,9 @@ function onTouchEnd(e: TouchEvent) {
     <!-- 072-a 观测：诊断行（仅 ?diag=1 显示；见 core/diag.ts）+ 选项残留观测（2026-10-25） -->
     <p v-if="diagOn && diagHead" class="diag-line" data-testid="diag-line">
       {{ diagHead }}<br /><span class="diag-body">{{ diagBody }}</span>
-      <template v-if="diagInput"><br /><span class="diag-input">{{ diagInput }}</span></template>
+      <template v-if="diagInput"
+        ><br /><span class="diag-input">{{ diagInput }}</span></template
+      >
     </p>
     <!-- 状态行：左=难度 · 中=题号 · 右=计时/正确率（R24 三栏紧凑布局） -->
     <div class="status-bar">
@@ -1496,13 +1534,15 @@ function onTouchEnd(e: TouchEvent) {
         <span v-if="!gate.ready.value && !quiz.answered" class="timer loading">
           <span class="spin" aria-hidden="true"></span> {{ t('quiz.loadingMedia') }}
         </span>
-        <span v-else-if="timeLeft !== null && !quiz.answered" class="timer" :class="{ warn: timeLeft <= warnThreshold }">
+        <span
+          v-else-if="timeLeft !== null && !quiz.answered"
+          class="timer"
+          :class="{ warn: timeLeft <= warnThreshold }"
+        >
           <Timer class="ic" :size="14" /> {{ timeLeft }}s
         </span>
         <span v-else>{{
-          quiz.answered || quiz.index > 0
-            ? t('quiz.accuracyLabel', { acc: quiz.accuracy })
-            : '--'
+          quiz.answered || quiz.index > 0 ? t('quiz.accuracyLabel', { acc: quiz.accuracy }) : '--'
         }}</span>
       </span>
     </div>
@@ -1606,9 +1646,8 @@ function onTouchEnd(e: TouchEvent) {
                 {{ t('quiz.correctImage', { letter: answerLetter }) }}
               </span>
               <span v-else>
-                {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
-                  t('quiz.answerSci', { sci: quiz.current.sci })
-                }}
+                {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b
+                >{{ t('quiz.answerSci', { sci: quiz.current.sci }) }}
               </span>
             </div>
           </div>
@@ -1617,7 +1656,9 @@ function onTouchEnd(e: TouchEvent) {
               <Hourglass class="ic" :size="13" />
               {{ t('quiz.autoAdvancing', { sec: (autoNextRemaining ?? 0).toFixed(1) }) }}
             </span>
-            <button class="btn-mini" type="button" @click="cancelAutoOnce">{{ t('quiz.cancelAuto') }}</button>
+            <button class="btn-mini" type="button" @click="cancelAutoOnce">
+              {{ t('quiz.cancelAuto') }}
+            </button>
             <button class="btn-mini ct-next" type="button" @click="goNext">{{ nextLabel }}</button>
           </div>
         </div>
@@ -1632,16 +1673,19 @@ function onTouchEnd(e: TouchEvent) {
         role="status"
         tabindex="-1"
       >
-        <strong v-if="timedOut"><AlarmClock class="ic" :size="16" /> {{ t('quiz.timeout') }}</strong>
-        <strong v-else-if="isCorrect"><CircleCheck class="ic" :size="16" /> {{ t('quiz.correct') }}</strong>
+        <strong v-if="timedOut"
+          ><AlarmClock class="ic" :size="16" /> {{ t('quiz.timeout') }}</strong
+        >
+        <strong v-else-if="isCorrect"
+          ><CircleCheck class="ic" :size="16" /> {{ t('quiz.correct') }}</strong
+        >
         <strong v-else><CircleX class="ic" :size="16" /> {{ t('quiz.wrong') }}</strong>
         <template v-if="answerIsImage">
           {{ t('quiz.correctImage', { letter: answerLetter }) }}
         </template>
         <template v-else>
-          {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b>{{
-            t('quiz.answerSci', { sci: quiz.current.sci })
-          }}
+          {{ t('quiz.correctAnswer') }}<b>{{ quiz.current.answer }}</b
+          >{{ t('quiz.answerSci', { sci: quiz.current.sci }) }}
           <span class="muted"> · {{ familyOf(quiz.current.family) }}</span>
         </template>
       </div>
@@ -1928,9 +1972,9 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.region-change:hover{
-  border-color: var(--primary-light);
-}
+  .region-change:hover {
+    border-color: var(--primary-light);
+  }
 }
 /* 自动定位小字（2026-11-01）：auto 模式下在摘要下注明来源 */
 .region-auto {
@@ -2018,9 +2062,9 @@ function onTouchEnd(e: TouchEvent) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.continent-head:hover{
-  background: #f3fbf7;
-}
+  .continent-head:hover {
+    background: #f3fbf7;
+  }
 }
 .continent-head .chev {
   color: var(--text-light);
@@ -2421,11 +2465,11 @@ function onTouchEnd(e: TouchEvent) {
   transition: all 0.18s ease;
 }
 @media (hover: hover) {
-.btn-mini:hover{
-  color: var(--primary);
-  border-color: var(--primary-light);
-  background: #eaf4ef;
-}
+  .btn-mini:hover {
+    color: var(--primary);
+    border-color: var(--primary-light);
+    background: #eaf4ef;
+  }
 }
 /* 浮窗内的「下一题/查看结果」：宽度贴合文字（不撑满），更醒目 */
 .ct-next {
@@ -2434,12 +2478,12 @@ function onTouchEnd(e: TouchEvent) {
   color: #fff;
 }
 @media (hover: hover) {
-.ct-next:hover{
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  filter: brightness(0.94);
-}
+  .ct-next:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    filter: brightness(0.94);
+  }
 }
 .quit-corner {
   display: inline-flex;
@@ -2456,11 +2500,11 @@ function onTouchEnd(e: TouchEvent) {
   transition: all 0.18s ease;
 }
 @media (hover: hover) {
-.quit-corner:hover{
-  color: var(--wrong);
-  border-color: var(--wrong);
-  background: #fff;
-}
+  .quit-corner:hover {
+    color: var(--wrong);
+    border-color: var(--wrong);
+    background: #fff;
+  }
 }
 .spinner {
   width: 46px;
@@ -2524,9 +2568,9 @@ function onTouchEnd(e: TouchEvent) {
   vertical-align: middle;
 }
 @media (hover: hover) {
-.report-link:hover{
-  color: var(--primary);
-}
+  .report-link:hover {
+    color: var(--primary);
+  }
 }
 
 /* ---- 099 S1 看名选图 ---- */

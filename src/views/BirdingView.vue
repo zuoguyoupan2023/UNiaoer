@@ -16,14 +16,34 @@ import type { ComponentPublicInstance } from 'vue'
 import type { MediaAsset } from '@/types'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Globe2, Lightbulb, MapPin, Search, Volume2, VolumeX, X, ZoomIn } from 'lucide-vue-next'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+  Globe2,
+  Lightbulb,
+  MapPin,
+  Search,
+  Volume2,
+  VolumeX,
+  X,
+  ZoomIn,
+} from 'lucide-vue-next'
 import CatalogPanel from '@/components/CatalogPanel.vue'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import AttributionLine from '@/components/AttributionLine.vue'
 import { prefersReducedMotion, useDialogA11y } from '@/composables/useDialogA11y'
 import { useMediaQuery } from '@/composables/useMediaQuery'
-import { loadBank, loadSpeciesAssets, speciesById, speciesName, type BankSpecies, type Manifest } from '@/core/bank'
+import {
+  loadBank,
+  loadSpeciesAssets,
+  speciesById,
+  speciesName,
+  type BankSpecies,
+  type Manifest,
+} from '@/core/bank'
 import {
   buildCountryIndex,
   countriesInContinent,
@@ -186,7 +206,10 @@ function loadLastRegion(): LastRegion | null {
 function saveLastRegion() {
   if (!selected.value) return
   try {
-    localStorage.setItem(LAST_REGION_KEY, JSON.stringify({ cc: selected.value, sub: province.value }))
+    localStorage.setItem(
+      LAST_REGION_KEY,
+      JSON.stringify({ cc: selected.value, sub: province.value }),
+    )
   } catch {
     // 隐私模式/配额满：静默降级（每次刷新走 IP 定位）
   }
@@ -203,7 +226,8 @@ function applyQuery() {
   nearby.value = tab === 'spots' && q.nearby === '1'
   if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
   if (typeof q.sub === 'string') province.value = q.sub
-  explicitRegionOnEntry = (!!q.cc && typeof q.cc === 'string') || (!!q.sub && typeof q.sub === 'string')
+  explicitRegionOnEntry =
+    (!!q.cc && typeof q.cc === 'string') || (!!q.sub && typeof q.sub === 'string')
   // `?preview=1`：外部入口（首页「预习模式」/「我的」页「去预习」）直达预习浮窗；一次性参数，不写回 URL
   if (q.preview === '1') {
     previewOpen.value = true
@@ -240,7 +264,8 @@ function syncQuery() {
   // 与当前 URL 相同则不触发导航（避免每次挂载都 replace 一次）
   const cur = route.query
   const same =
-    Object.keys(cur).length === Object.keys(q).length && Object.keys(q).every((k) => cur[k] === q[k])
+    Object.keys(cur).length === Object.keys(q).length &&
+    Object.keys(q).every((k) => cur[k] === q[k])
   if (same) return
   void router.replace({ query: q })
 }
@@ -397,16 +422,25 @@ const filtered = computed(() => {
   return [...list].sort((a, b) => collator.value.compare(countryName(a.code), countryName(b.code)))
 })
 /** 合并索引(国家 → 短码)与 bank 索引(降级路径与省级过滤用) */
-const mergedIndex = computed(() => (mergedBySpecies.value ? buildCountryIndex(mergedBySpecies.value) : {}))
+const mergedIndex = computed(() =>
+  mergedBySpecies.value ? buildCountryIndex(mergedBySpecies.value) : {},
+)
 const index = computed(() => (bySpecies.value ? buildCountryIndex(bySpecies.value) : {}))
 /**
  * 该国是否提供二级（省级）浏览入口（083）：镇级国家（SI/LV/MK/MT/SG）与微型国（NR/TV/KI/MH）
  * 收起——数据仍在（物种页热力条照常），只是不提供浏览与出题的省选择。
  */
-const provinceEnabled = computed(() => provinceSecondLevelEnabled(provinceIndex.value, selected.value))
+const provinceEnabled = computed(() =>
+  provinceSecondLevelEnabled(provinceIndex.value, selected.value),
+)
 const provinces = computed(() => {
   if (!provinceEnabled.value) return []
-  const list = provinceStats(provinceIndex.value, countryProvince.value, selected.value, locale.value)
+  const list = provinceStats(
+    provinceIndex.value,
+    countryProvince.value,
+    selected.value,
+    locale.value,
+  )
   if (sortMode.value === 'count') return [...list].sort((a, b) => b.count - a.count)
   return [...list].sort((a, b) => collator.value.compare(a.name, b.name))
 })
@@ -477,7 +511,8 @@ const countryGridItems = computed<GridItem[]>(() => {
       if (!bankHits.length) {
         // 没有 bank 命中 → 退回骨架条目（未收录媒体，仅展示）
         if (!e) continue
-        const sp = bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
+        const sp =
+          bankBySci.value.get(e.nameSci.toLowerCase()) ?? speciesById(slugifySci(e.nameSci))
         const gp = poolByCode.value.get(code)?.[0] ?? null
         const usable = sp ?? gp
         items.push({
@@ -497,7 +532,12 @@ const countryGridItems = computed<GridItem[]>(() => {
           name: nameOf(sp),
           nameSci: sp.nameSci,
           playable: true,
-          thumb: sp.image?.thumbUrl || sp.image?.url || sp.images?.[0]?.thumbUrl || sp.images?.[0]?.url || null,
+          thumb:
+            sp.image?.thumbUrl ||
+            sp.image?.url ||
+            sp.images?.[0]?.thumbUrl ||
+            sp.images?.[0]?.url ||
+            null,
           bankId: sp.id,
         })
       }
@@ -561,12 +601,15 @@ const recordCounts = computed(() => {
 
 /** 某物种在当前选择下的记录数（0 = 无记录）。用 slug（= 产物里的物种 id），
  *  这样**未收录**的骨架物种也能显示「GBIF N 条」（`bankId` 只有已收录种才有）。 */
-const recordCountOf = (id: string | null | undefined) => (id ? (recordCounts.value.get(id) ?? 0) : 0)
+const recordCountOf = (id: string | null | undefined) =>
+  id ? (recordCounts.value.get(id) ?? 0) : 0
 
 /** 省级层仅覆盖 bank 物种:选中省份时只显示省内的 bank 种 */
 const sortedGridItems = computed<GridItem[]>(() => {
   const ps = provinceSet.value
-  const base = ps ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId)) : countryGridItems.value
+  const base = ps
+    ? countryGridItems.value.filter((it) => it.bankId && ps.has(it.bankId))
+    : countryGridItems.value
   if (speciesSort.value !== 'records') return base
   // 记录数降序 → 名称兜底（保证稳定）；无记录（0）自然排在最后
   return [...base].sort(
@@ -655,9 +698,7 @@ const previewCurrent = computed(() => {
 const previewSp = computed(() =>
   previewCurrent.value?.bankId ? (speciesById(previewCurrent.value.bankId) ?? null) : null,
 )
-const previewAudio = computed(() =>
-  previewCurrent.value ? cardAudio(previewCurrent.value) : null,
-)
+const previewAudio = computed(() => (previewCurrent.value ? cardAudio(previewCurrent.value) : null))
 const previewMastered = computed(() => {
   void masteryVersion.value
   return previewCurrent.value ? isMastered(previewCurrent.value.slug) : false
@@ -799,9 +840,7 @@ const previewImageMain = computed(() => {
   const cur = previewCurrent.value
   if (!cur) return null
   return (
-    previewAssets.value?.images?.[0]?.thumbUrl ??
-    thumbUrlOf(thumbs.value, cur.slug) ??
-    cur.thumb
+    previewAssets.value?.images?.[0]?.thumbUrl ?? thumbUrlOf(thumbs.value, cur.slug) ?? cur.thumb
   )
 })
 /** 灯箱大图（xl 原图 → full → 展示图） */
@@ -850,7 +889,12 @@ async function ensureCatalogIndex() {
       for (const o of d.orders)
         for (const f of o.families)
           for (const s of f.species)
-            m.set(s.id, { famSci: f.sci, famZh: f.zh ?? '', py: s.py ?? '', pyTone: s.pyTone ?? '' })
+            m.set(s.id, {
+              famSci: f.sci,
+              famZh: f.zh ?? '',
+              py: s.py ?? '',
+              pyTone: s.pyTone ?? '',
+            })
       catalogIndex.value = m
     }
   } catch {
@@ -967,9 +1011,7 @@ const activeSection = computed(() =>
 const activeRows = computed(() => {
   const rows = localStats.value.rows
   if (activeSection.value !== 'known') return rows
-  return [...rows].sort(
-    (a, b) => b.known - a.known || b.n - a.n || a.key.localeCompare(b.key),
-  )
+  return [...rows].sort((a, b) => b.known - a.known || b.n - a.n || a.key.localeCompare(b.key))
 })
 const statsMax = computed(() => barMaxOf(localStats.value))
 /**
@@ -1114,7 +1156,8 @@ function scrollToResults() {
 /** 深链 `?cc=` 可能跨洲：数据就绪后把大洲切到该国家所在洲（否则列表里看不到选中国） */
 watch(stats, () => {
   if (!stats.value.length) return
-  if (countriesInContinent(stats.value, continent.value).some((s) => s.code === selected.value)) return
+  if (countriesInContinent(stats.value, continent.value).some((s) => s.code === selected.value))
+    return
   const found = continents.value.find((c) =>
     countriesInContinent(stats.value, c).some((s) => s.code === selected.value),
   )
@@ -1203,11 +1246,7 @@ function pickProvince(code: string) {
 
     <!-- 区域②（移动端）：常驻触发条，紧跟标题之下。本页 .birding 已放开 overflow，
          sticky 在卡片内照常工作；窄屏下这是**唯一**的地区入口，大洲/国家/省级都在抽屉里逐级选。 -->
-    <div
-      v-if="isMobile && stats.length"
-      class="picker-bar-wrap"
-      :style="{ top: `${stickyTop}px` }"
-    >
+    <div v-if="isMobile && stats.length" class="picker-bar-wrap" :style="{ top: `${stickyTop}px` }">
       <button
         type="button"
         class="picker-bar"
@@ -1379,8 +1418,17 @@ function pickProvince(code: string) {
               <span class="tab-label">{{ t('region.tabHotspots') }}</span>
               <span class="tab-count">
                 <span class="tab-n">{{ nearby ? '' : hotspotList.length }}</span>
-                <template v-if="!nearby && province && !hotspotResult.fallback && hotspotCountryCount > hotspotList.length">
-                  <span class="tab-sub">{{ t('region.hotspotOfCountry', { n: hotspotCountryCount }) }}</span>
+                <template
+                  v-if="
+                    !nearby &&
+                    province &&
+                    !hotspotResult.fallback &&
+                    hotspotCountryCount > hotspotList.length
+                  "
+                >
+                  <span class="tab-sub">{{
+                    t('region.hotspotOfCountry', { n: hotspotCountryCount })
+                  }}</span>
                 </template>
               </span>
             </button>
@@ -1445,7 +1493,9 @@ function pickProvince(code: string) {
                       </span>
                       <span class="hotspot-stat muted">
                         {{ t('region.hotspotSpeciesN', { n: h.speciesCount }) }}
-                        <template v-if="h.latestObs"> · {{ t('region.hotspotLatest', { d: h.latestObs }) }}</template>
+                        <template v-if="h.latestObs">
+                          · {{ t('region.hotspotLatest', { d: h.latestObs }) }}</template
+                        >
                       </span>
                     </button>
                     <div v-if="expandedHotspot === h.id" class="hotspot-detail">
@@ -1454,7 +1504,12 @@ function pickProvince(code: string) {
                         {{ t('region.hotspotGridNearby', { km: h.gridKm ?? 0, r: h.gridRecords }) }}
                       </p>
                       <p class="hotspot-sub">{{ t('region.hotspotTopSpecies') }}</p>
-                      <a class="hotspot-ext" :href="ebirdHotspotUrl(h.id)" target="_blank" rel="noopener noreferrer">
+                      <a
+                        class="hotspot-ext"
+                        :href="ebirdHotspotUrl(h.id)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         {{ t('region.hotspotOnEbird') }}
                       </a>
                       <ul class="hotspot-spp">
@@ -1523,7 +1578,11 @@ function pickProvince(code: string) {
             </div>
             <ul class="species-grid">
               <li v-for="gi in visibleItems" :key="gi.slug">
-                <RouterLink class="species-card" :class="{ 'not-in-bank': !gi.playable }" :to="`/species/${gi.slug}`">
+                <RouterLink
+                  class="species-card"
+                  :class="{ 'not-in-bank': !gi.playable }"
+                  :to="`/species/${gi.slug}`"
+                >
                   <img
                     v-if="cardThumb(gi)"
                     class="thumb"
@@ -1542,7 +1601,9 @@ function pickProvince(code: string) {
                         type="button"
                         class="card-play"
                         :class="{ playing: isPlaying(cardAudio(gi)!) }"
-                        :aria-label="isPlaying(cardAudio(gi)!) ? t('region.stopCall') : t('region.playCall')"
+                        :aria-label="
+                          isPlaying(cardAudio(gi)!) ? t('region.stopCall') : t('region.playCall')
+                        "
                         :aria-pressed="isPlaying(cardAudio(gi)!)"
                         @click.prevent.stop="playToggle(cardAudio(gi)!)"
                       >
@@ -1661,7 +1722,9 @@ function pickProvince(code: string) {
                 @click="pvToggleContinent(g.key)"
               >
                 <span>{{ t(`region.continents.${g.key}`) }}</span>
-                <span class="chev" aria-hidden="true">{{ pvOpenContinent === g.key ? '−' : '+' }}</span>
+                <span class="chev" aria-hidden="true">{{
+                  pvOpenContinent === g.key ? '−' : '+'
+                }}</span>
               </button>
               <div v-if="pvOpenContinent === g.key" class="pv-country-wrap">
                 <template v-for="s in g.countries" :key="s.code">
@@ -1695,195 +1758,214 @@ function pickProvince(code: string) {
           </div>
 
           <template v-else-if="pvTab === 'preview'">
-          <template v-if="previewCurrent">
-            <div class="pv-body">
-            <div class="pv-head">
-              <!-- 桌面：图左文右（2026-10-31 用户定：右侧上方=名字/学名）；
+            <template v-if="previewCurrent">
+              <div class="pv-body">
+                <div class="pv-head">
+                  <!-- 桌面：图左文右（2026-10-31 用户定：右侧上方=名字/学名）；
                    竖屏手机：**名字在上、图在下**（2026-11-04 用户定，图可占满整宽）。
                    两种布局用 CSS 换序（.pv-side order），模板顺序保持一致。
                    「查看」按钮放图的左下角、喇叭放右下角，都压在图上（见 .pv-photo-acts）。 -->
-              <button
-                v-if="previewImageMain"
-                type="button"
-                class="pv-photo"
-                :aria-label="t('region.pvZoom')"
-                @click="openLightbox(previewImageFull, previewImageMainMedia)"
-              >
-                <img
-                  :src="previewImageMain"
-                  alt=""
-                  @error="onThumbError(previewCurrent.slug)"
-                />
-                <span class="pv-zoom"><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvView') }}</span>
-              </button>
-              <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
-              <div class="pv-side">
-                <!-- 右对齐三行：拼音（仅中文界面且有中文名）/ 中文名（或英文名）/ 学名；
+                  <button
+                    v-if="previewImageMain"
+                    type="button"
+                    class="pv-photo"
+                    :aria-label="t('region.pvZoom')"
+                    @click="openLightbox(previewImageFull, previewImageMainMedia)"
+                  >
+                    <img
+                      :src="previewImageMain"
+                      alt=""
+                      @error="onThumbError(previewCurrent.slug)"
+                    />
+                    <span class="pv-zoom"
+                      ><ZoomIn :size="12" aria-hidden="true" />{{ t('region.pvView') }}</span
+                    >
+                  </button>
+                  <div v-else class="pv-photo pv-photo-empty" aria-hidden="true"></div>
+                  <div class="pv-side">
+                    <!-- 右对齐三行：拼音（仅中文界面且有中文名）/ 中文名（或英文名）/ 学名；
                      名字与学名都缺时只剩学名一行 -->
-                <div class="pv-title">
-                  <p v-if="previewPinyin" class="pv-py">{{ previewPinyin }}</p>
-                  <p v-if="previewCurrent.name !== previewCurrent.nameSci" class="pv-name">{{ previewCurrent.name }}</p>
-                  <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
+                    <div class="pv-title">
+                      <p v-if="previewPinyin" class="pv-py">{{ previewPinyin }}</p>
+                      <p v-if="previewCurrent.name !== previewCurrent.nameSci" class="pv-name">
+                        {{ previewCurrent.name }}
+                      </p>
+                      <p class="pv-sci">{{ previewCurrent.nameSci }}</p>
+                    </div>
+                    <!-- 桌面：压在右侧栏底部；竖屏手机：绝对定位到图的右下角（见样式里的媒体查询） -->
+                    <button
+                      v-if="previewAudio"
+                      type="button"
+                      class="card-play pv-play"
+                      :class="{ playing: isPlaying(previewAudio) }"
+                      :aria-label="
+                        isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')
+                      "
+                      :aria-pressed="isPlaying(previewAudio)"
+                      @click="playToggle(previewAudio)"
+                    >
+                      <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
+                      <Volume2 v-else :size="16" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-                <!-- 桌面：压在右侧栏底部；竖屏手机：绝对定位到图的右下角（见样式里的媒体查询） -->
+                <!-- 首图/首音署名（铁律 5、11：每段展示的素材都要有作者·许可证）。
+                 集中放在头部下方整行——塞进右侧窄栏会折成四五行；图标区分图/音 -->
+                <div v-if="previewImageMainMedia || previewAudioMedia" class="pv-credits">
+                  <AttributionLine
+                    v-if="previewImageMainMedia"
+                    compact
+                    :media="previewImageMainMedia"
+                  />
+                  <AttributionLine v-if="previewAudioMedia" compact :media="previewAudioMedia" />
+                </div>
+
+                <!-- 展开区：其余图/音一起展开、一起折叠（一个开关）。
+                 **每条素材都带自己的署名**（铁律 5、11）：图在缩略图正下方，音在试听按钮后 -->
+                <div v-if="mediaExpanded && hasExtraMedia" class="pv-extra">
+                  <div v-if="extraImages.length" class="pv-extra-imgs">
+                    <figure
+                      v-for="(m, i) in extraImages"
+                      :key="`img-${i}`"
+                      class="pv-extra-img-wrap"
+                    >
+                      <button
+                        type="button"
+                        class="pv-extra-img"
+                        :aria-label="t('region.pvZoom')"
+                        @click="openLightbox(m.xlUrl ?? m.url, m)"
+                      >
+                        <img :src="m.thumbUrl ?? m.url" alt="" loading="lazy" decoding="async" />
+                      </button>
+                      <AttributionLine compact :media="m" />
+                    </figure>
+                  </div>
+                  <ul v-if="extraAudios.length" class="pv-extra-audios">
+                    <li v-for="(m, i) in extraAudios" :key="`aud-${i}`" class="pv-extra-audio">
+                      <div class="pv-extra-audio-row">
+                        <button
+                          type="button"
+                          class="card-play"
+                          :class="{ playing: isPlaying(m.url) }"
+                          :aria-label="
+                            isPlaying(m.url) ? t('region.stopCall') : t('region.playCall')
+                          "
+                          :aria-pressed="isPlaying(m.url)"
+                          @click="playToggle(m.url)"
+                        >
+                          <VolumeX v-if="isPlaying(m.url)" :size="14" aria-hidden="true" />
+                          <Volume2 v-else :size="14" aria-hidden="true" />
+                        </button>
+                        <span class="muted">{{ t('region.pvAudio', { n: i + 2 }) }}</span>
+                      </div>
+                      <AttributionLine compact :media="m" />
+                    </li>
+                  </ul>
+                </div>
                 <button
-                  v-if="previewAudio"
+                  v-if="hasExtraMedia"
                   type="button"
-                  class="card-play pv-play"
-                  :class="{ playing: isPlaying(previewAudio) }"
-                  :aria-label="isPlaying(previewAudio) ? t('region.stopCall') : t('region.playCall')"
-                  :aria-pressed="isPlaying(previewAudio)"
-                  @click="playToggle(previewAudio)"
+                  class="pv-media-toggle"
+                  :aria-expanded="mediaExpanded"
+                  @click="mediaExpanded = !mediaExpanded"
                 >
-                  <VolumeX v-if="isPlaying(previewAudio)" :size="16" aria-hidden="true" />
-                  <Volume2 v-else :size="16" aria-hidden="true" />
+                  <ChevronDown
+                    class="chev"
+                    :class="{ open: mediaExpanded }"
+                    :size="14"
+                    aria-hidden="true"
+                  />
+                  {{
+                    mediaExpanded
+                      ? t('region.pvMediaCollapse')
+                      : t('region.pvMediaExpand', { n: extraImages.length + extraAudios.length })
+                  }}
+                </button>
+
+                <!-- 完整信息（2026-10-31 用户反馈：生境/习性等必须显示，不再 compact）：
+                 生活型（可点开含义）、居留型、生境、习性、分布（可展开国家列表）+ 特征数据 -->
+                <SpeciesFacts
+                  class="pv-facts"
+                  :profile="previewSp?.profile"
+                  :species-id="previewCurrent.slug"
+                  :taxon-key="previewSp?.taxonKey"
+                  :name-sci="previewCurrent.nameSci"
+                />
+              </div>
+              <!-- /.pv-body：信息区独立滚动 -->
+
+              <!-- 熟记 + 上下张 + 筛选固定在浮窗底部（2026-10-31 用户定），
+                 不同鸟的信息量差异只影响上方滚动区，不再推挤按钮 -->
+              <button
+                type="button"
+                class="pv-master"
+                :class="{ known: previewMastered }"
+                :aria-pressed="previewMastered"
+                @click="togglePreviewMastery"
+              >
+                <Lightbulb class="bulb" :size="20" aria-hidden="true" />
+                <span>{{ t('region.masteryAction') }}</span>
+              </button>
+
+              <div class="pv-nav">
+                <button
+                  type="button"
+                  class="pv-step"
+                  :disabled="previewList.length < 2"
+                  @click="stepPreview(-1)"
+                >
+                  <ChevronLeft :size="15" aria-hidden="true" />
+                  {{ t('region.previewPrev') }}
+                </button>
+                <span class="pv-pos muted">
+                  {{ t('region.previewPos', { i: previewIndex + 1, n: previewList.length }) }}
+                </span>
+                <button
+                  type="button"
+                  class="pv-step"
+                  :disabled="previewList.length < 2"
+                  @click="stepPreview(1)"
+                >
+                  {{ t('region.previewNext') }}
+                  <ChevronRight :size="15" aria-hidden="true" />
                 </button>
               </div>
-            </div>
-            <!-- 首图/首音署名（铁律 5、11：每段展示的素材都要有作者·许可证）。
-                 集中放在头部下方整行——塞进右侧窄栏会折成四五行；图标区分图/音 -->
-            <div v-if="previewImageMainMedia || previewAudioMedia" class="pv-credits">
-              <AttributionLine
-                v-if="previewImageMainMedia"
-                compact
-                :media="previewImageMainMedia"
-              />
-              <AttributionLine v-if="previewAudioMedia" compact :media="previewAudioMedia" />
-            </div>
+            </template>
+            <!-- 数据未就绪（深链直开）：给加载态，避免被误读成「暂无鸟种」 -->
+            <p v-else-if="!stats.length && !failed" class="muted pv-empty" role="status">
+              {{ t('common.loading') }}
+            </p>
+            <p v-else class="muted pv-empty">{{ t('region.previewEmpty') }}</p>
 
-            <!-- 展开区：其余图/音一起展开、一起折叠（一个开关）。
-                 **每条素材都带自己的署名**（铁律 5、11）：图在缩略图正下方，音在试听按钮后 -->
-            <div v-if="mediaExpanded && hasExtraMedia" class="pv-extra">
-              <div v-if="extraImages.length" class="pv-extra-imgs">
-                <figure v-for="(m, i) in extraImages" :key="`img-${i}`" class="pv-extra-img-wrap">
-                  <button
-                    type="button"
-                    class="pv-extra-img"
-                    :aria-label="t('region.pvZoom')"
-                    @click="openLightbox(m.xlUrl ?? m.url, m)"
-                  >
-                    <img :src="m.thumbUrl ?? m.url" alt="" loading="lazy" decoding="async" />
-                  </button>
-                  <AttributionLine compact :media="m" />
-                </figure>
-              </div>
-              <ul v-if="extraAudios.length" class="pv-extra-audios">
-                <li v-for="(m, i) in extraAudios" :key="`aud-${i}`" class="pv-extra-audio">
-                  <div class="pv-extra-audio-row">
-                    <button
-                      type="button"
-                      class="card-play"
-                      :class="{ playing: isPlaying(m.url) }"
-                      :aria-label="isPlaying(m.url) ? t('region.stopCall') : t('region.playCall')"
-                      :aria-pressed="isPlaying(m.url)"
-                      @click="playToggle(m.url)"
-                    >
-                      <VolumeX v-if="isPlaying(m.url)" :size="14" aria-hidden="true" />
-                      <Volume2 v-else :size="14" aria-hidden="true" />
-                    </button>
-                    <span class="muted">{{ t('region.pvAudio', { n: i + 2 }) }}</span>
-                  </div>
-                  <AttributionLine compact :media="m" />
-                </li>
-              </ul>
-            </div>
-            <button
-              v-if="hasExtraMedia"
-              type="button"
-              class="pv-media-toggle"
-              :aria-expanded="mediaExpanded"
-              @click="mediaExpanded = !mediaExpanded"
-            >
-              <ChevronDown class="chev" :class="{ open: mediaExpanded }" :size="14" aria-hidden="true" />
-              {{
-                mediaExpanded
-                  ? t('region.pvMediaCollapse')
-                  : t('region.pvMediaExpand', { n: extraImages.length + extraAudios.length })
-              }}
-            </button>
-
-            <!-- 完整信息（2026-10-31 用户反馈：生境/习性等必须显示，不再 compact）：
-                 生活型（可点开含义）、居留型、生境、习性、分布（可展开国家列表）+ 特征数据 -->
-            <SpeciesFacts
-              class="pv-facts"
-              :profile="previewSp?.profile"
-              :species-id="previewCurrent.slug"
-              :taxon-key="previewSp?.taxonKey"
-              :name-sci="previewCurrent.nameSci"
-            />
-
-            </div><!-- /.pv-body：信息区独立滚动 -->
-
-            <!-- 熟记 + 上下张 + 筛选固定在浮窗底部（2026-10-31 用户定），
-                 不同鸟的信息量差异只影响上方滚动区，不再推挤按钮 -->
-            <button
-              type="button"
-              class="pv-master"
-              :class="{ known: previewMastered }"
-              :aria-pressed="previewMastered"
-              @click="togglePreviewMastery"
-            >
-              <Lightbulb class="bulb" :size="20" aria-hidden="true" />
-              <span>{{ t('region.masteryAction') }}</span>
-            </button>
-
-            <div class="pv-nav">
+            <div class="pv-filters" role="group" :aria-label="t('region.previewMode')">
               <button
                 type="button"
-                class="pv-step"
-                :disabled="previewList.length < 2"
-                @click="stepPreview(-1)"
+                class="sort-btn"
+                :class="{ active: previewFilter === 'all' }"
+                :aria-pressed="previewFilter === 'all'"
+                @click="setPreviewFilter('all')"
               >
-                <ChevronLeft :size="15" aria-hidden="true" />
-                {{ t('region.previewPrev') }}
+                {{ t('region.filterAll') }}
               </button>
-              <span class="pv-pos muted">
-                {{ t('region.previewPos', { i: previewIndex + 1, n: previewList.length }) }}
-              </span>
               <button
                 type="button"
-                class="pv-step"
-                :disabled="previewList.length < 2"
-                @click="stepPreview(1)"
+                class="sort-btn"
+                :class="{ active: previewFilter === 'unmastered' }"
+                :aria-pressed="previewFilter === 'unmastered'"
+                @click="setPreviewFilter('unmastered')"
               >
-                {{ t('region.previewNext') }}
-                <ChevronRight :size="15" aria-hidden="true" />
+                {{ t('region.filterUnmastered') }}
+              </button>
+              <button
+                type="button"
+                class="sort-btn"
+                :class="{ active: previewFilter === 'mastered' }"
+                :aria-pressed="previewFilter === 'mastered'"
+                @click="setPreviewFilter('mastered')"
+              >
+                {{ t('region.filterMastered') }}
               </button>
             </div>
-          </template>
-          <!-- 数据未就绪（深链直开）：给加载态，避免被误读成「暂无鸟种」 -->
-          <p v-else-if="!stats.length && !failed" class="muted pv-empty" role="status">{{ t('common.loading') }}</p>
-          <p v-else class="muted pv-empty">{{ t('region.previewEmpty') }}</p>
-
-          <div class="pv-filters" role="group" :aria-label="t('region.previewMode')">
-            <button
-              type="button"
-              class="sort-btn"
-              :class="{ active: previewFilter === 'all' }"
-              :aria-pressed="previewFilter === 'all'"
-              @click="setPreviewFilter('all')"
-            >
-              {{ t('region.filterAll') }}
-            </button>
-            <button
-              type="button"
-              class="sort-btn"
-              :class="{ active: previewFilter === 'unmastered' }"
-              :aria-pressed="previewFilter === 'unmastered'"
-              @click="setPreviewFilter('unmastered')"
-            >
-              {{ t('region.filterUnmastered') }}
-            </button>
-            <button
-              type="button"
-              class="sort-btn"
-              :class="{ active: previewFilter === 'mastered' }"
-              :aria-pressed="previewFilter === 'mastered'"
-              @click="setPreviewFilter('mastered')"
-            >
-              {{ t('region.filterMastered') }}
-            </button>
-          </div>
           </template>
 
           <!-- ── 标签页 2：数据（en 用 Data，避免与 /stats 统计页混淆）──────────
@@ -1938,7 +2020,13 @@ function pickProvince(code: string) {
             </div>
             <!-- 占上一级对比值（上海-中国含港澳台 / 台湾-中国 / 新加坡-亚洲 / xx-全球） -->
             <p v-if="regionRatio" class="pvs-ratio muted">
-              {{ t('region.pvRatio', { parent: regionRatio.parentName, pct: regionRatio.parentPct, global: regionRatio.globalPct }) }}
+              {{
+                t('region.pvRatio', {
+                  parent: regionRatio.parentName,
+                  pct: regionRatio.parentPct,
+                  global: regionRatio.globalPct,
+                })
+              }}
             </p>
             <p class="pvs-cap">{{ t('region.count', { n: localStats.total }) }}</p>
             <div class="pvs-bars">
@@ -1952,18 +2040,40 @@ function pickProvince(code: string) {
                     :aria-expanded="expandedStat === r.key"
                     @click="toggleStatRow(r.key)"
                   >
-                    <ChevronRight class="pvs-caret" :class="{ open: expandedStat === r.key }" :size="11" aria-hidden="true" />
-                    {{ r.name }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{ r.sci }}</em>
+                    <ChevronRight
+                      class="pvs-caret"
+                      :class="{ open: expandedStat === r.key }"
+                      :size="11"
+                      aria-hidden="true"
+                    />
+                    {{ r.name
+                    }}<em v-if="r.sci && statsGroupBy === 'family' && r.name !== r.sci">{{
+                      r.sci
+                    }}</em>
                   </button>
                   <span class="pvs-track">
                     <!-- 我已认识：对数刻度，黄=已认识（0 时不渲染）/灰=科体量余量；该地鸟种：线性绿 -->
                     <template v-if="activeSection === 'known'">
-                      <span v-if="r.known > 0" class="pvs-fill mastered" :style="{ width: `${barPct(r.known, statsMax)}%` }"></span>
-                      <span v-if="r.n - r.known > 0" class="pvs-fill todo" :style="{ width: `${barRemPct(r.n, r.known, statsMax)}%` }"></span>
+                      <span
+                        v-if="r.known > 0"
+                        class="pvs-fill mastered"
+                        :style="{ width: `${barPct(r.known, statsMax)}%` }"
+                      ></span>
+                      <span
+                        v-if="r.n - r.known > 0"
+                        class="pvs-fill todo"
+                        :style="{ width: `${barRemPct(r.n, r.known, statsMax)}%` }"
+                      ></span>
                     </template>
-                    <span v-else class="pvs-fill" :style="{ width: `${statPct(r.n, statsMax)}%` }"></span>
+                    <span
+                      v-else
+                      class="pvs-fill"
+                      :style="{ width: `${statPct(r.n, statsMax)}%` }"
+                    ></span>
                   </span>
-                  <span class="pvs-n muted">{{ activeSection === 'known' ? `${r.known}/${r.n}` : r.n }}</span>
+                  <span class="pvs-n muted">{{
+                    activeSection === 'known' ? `${r.known}/${r.n}` : r.n
+                  }}</span>
                 </div>
                 <!-- 点科/属名展开：该组在当前地区的全部鸟种（按记录数排序；我已认识里黑=已认识/灰=待认识） -->
                 <div v-if="expandedStat === r.key" class="pvs-species">
@@ -1995,7 +2105,8 @@ function pickProvince(code: string) {
               <figcaption v-if="lightboxMedia" class="pv-lightbox-cap" @click.stop>
                 <AttributionLine compact :media="lightboxMedia" />
               </figcaption>
-            </figure>          </div>
+            </figure>
+          </div>
         </div>
       </div>
     </Teleport>
@@ -2042,10 +2153,11 @@ function pickProvince(code: string) {
   transition: all 0.16s ease;
 }
 @media (hover: hover) {
-.continent-btn:hover{
-  border-color: var(--primary-light);
+  .continent-btn:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.continent-btn.active {
+.continent-btn.active {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
@@ -2144,10 +2256,11 @@ function pickProvince(code: string) {
   text-align: left;
 }
 @media (hover: hover) {
-.country-btn:hover{
-  border-color: var(--primary-light);
+  .country-btn:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.country-btn.active {
+.country-btn.active {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;
@@ -2321,11 +2434,12 @@ function pickProvince(code: string) {
   color: var(--text-light);
 }
 @media (hover: hover) {
-.prov-btn:hover{
-  border-color: var(--primary-light);
-  background: #f7faf8;
+  .prov-btn:hover {
+    border-color: var(--primary-light);
+    background: #f7faf8;
+  }
 }
-}.prov-btn.active {
+.prov-btn.active {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;
@@ -2380,10 +2494,11 @@ function pickProvince(code: string) {
   margin-bottom: -2px;
 }
 @media (hover: hover) {
-.panel-tab:hover{
-  color: var(--primary);
+  .panel-tab:hover {
+    color: var(--primary);
+  }
 }
-}.panel-tab.active {
+.panel-tab.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
 }
@@ -2459,10 +2574,11 @@ function pickProvince(code: string) {
   transition: all 0.18s ease;
 }
 @media (hover: hover) {
-.nearby-toggle:hover{
-  background: #dceee4;
+  .nearby-toggle:hover {
+    background: #dceee4;
+  }
 }
-}.nearby-toggle.on {
+.nearby-toggle.on {
   background: var(--grad);
   border-color: transparent;
   color: #fff;
@@ -2496,10 +2612,11 @@ function pickProvince(code: string) {
   text-align: left;
 }
 @media (hover: hover) {
-.hotspot-btn:hover{
-  border-color: var(--primary-light);
+  .hotspot-btn:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.hotspot-btn[aria-expanded='true'] {
+.hotspot-btn[aria-expanded='true'] {
   border-color: var(--primary);
   background: #eaf4ef;
 }
@@ -2560,12 +2677,13 @@ function pickProvince(code: string) {
   transition: all 0.18s ease;
 }
 @media (hover: hover) {
-.species-card:hover{
-  border-color: var(--primary-light);
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
+  .species-card:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+  }
 }
-}.thumb {
+.thumb {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
@@ -2628,10 +2746,11 @@ function pickProvince(code: string) {
   }
 }
 @media (hover: hover) {
-.preview-btn:hover{
-  border-color: var(--primary-light);
+  .preview-btn:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.preview-btn[aria-pressed='true'] {
+.preview-btn[aria-pressed='true'] {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
@@ -2665,10 +2784,11 @@ function pickProvince(code: string) {
   transition: color 0.15s ease;
 }
 @media (hover: hover) {
-.card-play:hover{
-  color: var(--primary);
+  .card-play:hover {
+    color: var(--primary);
+  }
 }
-}.card-play.playing {
+.card-play.playing {
   color: var(--primary);
 }
 
@@ -2754,10 +2874,10 @@ function pickProvince(code: string) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.preview-close:hover{
-  color: var(--text);
-}
-}/* 信息区独立滚动：不同鸟的信息量差异只影响这里，底部按钮组不动（2026-10-31 用户定） */
+  .preview-close:hover {
+    color: var(--text);
+  }
+} /* 信息区独立滚动：不同鸟的信息量差异只影响这里，底部按钮组不动（2026-10-31 用户定） */
 .pv-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -2880,10 +3000,11 @@ function pickProvince(code: string) {
   color: #b8c4bd;
 }
 @media (hover: hover) {
-.pv-master:hover{
-  border-color: var(--primary-light);
+  .pv-master:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.pv-master.known {
+.pv-master.known {
   border-color: #f59e0b;
   background: #fff8ec;
   color: #92580a;
@@ -2919,10 +3040,11 @@ function pickProvince(code: string) {
   cursor: default;
 }
 @media (hover: hover) {
-.pv-step:not(:disabled):hover{
-  border-color: var(--primary-light);
+  .pv-step:not(:disabled):hover {
+    border-color: var(--primary-light);
+  }
 }
-}.pv-pos {
+.pv-pos {
   font-variant-numeric: tabular-nums;
   font-size: 0.72rem;
 }
@@ -3015,11 +3137,12 @@ function pickProvince(code: string) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.pv-media-toggle:hover{
-  border-color: var(--primary-light);
-  color: var(--text);
+  .pv-media-toggle:hover {
+    border-color: var(--primary-light);
+    color: var(--text);
+  }
 }
-}.pv-media-toggle .chev {
+.pv-media-toggle .chev {
   transition: transform 0.15s ease;
 }
 .pv-media-toggle .chev.open {
@@ -3071,10 +3194,10 @@ function pickProvince(code: string) {
   text-decoration-color: rgba(255, 255, 255, 0.4);
 }
 @media (hover: hover) {
-.pv-lightbox-cap :deep(a:hover){
-  color: #fff;
-  text-decoration-color: #fff;
-}
+  .pv-lightbox-cap :deep(a:hover) {
+    color: #fff;
+    text-decoration-color: #fff;
+  }
 }
 /* ── 预习浮窗 · 数据面板（信息流内的展开节，2026-10-31 用户反馈后改版）── */
 .pv-stats {
@@ -3140,10 +3263,11 @@ function pickProvince(code: string) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.pvs-name:hover{
-  color: var(--primary);
+  .pvs-name:hover {
+    color: var(--primary);
+  }
 }
-}.pvs-name.genus {
+.pvs-name.genus {
   font-style: italic;
 }
 .pvs-caret {
@@ -3171,11 +3295,12 @@ function pickProvince(code: string) {
   color: var(--text);
 }
 @media (hover: hover) {
-.pvs-species a:hover{
-  color: var(--primary);
-  text-decoration: underline;
+  .pvs-species a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+  }
 }
-}.pvs-name em {
+.pvs-name em {
   font-style: italic;
   color: var(--text-light);
   margin-left: 4px;
@@ -3244,10 +3369,10 @@ function pickProvince(code: string) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.pv-region-toggle:hover{
-  border-color: var(--primary-light);
-}
-}/* 展开时选区占满整个浮窗（2026-10-31 用户反馈）：flex:1 吃掉摘要行之下的全部空间，
+  .pv-region-toggle:hover {
+    border-color: var(--primary-light);
+  }
+} /* 展开时选区占满整个浮窗（2026-10-31 用户反馈）：flex:1 吃掉摘要行之下的全部空间，
    滚动发生在面板自身；鸟内容此时整体让位（v-else） */
 .pv-region-full {
   flex: 1 1 auto;
@@ -3276,10 +3401,11 @@ function pickProvince(code: string) {
   text-align: left;
 }
 @media (hover: hover) {
-.pv-continent-head:hover{
-  border-color: var(--primary-light);
+  .pv-continent-head:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.pv-continent-head.on {
+.pv-continent-head.on {
   border-color: var(--primary);
   background: #eaf4ef;
 }
@@ -3311,11 +3437,12 @@ function pickProvince(code: string) {
   text-align: left;
 }
 @media (hover: hover) {
-.pv-country:hover{
-  border-color: var(--primary-light);
-  background: #f7faf8;
+  .pv-country:hover {
+    border-color: var(--primary-light);
+    background: #f7faf8;
+  }
 }
-}.pv-country.on {
+.pv-country.on {
   border-color: var(--primary);
   background: #eaf4ef;
   font-weight: 700;
@@ -3346,10 +3473,11 @@ function pickProvince(code: string) {
   cursor: pointer;
 }
 @media (hover: hover) {
-.pv-prov:hover{
-  border-color: var(--primary-light);
+  .pv-prov:hover {
+    border-color: var(--primary-light);
+  }
 }
-}.pv-prov.on {
+.pv-prov.on {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
@@ -3412,5 +3540,4 @@ function pickProvince(code: string) {
     color: var(--primary);
   }
 }
-
 </style>

@@ -83,6 +83,7 @@
     "check:traits": "node scripts/check-traits.mjs",
     "check:tiers": "node scripts/check-tier-version.mjs",
     "check:tiers:local": "node scripts/check-tier-version.mjs --no-net",
+    "check:touch-hover": "node scripts/check-touch-hover.mjs",
     "report:tiers": "node scripts/report-tier-pools.mjs",
     "verify:push": "run-s type-check check:layers check:index check:traits check:changelog check:tiers:local",
     "hooks:install": "node scripts/install-git-hooks.mjs",
