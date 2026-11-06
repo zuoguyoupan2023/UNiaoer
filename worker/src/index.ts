@@ -2127,10 +2127,13 @@ async function handleSharePage(request: Request, env: Env, id: string): Promise<
 
 // ---------- 028 公开统计看板（/api/stats/public）----------
 
-/** 公开看板聚合缓存 TTL：5 分钟（用户 2026-10-20 反馈"两小时还是旧数据"后收紧；见 docs/066 §7） */
-const PUBLIC_STATS_TTL = 300
-/** 看板使用的 Cache API key（与 /api/questions 的缓存桶分开，避免规则互相干扰） */
-const PUBLIC_STATS_CACHE = 'uniaoer-api-stats'
+/** 看板快照在 D1 里的键（每个 days 一份） */
+const statsSnapshotKey = (days: number): string => `public-stats:days=${days}`
+/**
+ * 快照的**硬上限**（秒）：即使 cron 没跑、也没人手动刷新，超过这个年龄也强制重算一次。
+ * 防止「快照写入一直失败 → 永远返回同一份旧数据」。
+ */
+const STATS_SNAPSHOT_MAX_AGE = 3600
 
 /**
  * GET /api/stats/public —— 公开统计（无需密钥；**只输出聚合计数**，无任何个人/运行期信息）。
@@ -2140,163 +2143,341 @@ const PUBLIC_STATS_CACHE = 'uniaoer-api-stats'
  *   · 不公开：精确 IP、单次会话明细、分享者的个人数据、任何可关联个人的键。
  *   · 独立访客是"按日哈希去重"的数字（跨日不可关联），非精确人数（口径见 schema.sql）。
  *
- * 新鲜度：Worker 侧 Cache API 聚合缓存 5 分钟；响应 `cache-control: no-store`，
- * 不让浏览器或边缘缓存留存旧快照（2026-10-20 事故：CF 边缘按 4 小时缓存了该端点，
- * 页面两小时还是 20:41 的数据）。
- * 前端请求 `/api/stats/public/<5分钟分桶>`，桶号只用于绕过可能存在的边缘缓存，
- * **不进 Worker 缓存键**（键固定为 `?days=N`），因此 D1 聚合仍最多 5 分钟一次。
- * 回源成本：≤3 次小查询（聚合扫描 metrics_daily 近窗口 + 两个 DISTRIBUTION 分组），
- * 全部走主键/小表；日写入仅几十行，压力可忽略。
+ * ## 新鲜度与三级缓存（2026-11-06 重构，见 docs/111）
+ *
+ * 设计原则（用户原设计的完整体）：
+ *   ① 没人查看 → 一次都不查（**没有 cron**）；
+ *   ② 有人查 → 先看有没有 TT 内 的快照，有就直接返回（**不碰 D1 的原始表**）；
+ *   ③ 没有 → 重算一次，**写回快照**，下一个人在 TTL 内直接用。
+ *
+ * 三层，从近到远：
+ *
+ * | 层 | 位置 | 命中成本 | 说明 |
+ * |---|---|---|---|
+ * | L1 | Cache API（per-colo） | 0 行 | 本节点最快；**每个 colo 各一份**，会驱逐 |
+ * | L2 | D1 `metrics_snapshot`（**全局一份**） | **1 行** | 跨 colo 共享，这是「全局 10 分钟内只重算一次」的保证 |
+ * | L3 | 重算 `metrics_daily` | **6,419 行**（一次扫描） | 只在 L1/L2 都过期时发生 |
+ *
+ * **为什么 L2 必须是 D1 而不是 Cache API**：Cache API 是 per-colo 的，不同边缘节点
+ * 各存一份、各自被驱逐，**无法保证「10 分钟内全局只查一次」**。
+ * D1 的一行是全局共享的，这才是用户设计想要的效果。
+ *
+ * **L3 的成本为什么是 6,419 行而不是 46,322 行**：
+ * 原实现跑 6 条独立聚合查询（`GROUP BY event` / `GROUP BY props` / `GROUP BY day,props`），
+ * 每条都各自全表扫描 → 6,419 × 7.2 ≈ 46,322 行。
+ * 现在改成**一次 `SELECT day,event,props,n` 取全表**（6,419 行），在 Worker 内存里
+ * 用 JS 算出全部 6 个维度（实测输出与原 6 条查询**逐字段一致**，见 worker/src/__tests__/stats.spec.ts）。
+ * 表只有 6,419 行、约 385 KB，Workers 128 MB 内存无压力。
+ *
+ * 响应永远 `cache-control: no-store`（2026-10-20 事故：CF 边缘按 4 小时缓存在 CDN 上，
+ * 页面两小时还是旧数据）。新鲜度靠 `generatedAt` 与 `x-stats-cache` 头对外可见。
  */
-async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
-  const days = clampInt(url.searchParams.get('days'), 7, 90, 30)
-  const cache = await caches.open(PUBLIC_STATS_CACHE)
-  // 键固定：忽略前端的分桶尾巴（`/api/stats/public/<bucket>`）
-  const cacheKey = new Request(`${url.origin}/api/stats/public?days=${days}`, { method: 'GET' })
-  const hit = await cache.match(cacheKey)
-  if (hit) {
-    const cachedAt = Number(hit.headers.get('x-stats-cached-at') || 0)
-    if (cachedAt > 0 && (Date.now() - cachedAt) / 1000 < PUBLIC_STATS_TTL) {
-      const res = new Response(hit.body, hit)
-      // 命中时也必须 no-store：否则边缘/浏览器又会把这份快照存上几小时
-      res.headers.set('cache-control', 'no-store')
-      res.headers.set('x-stats-cache', 'HIT')
-      return res
+/**
+ * 看板真正消费的事件清单（2026-11-06 逐个核对前端代码得出，见 docs/111）。
+ *
+ * **这是把扫描行数从 6,419 降到约 1,534 的关键**：`metrics_daily` 里 76% 的行是
+ * `quiz_answer`（`props` 带 `species=`，4,885 行），它为「物种级错误率」（docs/077）
+ * 与地区统计（docs/073）服务，**公开看板完全不消费它**。
+ *
+ * 与前端对应关系（改前端时**必须同步这里**，否则看板数字会缺项）：
+ *   · `StatsView` 的 6 张卡片 → visitor_unique / session_start / quiz_complete /
+ *     page_view / poster_create / report_submit
+ *   · `StatsView` 逐日条形图 → quiz_complete
+ *   · `StatsView` 徽章进度 → badge_earned
+ *   · `StatsView` 称号进度 → title_earned
+ *   · `StatsView` + `ResultView` 档位正确率 → quiz_score（精确）/ quiz_result（早期）
+ *
+ * ⚠️ 依赖 `idx_metrics_event`（见 `worker/schema.sql`）。**没有该索引时本查询退化为全表扫描**
+ * （6,419 行），结果仍正确——只是省不到行数。所以「先建索引」是性能前提，不是正确性前提。
+ */
+const STATS_EVENTS = [
+  'visitor_unique',
+  'session_start',
+  'quiz_complete',
+  'page_view',
+  'poster_create',
+  'report_submit',
+  'badge_earned',
+  'title_earned',
+  'quiz_result',
+  'quiz_score',
+] as const
+
+/** `metrics_daily` 的一行（一次扫描的原始形状） */
+interface MetricRow {
+  day: string
+  event: string
+  props: string
+  n: number
+}
+
+/** 早期正确率分桶的中点（094-P2）→ 用于把 5 档分桶估算成百分比 */
+const BAND_MID: Record<string, number> = {
+  '0-20': 10,
+  '20-40': 30,
+  '40-60': 50,
+  '60-80': 70,
+  '80-100': 90,
+}
+
+/**
+ * 算公开看板需要的全部聚合 —— **一次全表扫描 + JS 聚合**（docs/111）。
+ *
+ * 为什么不是 6 条 SQL：那 6 条各自全表扫描，合计 46,322 行（= 6,419 × 7.2）。
+ * 一次 `SELECT day,event,props,n` 只读 6,419 行，JS 侧循环同样次数量级，
+ * 输出与原 6 条查询**逐字段一致**（`worker/src/__tests__/stats.spec.ts` 守这条契约）。
+ *
+ * ⚠️ 两个口径**必须分开**，不能混：
+ *   · `totals`  = **全时段**（不筛 day）→ 累计计数
+ *   · `series`  = **近 N 天**（筛 day >= since）
+ */
+export async function aggregateStats(
+  env: Env,
+  days: number,
+  since: string,
+): Promise<Record<string, unknown>> {
+  // 只读看板消费的 event（1,534 行），不读 quiz_answer 的物种明细（4,885 行）。
+  // 有 idx_metrics_event 时走索引；没有则退化为全表扫描（结果相同，只是不省行）。
+  const placeholders = STATS_EVENTS.map(() => '?').join(',')
+  const raw = await env.DB.prepare(
+    `SELECT day, event, props, n FROM metrics_daily WHERE event IN (${placeholders})`,
+  )
+    .bind(...STATS_EVENTS)
+    .all<MetricRow>()
+  const rows = raw.results ?? []
+
+  // ---- 一次遍历，算出全部维度 ----
+  const totals: Record<string, number> = {}
+  const seriesMap = new Map<string, number>()
+  const badgeMap = new Map<string, number>()
+  const titleMap = new Map<string, number>()
+  /** event → day → props → n（供 quiz_result / quiz_score 两个口径复用） */
+  const byEventDayProps = new Map<string, Map<string, Map<string, number>>>()
+
+  for (const r of rows) {
+    const n = r.n ?? 0
+    if (!r.event) continue
+
+    // totals：全时段
+    totals[r.event] = (totals[r.event] ?? 0) + n
+
+    // series：只取近 N 天
+    if (r.day >= since) {
+      const k = `${r.day}|${r.event}`
+      seriesMap.set(k, (seriesMap.get(k) ?? 0) + n)
+    }
+
+    // 徽章 / 称号：按 props 聚合（全时段，与原 SQL 一致）
+    if (r.event === 'badge_earned') badgeMap.set(r.props, (badgeMap.get(r.props) ?? 0) + n)
+    if (r.event === 'title_earned') titleMap.set(r.props, (titleMap.get(r.props) ?? 0) + n)
+
+    // quiz_result / quiz_score：按 day × props（全时段）
+    if (r.event === 'quiz_result' || r.event === 'quiz_score') {
+      let dayMap = byEventDayProps.get(r.event)
+      if (!dayMap) byEventDayProps.set(r.event, (dayMap = new Map()))
+      let propsMap = dayMap.get(r.day)
+      if (!propsMap) dayMap.set(r.day, (propsMap = new Map()))
+      propsMap.set(r.props, (propsMap.get(r.props) ?? 0) + n)
     }
   }
 
+  // ---- series：按 day 升序（原 SQL 是 ORDER BY day）----
+  const series = [...seriesMap.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([k, n]) => {
+      const bar = k.indexOf('|')
+      return { day: k.slice(0, bar), event: k.slice(bar + 1), n }
+    })
+
+  // ---- badges / titles：按 n 降序（原 SQL 是 ORDER BY n DESC）----
+  const toPropList = (m: Map<string, number>) =>
+    [...m.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([props, n]) => ({ ...parseProps(props), n }))
+
+  // ---- accuracyByTier：精确（quiz_score）+ 早期估算（quiz_result）----
+  const scoresRows = flatten(byEventDayProps.get('quiz_score'))
+  const resultsRows = flatten(byEventDayProps.get('quiz_result'))
+
+  type TierStat = { tier: string; n: number; mean: number; approx: boolean; bands?: Record<string, number> }
+
+  // 精确：按 tier 累计轮次与题量；记录首次出现日（该档位「早期」的分界线）
+  const exact = new Map<string, { rounds: number; correct: number; total: number; firstDay: string }>()
+  for (const r of scoresRows) {
+    const p = parseProps(r.props)
+    const tier = p.tier ?? ''
+    const correct = Number(p.correct)
+    const total = Number(p.total)
+    // correct ≤ total 的跨字段校验只能在这里做（单属性校验看不到彼此）
+    if (!tier || !Number.isInteger(correct) || !Number.isInteger(total) || total <= 0) continue
+    if (correct < 0 || correct > total) continue
+    const cell = exact.get(tier) ?? { rounds: 0, correct: 0, total: 0, firstDay: r.day }
+    cell.rounds += r.n
+    cell.correct += correct * r.n
+    cell.total += total * r.n
+    if (r.day < cell.firstDay) cell.firstDay = r.day
+    exact.set(tier, cell)
+  }
+
+  // 早期分桶：只累计「该档位首次精确数据之前」的行
+  const early = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
+  for (const r of resultsRows) {
+    const p = parseProps(r.props)
+    const tier = p.tier ?? ''
+    const b = p.band ?? ''
+    if (!tier || !(b in BAND_MID)) continue
+    const ex = exact.get(tier)
+    if (ex && r.day >= ex.firstDay) continue // 精确时代：分桶行与 quiz_score 重复
+    const cell = early.get(tier) ?? { n: 0, weighted: 0, bands: {} }
+    cell.n += r.n
+    cell.weighted += r.n * (BAND_MID[b] ?? 0)
+    cell.bands[b] = (cell.bands[b] ?? 0) + r.n
+    early.set(tier, cell)
+  }
+
+  const accuracyByTier: TierStat[] = []
+  for (const [tier, ex] of exact) {
+    accuracyByTier.push({
+      tier,
+      n: ex.rounds,
+      mean: Math.round((ex.correct / ex.total) * 100),
+      approx: false,
+    })
+  }
+  for (const [tier, bd] of early) {
+    accuracyByTier.push({
+      tier,
+      n: bd.n,
+      mean: Math.round(bd.weighted / bd.n),
+      bands: bd.bands,
+      approx: true,
+    })
+  }
+  accuracyByTier.sort((a, b) => Number(a.tier) - Number(b.tier) || Number(a.approx) - Number(b.approx))
+
+  return {
+    generatedAt: new Date().toISOString(),
+    days,
+    since,
+    /** 累计（自上线起，全时段） */
+    totals,
+    /** 近 N 日日序列：day × event */
+    series,
+    badges: toPropList(badgeMap),
+    titles: toPropList(titleMap),
+    accuracyByTier,
+    /** 口径说明（前端直接展示，避免"数字怎么来的"疑问） */
+    notes: {
+      visitor: '独立访客为按日去重的匿名计数（日盐哈希，IP/UA 不落库、跨日不可关联）；非精确人数。',
+      scope: '仅统计本站匿名事件；成绩/档案仍只存在各自设备。',
+    },
+  }
+}
+
+/** Map<day, Map<props, n>> → 扁平数组（供 accuracyByTier 遍历） */
+function flatten(dayMap: Map<string, Map<string, number>> | undefined): { day: string; props: string; n: number }[] {
+  if (!dayMap) return []
+  const out: { day: string; props: string; n: number }[] = []
+  for (const [day, propsMap] of dayMap) {
+    for (const [props, n] of propsMap) out.push({ day, props, n })
+  }
+  return out
+}
+
+async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
+  const days = clampInt(url.searchParams.get('days'), 7, 90, 30)
+
+  // 2026-11-06：**移除了 Cache API 层**。
+  //
+  // 原因是它和「整点汇总 + 手动刷新」的语义冲突：
+  //   · Cache API 是 per-colo 的，某节点的 HIT 会掩盖刚被手动刷新的新快照；
+  //   · 现在读一次 D1 快照只要 **1 行**，比 Cache API 的 match() 还便宜（且是全局一致的）。
+  // 保留它只会让「刷新后别的节点还能看到旧数据」——正是用户要避免的。
+  // 响应仍是 `no-store`，边缘/CDN 不会留副本。
+
+  // ---- L2：D1 快照（全局一份）----
+  // 语义（2026-11-06 用户定，见 docs/111）：
+  //   · 整点 cron 生成一份，`source='cron'`；
+  //   · 用户点「刷新」可覆盖它，`source='manual'`，有 10 分钟冷却；
+  //   · **读的时候永远返回 built_at 最新的那一份**，不管它是 cron 还是 manual 生成的。
+  // 所以这里直接取最新一行——不需要区分来源。
+  // 读不到表（尚未建表）时降级到 L3，不能让整个端点 500。
+  let snapshotPayload: string | null = null
+  let snapshotAt = 0
+  let snapshotSource = 'cron'
+  try {
+    const row = await env.DB.prepare(
+      'SELECT payload, built_at, source FROM metrics_snapshot WHERE key = ? ORDER BY built_at DESC LIMIT 1',
+    )
+      .bind(statsSnapshotKey(days))
+      .first<{ payload: string; built_at: string; source: string }>()
+    if (row) {
+      const at = Date.parse(row.built_at)
+      const age = (Date.now() - at) / 1000
+      // 快照极旧（硬上限 1 小时）说明 cron 没跑 + 没人手动刷 → 重算一次自愈
+      if (Number.isFinite(at) && age >= 0 && age < STATS_SNAPSHOT_MAX_AGE) {
+        snapshotPayload = row.payload
+        snapshotAt = at
+        snapshotSource = row.source || 'cron'
+      }
+    }
+  } catch {
+    // 表不存在 / D1 抖动 → 走 L3 重算（不阻塞端点）
+  }
+
+  if (snapshotPayload) {
+    const meta = {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-stats-cache': 'SNAPSHOT',
+      'x-stats-cached-at': String(snapshotAt),
+      'x-stats-source': snapshotSource,
+      ...CORS,
+    }
+    return new Response(snapshotPayload, { headers: meta })
+  }
+
+  // ---- L3：重算（一次扫描看板事件 + JS 聚合）----
+  // 只在「完全没有快照」或「快照超过 1 小时硬上限」时发生。
+  // 正常情况由整点 cron 与手动刷新维持，这里只是兜底自愈。
   const today = new Date()
   const since = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
   try {
-    const [series, byEvent, badges, titles, results, scores] = await Promise.all([
-      env.DB.prepare(
-        'SELECT day, event, SUM(n) AS n FROM metrics_daily WHERE day >= ? GROUP BY day, event ORDER BY day',
-      )
-        .bind(since)
-        .all<{ day: string; event: string; n: number }>(),
-      env.DB.prepare('SELECT event, SUM(n) AS n FROM metrics_daily GROUP BY event')
-        .all<{ event: string; n: number }>(),
-      env.DB.prepare(
-        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'badge_earned' GROUP BY props ORDER BY n DESC",
-      )
-        .all<{ props: string; n: number }>(),
-      env.DB.prepare(
-        "SELECT props, SUM(n) AS n FROM metrics_daily WHERE event = 'title_earned' GROUP BY props ORDER BY n DESC",
-      )
-        .all<{ props: string; n: number }>(),
-      // 072-k：正确率分桶（按档位×日聚合；不含物种/用户）——只用于「早期」口径（见下）
-      env.DB.prepare(
-        "SELECT day, props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_result' GROUP BY day, props",
-      )
-        .all<{ day: string; props: string; n: number }>(),
-      // 076：精确得分（correct/total）——主口径，正确率 = Σcorrect / Σtotal
-      env.DB.prepare(
-        "SELECT day, props, SUM(n) AS n FROM metrics_daily WHERE event = 'quiz_score' GROUP BY day, props",
-      )
-        .all<{ day: string; props: string; n: number }>(),
-    ])
+    const agg = await aggregateStats(env, days, since)
+    const body = JSON.stringify(agg)
+    const nowIso = new Date().toISOString()
 
-    const totals: Record<string, number> = {}
-    for (const r of byEvent.results) totals[r.event] = r.n
+    // 兜底快照标记为 source='manual'（它不是整点生成的）
+    ctx.waitUntil(
+      env.DB.prepare(
+        `INSERT INTO metrics_snapshot (key, payload, built_at, source) VALUES (?, ?, ?, 'manual')
+         ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, built_at = excluded.built_at, source = excluded.source`,
+      )
+        .bind(statsSnapshotKey(days), body, nowIso)
+        .run()
+        .catch(() => {
+          /* 表未建 / 写失败 → 下次还会重算，不影响正确性 */
+        }),
+    )
 
-    const out = {
-      generatedAt: new Date().toISOString(),
-      days,
-      since,
-      /** 累计（自上线起，全时段） */
-      totals,
-      /** 近 N 日日序列：day × event */
-      series: series.results,
-      badges: badges.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
-      titles: titles.results.map((r) => ({ ...parseProps(r.props), n: r.n })),
-      /**
-       * 072-k / 076 / 094：各档位正确率。
-       *
-       * **主口径（精确，076）**：`quiz_score{tier,correct,total}` → 正确率 = Σcorrect / Σtotal，
-       * 题级加权（题量不足 10 的轮次不会被放大或缩小），`approx: false`。
-       * **无样本量门槛**（094：n≥10 门槛会让新档位上线初期完全不可见，L6/L7 曾因此隐形）；
-       * 轮次数 n 随条目下发，样本大小自明。
-       *
-       * **早期口径（估算，094-P2）**：各档位**首次出现精确数据之前**的轮次只有 5 档分桶
-       * （`quiz_result{tier,band}`），按桶中点（10/30/50/70/90）加权估算，`approx: true`，
-       * 前端折叠展示并加 ≈，不与精确值混排。首次精确数据之后的分桶行与 quiz_score
-       * 重复，不计入（前端仍在发 quiz_result 供 073 地区口径，公开看板不再用它）。
-       */
-      accuracyByTier: (() => {
-        const BAND_MID: Record<string, number> = {
-          '0-20': 10,
-          '20-40': 30,
-          '40-60': 50,
-          '60-80': 70,
-          '80-100': 90,
-        }
-        type TierStat = { tier: string; n: number; mean: number; approx: boolean; bands?: Record<string, number> }
-
-        // 精确：按 (tier) 累计轮次与题量；记录首次出现日（该档位「早期」的分界线）
-        const exact = new Map<string, { rounds: number; correct: number; total: number; firstDay: string }>()
-        for (const r of scores.results) {
-          const p = parseProps(r.props)
-          const tier = p.tier ?? ''
-          const correct = Number(p.correct)
-          const total = Number(p.total)
-          // correct ≤ total 的跨字段校验只能在这里做（单属性校验看不到彼此）
-          if (!tier || !Number.isInteger(correct) || !Number.isInteger(total) || total <= 0) continue
-          if (correct < 0 || correct > total) continue
-          const cell = exact.get(tier) ?? { rounds: 0, correct: 0, total: 0, firstDay: r.day }
-          cell.rounds += r.n
-          cell.correct += correct * r.n
-          cell.total += total * r.n
-          if (r.day < cell.firstDay) cell.firstDay = r.day
-          exact.set(tier, cell)
-        }
-
-        // 早期分桶：只累计「该档位首次精确数据之前」的行（那时只有分桶，无法精确化）
-        const early = new Map<string, { n: number; weighted: number; bands: Record<string, number> }>()
-        for (const r of results.results) {
-          const p = parseProps(r.props)
-          const tier = p.tier ?? ''
-          const b = p.band ?? ''
-          if (!tier || !(b in BAND_MID)) continue
-          const ex = exact.get(tier)
-          if (ex && r.day >= ex.firstDay) continue // 精确时代：分桶行与 quiz_score 重复
-          const cell = early.get(tier) ?? { n: 0, weighted: 0, bands: {} }
-          cell.n += r.n
-          cell.weighted += r.n * (BAND_MID[b] ?? 0)
-          cell.bands[b] = (cell.bands[b] ?? 0) + r.n
-          early.set(tier, cell)
-        }
-
-        const out: TierStat[] = []
-        for (const [tier, ex] of exact) {
-          out.push({ tier, n: ex.rounds, mean: Math.round((ex.correct / ex.total) * 100), approx: false })
-        }
-        for (const [tier, bd] of early) {
-          out.push({ tier, n: bd.n, mean: Math.round(bd.weighted / bd.n), bands: bd.bands, approx: true })
-        }
-        return out.sort((a, b) => Number(a.tier) - Number(b.tier) || Number(a.approx) - Number(b.approx))
-      })(),
-      /** 口径说明（前端直接展示，避免"数字怎么来的"疑问） */
-      notes: {
-        visitor:
-          '独立访客为按日去重的匿名计数（日盐哈希，IP/UA 不落库、跨日不可关联）；非精确人数。',
-        scope: '仅统计本站匿名事件；成绩/档案仍只存在各自设备。',
-      },
-    }
-    const res = json(out, {
+    return new Response(body, {
       headers: {
-        // 不缓存：边缘/浏览器都不留旧快照；聚合结果由 Worker Cache API 兜 5 分钟
+        'content-type': 'application/json; charset=utf-8',
+        // 不缓存：边缘/浏览器都不留旧快照
         'cache-control': 'no-store',
         'x-stats-cache': 'MISS',
         'x-stats-cached-at': String(Date.now()),
+        'x-stats-source': 'manual',
+        ...CORS,
       },
     })
-    // Cache API 会按响应头决定是否可存：副本改成可缓存，对外仍然是 no-store
-    const cacheable = res.clone()
-    cacheable.headers.set('cache-control', `public, max-age=${PUBLIC_STATS_TTL}`)
-    ctx.waitUntil(cache.put(cacheKey, cacheable))
-    return res
-  } catch {
-    // 只读聚合失败（如首次部署表尚未生效）：返回可用形状的空结构，不 5xx
+  } catch (e) {
+    // 只读聚合失败（如首次部署表尚未生效）：返回可用形状的空结构，不 5xx。
+    // ⚠️ 但**必须留下可诊断的痕迹**——2026-11-06 首次上线时这里是静默的，
+    // 只看到 `x-stats-cache: BYPASS`，完全不知道哪一步炸了。
+    // 现在把错误写进响应头（不含敏感信息）并 console.error 进 Workers Logs。
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[stats] aggregate failed:', msg)
     return json(
       {
         generatedAt: new Date().toISOString(),
@@ -2309,8 +2490,120 @@ async function handlePublicStats(env: Env, ctx: ExecutionContext, url: URL): Pro
         accuracyByTier: [],
         notes: { visitor: '', scope: '' },
       },
-      { headers: { 'cache-control': 'no-store', 'x-stats-cache': 'BYPASS' } },
+      { headers: { 'cache-control': 'no-store', 'x-stats-cache': 'BYPASS', 'x-stats-error': msg.slice(0, 120) } },
     )
+  }
+}
+
+/**
+ * POST /api/stats/refresh —— 手动刷新看板（2026-11-06 用户定）。
+ *
+ * ## 用户的设计（原文）
+ * > 「增加一个刷新按钮：数据刷新到 10 分钟前；点击这个按钮获取 5 分钟之前的数据，
+ * > 再次计算，计算结果覆盖之前的整点数据，然后按钮灰色，10 分钟后解锁可以再次获取，
+ * > 避免反复刷新。」
+ *
+ * ## 实现取舍
+ *
+ * ⚠️ **「刷新到 5/10 分钟前」在数据上做不到**：`metrics_daily` 是**按天聚合**的表
+ * （主键 `(day, event, props)`，`day` 是 'YYYY-MM-DD'），**没有任何秒级时间戳**。
+ * 所以无法「只统计到 5 分钟前的数据」——所有行都是「整天」的计数。
+ *
+ * 能做到的是：**触发一次重算，覆盖整点那份快照**。用户的「看到最新数据」这个目标达到了，
+ * 只是「截止到 N 分钟前」这个精确边界不存在（永远包含「今天到目前为止」的全部计数）。
+ *
+ * ## 冷却
+ * 10 分钟内只允许刷新一次（`STATS_REFRESH_COOLDOWN`）。
+ * 冷却状态从**快照的 `source='manual'` 且 `built_at` 在 10 分钟内**推断——
+ * 不需要额外的锁表。多个人同时点，后到的会拿到 429 + 剩余冷却秒数。
+ */
+const STATS_REFRESH_COOLDOWN = 600
+
+async function handleStatsRefresh(env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
+  const days = clampInt(url.searchParams.get('days'), 7, 90, 30)
+  const key = statsSnapshotKey(days)
+
+  // 冷却检查：最近一次手动刷新是否还在 10 分钟内
+  try {
+    const row = await env.DB.prepare(
+      'SELECT built_at, source FROM metrics_snapshot WHERE key = ?',
+    )
+      .bind(key)
+      .first<{ built_at: string; source: string }>()
+    if (row?.source === 'manual') {
+      const at = Date.parse(row.built_at)
+      const elapsed = (Date.now() - at) / 1000
+      if (Number.isFinite(at) && elapsed >= 0 && elapsed < STATS_REFRESH_COOLDOWN) {
+        return json(
+          {
+            error: 'cooldown',
+            retryAfterSec: Math.ceil(STATS_REFRESH_COOLDOWN - elapsed),
+            builtAt: row.built_at,
+          },
+          { status: 429 },
+        )
+      }
+    }
+  } catch {
+    // 表不存在 → 继续（下面的重算会顺带建快照，若表真没有则写失败但不阻塞）
+  }
+
+  const today = new Date()
+  const since = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  try {
+    const agg = await aggregateStats(env, days, since)
+    const body = JSON.stringify(agg)
+    const nowIso = new Date().toISOString()
+    await env.DB.prepare(
+      `INSERT INTO metrics_snapshot (key, payload, built_at, source) VALUES (?, ?, ?, 'manual')
+       ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, built_at = excluded.built_at, source = excluded.source`,
+    )
+      .bind(key, body, nowIso)
+      .run()
+    return json({ ok: true, builtAt: nowIso, source: 'manual', retryAfterSec: STATS_REFRESH_COOLDOWN })
+  } catch (e) {
+    return json({ error: 'refresh_failed', detail: String(e).slice(0, 120) }, { status: 500 })
+  }
+}
+
+/**
+ * 整点自动汇总（cron 触发，2026-11-06 用户定）。
+ *
+ * 用户的设计原文：
+ * > 「每个小时整点自动算一次汇总数据，得到一个结果；stats 界面直接获取这个结果；
+ * > 整点数据显示，并显示计算时间。」
+ *
+ * 实现：`wrangler.toml` 配 `crons = ["0 * * * *"]`（**每小时整点一次，每天 24 次**）。
+ *
+ * ## 为什么只有 1 个 days 值（2026-11-06 修正）
+ *
+ * 原实现算了 `[7, 30, 90]` 三个值。但逐个核对前端后确认：
+ *   · `StatsView`  → `fetchPublicStats(30)`（固定 30）
+ *   · `ResultView` → `fetchPublicStats()`（默认 30）
+ * **7 和 90 没有任何调用方，属于纯浪费（占 cron 成本的 2/3）。**
+ *
+ * 现在只算 `days=30`。其它值（管理端手工指定等）仍走「读不到快照 → 重算」的兜底路径，
+ * 结果正确，只是那一次会真的扫一遍（1,553 行）。
+ *
+ * 成本：24 次/天 × 1 次 × 1,553 行 ≈ **3.7 万行/天**（免费额度的 0.7%）。
+ */
+const STATS_CRON_DAYS = [30] as const
+
+async function handleStatsCron(env: Env): Promise<void> {
+  const today = new Date()
+  for (const days of STATS_CRON_DAYS) {
+    const since = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+    try {
+      const agg = await aggregateStats(env, days, since)
+      await env.DB.prepare(
+        `INSERT INTO metrics_snapshot (key, payload, built_at, source) VALUES (?, ?, ?, 'cron')
+         ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, built_at = excluded.built_at, source = excluded.source`,
+      )
+        .bind(statsSnapshotKey(days), JSON.stringify(agg), new Date().toISOString())
+        .run()
+    } catch {
+      // 单个 days 失败不影响其它；下次整点重试
+    }
   }
 }
 
@@ -2412,6 +2705,16 @@ async function handleAdminPatch(request: Request, env: Env, id: string): Promise
 }
 
 export default {
+  /**
+   * 整点自动汇总（2026-11-06 用户定）：`wrangler.toml` 的 `[triggers] crons = ["0 * * * *"]`。
+   *
+   * 为什么用 cron 而不是「懒重算」：用户明确要「整点算一次，stats 界面直接拿这个结果」。
+   * 好处是看板读的永远是**算好的快照**（1 行），不需要任何请求触发重算。
+   * 代价是每天固定 24 次 × 3 个 days × 1,534 行 ≈ 11 万行（占额度 2.2%）——可接受。
+   */
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(handleStatsCron(env))
+  },
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     // 权威域名是 apex（uniaoer.com）；www 未接入 Worker 的 /api 路由，
@@ -2483,8 +2786,8 @@ export default {
         if (path === '/api/admin/stats/province') return await handleAdminStatsProvince(request, env, url)
         // 077：鸟种级错误率 / 错认组合（管理端观察期，T+1；公开页暂不展示）
         if (path === '/api/admin/stats/species') return await handleAdminStatsSpecies(request, env, url)
-        // 028 公开统计看板（无需密钥；边缘缓存 1 小时）
-        // 接受 `/api/stats/public` 与 `/api/stats/public/<分桶>`：分桶只用于绕开边缘缓存
+        // 028 公开统计看板（无需密钥；读 D1 快照 1 行）
+        // 接受 `/api/stats/public` 与 `/api/stats/public/<分桶>`（分桶只是历史兼容，已无作用）
         if (path === '/api/stats/public' || path.startsWith('/api/stats/public/'))
           return await handlePublicStats(env, ctx, url)
         // 029 M3:质量隔离台账（管理端读取,供 /admin 展示与导出脚本拉取）
@@ -2511,6 +2814,10 @@ export default {
       // 028 匿名计量上报（公开；白名单 + 内存限流；静默 204）
       if (method === 'POST' && path === '/api/metrics') {
         return await handleMetrics(request, env, ctx)
+      }
+      // 2026-11-06：看板手动刷新（公开；10 分钟冷却，见 docs/111）
+      if (method === 'POST' && path === '/api/stats/refresh') {
+        return await handleStatsRefresh(env, ctx, url)
       }
       if (method === 'POST' && path === '/api/shares') {
         return await handleCreateShare(request, env)

@@ -8,11 +8,11 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BarChart3, Trophy } from 'lucide-vue-next'
+import { BarChart3, RefreshCw, Trophy } from 'lucide-vue-next'
 import BadgeIcon from '@/components/BadgeIcon.vue'
 import { BADGES } from '@/core/badges'
 import { TITLE_TRACKS } from '@/core/titles'
-import { dailySeries, fetchPublicStats, totalOf, type PublicStats } from '@/core/publicStats'
+import { dailySeries, fetchPublicStats, refreshPublicStats, totalOf, type PublicStats } from '@/core/publicStats'
 import { logPct, logTicks, logTop, trimLeadingZeros } from '@/core/statsChart'
 import { currentLocale } from '@/i18n'
 
@@ -22,6 +22,9 @@ const stats = ref<PublicStats | null>(null)
 const loading = ref(true)
 const refreshing = ref(false)
 const unavailable = ref(false)
+/** 刷新冷却剩余秒数（>0 时按钮置灰）。2026-11-06 用户定：10 分钟内只能刷一次 */
+const cooldownLeft = ref(0)
+let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
 async function load() {
   const s = await fetchPublicStats(30)
@@ -31,11 +34,44 @@ async function load() {
   refreshing.value = false
 }
 
-/** 手动刷新：数据最多 5 分钟旧（Worker 聚合缓存），不必等页面重进 */
+/** 启动/刷新冷却倒计时 */
+function startCooldown(sec: number) {
+  cooldownLeft.value = Math.max(0, Math.ceil(sec))
+  if (cooldownTimer) clearInterval(cooldownTimer)
+  if (cooldownLeft.value <= 0) return
+  cooldownTimer = setInterval(() => {
+    cooldownLeft.value = Math.max(0, cooldownLeft.value - 1)
+    if (cooldownLeft.value <= 0 && cooldownTimer) {
+      clearInterval(cooldownTimer)
+      cooldownTimer = null
+    }
+  }, 1000)
+}
+
+/**
+ * 手动刷新（2026-11-06 用户定）。
+ *
+ * 实现：`POST /api/stats/refresh` → Worker 重算并把结果覆盖进快照；
+ * 其他人下次打开看到的也是这份新数据（快照全局共享）。
+ * 冷却由 Worker 强制（429 + retryAfterSec），前端只负责置灰与倒计时。
+ *
+ * ⚠️ 注意：`metrics_daily` 是**按天聚合**的，没有秒级时间戳，所以
+ * 「只统计到 5 分钟前」在数据上做不到——刷新得到的是「到现在为止」的全量重算。
+ */
 async function reload() {
-  if (refreshing.value) return
+  if (refreshing.value || cooldownLeft.value > 0) return
   refreshing.value = true
-  await load()
+  try {
+    const r = await refreshPublicStats(30)
+    if (r.ok) {
+      startCooldown(r.retryAfterSec ?? 600)
+      await load()
+    } else if (r.cooldownSec) {
+      startCooldown(r.cooldownSec)
+    }
+  } finally {
+    refreshing.value = false
+  }
 }
 
 onMounted(load)
@@ -131,8 +167,22 @@ const dayLabel = (day: string) => day.slice(5) // MM-DD
     <template v-else>
       <p class="muted small meta">
         {{ t('stats.generatedAt', { at: dateText }) }} · {{ t('stats.cachedHint') }}
-        <button class="link refresh" type="button" :disabled="refreshing" @click="reload">
-          {{ refreshing ? t('stats.refreshing') : t('stats.refresh') }}
+        <!-- 2026-11-06 用户定：手动刷新覆盖整点数据，10 分钟冷却（冷却期置灰 + 倒计时） -->
+        <button
+          class="link refresh"
+          type="button"
+          :disabled="refreshing || cooldownLeft > 0"
+          :title="cooldownLeft > 0 ? t('stats.refreshCooldown', { sec: cooldownLeft }) : ''"
+          @click="reload"
+        >
+          <RefreshCw v-if="!refreshing" class="ic" :size="13" />
+          {{
+            refreshing
+              ? t('stats.refreshing')
+              : cooldownLeft > 0
+                ? t('stats.refreshCooldown', { sec: cooldownLeft })
+                : t('stats.refresh')
+          }}
         </button>
       </p>
 

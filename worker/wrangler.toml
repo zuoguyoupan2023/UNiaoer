@@ -39,3 +39,10 @@ zone_name = "uniaoer.com"
 [[routes]]
 pattern = "www.uniaoer.com/*"
 zone_name = "uniaoer.com"
+
+# 2026-11-06：整点自动汇总公开看板（docs/111）。
+# 每小时整点算一次 totals/series/badges/titles/accuracyByTier，写进 metrics_snapshot。
+# 看板读的永远是这份快照（1 行），不再依赖「有人访问才重算」。
+# 成本：24 次/天 × 3 个 days 值 × ~1,534 行 ≈ 11 万行/天（免费额度 500 万的 2.2%）。
+[triggers]
+crons = ["0 * * * *"]

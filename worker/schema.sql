@@ -210,6 +210,34 @@ CREATE TABLE IF NOT EXISTS metrics_daily (
   PRIMARY KEY (day, event, props)
 );
 
+-- 公开看板的**预聚合快照**（2026-11-06，见 docs/111）。
+--
+-- 为什么需要它：看板的全部内容只有约 1,036 个数字（totals/series/badges/titles/accuracyByTier），
+-- 完整 JSON 约 60 KB。但原实现每次回源都要跑 6 条聚合查询扫遍 metrics_daily（46,322 行），
+-- 其中 76% 的行是 `quiz_answer` 的物种级明细——看板根本用不到那个粒度。
+--
+-- 现在：过期时才重算一次（一次全表扫描 6,419 行），结果写进本表的一行；
+-- 之后所有请求（**跨所有边缘节点**）都只读这一行。
+-- 这是「10 分钟内全局最多重算一次」的保证——Cache API 是 per-colo 的，做不到这点。
+--
+-- 清理：key 形如 'public-stats:days=N'，N 只有 7–90 共 84 种取值，
+-- 行数上限 84，无需定期清理。
+--
+-- source 语义（2026-11-06）：
+--   'cron'   = 整点自动汇总生成（`wrangler.toml` 的 crons，每天 24 次）
+--   'manual' = 用户点「刷新」生成（`POST /api/stats/refresh`，10 分钟冷却）
+-- 读取时永远取 built_at 最新的一行（不区分来源）——手动刷新覆盖整点数据正是设计意图。
+CREATE TABLE IF NOT EXISTS metrics_snapshot (
+  key      TEXT PRIMARY KEY,           -- 'public-stats:days=30'
+  payload  TEXT NOT NULL,              -- 完整看板 JSON（约 60 KB）
+  built_at TEXT NOT NULL,              -- ISO 时间戳；超过硬上限即重算
+  source   TEXT NOT NULL DEFAULT 'cron' -- 'cron' | 'manual'
+);
+
+-- `aggregateStats` 按 event 过滤，需要这个索引才能把扫描行数从 6,419 降到约 1,534。
+-- 没有它查询仍**正确**，只是退化为全表扫描（见 docs/111）。
+CREATE INDEX IF NOT EXISTS idx_metrics_event ON metrics_daily(event);
+
 -- 独立访客去重（**只存不可逆哈希**，见 §隐私）：
 --   vhash = sha256(日盐 | 日期 | IP | UA) 的截断值；日盐每日随机轮换（存 meta，`stats_salt_<day>`），
 --   故**无法跨日关联同一人**；IP/UA 原值不落库（仅在内存中参与一次哈希计算）。

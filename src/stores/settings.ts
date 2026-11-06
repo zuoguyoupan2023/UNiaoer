@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { AutoNextDelaySec, AutoNextMode, LicensePolicy, QuizRegime, Tier } from '@/types'
 import { setLocale, currentLocale as i18nCurrentLocale, type AppLocale } from '@/i18n'
+import { isGlobalZoneEnabled } from '@/core/globalZone'
 
 // v2：音频自动播放默认由「关」改为「开」（见 006），旧键不复用以免沿用旧默认
 const STORAGE_KEY = 'uniaoer.settings.v2'
@@ -139,9 +140,40 @@ export const useSettingsStore = defineStore('settings', () => {
   /** L6 半鸟人卷别（docs/085 D-2：switch 切换，'default' 跟随界面语言 / 'sci' 学名卷） */
   /** D5 自适应难度：默认开；开启后介绍页会按最近表现推荐档位，"再来一轮"也会自动升降 */
   const adaptiveTier = ref<boolean>(saved.adaptiveTier ?? true)
-  /** 029 M2:出题地区偏好（默认 ALL=不过滤；L1-L3 按此过滤全球池） */
-  const region = ref<string>(saved.region ?? 'ALL')
-  /** 出题地区来源（2026-11-01,见 Persisted.regionSource 注释） */
+  /**
+   * 用户**真实的**地区偏好（持久化用）。
+   *
+   * 2026-11-06 用户定：默认「亚洲」（AS），不再是 'ALL'（全球）。
+   * 原因：大部分人熟悉本国/本洲，全球池对新手太宽，正确率趋近概率、训练信号接近零
+   * （docs/109 §7）。同时**取消了 IP 自动定位**——定位涉及权限、网络环境、用户习惯差异，
+   * 不可靠；改为「默认亚洲 + 用户自己改国家/洲」。
+   *
+   * 旧存档迁移：以前 `region` 可能是 `'ALL'`，一律迁到 `'AS'`
+   * （全球现在不持久化，见下面 `region` 的说明）。
+   */
+  const savedRegion = saved.region === 'ALL' ? 'AS' : (saved.region ?? 'AS')
+  const persistedRegion = ref<string>(savedRegion)
+  /**
+   * **本次生效**的出题地区。`?zone=global` 的一次性覆盖发生在这里。
+   *
+   * 为什么要把「生效值」和「持久化值」分开（用户 2026-11-06 二次修订）：
+   * 「有些人好奇开了，下次这个人其实还是做上海/香港/云南的，而不是 ALL；
+   * 每次想做 global 的人需要用特殊链接访问，这样才合理吧？」
+   *
+   * 如果直接把 `settings.region` 改成 `'ALL'` 再落盘，用户（比如本来做上海）好奇点一次，
+   * **他原来的「上海」就丢了**——下次只能看到亚洲。所以：
+   *   · `region`（生效值）可以是临时的 `'ALL'`；
+   *   · `persistedRegion`（持久值）**永远不写 `'ALL'`**，始终保留用户真实的地区偏好。
+   */
+  const region = ref<string>(isGlobalZoneEnabled() ? 'ALL' : savedRegion)
+  // 显式选了非全球的地区 → 更新持久值；「全球」只在本次会话生效，不污染存档
+  watch(region, (v) => {
+    if (v !== 'ALL') persistedRegion.value = v
+  })
+  /**
+   * 出题地区来源（2026-11-01 引入，**2026-11-06 后不再写入**）。
+   * 自动定位已取消，本字段仅保留用于兼容旧存档，不再驱动任何界面行为。
+   */
   const regionSource = ref<'auto' | 'manual' | undefined>(saved.regionSource)
   /** 028 匿名计量开关（默认开；关闭即完全不上报） */
   const metricsEnabled = ref<boolean>(saved.metricsEnabled ?? true)
@@ -182,7 +214,7 @@ export const useSettingsStore = defineStore('settings', () => {
       memoryBoardSize,
       s1Form,
       adaptiveTier,
-      region,
+      persistedRegion,
       regionSource,
       metricsEnabled,
       metricsGeo,
@@ -219,7 +251,9 @@ export const useSettingsStore = defineStore('settings', () => {
             memoryBoardSize: memoryBoardSize.value,
             s1Form: s1Form.value,
             adaptiveTier: adaptiveTier.value,
-            region: region.value,
+            // 永远写「持久值」而非生效值：`?zone=global` 的一次性覆盖不能落盘，
+            // 否则用户好奇点一次，他原来的「上海」就被 'ALL' 永久覆盖了。
+            region: persistedRegion.value,
             regionSource: regionSource.value,
             metricsEnabled: metricsEnabled.value,
             metricsGeo: metricsGeo.value,

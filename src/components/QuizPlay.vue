@@ -24,7 +24,6 @@ import {
   Hourglass,
   Image as ImageIcon,
   Keyboard,
-  LocateFixed,
   LogOut,
   Play,
   Smartphone,
@@ -57,6 +56,7 @@ import {
   type ContinentCode,
 } from '@/core/region'
 import { familyDisplay } from '@/i18n/data/family'
+import { isGlobalZoneEnabled } from '@/core/globalZone'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import AttributionLine from './AttributionLine.vue'
 import AnswerReview from './AnswerReview.vue'
@@ -380,6 +380,15 @@ function continentSpeciesCount(c: Continent): number {
 const chosenContinent = computed<ContinentCode | null>(() =>
   isContinentCode(regionChoice.value) ? regionChoice.value : null,
 )
+/**
+ * 「全球」出题区是否解锁（2026-11-06 用户定）。
+ *
+ * 默认**不解锁**：全球是成本最高、训练信号最弱的一档（题目里的鸟用户从没见过，
+ * 正确率趋近 25% 概率），不该对新用户暴露。`?zone=global` 解锁并记住，
+ * `?zone=0` 关闭。详见 `src/core/globalZone.ts` 与 `docs/109 §7`。
+ */
+const globalZoneEnabled = isGlobalZoneEnabled()
+
 /** 「全球」快捷项（清空地区选择） */
 function chooseGlobal() {
   regionChoice.value = 'ALL'
@@ -395,8 +404,7 @@ const regionChoice = computed({
   get: () => settings.region,
   set: (v: string) => {
     settings.region = v
-    // 2026-11-01 用户定：面板里任何显式选择（含「全球」）= 永久退出自动定位模式
-    settings.regionSource = 'manual'
+    // 2026-11-06：`regionSource` 已随「取消自动定位」废弃，不再写入。
   },
 })
 /** 固定显示名（CN/港澳台走 i18n，其余走 Intl.DisplayNames）——避免各端 CLDR 差异（见 core/region.ts） */
@@ -475,11 +483,25 @@ watch(regionChoice, (v) => {
   }
   if (regionProvince.value && !regionProvince.value.startsWith(v + '-')) regionProvince.value = ''
 })
-/** 087 P0：展开选择面板时，自动展开当前所选国所属的洲（少一次寻找） */
+/** 087 P0：展开选择面板时，自动展开当前所选国所属的洲（少一次寻找）
+ *
+ * 2026-11-06：默认地区改为「亚洲」（`settings.region` 缺省 `'AS'`），此时 `selectedCountry`
+ * 为空（洲码不是国家码）。用户明确要求「下面自动展开各国」——所以选的是洲时，
+ * 直接展开那个洲。 */
 watch(regionPickerOpen, (open) => {
   if (!open) return
   const c = continentOf(selectedCountry.value)
-  if (c) openContinent.value = c
+  if (c) {
+    openContinent.value = c
+    return
+  }
+  // 选中的是「洲」本身 → 展开该洲（默认场景：亚洲）。
+  // 洲码 → Continent 没有现成反向表，用 CONTINENTS + continentCodeOf 反查。
+  const cc = chosenContinent.value
+  if (cc) {
+    const asContinent = CONTINENTS.find((k) => continentCodeOf(k) === cc)
+    if (asContinent) openContinent.value = asContinent
+  }
 })
 function chooseRegionProvince(code: string) {
   // 再点一次同省 = 取消省细分（回到纯国家）
@@ -553,54 +575,19 @@ function chooseRegime(r: QuizRegime) {
 }
 
 /**
- * 出题区域自动定位（2026-11-01 用户定：很多人熟悉的是本地鸟，全球池对新手太宽）。
- * 按 IP 归属地（Worker `/api/geo`，`request.cf` 派生，**不存 IP 不进日志**）把用户带到
- * 省级出题区域，与观鸟页同款端点同款降级：
- * · `regionSource === 'manual'`（用户显式选过，含「全球」）→ 永不再打扰；
- * · 旧用户未表态（缺省）但已有非 ALL 选择 → 视为手动，不覆盖；
- * · 省码必须过省级索引校验（未收录/未开放二级的国家停在国家层，绝不猜省）；
- * · 港澳台按铁律 6 归入中国省级条目（Worker 已归并为 CN-71/91/92）；
- * · 失败/无数据 → 保持现状，静默不打扰。
- * @returns 是否实际改写了地区（调用方据此刷新赛制计数）
+ * 出题区域：**2026-11-06 用户定，取消 IP 自动定位。**
+ *
+ * 原方案（2026-11-01）按 `/api/geo` 把用户带到省级区域。取消原因（用户原话要点）：
+ * 定位涉及**手机权限、网络环境、用户习惯**的巨大差异，结果不可靠；
+ * 而且定位失败时的兜底是「保持默认全球」，正好把新手扔进最不该去的池子。
+ *
+ * 现在的做法：**默认「亚洲」（`settings.region` 缺省 `'AS'`）**，面板里默认展开各国，
+ * 用户自己改国家/洲。不做任何网络定位、不申请任何权限。
+ * 全球出题需 `?zone=global` 解锁（`src/core/globalZone.ts`）。
  */
-async function autoRegionDetect(): Promise<boolean> {
-  if (settings.regionSource === 'manual') return false
-  if (settings.regionSource === undefined && settings.region !== 'ALL') return false
-  try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/geo`, { cache: 'no-store' })
-    if (!res.ok) return false
-    const d = (await res.json()) as { country?: string | null; province?: string | null }
-    const cc = String(d.country ?? '').toUpperCase()
-    if (!/^[A-Z]{2}$/.test(cc)) return false
-    let next = cc
-    const prov = String(d.province ?? '').toUpperCase()
-    if (/^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(prov)) {
-      const owner = prov.slice(0, 2)
-      // 索引可能比定位响应晚到：直接取 loader（模块级缓存，不会重复请求）
-      const idx = provinceData.value ?? (await loadProvincesIndex())
-      if (idx && provinceSecondLevelEnabled(idx, owner) && !!idx.byCountry?.[owner]?.[prov])
-        next = prov
-    }
-    if (next === settings.region) return false
-    settings.region = next
-    settings.regionSource = 'auto'
-    return true
-  } catch {
-    // 端点未部署/网络失败：保持默认「全球」，静默降级
-    return false
-  }
-}
 
 /** 进入介绍页：决定是否弹昵称浮窗、可用赛制（不可用则回退首个可用） */
 async function initIntro() {
-  // 自动定位（2026-11-01）：命中改写了地区 → 池子随地区变，赛制计数要重算
-  void autoRegionDetect().then((applied) => {
-    if (!applied) return
-    void quiz
-      .regimeCounts(props.type, tier.value)
-      .then((c) => (regimeCountsData.value = c))
-      .catch(() => {})
-  })
   if (!settings.nickname && !settings.nicknameGuideDismissed) showNameModal.value = true
   try {
     regimeCountsData.value = await quiz.regimeCounts(props.type, tier.value)
@@ -1405,15 +1392,15 @@ function onTouchEnd(e: TouchEvent) {
         {{ regionPickerOpen ? t('quiz.regionDone') : t('quiz.regionChange') }}
       </button>
     </div>
-    <!-- 自动定位标记（2026-11-01 用户定）：auto 模式下注明来源；「更改」可改并永久退出 auto -->
-    <p v-if="settings.regionSource === 'auto'" class="region-auto muted small">
-      <LocateFixed class="ic" :size="13" /> {{ t('quiz.regionAutoHint') }}
-    </p>
+    <!-- 2026-11-06：自动定位已取消（用户定），此行随之移除 -->
     <div v-if="regionPickerOpen" class="region-picker">
       <!-- 2026-10-25（问题 1 修正）：任何档位任选 洲/国家/省/全球。
              洲标题**本身即选择器**：点洲 = 选中该洲 + 在其下展开国家（点国家再展开省）——
              与「点中国 → 下面展开省」同构；不再有「上面一行洲直选 + 下面又一组洲」的重复。 -->
-      <div class="regions">
+      <!-- 2026-11-06 用户定：**「全球」不直接提供**，避免新手贸然挑战（正确率趋近概率，
+           训练信号接近零，见 docs/109 §7）。仅 `?zone=global` 解锁后才显示。
+           洲/国家/省照常全部可选。 -->
+      <div v-if="globalZoneEnabled" class="regions">
         <button
           type="button"
           class="tier region"

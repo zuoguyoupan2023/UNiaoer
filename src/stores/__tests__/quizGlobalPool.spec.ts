@@ -80,11 +80,20 @@ beforeEach(() => {
 })
 
 describe('S6 · 名单统一 + 地区过滤', () => {
-  it('L4/L5 以 ALL 请求地区子集（资深画像全球开放）', async () => {
+  it('L4/L5 也按用户地区偏好请求（2026-10-25 全档位统一，旧的「高级档全球开放」已废）', async () => {
+    const settings = useSettingsStore()
+    settings.region = 'CN'
     const quiz = useQuizStore()
     await quiz.start('image', { tier: 4, count: 6 })
-    expect(loadRegionalPoolMock).toHaveBeenCalledWith('ALL')
+    expect(loadRegionalPoolMock).toHaveBeenCalledWith('CN')
     expect(quiz.error).toBe('')
+  })
+
+  it('默认地区是「亚洲」而非「全球」（2026-11-06 用户定）', async () => {
+    // 不设 settings.region，走缺省值
+    const quiz = useQuizStore()
+    await quiz.start('image', { tier: 2, count: 6 })
+    expect(loadRegionalPoolMock).toHaveBeenCalledWith('AS')
   })
 
   it('L1–L3 按用户地区偏好请求（地区子集）', async () => {

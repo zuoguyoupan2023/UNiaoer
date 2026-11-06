@@ -729,7 +729,9 @@ export const useQuizStore = defineStore('quiz', () => {
     source.value = 'normal'
     escapedQuit.value = false
     memoryResult.value = null
-    region.value = 'ALL'
+    // 2026-11-06：重置回**用户当前所选**地区（不再硬编码 'ALL'）。
+    // 硬编码 ALL 会在「重新开始」后悄悄把用户扔回全球池（而全球默认已隐藏）。
+    region.value = useSettingsStore().region || 'AS'
   }
 
   return {
