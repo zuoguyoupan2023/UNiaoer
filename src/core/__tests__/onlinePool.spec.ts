@@ -37,7 +37,9 @@ function stubFetch(impl: (url: string) => Response | Promise<Response>) {
  * 不写缓存）。此前测试用同一个 image-only 目标种请求 audio，正是因此误判为"缓存 bug"。
  */
 const okResponse = (url = '') => {
-  const isAudio = url.includes('type=audio')
+  // 2026-11-06（docs/109 §3）：题型在**路径**里（`/api/questions/v/4/3/audio/ALL/50`），
+  // 不再有 `type=` 查询串。
+  const isAudio = /\/audio\//.test(url) || url.includes('type=audio')
   const sp = isAudio
     ? { ...target, image: null, audio: { url: 'https://m/1.mp3', type: 'audio' } }
     : target
@@ -56,36 +58,34 @@ afterEach(() => {
 })
 
 describe('fetchOnlinePool', () => {
-  it('成功：返回目标种与干扰项候选，count 归一为 30', async () => {
+  it('成功：返回目标种与干扰项候选，count 归一为 50', async () => {
     const calls = stubFetch((u) => okResponse(u))
     const r = await fetchOnlinePool('image', 3, 'ALL')
     expect(r?.species).toHaveLength(1)
     expect(r?.distractors).toHaveLength(1)
     expect(r?.from).toBe('network')
-    expect(calls[0]).toContain('tier=3')
-    expect(calls[0]).toContain('type=image')
-    expect(calls[0]).toContain('count=50') // 措施 3：常量,收敛边缘缓存 key（072-a：30→50 修首轮短轮）
-    expect(calls[0]).not.toContain('region=') // ALL 不带 region
+    // 2026-11-06（docs/109 §3）：全部维度编进**路径**，不用查询串
+    expect(calls[0]).toBe('/api/questions/v/4/3/image/ALL/50')
   })
 
   it('地区：全档统一——任何档位带 省/国家/洲 都生效（2026-10-25 用户定）', async () => {
     const calls = stubFetch((u) => okResponse(u))
     await fetchOnlinePool('image', 2, 'CN')
-    expect(calls[0]).toContain('region=CN')
+    expect(calls[0]).toBe('/api/questions/v/4/2/image/CN/50')
     for (const t of [4, 5, 6, 7] as const) {
       clearClientPoolCache()
       calls.length = 0
       await fetchOnlinePool('image', t, 'CN-11')
-      expect(calls[0]).toContain('region=CN-11')
+      expect(calls[0]).toBe(`/api/questions/v/4/${t}/image/CN-11/50`)
     }
     clearClientPoolCache()
     calls.length = 0
     await fetchOnlinePool('image', 3, 'ASIA')
-    expect(calls[0]).toContain('region=ASIA')
+    expect(calls[0]).toBe('/api/questions/v/4/3/image/ASIA/50')
     clearClientPoolCache()
     calls.length = 0
     await fetchOnlinePool('image', 5, 'ALL')
-    expect(calls[0]).not.toContain('region=')
+    expect(calls[0]).toBe('/api/questions/v/4/5/image/ALL/50')
   })
 
   it('措施 3：同键第二次调用命中客户端缓存（零网络）', async () => {

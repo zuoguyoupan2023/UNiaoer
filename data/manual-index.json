@@ -1,0 +1,492 @@
+{
+  "$schema": "uniaoer/manual-index@1",
+  "notice": [
+    "第三方公益图鉴的「物种 → 页码」索引，用于在物种详情页做文字指引（「X 手册第 Y 页有手绘」）。",
+    "**只做文字指引，不复制、不裁切、不导出任何手册图文**——《中国海鸟与游禽观察手册》版权声明",
+    "（p2）仅允许以手册整体为单位非盈利使用，明确禁止拆分、重组、挪为他用。",
+    "手册文件本身不入库（见 .gitignore），由用户自行从官方渠道获取完整版。"
+  ],
+  "manuals": [
+    {
+      "id": "cn-seabirds-waterfowl-2023",
+      "titleZh": "中国海鸟与游禽观察手册",
+      "titleEn": "Handbook to Sea Birds and Waterfowl of China",
+      "author": "鸟类图鉴绘画学习小组",
+      "year": 2023,
+      "totalPages": 28,
+      "contentPages": [
+        9,
+        24
+      ],
+      "fileSha256": "b19e2c6ee0f8a936758c25c080f184ea1e8a32544b21e8159e82589236821aae",
+      "fileBytes": 47452259,
+      "licenseNote": "本手册为多人创作作品。版权声明（p2）允许以非盈利目的使用电子版（个人观鸟、非盈利团体观鸟、免费公益教学）；禁止制成印刷品分发；创作者保留一切衍生品权利；任何使用仅接受以手册整体为单位，不得拆分、重组、挪为他用。",
+      "licenseUrl": null,
+      "officialUrl": null,
+      "mirrors": [
+        {
+          "url": "https://pan.baidu.com/s/1p8nGbfaaBMLLxLSOze0big",
+          "code": "1234",
+          "verifiedByUser": true,
+          "note": "用户已下载并核对与本地文件一致"
+        },
+        {
+          "url": "https://pan.baidu.com/s/1rlDjEI8ihe0gg7Z_ppSBgQ",
+          "code": "f9pw",
+          "verifiedByUser": false,
+          "note": "来源未核实，待确认是否官方发布"
+        }
+      ],
+      "species": [
+        {
+          "name": "凤头䴙䴘",
+          "pages": [
+            9
+          ],
+          "speciesId": "podiceps-cristatus"
+        },
+        {
+          "name": "小䴙䴘",
+          "pages": [
+            9
+          ],
+          "speciesId": "tachybaptus-ruficollis"
+        },
+        {
+          "name": "角䴙䴘",
+          "pages": [
+            9
+          ],
+          "speciesId": "podiceps-auritus"
+        },
+        {
+          "name": "赤颈䴙䴘",
+          "pages": [
+            9
+          ],
+          "speciesId": "podiceps-grisegena"
+        },
+        {
+          "name": "黑颈䴙䴘",
+          "pages": [
+            9
+          ],
+          "speciesId": "podiceps-nigricollis"
+        },
+        {
+          "name": "太平洋潜鸟",
+          "pages": [
+            10
+          ],
+          "speciesId": "gavia-pacifica"
+        },
+        {
+          "name": "普通潜鸟",
+          "pages": [
+            10
+          ],
+          "speciesId": "gavia-immer"
+        },
+        {
+          "name": "红喉潜鸟",
+          "pages": [
+            10
+          ],
+          "speciesId": "gavia-stellata"
+        },
+        {
+          "name": "黄嘴潜鸟",
+          "pages": [
+            10
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "黑喉潜鸟",
+          "pages": [
+            10
+          ],
+          "speciesId": "gavia-arctica"
+        },
+        {
+          "name": "白尾鹲",
+          "pages": [
+            11
+          ],
+          "speciesId": "phaethon-lepturus"
+        },
+        {
+          "name": "红嘴鹲",
+          "pages": [
+            11
+          ],
+          "speciesId": "phaethon-aethereus"
+        },
+        {
+          "name": "红尾鹲",
+          "pages": [
+            11
+          ],
+          "speciesId": "phaethon-rubricauda"
+        },
+        {
+          "name": "漂泊信天翁",
+          "pages": [
+            12
+          ],
+          "speciesId": "diomedea-exulans"
+        },
+        {
+          "name": "短尾信天翁",
+          "pages": [
+            12
+          ],
+          "speciesId": "phoebastria-albatrus"
+        },
+        {
+          "name": "黑背信天翁",
+          "pages": [
+            12
+          ],
+          "speciesId": "phoebastria-immutabilis"
+        },
+        {
+          "name": "黑脚信天翁",
+          "pages": [
+            12
+          ],
+          "speciesId": "phoebastria-nigripes"
+        },
+        {
+          "name": "日本叉尾海燕",
+          "pages": [
+            13
+          ],
+          "speciesId": "hydrobates-matsudairae"
+        },
+        {
+          "name": "白腰叉尾海燕",
+          "pages": [
+            13
+          ],
+          "speciesId": "hydrobates-leucorhous"
+        },
+        {
+          "name": "褐翅叉尾海燕",
+          "pages": [
+            13
+          ],
+          "speciesId": "hydrobates-tristrami"
+        },
+        {
+          "name": "黄蹼洋海燕",
+          "pages": [
+            13
+          ],
+          "speciesId": "oceanites-oceanicus"
+        },
+        {
+          "name": "黑叉尾海燕",
+          "pages": [
+            13
+          ],
+          "speciesId": "hydrobates-monorhis"
+        },
+        {
+          "name": "信使圆尾鹱",
+          "pages": [
+            14
+          ],
+          "speciesId": "pterodroma-heraldica"
+        },
+        {
+          "name": "暴雪鹱",
+          "pages": [
+            14
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "棕头圆尾鹱",
+          "pages": [
+            14
+          ],
+          "speciesId": "pterodroma-solandri"
+        },
+        {
+          "name": "白额圆尾鹱",
+          "pages": [
+            14
+          ],
+          "speciesId": "pterodroma-hypoleuca"
+        },
+        {
+          "name": "钩嘴圆尾鹱",
+          "pages": [
+            14
+          ],
+          "speciesId": "pseudobulweria-rostrata"
+        },
+        {
+          "name": "楔尾鹱",
+          "pages": [
+            15
+          ],
+          "speciesId": "ardenna-pacifica"
+        },
+        {
+          "name": "淡足鹱",
+          "pages": [
+            15
+          ],
+          "speciesId": "ardenna-carneipes"
+        },
+        {
+          "name": "灰鹱",
+          "pages": [
+            15
+          ],
+          "speciesId": "ardenna-grisea"
+        },
+        {
+          "name": "短尾鹱",
+          "pages": [
+            15
+          ],
+          "speciesId": "ardenna-tenuirostris"
+        },
+        {
+          "name": "白额鹱",
+          "pages": [
+            16
+          ],
+          "speciesId": "calonectris-leucomelas"
+        },
+        {
+          "name": "花斑鹱",
+          "pages": [
+            16
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "褐燕鹱",
+          "pages": [
+            16
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "黑鹱",
+          "pages": [
+            16
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "卷羽鹈鹕",
+          "pages": [
+            17
+          ],
+          "speciesId": "pelecanus-crispus"
+        },
+        {
+          "name": "斑嘴鹈鹕",
+          "pages": [
+            17
+          ],
+          "speciesId": "pelecanus-philippensis"
+        },
+        {
+          "name": "白鹈鹕",
+          "pages": [
+            17
+          ],
+          "speciesId": "pelecanus-onocrotalus"
+        },
+        {
+          "name": "粉红背鹈鹕",
+          "pages": [
+            17
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "大军舰鸟",
+          "pages": [
+            18
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "白斑军舰鸟",
+          "pages": [
+            18
+          ],
+          "speciesId": "fregata-ariel"
+        },
+        {
+          "name": "白腹军舰鸟",
+          "pages": [
+            18
+          ],
+          "speciesId": "fregata-andrewsi"
+        },
+        {
+          "name": "红脚鲣鸟",
+          "pages": [
+            19
+          ],
+          "speciesId": "sula-sula"
+        },
+        {
+          "name": "蓝脸鲣鸟",
+          "pages": [
+            19
+          ],
+          "speciesId": "sula-dactylatra"
+        },
+        {
+          "name": "褐鲣鸟",
+          "pages": [
+            19
+          ],
+          "speciesId": "sula-leucogaster"
+        },
+        {
+          "name": "侏鸬鹚",
+          "pages": [
+            20
+          ],
+          "speciesId": "microcarbo-pygmaeus"
+        },
+        {
+          "name": "印度鸬鹚",
+          "pages": [
+            20
+          ],
+          "speciesId": "phalacrocorax-fuscicollis"
+        },
+        {
+          "name": "黑腹蛇鹈",
+          "pages": [
+            20
+          ],
+          "speciesId": "anhinga-melanogaster"
+        },
+        {
+          "name": "黑颈鸬鹚",
+          "pages": [
+            20
+          ],
+          "speciesId": "microcarbo-niger"
+        },
+        {
+          "name": "普通鸬鹚",
+          "pages": [
+            21
+          ],
+          "speciesId": "phalacrocorax-carbo"
+        },
+        {
+          "name": "海鸬鹚",
+          "pages": [
+            21
+          ],
+          "speciesId": "urile-pelagicus"
+        },
+        {
+          "name": "红脸鸬鹚",
+          "pages": [
+            21
+          ],
+          "speciesId": "urile-urile"
+        },
+        {
+          "name": "绿背鸬鹚",
+          "pages": [
+            21
+          ],
+          "speciesId": "phalacrocorax-capillatus"
+        },
+        {
+          "name": "冠海雀",
+          "pages": [
+            22
+          ],
+          "speciesId": "synthliboramphus-wumizusume"
+        },
+        {
+          "name": "崖海鸦",
+          "pages": [
+            22
+          ],
+          "speciesId": "uria-aalge"
+        },
+        {
+          "name": "扁嘴海雀",
+          "pages": [
+            22
+          ],
+          "speciesId": "synthliboramphus-antiquus"
+        },
+        {
+          "name": "斑海雀",
+          "pages": [
+            22
+          ],
+          "speciesId": "brachyramphus-marmoratus"
+        },
+        {
+          "name": "角嘴海雀",
+          "pages": [
+            22
+          ],
+          "speciesId": "cerorhinca-monocerata"
+        },
+        {
+          "name": "南极贼鸥",
+          "pages": [
+            23
+          ],
+          "speciesId": "stercorarius-maccormicki"
+        },
+        {
+          "name": "大贼鸥",
+          "pages": [
+            23
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "白鞘嘴鸥",
+          "pages": [
+            23
+          ],
+          "speciesId": null
+        },
+        {
+          "name": "中贼鸥",
+          "pages": [
+            24
+          ],
+          "speciesId": "stercorarius-pomarinus"
+        },
+        {
+          "name": "短尾贼鸥",
+          "pages": [
+            24
+          ],
+          "speciesId": "stercorarius-parasiticus"
+        },
+        {
+          "name": "长尾贼鸥",
+          "pages": [
+            24
+          ],
+          "speciesId": "stercorarius-longicaudus"
+        }
+      ]
+    }
+  ]
+}

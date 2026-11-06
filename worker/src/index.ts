@@ -160,6 +160,18 @@ function clampInt(raw: string | null, min: number, max: number, def: number): nu
   return Math.max(min, Math.min(max, v))
 }
 
+/** Fisher–Yates 洗牌（原地返回新数组，不改入参） */
+function shuffle<T>(list: readonly T[]): T[] {
+  const out = list.slice()
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = out[i]!
+    out[i] = out[j]!
+    out[j] = tmp
+  }
+  return out
+}
+
 /** 物种行 → 前端 BankSpecies 形状（media 由调用方补齐） */
 function toSpeciesBase(r: SpeciesRow): Record<string, unknown> {
   const profile =
@@ -316,10 +328,45 @@ async function handleManifest(env: Env, request: Request, name = 'manifest-meta.
  * 写入必须 `ctx.waitUntil`：响应返回后 Worker 的待处理任务会被取消，
  * 裸的 `cache.put(...)`（不 await）会被丢弃——那正是 2026-10-08 首版边缘缓存
  * 上线后每次仍 MISS 的原因（本地测不出，只有远端连续请求才暴露）。
+ *
+ * ## 2026-11-06：改成**全键进路径**（docs/109 §3）
+ *
+ * 迁移前实测（同参数连续 6 次请求）：`MISS / MISS / HIT / HIT / HIT / HIT`，
+ * 且 HIT 的响应头是 `cache-control: public, max-age=14400` —— Worker 声明的
+ * `max-age=1800` 被 **Zone 层的 4 小时 Cache Rule** 改写了。同一个坑在
+ * `region-tiers` 上踩过一次（docs/105/106），但那里当时选择了「路径分桶 + no-store」。
+ *
+ * **这里不照抄那个解法**，因为两者的取舍不同：
+ *   · 档位分片是**数据本身**，必须立刻拿到新版 → `no-store` 正确；
+ *   · 出题池对同一 `(tier,type,region)` 是**静态池 + 随机抽样**，抽到哪 50 条不影响
+ *     正确性（用户已明确接受题目可重复）→ 缓存越久越省 D1，不该 `no-store`。
+ *
+ * 真正要修的是**版本隔离**：Zone 的 4h 缓存不看 `QUESTIONS_CACHE_VERSION`，
+ * 题库重建后可能长达 4 小时喂旧池。解法是**把全部维度编进路径**：
+ *
+ *     /api/questions/v/<ver>/<tier>/<type>/<region>/<count>
+ *
+ * 路径必然参与任何 CDN 的缓存键——即使某条 Zone 规则去掉了查询串，各组合也不会串味。
+ * 版本号变了 → 新路径 → 旧副本自然失联，不需要 purge。响应仍保持可缓存
+ * （`public, max-age=1800`），CDN 的重复请求照样吸收，D1 不会因此多读。
  */
 const QUESTIONS_CACHE_TTL = 1800
 /** 缓存版本：需要强制失效旧缓存时 +1（随 Worker 重新部署生效）。 */
-const QUESTIONS_CACHE_VERSION = 3
+const QUESTIONS_CACHE_VERSION = 4
+
+/**
+ * 出题池的**路径式**缓存键（全部维度在路径里，无查询串）。
+ * 与前端 `src/core/onlinePool.ts` 的 `questionsUrl()` 必须保持一致。
+ */
+function questionsPathKey(
+  version: string | number,
+  tier: number,
+  type: string,
+  region: string,
+  count: number,
+): string {
+  return `/api/questions/v/${version}/${tier}/${type}/${region}/${count}`
+}
 
 async function handleQuestionsCached(
   request: Request,
@@ -327,16 +374,32 @@ async function handleQuestionsCached(
   url: URL,
   ctx: ExecutionContext,
 ): Promise<Response> {
+  // 支持两种形态：
+  //   · 路径式（当前）：`/api/questions/v/<ver>/<tier>/<type>/<region>/<count>`
+  //   · 查询串式（旧客户端 / 手工调试）：`/api/questions?tier=&type=&region=&count=`
+  const m = /^\/api\/questions\/v\/[^/]+\/(\d+)\/(audio|image)\/([A-Za-z0-9-]{1,16})\/(\d+)$/.exec(
+    url.pathname,
+  )
+  const tier = clampInt(m?.[1] ?? url.searchParams.get('tier'), 1, 5, 2)
+  const rawType = m?.[2] ?? url.searchParams.get('type')
+  const type = rawType === 'audio' ? 'audio' : 'image'
+  const region = (m?.[3] ?? url.searchParams.get('region') ?? 'ALL').toUpperCase()
+  const count = clampInt(m?.[4] ?? url.searchParams.get('count'), 1, 100, 10)
+
+  // 下游 handleQuestions 仍按查询串取值 → 用规范化后的参数重造一个 URL
+  const qUrl = new URL(url.origin + '/api/questions')
+  qUrl.searchParams.set('tier', String(tier))
+  qUrl.searchParams.set('type', type)
+  qUrl.searchParams.set('region', region)
+  qUrl.searchParams.set('count', String(count))
+
   // 只缓存 GET（无 cookie/鉴权参与,题库对所有用户相同）
   const cache = await caches.open('uniaoer-api-questions')
-  // 规范化缓存键：排除无关查询参数顺序差异（按固定顺序重建）
-  const keyUrl = new URL(url.origin + url.pathname)
-  for (const k of ['tier', 'type', 'region', 'count']) {
-    const v = url.searchParams.get(k)
-    if (v) keyUrl.searchParams.set(k, v)
-  }
-  keyUrl.searchParams.set('v', String(QUESTIONS_CACHE_VERSION))
-  const cacheKey = new Request(keyUrl.toString(), { method: 'GET' })
+  // 规范化缓存键：一律重建为「全键路径」，与请求实际带不带查询串无关
+  const cacheKey = new Request(
+    `https://uniaoer.com${questionsPathKey(QUESTIONS_CACHE_VERSION, tier, type, region, count)}`,
+    { method: 'GET' },
+  )
 
   const hit = await cache.match(cacheKey)
   if (hit) {
@@ -351,15 +414,15 @@ async function handleQuestionsCached(
     // 超龄：落到下面的回源（cache.put 覆盖旧条目）
   }
 
-  const res = await handleQuestions(env, url)
+  const res = await handleQuestions(env, qUrl)
   if (!res.ok) return res
-  const forCache = new Response(res.body, res)
-  forCache.headers.set('cache-control', `public, max-age=${QUESTIONS_CACHE_TTL}`)
-  forCache.headers.set('x-cached-at', String(Date.now()))
-  forCache.headers.set('x-cache', 'MISS')
+  const out = new Response(res.body, res)
+  out.headers.set('cache-control', `public, max-age=${QUESTIONS_CACHE_TTL}`)
+  out.headers.set('x-cached-at', String(Date.now()))
+  out.headers.set('x-cache', 'MISS')
   // 写缓存不阻塞响应，但必须挂到 waitUntil——否则响应返回后写操作被运行时取消
-  ctx.waitUntil(cache.put(cacheKey, forCache.clone()))
-  return forCache
+  ctx.waitUntil(cache.put(cacheKey, out.clone()))
+  return out
 }
 
 /**
@@ -411,17 +474,35 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     if (gtiers?.size) {
       const allowed = new Set(commonness)
       const ids = [...gtiers].filter(([, t]) => allowed.has(t)).map(([id]) => id)
-      // 洲模式：全球抽样后还要按洲区系过滤（欧洲约占全球 17%），过采样 6 倍保证足量
-      rows = await sampleByIds(env, ids, playableCol, isContinentCode(region) ? count * 6 : count)
       if (isContinentCode(region)) {
+        // 洲模式：全球档位表只有 id→档位，**没有区系短码**，所以必须在拿到行之后按
+        // `taxon_key` 过滤。原实现是「过采样 count*6 + 一次过滤」，过采样只放大 `LIMIT`
+        // 数字，代价却是每次把整份全球 id 列表（8,787 个 → 3 万行）送进 D1。
+        //
+        // 改成**分批迭代**（2026-11-06，docs/109）：每批只取 `count` 条，不够再取下一批，
+        // 最多 4 批。欧洲约占全球 17% → 期望 1~2 批就够；最坏 4 批也远小于一次全球扫描。
         const set = new Set((await regionShortCodes(env, region)) ?? [])
-        rows = rows
-          .filter((r) => {
+        const keep: SpeciesRow[] = []
+        const seen = new Set<string>()
+        for (let round = 0; round < 4 && keep.length < count; round++) {
+          const batch = await sampleByIds(env, ids, playableCol, count * 2)
+          let added = 0
+          for (const r of batch) {
+            if (seen.has(r.id)) continue
+            seen.add(r.id)
             const key = r.taxon_key || ''
             const code = key.startsWith('avibase-') ? key.slice(8) : ''
-            return code && set.has(code)
-          })
-          .slice(0, count)
+            if (code && set.has(code)) {
+              keep.push(r)
+              added++
+            }
+          }
+          // 这一批一个都没命中 → 说明区系集合与档位表对不上，再抽也是白读
+          if (!added) break
+        }
+        rows = keep.slice(0, count)
+      } else {
+        rows = await sampleByIds(env, ids, playableCol, count)
       }
       byTiers = true
     }
@@ -473,26 +554,33 @@ async function handleQuestions(env: Env, url: URL): Promise<Response> {
     return { ...toSpeciesBase(r), images: image ? [image] : [], audios: audio ? [audio] : [], image, audio }
   })
 
-  // 029 M4:干扰项名字候选（同样走索引区间扫描，只取 6 列，扫行数极小）
+  // 029 M4:干扰项名字候选（只取 6 列，无素材要求）
+  //
+  // 2026-11-06（docs/109 §2.4）：去掉 `ORDER BY rnd`，改按档位**每档一条等值查询**。
+  // 原实现 `commonness IN (...)` + `ORDER BY rnd` 是每次请求的**固定成本**（与地区无关）：
+  //   · 索引 `(commonness, rnd)` 跨档位时 `rnd` 不是全局有序 → 建临时 B 树读完整个候选集；
+  //   · 实测 397 行/请求（7 档）/ 489 行（8 档），而结果只要 120 条。
+  // 改成每档 `commonness = ?` 就用得上索引序（查询计划只剩 `SEARCH ... USING INDEX`，
+  // 不再有 `USE TEMP B-TREE`），单档 `LIMIT 20` 只读几十行，7 档合计约 68 行。
+  //
+  // 为什么「每档各取 20」而不是随机挑几档：干扰项要能覆盖难度的全部区间——
+  // 只取最常见的几档会让「同科近缘」策略失效（近缘物种往往同档）。每档等量也保证
+  // 不同 request 之间的分布不会漂移到某一段。实测各档合计 68 行，比原实现省 5.8×。
   const targetIds = new Set(species.map((s) => s.id))
   let distractors: Record<string, unknown>[] = []
   try {
-    const dStart = Math.random()
-    const dBase = `FROM species WHERE commonness IN (${placeholders}) AND quiz_excluded = 0`
-    const d = await env.DB.prepare(
-      `SELECT id,name_zh,name_sci,name_en,family,commonness ${dBase} AND rnd >= ? ORDER BY rnd LIMIT ?`,
+    const PER_LEVEL = Math.ceil(120 / commonness.length)
+    const dBase = `FROM species WHERE commonness = ? AND quiz_excluded = 0`
+    const batches = await Promise.all(
+      commonness.map((c) =>
+        env.DB.prepare(
+          `SELECT id,name_zh,name_sci,name_en,family,commonness ${dBase} AND rnd >= ? ORDER BY rnd LIMIT ?`,
+        )
+          .bind(c, Math.random(), PER_LEVEL)
+          .all<Pick<SpeciesRow, 'id' | 'name_zh' | 'name_sci' | 'name_en' | 'family' | 'commonness'>>(),
+      ),
     )
-      .bind(...commonness, dStart, 120)
-      .all<Pick<SpeciesRow, 'id' | 'name_zh' | 'name_sci' | 'name_en' | 'family' | 'commonness'>>()
-    let dRows = d.results
-    if (dRows.length < 120) {
-      const more = await env.DB.prepare(
-        `SELECT id,name_zh,name_sci,name_en,family,commonness ${dBase} AND rnd < ? ORDER BY rnd LIMIT ?`,
-      )
-        .bind(...commonness, dStart, 120 - dRows.length)
-        .all<Pick<SpeciesRow, 'id' | 'name_zh' | 'name_sci' | 'name_en' | 'family' | 'commonness'>>()
-      dRows = dRows.concat(more.results)
-    }
+    const dRows = batches.flatMap((b) => b.results)
     distractors = dRows
       .filter((r) => !targetIds.has(r.id))
       .map((r) => ({
@@ -661,8 +749,27 @@ async function globalTiers(env: Env): Promise<Map<string, number> | null> {
 
 /**
  * 按 id 白名单取样候选（036 地区档位路径）。
- * id 列表来自 R2 分片（单省 ≤ 538、国家级 ≤ ~2,600），经 json_each 展开成行；
- * 与索引区间扫描同口径：随机起点 + 环形补齐（边缘缓存 30 分钟窗口内可复用）。
+ * id 列表来自 R2 分片（单省 ≤ 538、国家级 ≤ ~2,600、全球 ≤ 11,026）。
+ *
+ * ## 为什么在 JS 侧先抽小样本（2026-11-06，docs/109）
+ *
+ * 原实现把**整份** id 列表塞进 `json_each(?)`。实测 D1 的 `rows_read` **按 JSON 元素逐个计费**
+ * （`SELECT COUNT(*) FROM json_each('[400 个元素]')` → `rows_read = 400`），加上
+ * `ORDER BY rnd` 要跨档位归并 → 建临时 B 树 → **整份列表必须读完才出第一条**：
+ *
+ * | id 数 | rows_read | 比例 |
+ * |---|---|---|
+ * | 400（省） | 1,407 | 3.5× |
+ * | 1,264（国 CN） | 4,430 | 3.5× |
+ * | 8,787（全球 tier2） | 30,692 | 3.5× |
+ *
+ * 也就是说全球模式**单次请求就要 3 万行**（免费额度 500 万/天，约 160 次就打光）。
+ * `LIMIT` 完全不起作用：`LIMIT 10` 与 `LIMIT 200` 读的行数一模一样。
+ *
+ * 改法：先在内存里洗牌抽 `need` 个 id，再只用这一小把去查 D1。
+ * 抽样不损失随机性——档位过滤已在调用方按分片完成，这里只是从「已合格的池子」里挑。
+ * 实测抽 80 个 id 稳定产出 50/50 条（图片题与听音题都是），素材覆盖率在省/国/全球
+ * 三档均为 97–100%（docs/109 §2）。
  */
 async function sampleByIds(
   env: Env,
@@ -671,22 +778,31 @@ async function sampleByIds(
   count: number,
 ): Promise<SpeciesRow[]> {
   if (!ids.length) return []
-  const json = JSON.stringify(ids)
-  const need = Math.min(ids.length, Math.max(count * 8, 200))
-  const startAt = Math.random()
+  // 抽样条数：`count` 加一点余量吸收素材缺失（实测省/国/全球三档素材覆盖率 97–100%）。
+  // 旧实现的 `count * 8`（≥200）是给「区间扫描 + 临时 B 树」时代的放大系数——
+  // 那时要在 D1 里翻遍候选才能凑够；现在抽样在 JS 完成，多余的放大只是白读行。
+  const need = Math.min(ids.length, Math.max(count + 16, Math.ceil(count * 1.3)))
+  // 只把抽样后的 id 送进 D1：rows_read ≈ 3.5 × 抽样数，与分片大小无关。
+  // 洗一次牌同时得到「主样本」与「补样本」两段，避免再做一次 O(n²) 的差集。
+  const shuffled = shuffle(ids)
+  const probe = shuffled.slice(0, need)
+  const spare = shuffled.slice(need, need * 2)
   const base = `FROM species
      WHERE id IN (SELECT value FROM json_each(?)) AND ${playableCol} IS NOT NULL AND quiz_excluded = 0`
-  const head = await env.DB.prepare(`SELECT * ${base} AND rnd >= ? ORDER BY rnd LIMIT ?`)
-    .bind(json, startAt, need)
+  // 无 ORDER BY：抽样已在 JS 完成，D1 侧只需把命中行取回来。
+  // 带 ORDER BY rnd 会强制建临时 B 树读完整个 probe（LIMIT 形同虚设），实测
+  // 400 ids 时 1,407 行 → 800 行；800 ids 时 2,820 → 1,600 行（docs/109 §2.3）。
+  const rows = await env.DB.prepare(`SELECT * ${base} LIMIT ?`)
+    .bind(JSON.stringify(probe), need)
     .all<SpeciesRow>()
-  let rows = head.results
-  if (rows.length < need) {
-    const tail = await env.DB.prepare(`SELECT * ${base} AND rnd < ? ORDER BY rnd LIMIT ?`)
-      .bind(json, startAt, need - rows.length)
+  // 素材缺失的物种被 SQL 过滤掉后可能不够数 → 用「补样本」再取一批
+  if (rows.results.length < count && spare.length) {
+    const more = await env.DB.prepare(`SELECT * ${base} LIMIT ?`)
+      .bind(JSON.stringify(spare), spare.length)
       .all<SpeciesRow>()
-    rows = rows.concat(tail.results)
+    return rows.results.concat(more.results).slice(0, count)
   }
-  return rows.slice(0, count)
+  return rows.results.slice(0, count)
 }
 
 /**
@@ -2344,7 +2460,13 @@ export default {
           /^\/api\/region-tiers\/(?:v\/([A-Za-z0-9._:-]{1,64})\/)?([A-Z]{2}(?:\.country)?\.json)$/,
         )
         if (tiersMatch) return await handleRegionTiers(env, ctx, tiersMatch[2]!, tiersMatch[1] ?? '')
-        if (path === '/api/questions') return await handleQuestionsCached(request, env, url, ctx)
+        // 2026-11-06（docs/109 §3）：出题池支持**全键路径**
+        // `/api/questions/v/<ver>/<tier>/<type>/<region>/<count>`。
+        // 全部维度都在路径里 → 任何 CDN 规则都拆不开、也串不了味；版本变了旧副本自然失联。
+        // 不带版本段的旧查询串形式仍然可用（Worker 内部按同一套维度重建缓存键）。
+        if (path === '/api/questions' || path.startsWith('/api/questions/v/')) {
+          return await handleQuestionsCached(request, env, url, ctx)
+        }
         const mediaMatch = path.match(/^\/api\/media\/(.+)$/)
         if (mediaMatch) return await handleMedia(env, decodeURIComponent(mediaMatch[1]!))
         if (path === '/api/reports') return await handlePublicReports(env, url)

@@ -148,13 +148,20 @@ function writeClientCache(key: string, value: CachedPool): void {
  *
  * `diagApiBase()` 仅在诊断模式下、且当前是「没有 Worker 的域名」（`*.pages.dev` / 本地 dev）
  * 时返回生产域名 —— 否则在线候选恒为 404/HTML，分支预览上无法复现「在线候选 ∩ 赛制池」的短轮。
- * 生产环境该函数返回空串，URL 与今天完全一致。
+ * 生产环境该函数返回空串。
+ *
+ * 2026-11-06（docs/109 §3）：**全部维度编进路径**，不再用查询串。
+ * 原因：`/api/questions` 的响应会被 Zone 层的 Cache Rule 按 4 小时缓存，而那条规则
+ * 不看 Worker 的 `QUESTIONS_CACHE_VERSION` —— 题库重建后可能长达 4 小时喂旧池。
+ * 路径一定参与任何 CDN 的缓存键，所以改成
+ * `/api/questions/v/<ver>/<tier>/<type>/<region>/<count>`，版本一变旧副本自然失联。
+ * 与 Worker 侧 `questionsPathKey()` 必须保持一致。
  */
+const QUESTIONS_PATH_VERSION = 4
+
 function questionsUrl(type: MediaType, tier: Tier, region: string): string {
-  const q = new URLSearchParams({ tier: String(tier), type, count: String(FETCH_COUNT) })
   const eff = effectiveRegion(tier, region)
-  if (eff !== 'ALL') q.set('region', eff)
-  return `${diagApiBase()}/api/questions?${q.toString()}`
+  return `${diagApiBase()}/api/questions/v/${QUESTIONS_PATH_VERSION}/${tier}/${type}/${eff}/${FETCH_COUNT}`
 }
 
 /**

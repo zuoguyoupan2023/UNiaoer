@@ -269,7 +269,33 @@
 - R2 上传后：`curl -I <公开域名>/media/<物种>/image.webp` → 期望 **200**。
 - D1 写入后：`wrangler d1 execute uniaoer --command "SELECT COUNT(*) FROM species;" --remote`。
 
+## 标准操作流程（SOP，特殊编号 000，**动手前先读**）
+
+| Sop | 什么时候读 | 文件 |
+|---|---|---|
+| **媒体纠错** | 某物种的图/音有错误、用户报错要结案 | `docs/000-SOP-媒体纠错标准流程.md` |
+| **Worker 部署 / 分片重建 / R2 发布** | 改 `worker/**`、重建 `province-commonness/`、推 R2 产物、改 D1 结构 | `docs/000-SOP-Worker部署与分片重建标准流程.md` |
+| **数据口径契约** | 新增/修改地区产物、出题池逻辑，或界面上任何「N 种」数字 | `000-DATA-CONTRACT.md`（仓库根） |
+
+### Worker / 分片 相关速查（细节见 SOP）
+
+```bash
+npm run worker:check                                  # 编译自检（不部署）
+npm run worker:deploy                                 # 部署（云端写 → 用户执行）
+npx wrangler rollback -c worker/wrangler.toml         # 回滚 Worker（秒级）
+
+npm run region:province-commonness -- --from-provinces  # 重建档位（不下载）
+npm run check:tiers:local                             # 本地分片校验
+npm run report:tiers                                  # 全量地区池核算
+node scripts/push-r2-data.mjs --dir public/data/province-commonness --apply  # 推分片+索引（云端写）
+npm run check:tiers                                   # 含 R2 远端抽样校验（推完必须跑）
+```
+
+> **完整顺序不可颠倒**：重建 → `check:tiers:local` → `report:tiers` → `push-r2-data --apply` → `check:tiers`。
+> `push-r2-data --apply` 只是**发布步骤**，不是完整流程；它不重建、不校验、不比对远端。
+
 ## 相关文档（本地，不入库；同步到私有 repo `uniaoer-private`）
 
 - `docs/` 文件夹：`000-SUMMARY`（全貌快照）· `006`（任务原始定义与 P3 规划）· `019`（I1/A5 待做方案）· `024`（数据集级许可与署名总表；**新数据源先登记**）。
+- 事故与专题：`105`（分片版本漂移）· `106`（边缘缓存策略对比与容量测算）· `107`（D1 读取额度 / 覆盖索引 / 分片降级 + 备份回滚）。
 - 根目录活跃文档：`017`（剩余任务盘点）· `018`（新窗口交接）及其余 `0xx-*.md`（000 数据接入 · 001 重写 · 002 扩展性 · 003/005 D1+R2 · 004 操作指南 · 007/012/014 交接 · 008 数据体系 · 009 称号徽章 · 010 i18n · 011 媒体库 · 013 档案 · 015/016 i18n 迁移/反查）。

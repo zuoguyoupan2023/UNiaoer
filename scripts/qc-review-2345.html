@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>2~5 图质检 · 人工复核</title>
+<style>
+  :root {
+    --bg: #f4fbf7;
+    --card: #fff;
+    --line: #dde9e2;
+    --ink: #22332c;
+    --muted: #6b7c74;
+    --green: #2d6a4f;
+    --pass: #d8f3dc;
+    --pass-ink: #1b4332;
+    --suspect: #fff3bf;
+    --suspect-ink: #7a5c00;
+    --reject: #fde0e2;
+    --reject-ink: #9b2226;
+    --missing: #e2e3e5;
+    --missing-ink: #41464b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--ink);
+    margin: 0; padding: 0 18px 84px;
+  }
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg); padding: 12px 0 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { font-size: 1rem; color: var(--green); margin: 0 0 8px; font-weight: 800; }
+  h1 small { color: var(--muted); font-weight: 500; font-size: .74rem; margin-left: 8px; }
+
+  #drop {
+    border: 2px dashed var(--line); border-radius: 12px;
+    background: #fff; padding: 42px 22px; text-align: center;
+    margin: 26px auto; max-width: 640px;
+  }
+  #drop.hot { border-color: var(--green); background: #eefaf2; }
+  #drop h2 { font-size: .95rem; margin: 0 0 8px; color: var(--green); }
+  #drop p { font-size: .8rem; color: var(--muted); margin: 4px 0; line-height: 1.6; }
+  #drop button {
+    margin-top: 14px; padding: 9px 20px; border-radius: 99px;
+    border: 1px solid var(--green); background: var(--green); color: #fff;
+    font-size: .82rem; font-weight: 700; cursor: pointer;
+  }
+  #file { display: none; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; font-size: .78rem; color: var(--muted); }
+  .bar button {
+    padding: 5px 12px; border: 1px solid var(--line); border-radius: 99px;
+    background: #fff; cursor: pointer; font-size: .74rem; font-weight: 700; color: var(--muted);
+    white-space: nowrap;
+  }
+  .bar button.on { background: var(--green); color: #fff; border-color: var(--green); }
+  .bar button.danger.on { background: var(--reject-ink); border-color: var(--reject-ink); }
+  .bar .spacer { flex: 1; }
+  .bar .stat { font-variant-numeric: tabular-nums; }
+
+  #progwrap { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 9px; }
+  #prog { height: 100%; width: 0; background: var(--green); transition: width .2s; }
+
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 12px; margin-top: 14px;
+  }
+  .card {
+    display: flex; gap: 11px; background: var(--card);
+    border: 2px solid var(--line); border-radius: 11px; padding: 11px;
+  }
+  .card.rej { border-color: #f1b0b6; }
+  .card.sus { border-color: #ecd98a; }
+  .card.marked { box-shadow: 0 0 0 3px #b7e4c7 inset; }
+
+  .thumbwrap { position: relative; flex-shrink: 0; width: 200px; }
+  .thumbwrap img {
+    width: 200px; height: 150px; object-fit: cover; border-radius: 7px;
+    background: #eee; display: block; cursor: zoom-in;
+  }
+  .thumbwrap img.broken { visibility: hidden; }
+  /* 机器判 missing 时尤其要能点开原图核实：给占位块 + 原图链接 */
+  .nophoto {
+    width: 200px; height: 150px; border-radius: 7px;
+    background: #eef1f0; border: 1px dashed #c7d3cc;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; font-size: .72rem; color: var(--muted); text-align: center; padding: 8px;
+  }
+  .nophoto a { color: #2d6a4f; font-weight: 700; }
+  .slotno {
+    position: absolute; left: 5px; top: 5px;
+    background: rgba(0,0,0,.65); color: #fff; font-size: .68rem; font-weight: 800;
+    padding: 1px 7px; border-radius: 99px; pointer-events: none;
+  }
+
+  .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: .77rem; }
+  .name { font-weight: 800; font-size: .87rem; }
+  .name .id { color: var(--muted); font-weight: 500; font-size: .7rem; }
+  .sci { color: var(--muted); font-style: italic; }
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .badge { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: .69rem; font-weight: 800; }
+  .badge.pass { background: var(--pass); color: var(--pass-ink); }
+  .badge.suspect { background: var(--suspect); color: var(--suspect-ink); }
+  .badge.reject { background: var(--reject); color: var(--reject-ink); }
+  .badge.missing { background: var(--missing); color: var(--missing-ink); }
+  .badge.pending { background: #eef1f0; color: var(--muted); }
+  .badge.ws { background: #ffe5d9; color: #9c3d10; }
+  .badge.mine { background: #cfe8ff; color: #0b4f7a; }
+  .reasons { color: var(--muted); word-break: break-word; }
+  .note { color: var(--reject-ink); }
+  .attr { color: #8a9a92; font-size: .7rem; line-height: 1.4; }
+  .attr a { color: #52796f; }
+  .model { color: #a3b1a9; font-size: .68rem; }
+
+  .btns { display: flex; gap: 5px; margin-top: auto; padding-top: 5px; }
+  .btns button {
+    flex: 1; padding: 6px 0; border: 1.5px solid var(--line); border-radius: 7px;
+    background: #fff; cursor: pointer; font-size: .73rem; font-weight: 600; color: var(--ink);
+  }
+  .btns button:hover { border-color: #9ecfb5; }
+  .btns button.on-ok { background: var(--pass); border-color: #74c69d; font-weight: 800; }
+  .btns button.on-swap { background: var(--reject); border-color: #e5989b; font-weight: 800; color: var(--reject-ink); }
+  .btns button.on-hold { background: var(--missing); border-color: #adb5bd; font-weight: 800; }
+
+  .pager {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; border-top: 1px solid var(--line);
+    padding: 9px 18px; display: flex; gap: 10px; align-items: center;
+    font-size: .78rem; z-index: 30;
+  }
+  .pager button {
+    padding: 5px 14px; border: 1px solid var(--line); border-radius: 7px;
+    background: #fff; cursor: pointer; font-size: .78rem;
+  }
+  .pager button:disabled { opacity: .35; cursor: default; }
+  .pager .info { flex: 1; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pager .jump { width: 62px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font-size: .76rem; text-align: center; }
+
+  #lightbox {
+    position: fixed; inset: 0; background: rgba(10,20,15,.92);
+    display: none; z-index: 100; cursor: zoom-out;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  #lightbox.on { display: flex; }
+  #lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+  #lightbox .cap {
+    position: absolute; left: 0; right: 0; bottom: 14px; text-align: center;
+    color: #dfe9e4; font-size: .8rem; padding: 0 24px;
+  }
+
+  .empty { text-align: center; color: var(--muted); font-size: .84rem; padding: 50px 0; }
+  .warn { background: #fff3bf; color: #7a5c00; border-radius: 8px; padding: 10px 14px; font-size: .78rem; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<header id="hdr" hidden>
+  <h1>2~5 图质检 · 人工复核 <small id="src"></small></h1>
+  <div class="bar" id="filters">
+    <button data-f="problem" class="on">问题优先</button>
+    <button data-f="reject" class="danger">reject</button>
+    <button data-f="suspect">suspect</button>
+    <button data-f="missing">missing</button>
+    <button data-f="wrong_species">种疑</button>
+    <button data-f="pass">pass</button>
+    <button data-f="mine">我标过</button>
+    <button data-f="unmarked">未标</button>
+    <button data-f="all">全部</button>
+    <span class="spacer"></span>
+    <span class="stat" id="stat"></span>
+    <button id="export">导出人工结果</button>
+    <button id="reload">换文件</button>
+  </div>
+  <div id="progwrap"><div id="prog"></div></div>
+</header>
+
+<div id="drop">
+  <h2>导入 manual-index2345.json</h2>
+  <p>把 <code>data-cache/qc-2345/manual-index2345.json</code> 拖到这里，或点下面的按钮选择。</p>
+  <p>也可以直接导入 <code>multimodal-2345.jsonl</code>（逐行 JSON，会按物种聚合）。</p>
+  <button id="pick">选择文件</button>
+  <input type="file" id="file" accept=".json,.jsonl" />
+  <div id="dropwarn"></div>
+</div>
+
+<div class="grid" id="grid"></div>
+<div class="empty" id="empty" hidden></div>
+
+<div class="pager" id="pager" hidden>
+  <button id="prev">‹ 上一页</button>
+  <input class="jump" id="jump" type="number" min="1" />
+  <button id="next">下一页 ›</button>
+  <span class="info" id="pageinfo"></span>
+</div>
+
+<div id="lightbox"><img id="lbimg" alt="" /><div class="cap" id="lbcap"></div></div>
+
+<script>
+/* ============================================================
+   2~5 图质检 · 人工复核
+   - 纯本地单文件，无构建、无服务、无外发请求（只拉 R2 公开图）
+   - 导入 JSON 后数据只在内存 + localStorage（人工三态）
+   ============================================================ */
+
+const PAGE = 60;
+const KEY_STORE = 'qc2345-manual-v1';
+let store = {};
+try { store = JSON.parse(localStorage.getItem(KEY_STORE) || '{}'); } catch { store = {}; }
+
+let ROWS = [];        // 扁平：一张图一条
+let filter = 'problem';
+let page = 0;
+let loadedName = '';
+
+/* ---------- 工具 ---------- */
+const el = (id) => document.getElementById(id);
+const keyOf = (r) => `${r.id}#${r.slot}`;
+const pct = (n, d) => (d ? ((n / d) * 100).toFixed(1) + '%' : '—');
+
+/** 载入 JSON / JSONL：接受聚合格式 {species:[{images:[...]}]} 或扁平数组，或 JSONL 逐行 */
+function normalize(raw, name) {
+  const text = raw.trim();
+  let payload = null;
+
+  // 先按整份 JSON 解析；失败则按 JSONL 逐行
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    const rows = [];
+    for (const line of text.split('\n')) {
+      const t = line.trim();
+      if (!t) continue;
+      try { rows.push(JSON.parse(t)); } catch { /* 跳过半行 */ }
+    }
+    if (!rows.length) throw new Error('既不是合法 JSON，也不是可解析的 JSONL');
+    payload = rows;
+  }
+
+  const out = [];
+  const push = (r) => out.push({
+    id: r.speciesId || r.id,
+    slot: Number(r.slot) || 1,
+    zh: r.nameZh || r.zh || '',
+    sci: r.nameSci || r.sci || '',
+    en: r.nameEn || r.en || '',
+    verdict: r.verdict || 'pending',
+    reasons: Array.isArray(r.reasons) ? r.reasons : [],
+    note: r.note || '',
+    model: r.model || '',
+    img: r.thumbUrl || r.img || r.imgUrl || '',
+    full: r.url || r.img || r.imgUrl || '',
+    author: r.author || '',
+    license: r.license || '',
+    source: r.source || '',
+    sourceUrl: r.sourceUrl || '',
+    total: Number(r.totalImages) || 0,
+  });
+
+  if (Array.isArray(payload)) {
+    payload.forEach(push);
+  } else if (Array.isArray(payload.species)) {
+    for (const sp of payload.species) {
+      const base = {
+        speciesId: sp.speciesId || sp.id,
+        nameZh: sp.nameZh, nameSci: sp.nameSci, nameEn: sp.nameEn, totalImages: sp.totalImages,
+      };
+      for (const im of sp.images || []) push({ ...base, ...im, speciesId: base.speciesId });
+    }
+  } else if (Array.isArray(payload.rows)) {
+    payload.rows.forEach(push);
+  } else {
+    throw new Error('认不出结构：需要 {species:[{images:[…]}]} 或扁平数组');
+  }
+
+  // 去重（同 id#slot 后出现的覆盖前面的）
+  const m = new Map();
+  for (const r of out) if (r.id) m.set(keyOf(r), r);
+  const list = [...m.values()];
+  if (!list.length) throw new Error('解析出 0 条记录');
+  return { list, meta: Array.isArray(payload) ? null : payload };
+}
+
+/* ---------- 排序：问题优先 ---------- */
+const RANK = { reject: 0, suspect: 1, missing: 2, pending: 3, pass: 4 };
+function sortRows() {
+  ROWS.sort((a, b) => (RANK[a.verdict] ?? 9) - (RANK[b.verdict] ?? 9)
+    || a.id.localeCompare(b.id)
+    || a.slot - b.slot);
+}
+
+/* ---------- 筛选 ---------- */
+function visible() {
+  switch (filter) {
+    case 'all': return ROWS;
+    case 'mine': return ROWS.filter((r) => store[keyOf(r)]);
+    case 'unmarked': return ROWS.filter((r) => !store[keyOf(r)]);
+    case 'problem': return ROWS.filter((r) => r.verdict !== 'pass' && r.verdict !== 'pending');
+    case 'wrong_species': return ROWS.filter((r) => r.reasons.includes('wrong_species'));
+    default: return ROWS.filter((r) => r.verdict === filter);
+  }
+}
+
+/* ---------- 渲染 ---------- */
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function cardHTML(r) {
+  const k = keyOf(r);
+  const mine = store[k]?.v || '';
+  const cls = ['card'];
+  if (r.verdict === 'reject') cls.push('rej');
+  if (r.verdict === 'suspect') cls.push('sus');
+  if (mine) cls.push('marked');
+
+  const ws = r.reasons.includes('wrong_species') ? ' <span class="badge ws">种疑</span>' : '';
+  const mineBadge = mine ? ` <span class="badge mine">${mine === 'ok' ? '我判合格' : mine === 'swap' ? '我要换' : '待定'}</span>` : '';
+  const srcLink = r.sourceUrl
+    ? `<a href="${esc(r.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(r.source || '原页')}</a>`
+    : esc(r.source || '');
+  const attr = [r.author, r.license, srcLink].filter(Boolean).join(' · ');
+
+  return `<div class="${cls.join(' ')}" data-k="${esc(k)}">
+    <div class="thumbwrap">
+      <img src="${esc(r.img)}" loading="lazy" alt="" class="thumb" data-full="${esc(r.full || r.img)}" data-cap="${esc(r.zh || r.id)} 第 ${r.slot} 张" />
+      <span class="slotno">#${r.slot}${r.total ? ' / ' + r.total : ''}</span>
+    </div>
+    <div class="info">
+      <div class="badges">
+        <span class="badge ${esc(r.verdict)}">${esc(r.verdict)}</span>${ws}${mineBadge}
+      </div>
+      <div class="name">${esc(r.zh || r.id)} <span class="id">${esc(r.id)}</span></div>
+      <div class="sci">${esc(r.sci)}${r.en ? ' · ' + esc(r.en) : ''}</div>
+      <div class="reasons">${esc(r.reasons.join(' · ') || '—')}</div>
+      ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
+      ${attr ? `<div class="attr">${attr}</div>` : ''}
+      <div class="model">${esc(r.model || '—')}</div>
+      <div class="btns">
+        <button data-v="ok" class="${mine === 'ok' ? 'on-ok' : ''}">合格</button>
+        <button data-v="swap" class="${mine === 'swap' ? 'on-swap' : ''}">要换</button>
+        <button data-v="hold" class="${mine === 'hold' ? 'on-hold' : ''}">待定</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const list = visible();
+  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  if (page >= pages) page = pages - 1;
+  if (page < 0) page = 0;
+  const slice = list.slice(page * PAGE, page * PAGE + PAGE);
+
+  const grid = el('grid');
+  grid.innerHTML = slice.map(cardHTML).join('');
+
+  // 破图时不留空框：换成「看原图」直达，方便人工核实 missing/取不到的判定是否成立
+  grid.querySelectorAll('img.thumb').forEach((im) => {
+    im.addEventListener('error', () => {
+      im.classList.add('broken');
+      const box = im.parentElement;
+      if (box.querySelector('.nophoto')) return;
+      const a = document.createElement('a');
+      a.className = 'nophoto';
+      a.href = im.dataset.full || im.src;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.innerHTML = '缩略图取不到<br><u>点开原图</u>';
+      box.appendChild(a);
+    }, { once: true });
+    im.addEventListener('click', () => openLightbox(im.dataset.full, im.dataset.cap));
+  });
+
+  // 三态
+  grid.querySelectorAll('.btns button').forEach((b) => {
+    b.addEventListener('click', () => {
+      const k = b.closest('.card').dataset.k;
+      if (store[k]?.v === b.dataset.v) delete store[k];
+      else store[k] = { v: b.dataset.v, at: Date.now() };
+      localStorage.setItem(KEY_STORE, JSON.stringify(store));
+      render();
+    });
+  });
+
+  const marked = ROWS.filter((r) => store[keyOf(r)]);
+  const c = (v) => ROWS.filter((r) => r.verdict === v).length;
+  el('stat').textContent =
+    `共 ${ROWS.length} 张（reject ${c('reject')} · suspect ${c('suspect')} · missing ${c('missing')} · pass ${c('pass')}）` +
+    ` · 已标 ${marked.length}（导出的 ${Object.keys(store).length} 条）`;
+
+  el('pageinfo').textContent = `第 ${page + 1} / ${pages} 页 · 本视图 ${list.length} 条`;
+  el('prev').disabled = page === 0;
+  el('next').disabled = page >= pages - 1;
+  el('jump').max = pages;
+  if (!el('jump').value) el('jump').value = page + 1;
+
+  const total = ROWS.length;
+  el('prog').style.width = total ? pct(marked.length, total) : '0';
+
+  el('empty').hidden = list.length > 0;
+  el('empty').textContent = ROWS.length ? '这个筛选下没有记录。' : '';
+
+  window.scrollTo(0, 0);
+}
+
+/* ---------- 大图 ---------- */
+function openLightbox(src, cap) {
+  if (!src) return;
+  el('lbimg').src = src;
+  el('lbcap').textContent = cap || '';
+  el('lightbox').classList.add('on');
+}
+el('lightbox').addEventListener('click', () => {
+  el('lightbox').classList.remove('on');
+  el('lbimg').src = '';
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    el('lightbox').classList.remove('on');
+    el('lbimg').src = '';
+  }
+  if (el('hdr').hidden) return;
+  if (e.key === 'ArrowLeft' && !el('prev').disabled) { page--; render(); }
+  if (e.key === 'ArrowRight' && !el('next').disabled) { page++; render(); }
+});
+
+/* ---------- 导入 ---------- */
+function showData(name, raw) {
+  const { list, meta } = normalize(raw, name);
+  ROWS = list;
+  sortRows();
+  loadedName = name;
+  el('src').textContent = meta?.generatedAt
+    ? `${name} · 生成于 ${new Date(meta.generatedAt).toLocaleString()}`
+    : name;
+  el('drop').hidden = true;
+  el('hdr').hidden = false;
+  el('pager').hidden = false;
+  page = 0;
+  filter = 'problem';
+  document.querySelectorAll('#filters button[data-f]').forEach((x) => x.classList.toggle('on', x.dataset.f === 'problem'));
+  render();
+}
+
+function readFile(f) {
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      showData(f.name, String(reader.result));
+    } catch (err) {
+      el('dropwarn').innerHTML = `<div class="warn">解析失败：${esc(err.message)}</div>`;
+    }
+  };
+  reader.readAsText(f);
+}
+
+el('pick').addEventListener('click', () => el('file').click());
+el('file').addEventListener('change', (e) => readFile(e.target.files[0]));
+
+const drop = el('drop');
+['dragenter', 'dragover'].forEach((ev) =>
+  drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('hot'); }));
+['dragleave', 'drop'].forEach((ev) =>
+  drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('hot'); }));
+drop.addEventListener('drop', (e) => readFile(e.dataTransfer.files[0]));
+// 也接受全窗口拖入
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (!el('hdr').hidden && e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+
+el('reload').addEventListener('click', () => {
+  el('hdr').hidden = true;
+  el('pager').hidden = true;
+  el('drop').hidden = false;
+  el('grid').innerHTML = '';
+  el('dropwarn').innerHTML = '';
+  ROWS = [];
+  el('file').value = '';
+});
+
+/* ---------- 筛选 / 翻页 / 导出 ---------- */
+document.querySelectorAll('#filters button[data-f]').forEach((b) =>
+  b.addEventListener('click', () => {
+    filter = b.dataset.f;
+    page = 0;
+    document.querySelectorAll('#filters button[data-f]').forEach((x) => x.classList.toggle('on', x === b));
+    render();
+  }));
+
+el('prev').addEventListener('click', () => { page--; render(); });
+el('next').addEventListener('click', () => { page++; render(); });
+el('jump').addEventListener('change', () => {
+  const n = Number(el('jump').value) - 1;
+  if (Number.isFinite(n) && n >= 0) { page = n; render(); }
+});
+
+el('export').addEventListener('click', () => {
+  // 导出为可直接回写的扁平清单（含 id/slot 定位 + 人工判定 + 机器判定快照）
+  const rows = [];
+  for (const r of ROWS) {
+    const m = store[keyOf(r)];
+    if (!m) continue;
+    rows.push({
+      speciesId: r.id,
+      slot: r.slot,
+      manual: m.v,               // ok | swap | hold
+      at: new Date(m.at).toISOString(),
+      machine: r.verdict,
+      reasons: r.reasons,
+      note: r.note,
+      img: r.full || r.img,
+      sourceUrl: r.sourceUrl,
+      author: r.author,
+      license: r.license,
+    });
+  }
+  const payload = {
+    $schema: 'uniaoer/qc-2345-manual@1',
+    exportedAt: new Date().toISOString(),
+    source: loadedName,
+    totalImages: ROWS.length,
+    marked: rows.length,
+    rows,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'manual-index2345-review-export.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
+</script>
+</body>
+</html>
