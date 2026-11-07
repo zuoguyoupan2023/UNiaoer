@@ -9,7 +9,6 @@
  * 请求用本地 320px 缩略图（4KB），提示词只要求回 "OK"，把花费压到最低。
  */
 import { readFileSync, existsSync } from 'node:fs'
-import { resolve } from 'node:path'
 
 // ---- .env 读取（仅取 QC_*，不打印） ----
 const env = {}

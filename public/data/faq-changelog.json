@@ -2,6 +2,22 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-11-07",
+      "titleZh": "白颊黑雁:图一已替换",
+      "titleEn": "Barnacle Goose: photo 1 has been replaced",
+      "bodyZh": "做题和查看鸟的详情时发现这三张图不合适展示。",
+      "bodyEn": "While answering questions and viewing the species details, these three photos were found unsuitable for display.",
+      "speciesId": "branta-leucopsis"
+    },
+    {
+      "date": "2026-11-07",
+      "titleZh": "扇尾沙锥:图三与图五已替换",
+      "titleEn": "Common Snipe: photos 3 and 5 have been replaced",
+      "bodyZh": "做题和查看鸟的详情时发现这三张图不合适展示。",
+      "bodyEn": "While answering questions and viewing the species details, these three photos were found unsuitable for display.",
+      "speciesId": "gallinago-gallinago"
+    },
+    {
       "date": "2026-11-03",
       "titleZh": "白尾蓝仙鹟:图一与图三已停用,补入雄鸟与雌鸟各一张",
       "titleEn": "White-tailed Flycatcher: photos 1 and 3 retired, a male and a female photo added",

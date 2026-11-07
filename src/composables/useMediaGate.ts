@@ -174,7 +174,7 @@ export function useMediaGate(opts: MediaGateOptions = {}) {
   // watch(shouldPromptRetry, (bad) => {
   //   if (bad && probeUrl && !probing && speedMbps.value === null) void probeSpeed(probeUrl)
   // })
-  void shouldPromptRetry // 组件仍读取它决定是否弹提示；探针停用后此处不再消费
+  void shouldPromptRetry.value // 组件仍读取它决定是否弹提示；探针停用后此处不再消费
 
   return {
     ready,
