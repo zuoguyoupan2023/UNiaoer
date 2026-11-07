@@ -176,6 +176,23 @@
      - CI 跑 `npm run check:tiers:local`（本地分片清单/档位数/省码数/generatedAt）；
      - 推 R2 前后与前端发布前，人工跑 `npm run check:tiers`（含 R2 远端比对，抽样 10 国）；
      - 改动档位产物后必须「重建 → `check:tiers` → 推 R2 → 再跑 `check:tiers` 确认远端一致」。
+   - **（2026-11-07）D1 专项——`schema.sql` 禁止单独执行、`--file` 必须先通读**
+     （2026-11-06 事故：schema.sql 被单独执行，其中 `DROP TABLE species` 清空了
+     11,026 行出题数据，前端静默降级到本地池一天无人察觉；见
+     `docs/000-SOP-D1防灾备份与恢复标准流程.md` §6）。
+     - **`worker/schema.sql` 含 `DROP TABLE species/questions/media`，禁止单独执行**——
+       它必须与 `seed.sql` 配对（`sync:prod` 的内部步骤）。单独跑 = 只删不灌。
+       给出任何 `d1 execute --file=worker/schema.sql` 的指令**之前必须先通读该文件全文**；
+     - **任何 `wrangler d1 execute --file=<文件>` 都不经过 cloud-guard**——执行前必须
+       人工通读目标文件，确认无 `DROP`/`DELETE`/`UPDATE`（或这些正是意图且已获批），
+       并把「执行了什么、影响哪些表」写进报告；
+     - **派生表（species/questions）空了不慌也不用手动补数据**：它是从 git 构建产物
+       重建的读模型，恢复 = `npm run sync:prod`（≈43,410 行写入，当日额度 43%，单日最多 2 次）
+       → `check:sync` → 验证出题 API；
+     - **Time Travel 是整库回滚**（破坏性、原地、7 天窗口），只用于用户数据（reports/
+       round_shares/metrics）丢失的兜底；恢复派生表**禁止**用 Time Travel；
+     - **定期备份用户数据**：每周 `npx wrangler d1 export uniaoer --remote
+       --output=store/d1-backups/<带时间戳>.sql`（存本地，gitignore；操作卡见 SOP §5）。
 
 14. **绝对不要杀用户启动的进程（2026-11-05 用户定，多次违反后成文）。**
     - **`npm run dev`（及任何用户自己起的 server / watch 进程）不许 `kill` / `pkill` / `fuser` /
@@ -275,6 +292,7 @@
 |---|---|---|
 | **媒体纠错** | 某物种的图/音有错误、用户报错要结案 | `docs/000-SOP-媒体纠错标准流程.md` |
 | **Worker 部署 / 分片重建 / R2 发布** | 改 `worker/**`、重建 `province-commonness/`、推 R2 产物、改 D1 结构 | `docs/000-SOP-Worker部署与分片重建标准流程.md` |
+| **D1 防灾备份与恢复** | 跑 `schema.sql`/`seed.sql` 或任何 `d1 execute --file` 之前；出题返 0 题、`species` 为空等数据异常；定期备份 | `docs/000-SOP-D1防灾备份与恢复标准流程.md` |
 | **数据口径契约** | 新增/修改地区产物、出题池逻辑，或界面上任何「N 种」数字 | `000-DATA-CONTRACT.md`（仓库根） |
 
 ### Worker / 分片 相关速查（细节见 SOP）

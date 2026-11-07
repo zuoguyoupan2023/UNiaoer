@@ -1,6 +1,19 @@
 -- UNiaoer D1 表结构
 -- 用法（由 npm run sync:prod 调用）：wrangler d1 execute uniaoer --file=worker/schema.sql --remote
 --
+-- ╔══════════════════════════════════════════════════════════════════════╗
+-- ║  ⚠️⚠️  禁止单独执行本文件！                                        ║
+-- ║                                                                      ║
+-- ║  本文件包含 DROP TABLE species/questions/media（见下）。             ║
+-- ║  单独跑它 = 清空 species 且不灌数据 → 出题 API 返 0 题，            ║
+-- ║  且前端静默降级到本地池（无报错，极难发现）。                        ║
+-- ║  2026-11-06 事故即由此发生（species 被清空一天无人察觉）。          ║
+-- ║                                                                      ║
+-- ║  ✅ 正确用法：npm run sync:prod -- --apply（schema.sql + seed.sql   ║
+-- ║     必须配对：先 DROP/CREATE 结构，再灌 11,026 行数据）。           ║
+-- ║  📖 见 docs/000-SOP-D1防灾备份与恢复标准流程.md §4.1                ║
+-- ╚══════════════════════════════════════════════════════════════════════╝
+--
 -- 分层：
 --   · 派生读模型（species / questions）—— 由构建产物重建（worker/seed.sql 重灌）。
 --     结构变更直接改本文件；DROP+CREATE 保证结构与数据都与构建产物严格一致
