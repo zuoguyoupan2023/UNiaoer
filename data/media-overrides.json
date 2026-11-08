@@ -715,6 +715,105 @@
           "reportIds": []
         }
       ]
+    },
+    "antrostomus-carolinensis": {
+      "_reason": "2026-11-08 用户自查：图二（image-2，obs 127859526）为沙地伏地张口威吓姿态；图三（image-3，obs 362020379 photo 660720857）源站上是网络梗图（两个表情包小人指着树丛），整张没有鸟；图四（image-4，obs 50468866）为人手持鸟的仰拍张口特写；图五（image-5，obs 180060911）是两只绒毛雏鸟，无成体辨识特征。以上四张停用，图一（image-1，默认图 photo 16038254）保留并继续作首图。新增 4 张（obs 275116442 / 6072071 / 170794158 / 124381788）。新图经逐张看图 + 逐条核对 community_taxon（均为 Antrostomus carolinensis，taxon id 199833，research grade），许可 CC0/CC BY/BY-NC，长边 2048。图二至图五源站标注本种无误，属取图规则选到废帧。新 key 从 image-6 起，旧对象保留在 R2 备查。首图仍为 image-1，D1 无需更新。隔离台账未涉及（未点过隔离）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/16038254/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/16038254/large.jpg",
+        "https://www.inaturalist.org/photos/16038254",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/217108557/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/217108557/large.jpeg",
+        "https://www.inaturalist.org/observations/127859526",
+        "https://www.inaturalist.org/photos/217108557",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/660720857/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/660720857/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/660718939/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/660718939/large.jpeg",
+        "https://www.inaturalist.org/observations/362020379",
+        "https://www.inaturalist.org/photos/660720857",
+        "https://www.inaturalist.org/photos/660718939",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/80135501/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/80135501/large.jpeg",
+        "https://www.inaturalist.org/observations/50468866",
+        "https://www.inaturalist.org/photos/80135501",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/313584795/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/313584795/large.jpeg",
+        "https://www.inaturalist.org/observations/180060911",
+        "https://www.inaturalist.org/photos/313584795",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/503953980/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/503953980/large.jpeg",
+        "https://www.inaturalist.org/observations/280586677",
+        "https://www.inaturalist.org/photos/503953980"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/494439249/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) JD Flores, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/275116442",
+          "sourceId": "494439249"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/7598006/large.jpeg",
+          "license": "cc0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/6072071",
+          "sourceId": "7598006"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/296287800/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Jared Shorma, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/170794158",
+          "sourceId": "296287800"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/210807513/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Jonathan Irons, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/124381788",
+          "sourceId": "210807513"
+        }
+      ],
+      "prependImageUrls": [
+        "https://bird.wewalk.world/media/antrostomus-carolinensis/image-1.full.webp"
+      ],
+      "rejected": [
+        {
+          "slot": "image-2",
+          "sourceUrl": "https://www.inaturalist.org/observations/127859526",
+          "imageUrl": "https://bird.wewalk.world/media/antrostomus-carolinensis/image-2.full.webp",
+          "reason": "用户判定不适合作为题目用图",
+          "reportIds": []
+        },
+        {
+          "slot": "image-3",
+          "sourceUrl": "https://www.inaturalist.org/observations/362020379",
+          "imageUrl": "https://bird.wewalk.world/media/antrostomus-carolinensis/image-3.full.webp",
+          "reason": "源站照片是网络梗图，画面中没有鸟",
+          "reportIds": []
+        },
+        {
+          "slot": "image-4",
+          "sourceUrl": "https://www.inaturalist.org/observations/50468866",
+          "imageUrl": "https://bird.wewalk.world/media/antrostomus-carolinensis/image-4.jpg",
+          "reason": "人手持鸟的仰拍张口特写，不适合作为辨识题图",
+          "reportIds": []
+        },
+        {
+          "slot": "image-5",
+          "sourceUrl": "https://www.inaturalist.org/observations/180060911",
+          "imageUrl": "https://bird.wewalk.world/media/antrostomus-carolinensis/image-5.full.webp",
+          "reason": "两只绒毛雏鸟，无成体辨识特征",
+          "reportIds": []
+        }
+      ]
     }
   }
 }

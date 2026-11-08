@@ -1054,6 +1054,18 @@ async function materialize(rec, id, prev) {
     const dup = rec.images.some((x) => x && (x.url === a.url || (a.sourceId && x.sourceId === a.sourceId)))
     if (!dup) rec.images.push(a)
   }
+  // 显式前置（保持旧 key）：用于「保留旧首图、只换中间几张」的定向修复——
+  // appendImageUrls 只能排到最后，首图会被新图顶掉、连带 D1 也要改。
+  const prependUrls = Array.isArray(ov?.prependImageUrls) ? ov.prependImageUrls : []
+  for (const u of [...prependUrls].reverse()) {
+    const a = (prev?.images || []).find((x) => x && x.url === u)
+    if (!a) {
+      console.warn(`   ⚠️ prependImageUrls 未在上一版找到：${u}`)
+      continue
+    }
+    const dup = rec.images.some((x) => x && (x.url === a.url || (a.sourceId && x.sourceId === a.sourceId)))
+    if (!dup) rec.images.unshift(a)
+  }
   rec.image = rec.images[0] || null
   rec.audio = rec.audios[0] || null
 }

@@ -2,6 +2,14 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-11-08",
+      "titleZh": "卡氏夜鹰:图二、图三、图四、图五已替换",
+      "titleEn": "Chuck-will's-widow: photos 2, 3, 4 and 5 have been replaced",
+      "bodyZh": "卡氏夜鹰原有 5 张图中 4 张不适合作为题目用图，已停用并补入 4 张新图；现在展示原图一与新增 4 张。感谢小红书网友 无心核酸酶 指出问题。",
+      "bodyEn": "Four of the Chuck-will's-widow's five photos were unsuitable as quiz images and have been retired; four new photos were added. Thanks to Xiaohongshu user 无心核酸酶 for pointing this out.",
+      "speciesId": "antrostomus-carolinensis"
+    },
+    {
       "date": "2026-11-07",
       "titleZh": "白颊黑雁:图一已替换",
       "titleEn": "Barnacle Goose: photo 1 has been replaced",
