@@ -850,8 +850,8 @@
       ]
     },
     "macheiramphus-alcinus": {
-      "_reason": "2026-11-08 用户复核：停用 image-3（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-3（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/414106018/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/414106018/large.jpeg",
@@ -940,8 +940,8 @@
       ]
     },
     "crithagra-atrogularis": {
-      "_reason": "2026-11-08 用户复核：停用 image-2/4/5（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-2/4/5（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/316970406/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/316970406/large.jpeg",
@@ -1439,8 +1439,8 @@
       ]
     },
     "yungipicus-moluccensis": {
-      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/714986364/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/714986364/large.jpeg",
@@ -1644,8 +1644,8 @@
       ]
     },
     "hydrophasianus-chirurgus": {
-      "_reason": "2026-11-08 用户复核：停用 image-3/4（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-3/4（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/44692230/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/44692230/large.jpeg",
@@ -1747,8 +1747,8 @@
       ]
     },
     "aerodramus-fuciphagus": {
-      "_reason": "2026-11-08 用户复核：停用 image-2/3/4（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-2/3/4（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/363074146/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/363074146/large.jpeg",
@@ -1891,8 +1891,8 @@
       "keepLeadImage": true
     },
     "tauraco-violaceus": {
-      "_reason": "2026-11-08 用户复核：停用 image-3（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-3（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/598888258/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/598888258/large.jpeg",
@@ -1934,8 +1934,8 @@
       ]
     },
     "hirundapus-giganteus": {
-      "_reason": "2026-11-08 用户复核：停用 image-2/5（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-2/5（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/556402215/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/556402215/large.jpeg",
@@ -1969,8 +1969,8 @@
       "keepLeadImage": true
     },
     "dicrurus-macrocercus": {
-      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。 2026-11-09 修复：原新图被写入的位置实际装着旧图一的字节（stage 模式复用同名文件所致），改用 image-30 起的新 key 重建。",
+      "imageKeyBase": 30,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/209265766/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/209265766/large.jpeg",
