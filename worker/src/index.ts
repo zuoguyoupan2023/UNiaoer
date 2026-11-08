@@ -436,7 +436,7 @@ async function handleQuestionsCached(
  *   分片缺失：降级为区系短码（species-distribution，国家级"有没有"）+ 全局 commonness
  *   097 F（2026-10-30）：region=ALL / 洲 → **全球档位表**（data/global-commonness.json，
  *     全球记录数十等分）收窄，洲再按成员国区系过滤；缺失才降级为全局 commonness
- *   两处共同：可玩（playable_image/audio 按题型） + quiz_excluded=0
+ *   两处共同：有素材（playable_image/audio 按题型） + quiz_excluded=0
  *
  * 返回候选物种（含 media），前端据此本地组装题面（不返回答案/选项——选项由前端按档位生成）。
  */

@@ -54,8 +54,8 @@ CREATE TABLE species (
   migration          TEXT,                    -- 居留型 C1：resident/summer/winter/passage/migrant/vagrant
   iucn_category      TEXT,                    -- IUCN 等级：LC/NT/VU/EN/CR…
   distribution_count INTEGER,                 -- 分布国家/地区数（C1）
-  playable_image     INTEGER NOT NULL DEFAULT 0, -- 有图可玩（D-023-3 拆维度）
-  playable_audio     INTEGER NOT NULL DEFAULT 0, -- 有音可玩
+  playable_image     INTEGER NOT NULL DEFAULT 0, -- 有图可出题（D-023-3 拆维度）
+  playable_audio     INTEGER NOT NULL DEFAULT 0, -- 有音可出题
   quiz_excluded      INTEGER NOT NULL DEFAULT 0, -- 029 M3：质量降级（仅展示不进题库）
   desc               TEXT,
   location           TEXT,

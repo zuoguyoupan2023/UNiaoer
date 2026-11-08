@@ -586,7 +586,7 @@ test.describe('入口与页面', () => {
   test('全球物种层（025）：未收录标记、轻量详情与 bank 回归', async ({ page }) => {
     await page.goto('/birding?tab=regions') // 默认亚洲 + 中国
 
-    // 全球未收录种:网格显示「未收录媒体」标记;bank 种仍带头图可玩
+    // 全球未收录种:网格显示「未收录媒体」标记;bank 种仍带头图可出题
     const globus = page.locator('.species-card', { hasText: 'Globus testus' })
     await expect(globus).toBeVisible()
     await expect(globus.locator('.sp-badge')).toHaveText('未收录媒体')

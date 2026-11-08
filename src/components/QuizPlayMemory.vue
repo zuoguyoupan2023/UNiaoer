@@ -89,7 +89,7 @@ function buildBoard() {
     .map((c, i) => ({ ...c, idx: i }))
 }
 
-// 图片牌预取：全部 12 张（320px 缩略图优先）在开局面就绪，翻开零等待
+// 图片牌预取：全部 12 张（320px 缩略图优先）在开局时就绪，翻开零等待
 const cardImageSrc = computed(() => new Map(cards.value.map((c) => [c.idx, c.media.thumbUrl || c.media.url])))
 function preloadImages() {
   for (const c of cards.value) {

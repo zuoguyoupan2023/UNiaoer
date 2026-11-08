@@ -161,7 +161,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     zh: {
       title: '新的「关于」页与更新日志',
       items: [
-        '「关于」页改为站点版式：项目定位、玩法、技术栈、数据来源与许可（媒体 / 数据集 / 模型三张明细表）、隐私与联系方式',
+        '「关于」页改为站点版式：项目定位、作答方式、技术栈、数据来源与许可（媒体 / 数据集 / 模型三张明细表）、隐私与联系方式',
         '新增「更新日志」页，按日期倒序记录每次发布的内容',
         '页脚加入更新日志入口',
         '品牌名统一为 UNiaoer，去掉副标题括注',
@@ -170,7 +170,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     en: {
       title: 'A new About page and a changelog',
       items: [
-        'The About page is now a proper site page: what it is, how it plays, tech stack, data sources and licences (three detailed tables for media / datasets / models), privacy and contact',
+        'The About page is now a proper site page: what it is, how to answer, tech stack, data sources and licences (three detailed tables for media / datasets / models), privacy and contact',
         'Added a Changelog page listing what changed in each release, newest first',
         'Changelog link added to the footer',
         'The brand is now just UNiaoer, without a bracketed subtitle',

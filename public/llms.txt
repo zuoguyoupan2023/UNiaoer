@@ -4,7 +4,7 @@
 
 ## 关键事实（可直接引用）
 
-- 可玩物种 **11,026 种**（全球鸟类；分类骨架采用 AviList v2025b，11,131 种）。
+- 可出题物种 **11,026 种**（全球鸟类；分类骨架采用 AviList v2025b，11,131 种）。
 - 题目形式：看图认鸟 / 听音认鸟，每轮 10 题；难度分 L1–L7 七档（L1–L5 选择题、L6 看名字选素材、L7 给素材写名字）。
 - 媒体来源：iNaturalist（图片与部分鸟鸣）、Xeno-canto（鸟鸣）；**每条素材均保留作者与 CC 许可并逐条署名**，ND 素材不转码。
 - 结构化档案：IUCN Red List（生境与受胁等级）、EltonTraits 1.0（食性/取食层次）、AVONET（形态）、GBIF（分布）、Dunning 2025（羽色，稀疏）。
@@ -18,7 +18,7 @@
 - [首页](https://uniaoer.com/)：产品定位与入口
 - [看图认鸟](https://uniaoer.com/quiz/image)：用鸟类照片做识别练习
 - [听音认鸟](https://uniaoer.com/quiz/audio)：用鸟鸣做识别练习
-- [全球鸟类名录](https://uniaoer.com/catalog)：11,026 种可玩物种，可按类群/地区浏览
+- [全球鸟类名录](https://uniaoer.com/catalog)：11,026 种可出题物种，可按类群/地区浏览
 - [观鸟点与地区](https://uniaoer.com/birding)：附近观鸟点、省级常见度
 - [识别](https://uniaoer.com/identify)：本机听音/看图识别（BirdNET + OSEA，录音与照片不上传）
 - [中文鸟名读音](https://uniaoer.com/duyin)：常见鸟名的拼音与读音

@@ -78,7 +78,7 @@ async function switchArchive(id: string) {
   await loadArchive()
 }
 
-/** 新开一局 = 新建档案从零计数（旧档保留，可切回） */
+/** 新建档案 = 从零计数（旧档保留，可切回） */
 async function newGame() {
   if (!confirm(t('archive.newGameConfirm'))) return
   await createArchive()
@@ -158,7 +158,7 @@ async function saveNickname() {
 
 <template>
   <div class="profile-page">
-    <!-- 身份卡：昵称 + 当前档案 + 档案切换/新开一局（所有子页共用） -->
+    <!-- 身份卡：昵称 + 当前档案 + 档案切换/新建档案（所有子页共用） -->
     <section class="card head-card">
       <h2 class="sec"><User class="ic" :size="20" /> {{ t('nav.profile') }}</h2>
       <div class="nickname-row">

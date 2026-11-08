@@ -193,9 +193,9 @@ const en: typeof zhMessages = {
     title: 'Archive',
     current: 'Current archive',
     list: 'All archives',
-    newGame: 'New game',
+    newGame: 'New archive',
     newGameConfirm:
-      'A new game starts counting from zero (creates a new archive). Old archives are kept and can be switched back anytime. Continue?',
+      'A new archive starts counting from zero (separate records). Old archives are kept and can be switched back anytime. Continue?',
     createdAt: 'Created {date}',
     count: '{n} archives',
     rename: 'Rename',

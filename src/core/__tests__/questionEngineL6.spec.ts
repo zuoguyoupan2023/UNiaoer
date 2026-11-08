@@ -149,7 +149,7 @@ describe('buildNameQuestions（L6 半鸟人）', () => {
       count: 10,
       onStats: (s) => (stats = s),
     })
-    // 15 种里：无中文名 1（nozh）+ 无图 1（noimg）→ 13 可玩 ∧ 有中文名
+    // 15 种里：无中文名 1（nozh）+ 无图 1（noimg）→ 13 可出题 ∧ 有中文名
     expect(stats!.unique).toBe(13)
   })
 })

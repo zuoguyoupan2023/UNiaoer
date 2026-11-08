@@ -50,7 +50,7 @@ function regionBadgeOf(code?: string): string {
 
 const rounds = ref<RoundRecord[]>([])
 const loading = ref(true)
-/** 手风琴：同时只展开一局 */
+/** 手风琴：同时只展开一组 */
 const openedId = ref<string | null>(null)
 /** 长列表分页：首屏 20 轮，「显示更多」每次 +20 */
 const visibleCount = ref(20)

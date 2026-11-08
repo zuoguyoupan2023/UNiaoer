@@ -522,8 +522,8 @@ describe('S6 · meta 名单 + assets 懒加载', () => {
     expect(qs[0]!.crossAssets?.[0]?.url).toBe(aud.url)
   })
 
-  it('P0（2026-10-19 白屏事故）：meta 说可玩、分片却缺该种 → 该种不出题，绝不发空媒体', async () => {
-    // ba 桶被声明可玩但分片里没有 bad-01（模拟 meta/assets 不一致）；go 桶正常。
+  it('P0（2026-10-19 白屏事故）：meta 说有素材、分片却缺该种 → 该种不出题，绝不发空媒体', async () => {
+    // ba 桶被声明有素材但分片里没有 bad-01（模拟 meta/assets 不一致）；go 桶正常。
     const good = asset('good-01', 'image')
     vi.stubGlobal(
       'fetch',
@@ -545,7 +545,7 @@ describe('S6 · meta 名单 + assets 懒加载', () => {
             { status: 200, headers: { 'content-type': 'application/json' } },
           )
         }
-        // ba 桶：声明了可玩，但分片里没有该种
+        // ba 桶：声明了有素材，但分片里没有该种
         if (u.includes('data/assets/ba.json')) {
           return new Response(
             JSON.stringify({ layer: 'assets', bucket: 'ba', species: {} }),

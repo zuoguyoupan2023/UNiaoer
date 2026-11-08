@@ -73,7 +73,7 @@ describe('trimLeadingZeros', () => {
     { day: '10-03', n: 5 },
   ]
 
-  it('只裁开头的 0，末尾的 0 保留（今天还没人玩也是信息）', () => {
+  it('只裁开头的 0，末尾的 0 保留（今天还没人作答也是信息）', () => {
     const out = trimLeadingZeros(days)
     expect(out.map((d) => d.day)).toEqual(['10-01', '10-02', '10-03'])
   })

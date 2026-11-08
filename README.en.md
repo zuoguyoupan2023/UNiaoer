@@ -18,7 +18,7 @@ Project description: learn to recognise birds from real photos and recordings, a
 ## Modes
 
 > Common rules: 10 questions per round; **both Chinese and English UI are supported** — prompts and answers follow the current UI language.
-> Since 2026-10-24, **new gameplay = extra difficulty levels** (L6/L7), with no separate entry point or extra wizard step.
+> Since 2026-10-24, **new modes = extra difficulty levels** (L6/L7), with no separate entry point or extra wizard step.
 
 ### L6 · Half-birder (name → photo / sound) — ✅ live (difficulty level 6)
 
@@ -100,7 +100,7 @@ npm run format       # format
 
 - ✅ P0 scaffolding: Vite + Vue 3 + TS + Pinia + router + tests + lint
 - ✅ P1 static question bank: `scripts/build-bank.mjs` fetches iNat/XC → licence filter → `manifest.json` (1,299 species / 5 photos + 5 recordings)
-- ✅ P2 core gameplay: photo quiz / audio quiz (options, feedback, per-item attribution, result review, multiple assets per species)
+- ✅ P2 core answering flow: photo quiz / audio quiz (options, feedback, per-item attribution, result review, multiple assets per species)
 - ✅ P3 experience: preloading, lazy loading, Service Worker persistence
 - ✅ P4 difficulty ladder L1–L5 (option count, time limit, commonness, pool, L5 random distractor audio)
 - ✅ P5 audio autoplay (configurable in Settings)
@@ -112,10 +112,10 @@ npm run format       # format
 - ✅ Regional data: seasonality `seasonality.json`; **province layer (sharded, 194 countries/territories)** `region-provinces/index.json` + 194 country shards (incl. China's 34 divisions, with Hong Kong/Macao/Taiwan labelled) + per-species-prefix buckets `region-species/*.json`; **country-level record counts** `region-records/` (**249 country/territory codes** — GBIF `countrycode` covers the full ISO 3166-1 set incl. dependencies and special areas, not the number of sovereign states; includes records without a province); birding spots `hotspots-ebird/` (eBird-derived spots + GBIF grid)
 - ✅ i18n (zh-CN / en, 875 keys, CI gate) · accessibility (H3) · E2E (Playwright 13 specs, fully offline)
 - ✅ Global expansion (data layer): AviList v2025b backbone `species-index.json` (11,131 species) + `taxonKey`/`playable` in the manifest; 5,808 Chinese names (curated first + Wikidata CC0); backbone mapping 10,892/11,131; global avifauna layer `/region` (249 countries) + lightweight species pages
-- ✅ Global media collection: **11,026 playable species** (photos 10,888 / audio 10,356) uploaded to R2, attributed item by item, ND never transcoded
+- ✅ Global media collection: **11,026 species with questions** (photos 10,888 / audio 10,356) uploaded to R2, attributed item by item, ND never transcoded
 - ✅ Full catalogue `/catalog`: **11,026 species / 46 orders / 252 families**, browsable as order → family → species (224/252 families have Chinese names); taxonomy / pinyin / commonness sorting (keys precomputed at build time) + A–Z jump + pinyin search
 - ✅ Anonymous metrics and sharing: **anonymous event counts** (no cookies, device IDs or IPs; can be disabled in Settings); share pages with **OG previews**, **view counts** and **offline retry**
-- 🚧 In progress: gameplay integration (P3) — global pool in quizzes, manifest layer loading, commonness tiers, media quality feedback loop (see `docs/029`)
+- 🚧 In progress: question-type integration (P3) — global pool in quizzes, manifest layer loading, commonness tiers, media quality feedback loop (see `docs/029`)
 
 ## Privacy
 

@@ -422,7 +422,7 @@
   transition: all 0.18s ease;
   letter-spacing: 0.2px;
 }
-/* 小号按钮：内边距/圆角更小（档案重命名/删除/新开一局等） */
+/* 小号按钮：内边距/圆角更小（档案重命名/删除/新建档案等） */
 .btn-sm {
   gap: 4px;
   padding: 5px 10px;
