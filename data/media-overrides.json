@@ -814,6 +814,1200 @@
           "reportIds": []
         }
       ]
+    },
+    "orthotomus-ruficeps": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/350254241/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/350254241/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/350254241/large.png",
+        "https://www.inaturalist.org/photos/350254241",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/711524219/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/711524219/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/711524219/large.png",
+        "https://www.inaturalist.org/photos/711524219",
+        "https://www.inaturalist.org/observations/110957553",
+        "https://www.inaturalist.org/observations/413138171"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/187257673/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Fadzrun, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/110957553",
+          "sourceId": "110957553"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/760323750/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Holland, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413138171",
+          "sourceId": "413138171"
+        }
+      ]
+    },
+    "macheiramphus-alcinus": {
+      "_reason": "2026-11-08 用户复核：停用 image-3（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/414106018/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/414106018/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/414106018/large.png",
+        "https://www.inaturalist.org/photos/414106018",
+        "https://www.inaturalist.org/observations/324425651"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/587189028/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Braden J. Judson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/324425651",
+          "sourceId": "324425651"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "microtarsus-melanoleucos": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/337917966/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/337917966/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/337917966/large.png",
+        "https://www.inaturalist.org/photos/337917966",
+        "https://www.inaturalist.org/observations/227276093"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/403174066/large.jpeg",
+          "license": "cc0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/227276093",
+          "sourceId": "227276093"
+        }
+      ]
+    },
+    "serinus-alario": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/5（不适合作为出题图），保留 image-3、image-4；补入 3 张经用户确认的新图（原定的新图图三已由用户排除）。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/183380155/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/183380155/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/183380155/large.png",
+        "https://www.inaturalist.org/photos/183380155",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/146602043/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/146602043/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/146602043/large.png",
+        "https://www.inaturalist.org/photos/146602043",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/254938900/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/254938900/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/254938900/large.png",
+        "https://www.inaturalist.org/photos/254938900",
+        "https://www.inaturalist.org/observations/54306817",
+        "https://www.inaturalist.org/observations/206206493",
+        "https://www.inaturalist.org/observations/411746168"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/86405008/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Gerette Lotter, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/54306817",
+          "sourceId": "54306817"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/364694280/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Johan Heyns, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/206206493",
+          "sourceId": "206206493"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/757512049/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Adrian Johnson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/411746168",
+          "sourceId": "411746168"
+        }
+      ]
+    },
+    "crithagra-atrogularis": {
+      "_reason": "2026-11-08 用户复核：停用 image-2/4/5（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/316970406/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/316970406/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/316970406/large.png",
+        "https://www.inaturalist.org/photos/316970406",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/15902969/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/15902969/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/15902969/large.png",
+        "https://www.inaturalist.org/photos/15902969",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/215735016/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/215735016/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/215735016/large.png",
+        "https://www.inaturalist.org/photos/215735016",
+        "https://www.inaturalist.org/observations/10967881",
+        "https://www.inaturalist.org/observations/178520721",
+        "https://www.inaturalist.org/observations/284522671"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/15438777/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Patrick Lane, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/10967881",
+          "sourceId": "10967881"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/310656628/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Shaun Swanepoel, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/178520721",
+          "sourceId": "178520721"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/511348722/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Andy Bridges, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/284522671",
+          "sourceId": "284522671"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "hemicircus-concretus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/258341935/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/258341935/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/258341935/large.png",
+        "https://www.inaturalist.org/photos/258341935",
+        "https://www.inaturalist.org/observations/189737555"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/332464051/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Dixon Lau, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/189737555",
+          "sourceId": "189737555"
+        }
+      ]
+    },
+    "pycnonotus-plumosus": {
+      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/729511891/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/729511891/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/729511891/large.png",
+        "https://www.inaturalist.org/photos/729511891",
+        "https://www.inaturalist.org/observations/398346359"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/730731665/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Sam, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/398346359",
+          "sourceId": "398346359"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "trichoglossus-borneus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/387839929/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/387839929/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/387839929/large.png",
+        "https://www.inaturalist.org/photos/387839929",
+        "https://www.inaturalist.org/observations/264535388"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/475011758/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Ryan E. Gray, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/264535388",
+          "sourceId": "264535388"
+        }
+      ]
+    },
+    "delichon-lagopodum": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/4（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/205976622/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/205976622/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/205976622/large.png",
+        "https://www.inaturalist.org/photos/205976622",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/137161319/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/137161319/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/137161319/large.png",
+        "https://www.inaturalist.org/photos/137161319",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/166464835/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/166464835/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/166464835/large.png",
+        "https://www.inaturalist.org/photos/166464835",
+        "https://www.inaturalist.org/observations/181503494",
+        "https://www.inaturalist.org/observations/162854911",
+        "https://www.inaturalist.org/observations/223328413"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/316288964/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Oliver Komar, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/181503494",
+          "sourceId": "181503494"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/281623048/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Анна Васильченко, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/162854911",
+          "sourceId": "162854911"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/395695512/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Илья Сухов, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/223328413",
+          "sourceId": "223328413"
+        }
+      ]
+    },
+    "rhaphidura-leucopygialis": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/3/5（不适合作为出题图）；补入 4 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10942882/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10942882/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10942882/large.png",
+        "https://www.inaturalist.org/photos/10942882",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/449654130/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/449654130/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/449654130/large.png",
+        "https://www.inaturalist.org/photos/449654130",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/358270832/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/358270832/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/358270832/large.png",
+        "https://www.inaturalist.org/photos/358270832",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/274996207/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/274996207/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/274996207/large.png",
+        "https://www.inaturalist.org/photos/274996207",
+        "https://www.inaturalist.org/observations/231797043",
+        "https://www.inaturalist.org/observations/286234358",
+        "https://www.inaturalist.org/observations/147326587",
+        "https://www.inaturalist.org/observations/281433947"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/411739752/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) supapond13, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/231797043",
+          "sourceId": "231797043"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/514560274/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Hiroki Shudo, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/286234358",
+          "sourceId": "286234358"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/253492069/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) benjamynweil, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/147326587",
+          "sourceId": "147326587"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/505559318/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Penhtah Mahakayi, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/281433947",
+          "sourceId": "281433947"
+        }
+      ]
+    },
+    "bycanistes-bucinator": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40302332/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40302332/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40302332/large.png",
+        "https://www.inaturalist.org/photos/40302332",
+        "https://www.inaturalist.org/observations/164636452"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/284881277/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Kimr, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/164636452",
+          "sourceId": "164636452"
+        }
+      ]
+    },
+    "meiglyptes-tristis": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/4（不适合作为出题图）；补入 4 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/450514075/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/450514075/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/450514075/large.png",
+        "https://www.inaturalist.org/photos/450514075",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/450514089/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/450514089/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/450514089/large.png",
+        "https://www.inaturalist.org/photos/450514089",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/732869695/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/732869695/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/732869695/large.png",
+        "https://www.inaturalist.org/photos/732869695",
+        "https://www.inaturalist.org/observations/251736083",
+        "https://www.inaturalist.org/observations/399448211",
+        "https://www.inaturalist.org/observations/403432287"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/450514075/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Gideon Lam, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/251736083",
+          "sourceId": "450514075"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/450514089/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Gideon Lam, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/251736083",
+          "sourceId": "450514089"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/732869695/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Yovie Jehabut, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/399448211",
+          "sourceId": "399448211"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/740726641/large.jpg",
+          "license": "cc0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/403432287",
+          "sourceId": "403432287"
+        }
+      ]
+    },
+    "ploceus-hypoxanthus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/3（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/532274161/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/532274161/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/532274161/large.png",
+        "https://www.inaturalist.org/photos/532274161",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/644661659/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/644661659/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/644661659/large.png",
+        "https://www.inaturalist.org/photos/644661659",
+        "https://www.inaturalist.org/observations/261219303",
+        "https://www.inaturalist.org/observations/392604110"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/469252335/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Sam Hambly, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/261219303",
+          "sourceId": "261219303"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/719521665/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) julien CLAUDE, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/392604110",
+          "sourceId": "392604110"
+        }
+      ]
+    },
+    "cacomantis-merulinus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/3/5（不适合作为出题图）；补入 4 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177344374/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177344374/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177344374/large.png",
+        "https://www.inaturalist.org/photos/177344374",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177981207/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177981207/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177981207/large.png",
+        "https://www.inaturalist.org/photos/177981207",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/4914729/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/4914729/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/4914729/large.png",
+        "https://www.inaturalist.org/photos/4914729",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/672064989/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/672064989/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/672064989/large.png",
+        "https://www.inaturalist.org/photos/672064989",
+        "https://www.inaturalist.org/observations/296973376",
+        "https://www.inaturalist.org/observations/413323556",
+        "https://www.inaturalist.org/observations/413114513",
+        "https://www.inaturalist.org/observations/57892754"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/534791988/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Rejoice Gassah, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/296973376",
+          "sourceId": "296973376"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/760696337/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) hanssonanton03, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413323556",
+          "sourceId": "413323556"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/760277998/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) julien CLAUDE, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413114513",
+          "sourceId": "413114513"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/92384080/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Kelvin Joshua Che, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/57892754",
+          "sourceId": "57892754"
+        }
+      ]
+    },
+    "hemiprocne-longipennis": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/49359068/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/49359068/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/49359068/large.png",
+        "https://www.inaturalist.org/photos/49359068",
+        "https://www.inaturalist.org/observations/154042534"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/266126743/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) redbeanpole, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/154042534",
+          "sourceId": "154042534"
+        }
+      ]
+    },
+    "pernis-ptilorhynchus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/5（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/107322174/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/107322174/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/107322174/large.png",
+        "https://www.inaturalist.org/photos/107322174",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/144866192/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/144866192/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/144866192/large.png",
+        "https://www.inaturalist.org/photos/144866192",
+        "https://www.inaturalist.org/observations/413503297",
+        "https://www.inaturalist.org/observations/412503869"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/761062789/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Jordan Teo, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413503297",
+          "sourceId": "413503297"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/759043392/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) 陳豊鍾, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/412503869",
+          "sourceId": "412503869"
+        }
+      ]
+    },
+    "argusianus-argus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/109643681/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/109643681/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/109643681/large.png",
+        "https://www.inaturalist.org/photos/109643681",
+        "https://www.inaturalist.org/observations/194663042"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/342235966/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) A. Restu Dwikelana, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/194663042",
+          "sourceId": "194663042"
+        }
+      ]
+    },
+    "aerodramus-maximus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/5（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/20544295/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/20544295/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/20544295/large.png",
+        "https://www.inaturalist.org/photos/20544295",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/215183246/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/215183246/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/215183246/large.png",
+        "https://www.inaturalist.org/photos/215183246",
+        "https://www.inaturalist.org/observations/408453275",
+        "https://www.inaturalist.org/observations/236702570"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/750811278/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) K02_KO26RA, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/408453275",
+          "sourceId": "408453275"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/421145479/large.png",
+          "license": "cc-by-nc",
+          "author": "(c) eunikon, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/236702570",
+          "sourceId": "236702570"
+        }
+      ]
+    },
+    "yungipicus-moluccensis": {
+      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/714986364/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/714986364/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/714986364/large.png",
+        "https://www.inaturalist.org/photos/714986364",
+        "https://www.inaturalist.org/observations/304463414"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/548871829/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) longarms, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/304463414",
+          "sourceId": "304463414"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "trichoglossus-moluccanus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/3（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176222537/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176222537/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176222537/large.png",
+        "https://www.inaturalist.org/photos/176222537",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/352086408/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/352086408/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/352086408/large.png",
+        "https://www.inaturalist.org/photos/352086408",
+        "https://www.inaturalist.org/observations/148012363",
+        "https://www.inaturalist.org/observations/269200008"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/254802863/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Nathan Ruser, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/148012363",
+          "sourceId": "148012363"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/483990664/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Boulton, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/269200008",
+          "sourceId": "269200008"
+        }
+      ]
+    },
+    "dendrocygna-arcuata": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/83204372/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/83204372/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/83204372/large.png",
+        "https://www.inaturalist.org/photos/83204372",
+        "https://www.inaturalist.org/observations/213021778"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/376452548/large.jpg",
+          "license": "cc-by-nc-sa",
+          "author": "(c) Gary Leavens, some rights reserved (CC BY-NC-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/213021778",
+          "sourceId": "213021778"
+        }
+      ]
+    },
+    "caprimulgus-jotaka": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/3（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/519316187/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/519316187/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/519316187/large.png",
+        "https://www.inaturalist.org/photos/519316187",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/98480699/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/98480699/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/98480699/large.png",
+        "https://www.inaturalist.org/photos/98480699",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/263991650/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/263991650/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/263991650/large.png",
+        "https://www.inaturalist.org/photos/263991650",
+        "https://www.inaturalist.org/observations/398789704",
+        "https://www.inaturalist.org/observations/197958246",
+        "https://www.inaturalist.org/observations/210761086"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/731586535/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) John Turner Cambridge, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/398789704",
+          "sourceId": "398789704"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/348795600/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Tommy Hui, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/197958246",
+          "sourceId": "197958246"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/372741096/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) ahlsa, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/210761086",
+          "sourceId": "210761086"
+        }
+      ]
+    },
+    "buteo-japonicus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/603041927/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/603041927/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/603041927/large.png",
+        "https://www.inaturalist.org/photos/603041927",
+        "https://www.inaturalist.org/observations/259242830"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/465323016/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Elena Shnayder, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/259242830",
+          "sourceId": "259242830"
+        }
+      ]
+    },
+    "lophura-erythrophthalma": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/3/4/5（不适合作为出题图）；补入 4 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/320670648/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/320670648/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/320670648/large.png",
+        "https://www.inaturalist.org/photos/320670648",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/654082630/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/654082630/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/654082630/large.png",
+        "https://www.inaturalist.org/photos/654082630",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/462149723/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/462149723/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/462149723/large.png",
+        "https://www.inaturalist.org/photos/462149723",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/320477865/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/320477865/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/320477865/large.png",
+        "https://www.inaturalist.org/photos/320477865",
+        "https://www.inaturalist.org/observations/396919840",
+        "https://www.inaturalist.org/observations/406735338",
+        "https://www.inaturalist.org/observations/405064295",
+        "https://www.inaturalist.org/observations/183776722"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/727925292/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Alfuil, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/396919840",
+          "sourceId": "396919840"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/747332658/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) nature_radventures, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/406735338",
+          "sourceId": "406735338"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/743939264/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) saraalien1, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/405064295",
+          "sourceId": "405064295"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/320670648/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Catalina Tong, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/183776722",
+          "sourceId": "183776722"
+        }
+      ]
+    },
+    "hydrophasianus-chirurgus": {
+      "_reason": "2026-11-08 用户复核：停用 image-3/4（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44692230/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44692230/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44692230/large.png",
+        "https://www.inaturalist.org/photos/44692230",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/379865968/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/379865968/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/379865968/large.png",
+        "https://www.inaturalist.org/photos/379865968",
+        "https://www.inaturalist.org/observations/90967348",
+        "https://www.inaturalist.org/observations/257131397"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/150401053/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Ben Tsai蔡維哲, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/90967348",
+          "sourceId": "90967348"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/461196241/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) garlice99, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/257131397",
+          "sourceId": "257131397"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "hirundapus-cochinchinensis": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/3/4（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/639034613/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/639034613/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/639034613/large.png",
+        "https://www.inaturalist.org/photos/639034613",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/669008111/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/669008111/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/669008111/large.png",
+        "https://www.inaturalist.org/photos/669008111",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/460148160/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/460148160/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/460148160/large.png",
+        "https://www.inaturalist.org/photos/460148160",
+        "https://www.inaturalist.org/observations/270189523",
+        "https://www.inaturalist.org/observations/272367444",
+        "https://www.inaturalist.org/observations/203111456"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/485881548/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) 倒立, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/270189523",
+          "sourceId": "270189523"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/490004381/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) billyschofield, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/272367444",
+          "sourceId": "272367444"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/358810573/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Manuel Ruedi, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/203111456",
+          "sourceId": "203111456"
+        }
+      ]
+    },
+    "hemixos-cinereus": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/190847921/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/190847921/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/190847921/large.png",
+        "https://www.inaturalist.org/photos/190847921",
+        "https://www.inaturalist.org/observations/389028710"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/712549708/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Ingmar Rondeel, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/389028710",
+          "sourceId": "389028710"
+        }
+      ]
+    },
+    "aerodramus-fuciphagus": {
+      "_reason": "2026-11-08 用户复核：停用 image-2/3/4（不适合作为出题图）；补入 3 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/363074146/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/363074146/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/363074146/large.png",
+        "https://www.inaturalist.org/photos/363074146",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/482481367/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/482481367/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/482481367/large.png",
+        "https://www.inaturalist.org/photos/482481367",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/500556318/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/500556318/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/500556318/large.png",
+        "https://www.inaturalist.org/photos/500556318",
+        "https://www.inaturalist.org/observations/158054297",
+        "https://www.inaturalist.org/observations/302499530",
+        "https://www.inaturalist.org/observations/67491337"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/273194639/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) benjamynweil, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/158054297",
+          "sourceId": "158054297"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/545162093/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Sebastian K, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/302499530",
+          "sourceId": "302499530"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/109054874/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Vatcharavee Sriprasertsil, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/67491337",
+          "sourceId": "67491337"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "mearnsia-picina": {
+      "_reason": "2026-11-08 用户复核：停用 image-1/2/4/5（不适合作为出题图）；补入 4 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/724398637/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/724398637/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/724398637/large.png",
+        "https://www.inaturalist.org/photos/724398637",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232306523/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232306523/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232306523/large.png",
+        "https://www.inaturalist.org/photos/232306523",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/724409061/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/724409061/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/724409061/large.png",
+        "https://www.inaturalist.org/photos/724409061",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/340257795/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/340257795/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/340257795/large.png",
+        "https://www.inaturalist.org/photos/340257795",
+        "https://www.inaturalist.org/observations/224774821",
+        "https://www.inaturalist.org/observations/355672502",
+        "https://www.inaturalist.org/observations/224774665",
+        "https://www.inaturalist.org/observations/206579500"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/398423342/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) kevinpearce, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/224774821",
+          "sourceId": "224774821"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/648594466/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Jim Moore (Maryland), some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/355672502",
+          "sourceId": "355672502"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/398423014/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) kevinpearce, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/224774665",
+          "sourceId": "224774665"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/365308307/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Martin Kennewell, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/206579500",
+          "sourceId": "206579500"
+        }
+      ]
+    },
+    "halcyon-smyrnensis": {
+      "_reason": "2026-11-08 用户复核：停用 image-4（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/587745178/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/587745178/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/587745178/large.png",
+        "https://www.inaturalist.org/photos/587745178",
+        "https://www.inaturalist.org/observations/190566148"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/334104005/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Benjamin Koh, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/190566148",
+          "sourceId": "190566148"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "tauraco-violaceus": {
+      "_reason": "2026-11-08 用户复核：停用 image-3（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/598888258/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/598888258/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/598888258/large.png",
+        "https://www.inaturalist.org/photos/598888258",
+        "https://www.inaturalist.org/observations/254025154"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/454921662/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Luke Smith, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/254025154",
+          "sourceId": "254025154"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "falco-amurensis": {
+      "_reason": "2026-11-08 用户复核：停用 image-1（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/499937708/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/499937708/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/499937708/large.png",
+        "https://www.inaturalist.org/photos/499937708",
+        "https://www.inaturalist.org/observations/412919559"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/759883406/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) 小 白 桦, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/412919559",
+          "sourceId": "412919559"
+        }
+      ]
+    },
+    "hirundapus-giganteus": {
+      "_reason": "2026-11-08 用户复核：停用 image-2/5（不适合作为出题图）；补入 2 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/556402215/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/556402215/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/556402215/large.png",
+        "https://www.inaturalist.org/photos/556402215",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/266306369/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/266306369/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/266306369/large.png",
+        "https://www.inaturalist.org/photos/266306369",
+        "https://www.inaturalist.org/observations/78247637",
+        "https://www.inaturalist.org/observations/144613106"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/128031833/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Varad Giri, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/78247637",
+          "sourceId": "78247637"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/248225739/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Aleksey Levashkin, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/144613106",
+          "sourceId": "144613106"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "dicrurus-macrocercus": {
+      "_reason": "2026-11-08 用户复核：停用 image-2（不适合作为出题图）；补入 1 张经用户确认的新图。源观察在 iNaturalist 上标注为本种。新 key 从 image-6 起，旧对象保留 R2 备查。",
+      "imageKeyBase": 6,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/209265766/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/209265766/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/209265766/large.png",
+        "https://www.inaturalist.org/photos/209265766",
+        "https://www.inaturalist.org/observations/276988845"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/522324711/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Neela Shikari, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/276988845",
+          "sourceId": "276988845"
+        }
+      ],
+      "keepLeadImage": true
+    },
+    "melanoperdix-niger": {
+      "_reason": "2026-11-08 用户复核：全站仅 2 条观察，两图都保留，只调顺序——清晰的图放首位（新 key image-3），被枝叶遮挡的图放第二位（新 key image-4）。旧 key 保留 R2 备查。",
+      "imageKeyBase": 3,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65587263/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65587263/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65587263/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/469676151/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/469676151/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/469676151/large.png",
+        "https://www.inaturalist.org/photos/65587263",
+        "https://www.inaturalist.org/observations/41348650",
+        "https://www.inaturalist.org/observations/261433395"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/469676151/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) frank_lambert, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/261433395",
+          "sourceId": "469676151"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/65587263/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) Ganjar Cahyadi, some rights reserved (CC BY-NC), uploaded by Ganjar Cahyadi",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/65587263",
+          "sourceId": "65587263"
+        }
+      ]
     }
   }
 }

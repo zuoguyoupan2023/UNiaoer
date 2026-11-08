@@ -685,7 +685,7 @@ async function buildSpecies(sp, useXc, prev) {
     base.audios = [...xcAudios, ...inatAudios].slice(0, OPT.per)
     base.audio = base.audios[0] || null
 
-    applyOverrides(base)
+    applyOverrides(base, prev)
 
     // --images-only：音频回填必须放在 applyOverrides 之后，否则会被 --per 截断
     if (OPT.imagesOnly && prev) {
@@ -930,7 +930,7 @@ function pickInatAudios(results, policy) {
 }
 
 /** 应用人工覆盖表（011 §4.1/§4.4）：支持 images/audios 追加与 excludeUrls 排除 */
-function applyOverrides(base) {
+function applyOverrides(base, prev) {
   const ov = OVERRIDES[base.id] || OVERRIDES[base.nameSci]
   if (!ov) return
   const excl = new Set(ov.excludeUrls || [])
@@ -954,6 +954,25 @@ function applyOverrides(base) {
 
   base.images = [...toAssets(ov.images, 'image'), ...filter(base.images)].slice(0, OPT.per)
   base.audios = [...toAssets(ov.audios, 'audio'), ...filter(base.audios)].slice(0, OPT.per)
+
+  // 定向修复：keepLeadImage = true 时，把上一版的 image-1 提到首位（保持首图不变、D1 无需更新）。
+  // 用于「只换中间几张、首图本身没问题」的批量换图；首图要被换掉的种不要设这个字段。
+  if (ov.keepLeadImage && prev?.images?.length) {
+    const lead = prev.images[0]
+    if (lead && String(lead.url || '').startsWith((PUBLIC_BASE || '') + '/')) {
+      // 按 url / sourceId / originalUrl 三重去重：旧首图可能与自动结果里的同一张重复
+      const same = (a) =>
+        a && (
+          a.url === lead.url ||
+          (lead.sourceId && a.sourceId && String(a.sourceId) === String(lead.sourceId)) ||
+          (lead.originalUrl && a.originalUrl && a.originalUrl === lead.originalUrl)
+        )
+      const rest = base.images.filter((a) => !same(a))
+      base.images = [lead, ...rest].slice(0, OPT.per)
+    } else {
+      console.warn(`   ⚠️ keepLeadImage：上一版 image-1 不是已物化素材，跳过`)
+    }
+  }
 }
 
 /** M3 取音：XC 质量 A→E 优先（同质量取短），许可过滤，≤per；返回 best-first 候选数组 */
