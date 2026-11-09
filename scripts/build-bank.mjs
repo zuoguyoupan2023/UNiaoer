@@ -1033,8 +1033,13 @@ async function materialize(rec, id, prev) {
 
   // 序号即"从优到劣"排名（011 §6）：image-1/audio-1 为首选
   for (let i = 0; i < (rec.images || []).length; i++) {
-    const kept = reusableAsset(prev?.images?.[i], rec.images[i])
-    rec.images[i] = kept || (await persistImage(rec.images[i], id, i + keyBase))
+    // override 显式指定的图不参与「同源复用」（docs/118 §2）：复用的判据只有
+    // sourceId/sourceUrl/license，而这正是修复时唯一不变的东西——被覆盖的 key
+    // 内容已错，按 sourceId 复用会把上一版那个错 URL 连同错字节一起搬回来，
+    // 修复动作被静默吞掉。这里的图每次重建都必须重新下载校验。
+    const media = rec.images[i]
+    const kept = media && media.overridden ? null : reusableAsset(prev?.images?.[i], media)
+    rec.images[i] = kept || (await persistImage(media, id, i + keyBase))
   }
   for (let i = 0; i < (rec.audios || []).length; i++) {
     const kept = reusableAsset(prev?.audios?.[i], rec.audios[i])

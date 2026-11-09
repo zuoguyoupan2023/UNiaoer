@@ -2,6 +2,14 @@
   "_comment": "FAQ 更新日志（人工维护）。按 date 倒序展示；speciesId 可选，用于链接到鸟种详情。日期格式 YYYY-MM-DD。",
   "entries": [
     {
+      "date": "2026-11-09",
+      "titleZh": "Saltator albicollis：图 1 已修复",
+      "titleEn": "Lesser Antillean Saltator: photo 1 has been fixed",
+      "bodyZh": "该种图一（同时是题目首图）的文件内容被图二覆盖，已按声明的源图重新下载并写入新 key image-11；图二至图五未改动。",
+      "bodyEn": "The first photo (also the quiz lead image) had been overwritten with the second photo's content; it has been re-downloaded from its declared source and written to a new key, image-11. Photos 2 to 5 are unchanged.",
+      "speciesId": "saltator-albicollis"
+    },
+    {
       "date": "2026-11-08",
       "titleZh": "卡氏夜鹰:图二、图三、图四、图五已替换",
       "titleEn": "Chuck-will's-widow: photos 2, 3, 4 and 5 have been replaced",
