@@ -31,9 +31,6 @@
     "thumbs": "node scripts/build-thumbs.mjs",
     "r2:manifest": "wrangler r2 object put uniaoerbucket/data/manifest-meta.json --file=public/data/manifest-meta.json --content-type \"application/json; charset=utf-8\" --cache-control \"public, max-age=300\" --remote",
     "check:bank": "node scripts/check-bank.mjs",
-    "qc:2345": "node scripts/qc-multimodal-2345.mjs",
-    "qc:2345:dry": "node scripts/qc-multimodal-2345.mjs --dry-run",
-    "qc:2345:export": "node scripts/qc-multimodal-2345.mjs --export",
     "check:layers": "node scripts/check-manifest-layers.mjs",
     "check:meta": "node scripts/check-meta.mjs",
     "check:class": "node scripts/check-class.mjs",
@@ -113,7 +110,16 @@
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
     "build:model-labels": "node scripts/build-model-label-map.mjs",
-    "check:dist-size": "node scripts/check-dist-size.mjs"
+    "check:dist-size": "node scripts/check-dist-size.mjs",
+    "qc": "node scripts/qc.mjs --batch first",
+    "qc:first": "node scripts/qc.mjs --batch first",
+    "qc:2345": "node scripts/qc.mjs --batch slots2345",
+    "qc:all": "node scripts/qc.mjs --batch all",
+    "qc:dry": "node scripts/qc.mjs --batch first --dry-run",
+    "qc:export": "node scripts/qc.mjs --batch first --export",
+    "qc:export:2345": "node scripts/qc.mjs --batch slots2345 --export",
+    "qc:reclassify": "node scripts/qc.mjs --batch first --reclassify",
+    "qc:dims": "node scripts/qc.mjs --batch first --probe-dims"
   },
   "dependencies": {
     "lucide-vue-next": "^0.577.0",

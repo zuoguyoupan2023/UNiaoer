@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>2~5 图质检 · 人工复核</title>
+<title>图片质检 · 人工复核</title>
 <style>
   :root {
     --bg: #f4fbf7;
@@ -103,9 +103,10 @@
   .badges { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
   .badge { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: .69rem; font-weight: 800; }
   .badge.pass { background: var(--pass); color: var(--pass-ink); }
-  .badge.suspect { background: var(--suspect); color: var(--suspect-ink); }
-  .badge.reject { background: var(--reject); color: var(--reject-ink); }
+  .badge.suspect, .badge.human { background: var(--suspect); color: var(--suspect-ink); }
+  .badge.reject, .badge.exclude { background: var(--reject); color: var(--reject-ink); }
   .badge.missing { background: var(--missing); color: var(--missing-ink); }
+  .badge.species { background: #e7e0ff; color: #4b2f8a; }
   .badge.pending { background: #eef1f0; color: var(--muted); }
   .badge.ws { background: #ffe5d9; color: #9c3d10; }
   .badge.mine { background: #cfe8ff; color: #0b4f7a; }
@@ -158,18 +159,22 @@
 <body>
 
 <header id="hdr" hidden>
-  <h1>2~5 图质检 · 人工复核 <small id="src"></small></h1>
+  <h1>图片质检 · 人工复核 <small id="src"></small></h1>
   <div class="bar" id="filters">
-    <button data-f="problem" class="on">问题优先</button>
-    <button data-f="reject" class="danger">reject</button>
-    <button data-f="suspect">suspect</button>
-    <button data-f="missing">missing</button>
-    <button data-f="wrong_species">种疑</button>
-    <button data-f="pass">pass</button>
+    <button data-f="exclude" class="danger on">可排除</button>
+    <button data-f="human">待你判</button>
+    <button data-f="species">种疑</button>
+    <button data-f="missing">取不到</button>
+    <button data-f="pass">通过</button>
+    <button data-f="problem">全部问题</button>
     <button data-f="mine">我标过</button>
     <button data-f="unmarked">未标</button>
     <button data-f="all">全部</button>
     <span class="spacer"></span>
+  </div>
+  <!-- 标签子筛选：只在「待你判」下出现。human 桶占 20%+，按标签拆开才看得动 -->
+  <div class="bar" id="labels" hidden></div>
+  <div class="bar">
     <span class="stat" id="stat"></span>
     <button id="export">导出人工结果</button>
     <button id="reload">换文件</button>
@@ -178,8 +183,8 @@
 </header>
 
 <div id="drop">
-  <h2>导入 manual-index2345.json</h2>
-  <p>把 <code>data-cache/qc-2345/manual-index2345.json</code> 拖到这里，或点下面的按钮选择。</p>
+  <h2>导入 review.json</h2>
+  <p>把 <code>data-cache/qc/&lt;batch&gt;/review.json</code> 拖到这里，或点下面的按钮选择。<br><small>batch 取 <code>first</code>（首图）或 <code>slots2345</code>（第 2~5 张）。</small></p>
   <p>也可以直接导入 <code>multimodal-2345.jsonl</code>（逐行 JSON，会按物种聚合）。</p>
   <button id="pick">选择文件</button>
   <input type="file" id="file" accept=".json,.jsonl" />
@@ -200,7 +205,7 @@
 
 <script>
 /* ============================================================
-   2~5 图质检 · 人工复核
+   图片质检 · 人工复核
    - 纯本地单文件，无构建、无服务、无外发请求（只拉 R2 公开图）
    - 导入 JSON 后数据只在内存 + localStorage（人工三态）
    ============================================================ */
@@ -211,9 +216,11 @@ let store = {};
 try { store = JSON.parse(localStorage.getItem(KEY_STORE) || '{}'); } catch { store = {}; }
 
 let ROWS = [];        // 扁平：一张图一条
-let filter = 'problem';
+let filter = 'exclude';
+let labelFilter = ''; // 标签子筛选（只在 human 桶下生效）
 let page = 0;
 let loadedName = '';
+let DIMS = {};        // speciesId -> 长边像素（可选，从 dims.jsonl 导入）
 
 /* ---------- 工具 ---------- */
 const el = (id) => document.getElementById(id);
@@ -222,8 +229,28 @@ const pct = (n, d) => (d ? ((n / d) * 100).toFixed(1) + '%' : '—');
 
 /** 载入 JSON / JSONL：接受聚合格式 {species:[{images:[...]}]} 或扁平数组，或 JSONL 逐行 */
 function normalize(raw, name) {
-  const text = raw.trim();
-  let payload = null;
+  const text = raw.trim()
+  let payload = null
+
+  // 尺寸清单（dims.jsonl / dims 数组）：{speciesId, longEdge, w, h}，只挂到 DIMS 后直接返回空
+  {
+    const probe = text.startsWith('[') ? null : text.split('\n').find((l) => l.trim())
+    let firstRow = null
+    try {
+      const arr = JSON.parse(text)
+      if (Array.isArray(arr) && arr.length) firstRow = arr[0]
+    } catch {
+      if (probe) { try { firstRow = JSON.parse(probe) } catch { /* 不是 JSONL 首行 */ } }
+    }
+    if (firstRow && firstRow.longEdge !== undefined && !firstRow.verdict && !firstRow.bucket && !firstRow.url) {
+      const rows = text.startsWith('[')
+        ? JSON.parse(text)
+        : text.split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l))
+      for (const r of rows) if (r.speciesId) DIMS[r.speciesId] = r
+      el('dropwarn').innerHTML = `<div class="warn">已挂上 ${rows.length} 条尺寸数据（长边像素）。请再导入一次 review.json 或 latest.jsonl。</div>`
+      return { list: [], meta: null, dimsOnly: true }
+    }
+  }
 
   // 先按整份 JSON 解析；失败则按 JSONL 逐行
   try {
@@ -240,24 +267,62 @@ function normalize(raw, name) {
   }
 
   const out = [];
-  const push = (r) => out.push({
-    id: r.speciesId || r.id,
-    slot: Number(r.slot) || 1,
-    zh: r.nameZh || r.zh || '',
-    sci: r.nameSci || r.sci || '',
-    en: r.nameEn || r.en || '',
-    verdict: r.verdict || 'pending',
-    reasons: Array.isArray(r.reasons) ? r.reasons : [],
-    note: r.note || '',
-    model: r.model || '',
-    img: r.thumbUrl || r.img || r.imgUrl || '',
-    full: r.url || r.img || r.imgUrl || '',
-    author: r.author || '',
-    license: r.license || '',
-    source: r.source || '',
-    sourceUrl: r.sourceUrl || '',
-    total: Number(r.totalImages) || 0,
-  });
+  const push = (r) => {
+    // 标签统一从 labels 取；老数据的 reasons 里混了「图片清晰度良好」这类自然语言，只留标签形态的
+    const rawLabels = Array.isArray(r.labels) ? r.labels : Array.isArray(r.reasons) ? r.reasons : []
+    const labels = rawLabels.filter((x) => typeof x === 'string' && /^[a-z][a-z_]*$/.test(x))
+    out.push({
+      id: r.speciesId || r.id,
+      slot: Number(r.slot) || 1,
+      zh: r.nameZh || r.zh || '',
+      sci: r.nameSci || r.sci || '',
+      en: r.nameEn || r.en || '',
+      // 四态桶：新数据带 bucket；老数据按标签重算（没有标签的才退回三态近似）
+      verdict: r.bucket || (labels.length ? bucketOfLabels(labels) : normalizeVerdict(r.verdict)),
+      legacyVerdict: r.verdict && !r.bucket ? r.verdict : '',
+      labels,
+      note: r.note || '',
+      model: r.model || '',
+      img: r.thumbUrl || r.img || r.imgUrl || '',
+      full: r.url || r.img || r.imgUrl || '',
+      author: r.author || '',
+      license: r.license || '',
+      source: r.source || '',
+      sourceUrl: r.sourceUrl || '',
+      total: Number(r.totalImages) || 0,
+    })
+  };
+
+  /** 老三态 → 四态（AI 没把握就不排除：suspect 进 human，reject 按标签重算） */
+  function normalizeVerdict(v) {
+    if (!v) return 'pending'
+    if (['exclude', 'human', 'species', 'pass', 'missing', 'error', 'pending'].includes(v)) return v
+    if (v === 'suspect') return 'human'
+    if (v === 'reject') return 'exclude' // 只有真的没标签时才这么近似；有标签的走 bucketOfLabels
+    return 'human'
+  }
+
+  // 与 scripts/lib/qc-taxonomy.mjs 的 LABEL_BUCKET 保持一致（单文件页面无法 import）
+  const LABEL_BUCKET = {
+    non_bird: 'exclude', with_human: 'exclude', egg: 'exclude', specimen: 'exclude',
+    illustration: 'exclude', occluded: 'exclude', blurry_severe: 'exclude',
+    low_res: 'human', blurry: 'human', tiny_bird: 'human', crop_bad: 'human', watermark: 'human',
+    wrong_species: 'species',
+  }
+  const BUCKET_ORDER = ['exclude', 'human', 'species', 'pass', 'missing', 'error']
+  // occluded 单独出现时不排除（判据太主观，2026-11-09 验收发现 1/6 误杀）
+  const HARD_EXCLUDE = ['non_bird', 'with_human', 'specimen', 'illustration', 'egg', 'blurry_severe']
+  function bucketOfLabels(labels) {
+    const clean = (labels || []).filter((l) => LABEL_BUCKET[l])
+    if (!clean.length) return 'pass'
+    if (clean.includes('occluded') && !clean.some((l) => HARD_EXCLUDE.includes(l))) return 'human'
+    let best = 'pass'
+    for (const l of clean) {
+      const b = LABEL_BUCKET[l]
+      if (b && BUCKET_ORDER.indexOf(b) < BUCKET_ORDER.indexOf(best)) best = b
+    }
+    return best
+  }
 
   if (Array.isArray(payload)) {
     payload.forEach(push);
@@ -283,8 +348,8 @@ function normalize(raw, name) {
   return { list, meta: Array.isArray(payload) ? null : payload };
 }
 
-/* ---------- 排序：问题优先 ---------- */
-const RANK = { reject: 0, suspect: 1, missing: 2, pending: 3, pass: 4 };
+/* ---------- 排序：必须交人判定的优先 ---------- */
+const RANK = { exclude: 0, human: 1, species: 2, missing: 3, pending: 4, pass: 5 };
 function sortRows() {
   ROWS.sort((a, b) => (RANK[a.verdict] ?? 9) - (RANK[b.verdict] ?? 9)
     || a.id.localeCompare(b.id)
@@ -293,14 +358,45 @@ function sortRows() {
 
 /* ---------- 筛选 ---------- */
 function visible() {
+  let list
   switch (filter) {
-    case 'all': return ROWS;
-    case 'mine': return ROWS.filter((r) => store[keyOf(r)]);
-    case 'unmarked': return ROWS.filter((r) => !store[keyOf(r)]);
-    case 'problem': return ROWS.filter((r) => r.verdict !== 'pass' && r.verdict !== 'pending');
-    case 'wrong_species': return ROWS.filter((r) => r.reasons.includes('wrong_species'));
-    default: return ROWS.filter((r) => r.verdict === filter);
+    case 'all': list = ROWS; break
+    case 'mine': list = ROWS.filter((r) => store[keyOf(r)]); break
+    case 'unmarked': list = ROWS.filter((r) => !store[keyOf(r)]); break
+    case 'problem': list = ROWS.filter((r) => r.verdict !== 'pass' && r.verdict !== 'pending'); break
+    default: list = ROWS.filter((r) => r.verdict === filter)
   }
+  // 标签子筛选只作用于「待你判」，其它档位忽略
+  if (filter === 'human' && labelFilter) list = list.filter((r) => r.labels.includes(labelFilter))
+  return list
+}
+
+/* ---------- 标签子筛选栏（human 桶下按标签拆开，20%+ 的量才看得动） ---------- */
+const LABEL_ZH = {
+  tiny_bird: '主体小', blurry: '模糊', crop_bad: '裁切', watermark: '水印', low_res: '低像素',
+  non_bird: '无鸟', occluded: '遮挡', specimen: '标本', illustration: '插图',
+  with_human: '有人', egg: '蛋', blurry_severe: '严重虚化', wrong_species: '种疑',
+}
+function renderLabelBar() {
+  const box = el('labels')
+  if (filter !== 'human') { box.hidden = true; return }
+  const pool = ROWS.filter((r) => r.verdict === 'human')
+  const counts = {}
+  for (const r of pool) for (const l of r.labels) counts[l] = (counts[l] || 0) + 1
+  const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
+  if (!tags.length) { box.hidden = true; return }
+  box.hidden = false
+  box.innerHTML =
+    `<span style="color:var(--muted);font-size:.72rem">按标签：</span>` +
+    `<button data-l="" class="${labelFilter ? '' : 'on'}">全部 ${pool.length}</button>` +
+    tags.map((t) => `<button data-l="${esc(t)}" class="${labelFilter === t ? 'on' : ''}">${esc(LABEL_ZH[t] || t)} ${counts[t]}</button>`).join('')
+  box.querySelectorAll('button[data-l]').forEach((b) =>
+    b.addEventListener('click', () => {
+      labelFilter = b.dataset.l
+      page = 0
+      render()
+    }),
+  )
 }
 
 /* ---------- 渲染 ---------- */
@@ -312,16 +408,19 @@ function cardHTML(r) {
   const k = keyOf(r);
   const mine = store[k]?.v || '';
   const cls = ['card'];
-  if (r.verdict === 'reject') cls.push('rej');
-  if (r.verdict === 'suspect') cls.push('sus');
+  if (r.verdict === 'exclude') cls.push('rej');
+  if (r.verdict === 'human') cls.push('sus');
   if (mine) cls.push('marked');
 
-  const ws = r.reasons.includes('wrong_species') ? ' <span class="badge ws">种疑</span>' : '';
+  const ws = r.labels.includes('wrong_species') ? ' <span class="badge ws">种疑</span>' : '';
   const mineBadge = mine ? ` <span class="badge mine">${mine === 'ok' ? '我判合格' : mine === 'swap' ? '我要换' : '待定'}</span>` : '';
   const srcLink = r.sourceUrl
     ? `<a href="${esc(r.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(r.source || '原页')}</a>`
     : esc(r.source || '');
   const attr = [r.author, r.license, srcLink].filter(Boolean).join(' · ');
+  const edge = DIMS[r.id]?.longEdge;
+  const edgeTxt = Number.isFinite(edge) ? `${edge}px` : '';
+  const bucketZh = { exclude: '可排除', human: '待你判', species: '种疑', pass: '通过', missing: '取不到', error: '失败' }[r.verdict] || r.verdict;
 
   return `<div class="${cls.join(' ')}" data-k="${esc(k)}">
     <div class="thumbwrap">
@@ -330,11 +429,11 @@ function cardHTML(r) {
     </div>
     <div class="info">
       <div class="badges">
-        <span class="badge ${esc(r.verdict)}">${esc(r.verdict)}</span>${ws}${mineBadge}
+        <span class="badge ${esc(r.verdict)}">${esc(bucketZh)}</span>${ws}${mineBadge}
       </div>
       <div class="name">${esc(r.zh || r.id)} <span class="id">${esc(r.id)}</span></div>
       <div class="sci">${esc(r.sci)}${r.en ? ' · ' + esc(r.en) : ''}</div>
-      <div class="reasons">${esc(r.reasons.join(' · ') || '—')}</div>
+      <div class="reasons">${esc(r.labels.join(' · ') || '—')}${edgeTxt ? ` · 长边 ${edgeTxt}` : ''}</div>
       ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
       ${attr ? `<div class="attr">${attr}</div>` : ''}
       <div class="model">${esc(r.model || '—')}</div>
@@ -388,7 +487,7 @@ function render() {
   const marked = ROWS.filter((r) => store[keyOf(r)]);
   const c = (v) => ROWS.filter((r) => r.verdict === v).length;
   el('stat').textContent =
-    `共 ${ROWS.length} 张（reject ${c('reject')} · suspect ${c('suspect')} · missing ${c('missing')} · pass ${c('pass')}）` +
+    `共 ${ROWS.length} 张（可排除 ${c('exclude')} · 待你判 ${c('human')} · 种疑 ${c('species')} · 取不到 ${c('missing')} · 通过 ${c('pass')}）` +
     ` · 已标 ${marked.length}（导出的 ${Object.keys(store).length} 条）`;
 
   el('pageinfo').textContent = `第 ${page + 1} / ${pages} 页 · 本视图 ${list.length} 条`;
@@ -404,6 +503,7 @@ function render() {
   el('empty').textContent = ROWS.length ? '这个筛选下没有记录。' : '';
 
   window.scrollTo(0, 0);
+  renderLabelBar();
 }
 
 /* ---------- 大图 ---------- */
@@ -429,7 +529,8 @@ document.addEventListener('keydown', (e) => {
 
 /* ---------- 导入 ---------- */
 function showData(name, raw) {
-  const { list, meta } = normalize(raw, name);
+  const { list, meta, dimsOnly } = normalize(raw, name);
+  if (dimsOnly) { render(); return; } // 只挂了尺寸，不改当前数据集
   ROWS = list;
   sortRows();
   loadedName = name;
@@ -440,8 +541,8 @@ function showData(name, raw) {
   el('hdr').hidden = false;
   el('pager').hidden = false;
   page = 0;
-  filter = 'problem';
-  document.querySelectorAll('#filters button[data-f]').forEach((x) => x.classList.toggle('on', x.dataset.f === 'problem'));
+  filter = 'exclude';
+  document.querySelectorAll('#filters button[data-f]').forEach((x) => x.classList.toggle('on', x.dataset.f === 'exclude'));
   render();
 }
 
@@ -488,6 +589,7 @@ el('reload').addEventListener('click', () => {
 document.querySelectorAll('#filters button[data-f]').forEach((b) =>
   b.addEventListener('click', () => {
     filter = b.dataset.f;
+    labelFilter = ''; // 换主筛选时清掉标签子筛选
     page = 0;
     document.querySelectorAll('#filters button[data-f]').forEach((x) => x.classList.toggle('on', x === b));
     render();
@@ -511,9 +613,11 @@ el('export').addEventListener('click', () => {
       slot: r.slot,
       manual: m.v,               // ok | swap | hold
       at: new Date(m.at).toISOString(),
-      machine: r.verdict,
-      reasons: r.reasons,
+      machine: r.verdict,        // 四态桶
+      legacyVerdict: r.legacyVerdict || '',
+      labels: r.labels,
       note: r.note,
+      longEdge: DIMS[r.id]?.longEdge ?? null,
       img: r.full || r.img,
       sourceUrl: r.sourceUrl,
       author: r.author,
@@ -521,7 +625,7 @@ el('export').addEventListener('click', () => {
     });
   }
   const payload = {
-    $schema: 'uniaoer/qc-2345-manual@1',
+    $schema: 'uniaoer/qc-manual@3',
     exportedAt: new Date().toISOString(),
     source: loadedName,
     totalImages: ROWS.length,
@@ -531,7 +635,7 @@ el('export').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'manual-index2345-review-export.json';
+  a.download = `qc-review-export-${loadedName || 'batch'}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 });

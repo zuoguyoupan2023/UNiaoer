@@ -2022,6 +2022,28 @@
           "sourceId": "65587263"
         }
       ]
+    },
+    "chlorostilbon-lucidus": {
+      "_reason": "2026-11-09 用户复核：image-1（obs 340518009）为白化个体，全身纯白，羽色不能代表本种，不适合作为识别题面；源站标注与 community_taxon 均正确，属取图选到异常个体。改用 obs 251031633（悬停吸蜜，绿身红喙清楚）。image-2..5 不动。新 key 从 image-10 起。",
+      "imageKeyBase": 10,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/619686448/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/619686448/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/619686448/large.png",
+        "https://www.inaturalist.org/photos/619686448",
+        "https://www.inaturalist.org/observations/340518009",
+        "https://www.inaturalist.org/observations/251031633"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/338075662/large.jpg",
+          "license": "cc-by-nc-sa",
+          "author": "(c) trekman, some rights reserved (CC BY-NC-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/251031633",
+          "sourceId": "251031633"
+        }
+      ]
     }
   }
 }
