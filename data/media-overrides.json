@@ -2064,6 +2064,186 @@
           "sourceId": "117872890"
         }
       ]
+    },
+    "turdus-papuensis": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 44933354）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44933354/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44933354/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44933354/large.png",
+        "https://www.inaturalist.org/photos/44933354"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/44933354/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Nik Borrow, osa oikeuksista pidätetään (CC BY-NC), lähettänyt Nik Borrow",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/44933354",
+          "sourceId": "44933354"
+        }
+      ]
+    },
+    "turdus-pritzbueri": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 663696198）用未占用 key 段 image-40 重下 image-1；其余 1 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/663696198/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/663696198/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/663696198/large.png",
+        "https://www.inaturalist.org/photos/663696198"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/663696198/large.jpg",
+          "license": "pd",
+          "author": "Layard, 1878, ei tunnettuja tekijänoikeusrajoituksia (Tekijänoikeudeton)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/663696198",
+          "sourceId": "663696198"
+        }
+      ]
+    },
+    "saltator-atripennis": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 38543387）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/38543387/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/38543387/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/38543387/large.png",
+        "https://www.inaturalist.org/photos/38543387"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/38543387/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) John Guerin, some rights reserved (CC BY-NC), uploaded by John Guerin",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/38543387",
+          "sourceId": "38543387"
+        }
+      ]
+    },
+    "saltator-fuliginosus": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 5643295）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5643295/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5643295/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5643295/large.png",
+        "https://www.inaturalist.org/photos/5643295"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5643295/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Claudia Komesu, some rights reserved (CC BY-NC), uploaded by Claudia Komesu",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/5643295",
+          "sourceId": "5643295"
+        }
+      ]
+    },
+    "saltator-grandis": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 184001856）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/184001856/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/184001856/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/184001856/large.png",
+        "https://www.inaturalist.org/photos/184001856"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/184001856/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Ad Konings, some rights reserved (CC BY-NC), uploaded by Ad Konings",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/184001856",
+          "sourceId": "184001856"
+        }
+      ]
+    },
+    "saltator-maximus": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 6583750）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6583750/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6583750/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6583750/large.png",
+        "https://www.inaturalist.org/photos/6583750"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/6583750/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Heather Pickard, some rights reserved (CC BY-NC), uploaded by Heather Pickard",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/6583750",
+          "sourceId": "6583750"
+        }
+      ]
+    },
+    "saltator-striatipectus": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 68637533）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68637533/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68637533/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68637533/large.png",
+        "https://www.inaturalist.org/photos/68637533"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/68637533/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Guillermo O., some rights reserved (CC BY-NC), uploaded by Guillermo O.",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/68637533",
+          "sourceId": "68637533"
+        }
+      ]
+    },
+    "saltatricula-atricollis": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 332237797）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332237797/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332237797/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332237797/large.png",
+        "https://www.inaturalist.org/photos/332237797"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/332237797/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) pkondrashov, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/332237797",
+          "sourceId": "332237797"
+        }
+      ]
+    },
+    "rhynchocyclus-aequinoctialis": {
+      "_reason": "2026-11-09 docs/118 修复批次2：R2 上 image-1 的字节被 image-2 覆盖（诊断依据 store/dup-audit/dup-diagnose-fixed.json 的 Last-Modified 先后与 md5 相同）。按 manifest 声明的源图（iNat photo 259030278）用未占用 key 段 image-40 重下 image-1；其余 4 张（image-2 起）原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/259030278/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/259030278/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/259030278/large.png",
+        "https://www.inaturalist.org/photos/259030278"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/259030278/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Don Marsille, osa oikeuksista pidätetään (CC BY-NC), lähettänyt Don Marsille",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/259030278",
+          "sourceId": "259030278"
+        }
+      ]
     }
   }
 }
