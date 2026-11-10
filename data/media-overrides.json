@@ -2244,6 +2244,1006 @@
           "sourceId": "259030278"
         }
       ]
+    },
+    "dacnis-lineata": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 60962727）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/60962727/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/60962727/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/60962727/large.png",
+        "https://www.inaturalist.org/photos/60962727"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/60962727/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Allen Chartier, some rights reserved (CC BY-NC), uploaded by Allen Chartier",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/60962727",
+          "sourceId": "60962727"
+        }
+      ]
+    },
+    "formicarius-nigricapillus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 588677402）用未占用 key 段 image-40 重下 image-1；其余 2 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/588677402/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/588677402/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/588677402/large.png",
+        "https://www.inaturalist.org/photos/588677402"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/588677402/large.jpg",
+          "license": "cc-by-nc-sa",
+          "author": "(c) David Rodríguez Arias, some rights reserved (CC BY-NC-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/588677402",
+          "sourceId": "588677402"
+        }
+      ]
+    },
+    "poecilostreptus-palmeri": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 470528937）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/470528937/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/470528937/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/470528937/large.png",
+        "https://www.inaturalist.org/photos/470528937"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/470528937/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Douglas J. Long, some rights reserved (CC BY-NC), uploaded by Douglas J. Long",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/470528937",
+          "sourceId": "470528937"
+        }
+      ]
+    },
+    "poecilotriccus-albifacies": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 328985606）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/328985606/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/328985606/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/328985606/large.png",
+        "https://www.inaturalist.org/photos/328985606"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/328985606/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Christoph Moning, einige Rechte vorbehalten (CC BY), hochgeladen von Christoph Moning",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/328985606",
+          "sourceId": "328985606"
+        }
+      ]
+    },
+    "poecilotriccus-fumifrons": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 443919455）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/443919455/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/443919455/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/443919455/large.png",
+        "https://www.inaturalist.org/photos/443919455"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/443919455/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Christoph Moning, some rights reserved (CC BY), uploaded by Christoph Moning",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/443919455",
+          "sourceId": "443919455"
+        }
+      ]
+    },
+    "poecilotriccus-luluae": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 13405606）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13405606/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13405606/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13405606/large.png",
+        "https://www.inaturalist.org/photos/13405606"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/13405606/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) lauriekoepke, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/13405606",
+          "sourceId": "13405606"
+        }
+      ]
+    },
+    "poecilotriccus-russatus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 419416607）用未占用 key 段 image-40 重下 image-1；其余 2 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419416607/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419416607/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419416607/large.png",
+        "https://www.inaturalist.org/photos/419416607"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/419416607/large.jpg",
+          "license": "cc-by-nc-sa",
+          "author": "(c) Sergio Rivero Beneitez, some rights reserved (CC BY-NC-SA), uploaded by Sergio Rivero Beneitez",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/419416607",
+          "sourceId": "419416607"
+        }
+      ]
+    },
+    "poecilotriccus-sylvia": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 262536195）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/262536195/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/262536195/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/262536195/large.png",
+        "https://www.inaturalist.org/photos/262536195"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/262536195/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Don Marsille, some rights reserved (CC BY-NC), uploaded by Don Marsille",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/262536195",
+          "sourceId": "262536195"
+        }
+      ]
+    },
+    "poeoptera-lugubris": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 771892）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/771892/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/771892/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/771892/large.png",
+        "https://www.inaturalist.org/photos/771892"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/771892/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Cook, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/771892",
+          "sourceId": "771892"
+        }
+      ]
+    },
+    "poeoptera-stuhlmanni": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 24178790）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/24178790/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/24178790/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/24178790/large.png",
+        "https://www.inaturalist.org/photos/24178790"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/24178790/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Paul Prior, some rights reserved (CC BY), uploaded by Paul Prior",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/24178790",
+          "sourceId": "24178790"
+        }
+      ]
+    },
+    "pogoniulus-chrysoconus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 1787179）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1787179/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1787179/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1787179/large.png",
+        "https://www.inaturalist.org/photos/1787179"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1787179/large.jpg",
+          "license": "cc-by-nc-sa",
+          "author": "(c) Ian White, some rights reserved (CC BY-NC-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/1787179",
+          "sourceId": "1787179"
+        }
+      ]
+    },
+    "pogoniulus-leucomystax": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 174243568）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/174243568/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/174243568/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/174243568/large.png",
+        "https://www.inaturalist.org/photos/174243568"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/174243568/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Alex R, some rights reserved (CC BY-NC), uploaded by Alex R",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/174243568",
+          "sourceId": "174243568"
+        }
+      ]
+    },
+    "pogoniulus-scolopaceus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 6211385）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6211385/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6211385/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6211385/large.png",
+        "https://www.inaturalist.org/photos/6211385"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/6211385/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Nik Borrow, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/6211385",
+          "sourceId": "6211385"
+        }
+      ]
+    },
+    "pogoniulus-uropygialis": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 458239303）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/458239303/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/458239303/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/458239303/large.png",
+        "https://www.inaturalist.org/photos/458239303"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/458239303/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) aramirez, some rights reserved (CC BY-NC), uploaded by aramirez",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/458239303",
+          "sourceId": "458239303"
+        }
+      ]
+    },
+    "pogonocichla-stellata": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 28084840）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28084840/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28084840/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28084840/large.png",
+        "https://www.inaturalist.org/photos/28084840"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/28084840/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) clicque, some rights reserved (CC BY-NC), uploaded by clicque",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/28084840",
+          "sourceId": "28084840"
+        }
+      ]
+    },
+    "pogonornis-bidentatus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 133975991）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/133975991/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/133975991/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/133975991/large.png",
+        "https://www.inaturalist.org/photos/133975991"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/133975991/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) ViaVia Entebbe, some rights reserved (CC BY-NC), uploaded by ViaVia Entebbe",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/133975991",
+          "sourceId": "133975991"
+        }
+      ]
+    },
+    "pogonornis-dubius": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 63127）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/63127/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/63127/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/63127/large.png",
+        "https://www.inaturalist.org/photos/63127"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/63127/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Leszek Leszczynski, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/63127",
+          "sourceId": "63127"
+        }
+      ]
+    },
+    "pogonornis-melanopterus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 907970）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/907970/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/907970/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/907970/large.png",
+        "https://www.inaturalist.org/photos/907970"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/907970/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Martin Grimm, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/907970",
+          "sourceId": "907970"
+        }
+      ]
+    },
+    "pogonornis-minor": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 11745689）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11745689/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11745689/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11745689/large.png",
+        "https://www.inaturalist.org/photos/11745689"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/11745689/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Nigel Voaden, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/11745689",
+          "sourceId": "11745689"
+        }
+      ]
+    },
+    "pogonotriccus-lanyoni": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 95308875）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95308875/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95308875/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95308875/large.png",
+        "https://www.inaturalist.org/photos/95308875"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95308875/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Edwin Múnera Chavarría, some rights reserved (CC BY-NC), uploaded by Edwin Múnera Chavarría",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/95308875",
+          "sourceId": "95308875"
+        }
+      ]
+    },
+    "pogonotriccus-orbitalis": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 239217256）用未占用 key 段 image-40 重下 image-1；其余 3 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/239217256/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/239217256/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/239217256/large.png",
+        "https://www.inaturalist.org/photos/239217256"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/239217256/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Thibaud Aronson, some rights reserved (CC BY-SA), uploaded by Thibaud Aronson",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/239217256",
+          "sourceId": "239217256"
+        }
+      ]
+    },
+    "pogonotriccus-poecilotis": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 354107654）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/354107654/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/354107654/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/354107654/large.png",
+        "https://www.inaturalist.org/photos/354107654"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/354107654/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Justin Walker, some rights reserved (CC BY-NC), uploaded by Justin Walker",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/354107654",
+          "sourceId": "354107654"
+        }
+      ]
+    },
+    "poicephalus-cryptoxanthus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 410668181）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/410668181/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/410668181/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/410668181/large.png",
+        "https://www.inaturalist.org/photos/410668181"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/410668181/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) lance_robinson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/410668181",
+          "sourceId": "410668181"
+        }
+      ]
+    },
+    "poicephalus-fuscicollis": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 52413073）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/52413073/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/52413073/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/52413073/large.png",
+        "https://www.inaturalist.org/photos/52413073"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/52413073/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Gawie Malan, some rights reserved (CC BY-NC), uploaded by Gawie Malan",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/52413073",
+          "sourceId": "52413073"
+        }
+      ]
+    },
+    "poicephalus-meyeri": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 337875683）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/337875683/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/337875683/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/337875683/large.png",
+        "https://www.inaturalist.org/photos/337875683"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/337875683/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Ad Konings, some rights reserved (CC BY-NC), uploaded by Ad Konings",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/337875683",
+          "sourceId": "337875683"
+        }
+      ]
+    },
+    "poicephalus-robustus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 104453705）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/104453705/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/104453705/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/104453705/large.png",
+        "https://www.inaturalist.org/photos/104453705"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/104453705/large.jpg",
+          "license": "cc0",
+          "author": "no rights reserved, uploaded by Dave Brown",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/104453705",
+          "sourceId": "104453705"
+        }
+      ]
+    },
+    "poicephalus-rueppellii": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 158984676）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/158984676/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/158984676/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/158984676/large.png",
+        "https://www.inaturalist.org/photos/158984676"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/158984676/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Charles J. Sharp\n, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/158984676",
+          "sourceId": "158984676"
+        }
+      ]
+    },
+    "poliocephalus-rufopectus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 438377961）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438377961/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438377961/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438377961/large.png",
+        "https://www.inaturalist.org/photos/438377961"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/438377961/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Caiden, some rights reserved (CC BY-NC), uploaded by Caiden",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/438377961",
+          "sourceId": "438377961"
+        }
+      ]
+    },
+    "poliocrania-exsul": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 91764428）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/91764428/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/91764428/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/91764428/large.png",
+        "https://www.inaturalist.org/photos/91764428"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/91764428/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Ben Tsai蔡維哲, some rights reserved (CC BY-NC), uploaded by Ben Tsai蔡維哲",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/91764428",
+          "sourceId": "91764428"
+        }
+      ]
+    },
+    "poliolimnas-cinereus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 28900723）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28900723/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28900723/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28900723/large.png",
+        "https://www.inaturalist.org/photos/28900723"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/28900723/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Yovie Jehabut, some rights reserved (CC BY-NC), uploaded by Yovie Jehabut",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/28900723",
+          "sourceId": "28900723"
+        }
+      ]
+    },
+    "polioptila-albiventris": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 46262173）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/46262173/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/46262173/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/46262173/large.png",
+        "https://www.inaturalist.org/photos/46262173"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/46262173/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Elvis Jimenez, some rights reserved (CC BY-NC), uploaded by Elvis Jimenez",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/46262173",
+          "sourceId": "46262173"
+        }
+      ]
+    },
+    "polioptila-lembeyei": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 50989974）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50989974/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50989974/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50989974/large.png",
+        "https://www.inaturalist.org/photos/50989974"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/50989974/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Wayne Fidler, some rights reserved (CC BY-NC), uploaded by Wayne Fidler",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/50989974",
+          "sourceId": "50989974"
+        }
+      ]
+    },
+    "polioptila-plumbea": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 2711435）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2711435/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2711435/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2711435/large.png",
+        "https://www.inaturalist.org/photos/2711435"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/2711435/large.JPG",
+          "license": "cc-by-nc",
+          "author": "(c) Carmelo López Abad, some rights reserved (CC BY-NC), uploaded by Carmelo López Abad",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/2711435",
+          "sourceId": "2711435"
+        }
+      ]
+    },
+    "pomarea-nigra": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 530598593）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/530598593/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/530598593/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/530598593/large.png",
+        "https://www.inaturalist.org/photos/530598593"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/530598593/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) John D Reynolds, some rights reserved (CC BY-NC), uploaded by John D Reynolds",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/530598593",
+          "sourceId": "530598593"
+        }
+      ]
+    },
+    "poospiza-baeri": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 233346805）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/233346805/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/233346805/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/233346805/large.png",
+        "https://www.inaturalist.org/photos/233346805"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/233346805/large.jpg",
+          "license": "cc0",
+          "author": "no rights reserved, uploaded by Hugo Hulsberg",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/233346805",
+          "sourceId": "233346805"
+        }
+      ]
+    },
+    "poospiza-garleppi": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 47894951）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/47894951/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/47894951/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/47894951/large.png",
+        "https://www.inaturalist.org/photos/47894951"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/47894951/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Teresa Camacho-Badani, some rights reserved (CC BY-NC), uploaded by Teresa Camacho-Badani",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/47894951",
+          "sourceId": "47894951"
+        }
+      ]
+    },
+    "poospiza-nigrorufa": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 177234831）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177234831/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177234831/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/177234831/large.png",
+        "https://www.inaturalist.org/photos/177234831"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/177234831/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) joseluisblazquez, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/177234831",
+          "sourceId": "177234831"
+        }
+      ]
+    },
+    "poospiza-ornata": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 166359849）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/166359849/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/166359849/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/166359849/large.png",
+        "https://www.inaturalist.org/photos/166359849"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/166359849/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) graciela_gplp, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/166359849",
+          "sourceId": "166359849"
+        }
+      ]
+    },
+    "poospiza-rubecula": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 128543055）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/128543055/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/128543055/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/128543055/large.png",
+        "https://www.inaturalist.org/photos/128543055"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/128543055/large.jpg",
+          "license": "cc-by",
+          "author": "(c) capacoscar, some rights reserved (CC BY), uploaded by capacoscar",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/128543055",
+          "sourceId": "128543055"
+        }
+      ]
+    },
+    "poospiza-whitii": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 88362478）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/88362478/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/88362478/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/88362478/large.png",
+        "https://www.inaturalist.org/photos/88362478"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/88362478/large.jpeg",
+          "license": "cc0",
+          "author": "no rights reserved, uploaded by Naturalist Tours",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/88362478",
+          "sourceId": "88362478"
+        }
+      ]
+    },
+    "porphyrio-alleni": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 3473497）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/3473497/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/3473497/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/3473497/large.png",
+        "https://www.inaturalist.org/photos/3473497"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3473497/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Nigel Voaden, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/3473497",
+          "sourceId": "3473497"
+        }
+      ]
+    },
+    "prinia-erythroptera": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 64861321）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/64861321/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/64861321/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/64861321/large.png",
+        "https://www.inaturalist.org/photos/64861321"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/64861321/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Nik Borrow, some rights reserved (CC BY-NC), uploaded by Nik Borrow",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/64861321",
+          "sourceId": "64861321"
+        }
+      ]
+    },
+    "prinia-familiaris": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 379978622）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/379978622/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/379978622/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/379978622/large.png",
+        "https://www.inaturalist.org/photos/379978622"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/379978622/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) fachrynurmallojr, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/379978622",
+          "sourceId": "379978622"
+        }
+      ]
+    },
+    "prinia-flavicans": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 714533987）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/714533987/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/714533987/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/714533987/large.png",
+        "https://www.inaturalist.org/photos/714533987"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/714533987/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) lance_robinson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/714533987",
+          "sourceId": "714533987"
+        }
+      ]
+    },
+    "prinia-maculosa": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 64726020）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/64726020/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/64726020/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/64726020/large.png",
+        "https://www.inaturalist.org/photos/64726020"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/64726020/large.jpg",
+          "license": "cc-by",
+          "author": "(c) William Stephens, some rights reserved (CC BY), uploaded by William Stephens",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/64726020",
+          "sourceId": "64726020"
+        }
+      ]
+    },
+    "prinia-molleri": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 13080432）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13080432/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13080432/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13080432/large.png",
+        "https://www.inaturalist.org/photos/13080432"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/13080432/large.jpeg",
+          "license": "cc-by-sa",
+          "author": "(c) Thibaud Aronson, some rights reserved (CC BY-SA), uploaded by Thibaud Aronson",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/13080432",
+          "sourceId": "13080432"
+        }
+      ]
+    },
+    "prioniturus-flavicans": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 107895066）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/107895066/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/107895066/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/107895066/large.png",
+        "https://www.inaturalist.org/photos/107895066"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/107895066/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Christoph Moning, some rights reserved (CC BY), uploaded by Christoph Moning",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/107895066",
+          "sourceId": "107895066"
+        }
+      ]
+    },
+    "prioniturus-luconensis": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 159071682）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/159071682/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/159071682/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/159071682/large.png",
+        "https://www.inaturalist.org/photos/159071682"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/159071682/large.png",
+          "license": "cc-by-sa",
+          "author": "(c) Vinz Pascua, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/159071682",
+          "sourceId": "159071682"
+        }
+      ]
+    },
+    "prionops-caniceps": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 480764992）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/480764992/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/480764992/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/480764992/large.png",
+        "https://www.inaturalist.org/photos/480764992"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/480764992/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Nik Borrow, einige Rechte vorbehalten (CC BY-NC), hochgeladen von Nik Borrow",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/480764992",
+          "sourceId": "480764992"
+        }
+      ]
+    },
+    "prionops-plumatus": {
+      "_reason": "2026-11-09 docs/118 修复（阶段一批3）：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计 store/dup-audit/audit-850/）。按 manifest 声明的源图（iNat photo 1939277）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。excludeUrls 只用于把自动结果里同一张剔掉，避免 override 与自动结果重复。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1939277/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1939277/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1939277/large.png",
+        "https://www.inaturalist.org/photos/1939277"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1939277/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Paul Cools, some rights reserved (CC BY-NC), uploaded by Paul Cools",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/1939277",
+          "sourceId": "1939277"
+        }
+      ]
     }
   }
 }
