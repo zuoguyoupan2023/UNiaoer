@@ -3244,6 +3244,54 @@
           "sourceId": "1939277"
         }
       ]
+    },
+    "xiphorhynchus-guttatus": {
+      "_reason": "2026-11-10 docs/118 类⑥ 重叠种首图修复（用户已审图确认）：R2 上 image-1 的字节被 image-2 覆盖（aHash 距离 0，实测 2026-11-10），而 image-1 声明的源图 iNat photo 532778097 完好可下、内容与 image-2 完全不同。按该源图用未占用 key 段 image-40 重下首图。第 5 位源图已被 iNat 删除（404），本次不动，归入类③ 统一补图。 另：第 5 位源图（iNat photo 501519549）已被源站删除（404 实测），该位置会在重建时被剔除、前端暂显示 4 张图；待类③ 统一补图。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/532778097/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/532778097/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/532778097/large.png",
+        "https://www.inaturalist.org/photos/532778097",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/501519549/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/501519549/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/501519549/large.png",
+        "https://www.inaturalist.org/photos/501519549"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/532778097/large.jpg",
+          "license": "cc-by",
+          "author": "(c) cello caruso-turiello, some rights reserved (CC BY), uploaded by cello caruso-turiello",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/532778097",
+          "sourceId": "532778097"
+        }
+      ]
+    },
+    "sporophila-falcirostris": {
+      "_reason": "2026-11-10 docs/118 类⑥ 重叠种首图修复（用户已审图确认）：R2 上 image-1 的字节被 image-2 覆盖（aHash 距离 0，实测 2026-11-10），而 image-1 声明的源图 iNat photo 89726 完好可下、内容与 image-2 完全不同。按该源图用未占用 key 段 image-40 重下首图。第 5 位源图已被 iNat 删除（404），本次不动，归入类③ 统一补图。 另：第 5 位源图（iNat photo 191765855）已被源站删除（404 实测），该位置会在重建时被剔除、前端暂显示 4 张图；待类③ 统一补图。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/89726/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/89726/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/89726/large.png",
+        "https://www.inaturalist.org/photos/89726",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/191765855/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/191765855/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/191765855/large.png",
+        "https://www.inaturalist.org/photos/191765855"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/89726/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Dario Sanches, some rights reserved (CC BY-SA), uploaded by Dario Sanches",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/89726",
+          "sourceId": "89726"
+        }
+      ]
     }
   }
 }
