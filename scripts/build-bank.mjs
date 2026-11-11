@@ -1090,6 +1090,19 @@ async function materialize(rec, id, prev) {
     const dup = rec.images.some((x) => x && (x.url === a.url || (a.sourceId && x.sourceId === a.sourceId)))
     if (!dup) rec.images.unshift(a)
   }
+  // 原地换位（docs/118 选重修复）：把 override 新图放到指定位置，其余保持上一版顺序。
+  // 为什么需要：prepend 保留图 + override 新图只会在末尾，无法「只替换第 N 位」。
+  // replaceSlot 是 1 起的展示位号；被替换的旧图按 prev 里的位置剔除。
+  const replaceSlot = Number(ov?.replaceSlot) || 0
+  if (replaceSlot > 0 && prev?.images?.length) {
+    const newImgs = rec.images.filter((x) => x && x.overridden)
+    if (newImgs.length) {
+      const kept = (prev.images || []).filter((x, i) => i + 1 !== replaceSlot)
+      const out = [...kept]
+      out.splice(Math.min(replaceSlot - 1, out.length), 0, ...newImgs)
+      rec.images = out.slice(0, OPT.per)
+    }
+  }
   rec.image = rec.images[0] || null
   rec.audio = rec.audios[0] || null
 }
@@ -1495,6 +1508,7 @@ async function download(url, dest, tries = 5) {
   // 再花 40–90 s/张从源站重下（942 张 ≈ 17 小时纯等待）。
   // 只对 iNat photo 原图生效；缓存目录不在仓库内（store/ 已 gitignore）。
   const cached = await cachedSourceCopy(url, dest)
+  if (process.env.DBG_CACHE) console.error('[DBG] download url=' + url + ' dest=' + dest + ' cached=' + !!cached + ' species=' + path.basename(path.dirname(dest)))
   if (cached) return dest
 
   let lastErr

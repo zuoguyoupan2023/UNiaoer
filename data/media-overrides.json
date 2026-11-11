@@ -17354,6 +17354,595 @@
           "sourceId": "712505327"
         }
       ]
+    },
+    "apalis-fuscigularis": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-4.jpg 与 image-5.jpg 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-4，把 image-5 替换为用户选定的新图（obs 334656716，photo 607781199）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/3777967/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/3777967/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/3777967/large.png",
+        "https://www.inaturalist.org/photos/3777967",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/172849902/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/172849902/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/172849902/large.png",
+        "https://www.inaturalist.org/observations/103297898",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/607781194/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/607781194/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/607781194/large.png",
+        "https://www.inaturalist.org/observations/334656716",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/476970976/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/476970976/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/476970976/large.png",
+        "https://www.inaturalist.org/observations/265533594",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/348433691/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/348433691/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/348433691/large.png",
+        "https://www.inaturalist.org/observations/197782458"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/607781199/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Adrien Jailloux, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/334656716",
+          "sourceId": "607781199"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "celeus-torquatus": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-1.full.webp 与 image-4.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-1，把 image-4 替换为用户选定的新图（obs 56224355，photo 89583966）。原图替换在第 4 位（replaceSlot=4），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/195152/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/195152/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/195152/large.png",
+        "https://www.inaturalist.org/photos/195152",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/119427720/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/119427720/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/119427720/large.png",
+        "https://www.inaturalist.org/observations/73170800",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/89584028/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/89584028/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/89584028/large.png",
+        "https://www.inaturalist.org/observations/56224355",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185802010/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185802010/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185802010/large.png",
+        "https://www.inaturalist.org/observations/110167036",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/315485710/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/315485710/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/315485710/large.png",
+        "https://www.inaturalist.org/observations/181051516"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/89583966/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Justyn Stahl, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/56224355",
+          "sourceId": "89583966"
+        }
+      ],
+      "replaceSlot": 4
+    },
+    "arremon-semitorquatus": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-4.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-4 替换为用户选定的新图（obs 147571173，photo 253953940）。原图替换在第 4 位（replaceSlot=4），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/421517957/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/421517957/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/421517957/large.png",
+        "https://www.inaturalist.org/observations/236894898",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/92229655/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/92229655/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/92229655/large.png",
+        "https://www.inaturalist.org/observations/57801283",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/255253990/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/255253990/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/255253990/large.png",
+        "https://www.inaturalist.org/observations/148249622",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/255286534/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/255286534/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/255286534/large.png",
+        "https://www.inaturalist.org/observations/148265308",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/589524546/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/589524546/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/589524546/large.png",
+        "https://www.inaturalist.org/observations/325590031"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/253953940/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Rosa Leticia Pinto, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/147571173",
+          "sourceId": "253953940"
+        }
+      ],
+      "replaceSlot": 4
+    },
+    "emberiza-hortulana": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-5 替换为用户选定的新图（obs 283059829，photo 508596097）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/14066719/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/14066719/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/14066719/large.png",
+        "https://www.inaturalist.org/photos/14066719",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/289251504/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/289251504/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/289251504/large.png",
+        "https://www.inaturalist.org/observations/167005690",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/204069050/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/204069050/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/204069050/large.png",
+        "https://www.inaturalist.org/observations/120640022",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/717970709/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/717970709/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/717970709/large.png",
+        "https://www.inaturalist.org/observations/391814176",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/205729189/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/205729189/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/205729189/large.png",
+        "https://www.inaturalist.org/observations/121567266"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/508596097/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/283059829",
+          "sourceId": "508596097"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "coracina-schistacea": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-5 替换为用户选定的新图（obs 87214777，photo 143751673）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143750381/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143750381/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143750381/large.png",
+        "https://www.inaturalist.org/photos/143750381",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/101188782/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/101188782/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/101188782/large.png",
+        "https://www.inaturalist.org/observations/63086414",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143751662/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143751662/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143751662/large.png",
+        "https://www.inaturalist.org/observations/87214777",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29182540/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29182540/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29182540/large.png",
+        "https://www.inaturalist.org/observations/19028365",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143750369/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143750369/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/143750369/large.png",
+        "https://www.inaturalist.org/observations/87214041"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/143751673/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Peter Wilton, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/87214777",
+          "sourceId": "143751673"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "macropygia-modiglianii": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-4.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-4 替换为用户选定的新图（obs 333987930，photo 606421483）。原图替换在第 4 位（replaceSlot=4），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/449305355/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/449305355/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/449305355/large.png",
+        "https://www.inaturalist.org/photos/449305355",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/515590574/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/515590574/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/515590574/large.png",
+        "https://www.inaturalist.org/observations/286775190",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/571659139/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/571659139/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/571659139/large.png",
+        "https://www.inaturalist.org/observations/316406020",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/571659834/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/571659834/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/571659834/large.png",
+        "https://www.inaturalist.org/observations/316406454",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/605727806/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/605727806/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/605727806/large.png",
+        "https://www.inaturalist.org/observations/333623617"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/606421483/large.jpg",
+          "license": "cc-by",
+          "author": "(c) CaracalShan, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/333987930",
+          "sourceId": "606421483"
+        }
+      ],
+      "replaceSlot": 4
+    },
+    "myioborus-castaneocapilla": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-4.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-4，把 image-5 替换为用户选定的新图（obs 339424162，photo 617454799）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419306968/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419306968/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419306968/large.png",
+        "https://www.inaturalist.org/observations/235749382",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617294131/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617294131/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617294131/large.png",
+        "https://www.inaturalist.org/observations/339350427",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419308292/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419308292/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419308292/large.png",
+        "https://www.inaturalist.org/observations/235763081",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419386822/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419386822/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419386822/large.png",
+        "https://www.inaturalist.org/observations/235791435",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419306967/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419306967/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419306967/large.png",
+        "https://www.inaturalist.org/observations/235749380"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/617454799/large.jpg",
+          "license": "cc0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/339424162",
+          "sourceId": "617454799"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "oenanthe-dubia": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-1.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-1，把 image-5 替换为用户选定的新图（obs 412122661，photo 758266646）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2069705/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2069705/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2069705/large.png",
+        "https://www.inaturalist.org/photos/2069705",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617328004/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617328004/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617328004/large.png",
+        "https://www.inaturalist.org/observations/339361111",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/555520837/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/555520837/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/555520837/large.png",
+        "https://www.inaturalist.org/observations/307944903",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/566214304/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/566214304/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/566214304/large.png",
+        "https://www.inaturalist.org/observations/313535302",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13385944/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13385944/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13385944/large.png",
+        "https://www.inaturalist.org/observations/9777264"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/758266646/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Hailu Tilahun Argaw, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/412122661",
+          "sourceId": "758266646"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "oenanthe-oenanthe": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-5 替换为用户选定的新图（obs 61640594，photo 98657031）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67410847/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67410847/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67410847/large.png",
+        "https://www.inaturalist.org/photos/67410847",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.png",
+        "https://www.inaturalist.org/observations/141885050",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/349048969/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/349048969/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/349048969/large.png",
+        "https://www.inaturalist.org/observations/198085505",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/287827253/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/287827253/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/287827253/large.png",
+        "https://www.inaturalist.org/observations/166223119",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/257121153/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/257121153/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/257121153/large.png",
+        "https://www.inaturalist.org/observations/149232400"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/98657031/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Justyn Stahl, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/61640594",
+          "sourceId": "98657031"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "sitta-insularis": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-1.jpg 与 image-2.jpg 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-1，把 image-2 替换为用户选定的新图（obs 102337024，photo 612731852）。原图替换在第 2 位（replaceSlot=2），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50046419/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50046419/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50046419/large.png",
+        "https://www.inaturalist.org/photos/50046419",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185090025/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185090025/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185090025/large.png",
+        "https://www.inaturalist.org/observations/109781627",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/171043535/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/171043535/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/171043535/large.png",
+        "https://www.inaturalist.org/observations/102337024",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/612731981/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/612731981/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/612731981/large.png",
+        "https://www.inaturalist.org/observations/337102620",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/612731934/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/612731934/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/612731934/large.png",
+        "https://www.inaturalist.org/observations/337102619"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/612731852/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Floyd E. Hayes, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/102337024",
+          "sourceId": "612731852"
+        }
+      ],
+      "replaceSlot": 2
+    },
+    "strix-sartorii": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-4.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-4 替换为用户选定的新图（obs 299723757，photo 539989847）。原图替换在第 4 位（replaceSlot=4），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/7905672/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/7905672/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/7905672/large.png",
+        "https://www.inaturalist.org/photos/7905672",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/57125136/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/57125136/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/57125136/large.png",
+        "https://www.inaturalist.org/observations/36159337",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868404/large.JPG",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868404/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868404/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868404/large.png",
+        "https://www.inaturalist.org/observations/691086",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868403/large.JPG",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868403/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868403/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/868403/large.png",
+        "https://www.inaturalist.org/observations/691085",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/212369531/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/212369531/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/212369531/large.png",
+        "https://www.inaturalist.org/observations/125239058"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/539989847/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Darío Cantú, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/299723757",
+          "sourceId": "539989847"
+        }
+      ],
+      "replaceSlot": 4
+    },
+    "trachylaemus-purpuratus": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-5 替换为用户选定的新图（obs 134288372，photo 228874733）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/56445967/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/56445967/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/56445967/large.png",
+        "https://www.inaturalist.org/photos/56445967",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116436891/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116436891/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116436891/large.png",
+        "https://www.inaturalist.org/observations/71508854",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/48862300/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/48862300/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/48862300/large.png",
+        "https://www.inaturalist.org/observations/31232028",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185649425/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185649425/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/185649425/large.png",
+        "https://www.inaturalist.org/observations/110085493",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50999379/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50999379/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50999379/large.png",
+        "https://www.inaturalist.org/observations/32511234"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/228874733/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Niall Perrins, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/134288372",
+          "sourceId": "228874733"
+        }
+      ],
+      "replaceSlot": 5
+    },
+    "trochalopteron-virgatum": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-4.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-4 替换为用户选定的新图（obs 393433690，photo 721133368）。原图替换在第 4 位（replaceSlot=4），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/362537597/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/362537597/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/362537597/large.png",
+        "https://www.inaturalist.org/photos/362537597",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/175810164/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/175810164/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/175810164/large.png",
+        "https://www.inaturalist.org/observations/104864692",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621394534/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621394534/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621394534/large.png",
+        "https://www.inaturalist.org/observations/341350934",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621391771/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621391771/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621391771/large.png",
+        "https://www.inaturalist.org/observations/341350921",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/721145912/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/721145912/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/721145912/large.png",
+        "https://www.inaturalist.org/observations/393435183"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/721133368/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Rejoice Gassah, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/393433690",
+          "sourceId": "721133368"
+        }
+      ],
+      "replaceSlot": 4
+    },
+    "turdus-helleri": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-1.full.webp 与 image-2.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-1，把 image-2 替换为用户选定的新图（obs 326668093，photo 591657505）。原图替换在第 2 位（replaceSlot=2），首图未动，D1 不改。",
+      "imageKeyBase": 40,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/173264672/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/173264672/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/173264672/large.png",
+        "https://www.inaturalist.org/photos/173264672",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/142094370/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/142094370/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/142094370/large.png",
+        "https://www.inaturalist.org/observations/86270845",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29279064/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29279064/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29279064/large.png",
+        "https://www.inaturalist.org/observations/19081683",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/246817850/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/246817850/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/246817850/large.png",
+        "https://www.inaturalist.org/observations/143872536",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/53984637/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/53984637/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/53984637/large.png",
+        "https://www.inaturalist.org/observations/34312865"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/591657505/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Tobias Seifert, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/326668093",
+          "sourceId": "591657505"
+        }
+      ],
+      "replaceSlot": 2
+    },
+    "herpsilochmus-roraimae": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户确认）：image-2.full.webp 与 image-4.full.webp 是同一张照片。iNaturalist 上该种仅 5 张可用图，无新图可取 → 删除编号大的 image-4，画廊保留 4 张。首图未动，D1 不改。",
+      "prependImageUrls": [
+        "https://bird.wewalk.world/media/herpsilochmus-roraimae/image-1.jpg",
+        "https://bird.wewalk.world/media/herpsilochmus-roraimae/image-2.full.webp",
+        "https://bird.wewalk.world/media/herpsilochmus-roraimae/image-3.full.webp",
+        "https://bird.wewalk.world/media/herpsilochmus-roraimae/image-5.full.webp"
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65697809/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65697809/large.jpeg",
+        "https://www.inaturalist.org/photos/65697809",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617507885/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617507885/large.jpeg",
+        "https://www.inaturalist.org/observations/339452427",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419417221/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/419417221/large.jpeg",
+        "https://www.inaturalist.org/observations/235806466",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617312970/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617312970/large.jpeg",
+        "https://www.inaturalist.org/observations/339353824",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/605914848/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/605914848/large.jpeg",
+        "https://www.inaturalist.org/observations/333752198"
+      ],
+      "images": []
+    },
+    "lepidothrix-suavissima": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户确认）：image-2.full.webp 与 image-3.full.webp 是同一张照片。iNaturalist 上该种仅 3 张可用图，无新图可取 → 删除编号大的 image-3，画廊保留 2 张。首图未动，D1 不改。",
+      "prependImageUrls": [
+        "https://bird.wewalk.world/media/lepidothrix-suavissima/image-1.jpg",
+        "https://bird.wewalk.world/media/lepidothrix-suavissima/image-2.full.webp"
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65758408/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/65758408/large.jpeg",
+        "https://www.inaturalist.org/photos/65758408",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617311429/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617311429/large.jpeg",
+        "https://www.inaturalist.org/observations/339352280",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617507792/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617507792/large.jpeg",
+        "https://www.inaturalist.org/observations/339452409"
+      ],
+      "images": []
+    },
+    "turdus-murinus": {
+      "_reason": "2026-11-11 docs/118 选重修复（用户确认）：image-1.full.webp 与 image-4.full.webp 是同一张照片。iNaturalist 上该种仅 4 张可用图，无新图可取 → 删除编号大的 image-4，画廊保留 3 张。首图未动，D1 不改。",
+      "prependImageUrls": [
+        "https://bird.wewalk.world/media/turdus-murinus/image-1.full.webp",
+        "https://bird.wewalk.world/media/turdus-murinus/image-2.full.webp",
+        "https://bird.wewalk.world/media/turdus-murinus/image-3.full.webp"
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617507882/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617507882/large.jpeg",
+        "https://www.inaturalist.org/observations/339452429",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617454746/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617454746/large.jpeg",
+        "https://www.inaturalist.org/observations/339424140",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617454850/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617454850/large.jpeg",
+        "https://www.inaturalist.org/observations/339424184",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617312968/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617312968/large.jpeg",
+        "https://www.inaturalist.org/observations/339353825"
+      ],
+      "images": []
     }
   }
 }
