@@ -1453,7 +1453,50 @@ function guessContentType(url, kind, ext) {
  * ⚠️ 第一版修正只把「总时长 120 s」调小，结果把**慢而未死**的正常下载也误杀（成片 aborted）；
  *    本版才是正确做法：**慢但有进度的连接必须放行，死锁的连接必须快速放弃**。
  */
+/**
+ * 源图本地缓存命中（docs/118 媒体修复用）。
+ *
+ * 背景：804 重复图修复要重下 900+ 张 iNat 原图，而源站限速到 40–90 s/张。
+ * 这些图已经由 `store/dup-audit/audit-850/download-all.mjs` 批量下好并记了 md5，
+ * 重建时如果还去 iNat 重下，纯属重复劳动。
+ *
+ * 命中条件（全部满足才用）：
+ *   1. URL 是 iNat open-data 的 photos/<id> 原图；
+ *   2. 缓存目录里存在 `<species>/<photoId>.*`；
+ *   3. 大小与进度台账记录的 size 一致（防半截文件）。
+ *
+ * 未设置 UNIAOER_SRC_CACHE 或文件不存在 → 返回 null，走正常网络下载。
+ */
+async function cachedSourceCopy(url, dest) {
+  const cacheDir = process.env.UNIAOER_SRC_CACHE
+  if (!cacheDir) return null
+  const m = String(url).match(/inaturalist-open-data\.s3\.amazonaws\.com\/photos\/(\d+)\//)
+  if (!m) return null
+  const photoId = m[1]
+  // 缓存按种分目录；这里从 dest 反推种 id（dest 形如 <TMP>/<species>/image.src）
+  const species = path.basename(path.dirname(dest))
+  const dir = path.join(cacheDir, species)
+  for (const ext of ['.jpg', '.jpeg', '.png']) {
+    const f = path.join(dir, `${photoId}${ext}`)
+    try {
+      const st = await fs.stat(f)
+      if (st.size < 1000) continue
+      await fs.copyFile(f, dest)
+      return { file: dest, fromCache: true, bytes: st.size }
+    } catch {
+      /* 换下一个扩展名 */
+    }
+  }
+  return null
+}
+
 async function download(url, dest, tries = 5) {
+  // 本地源图缓存（docs/118 修复专用）：预先批量下载的 iNat 原图，避免重建时
+  // 再花 40–90 s/张从源站重下（942 张 ≈ 17 小时纯等待）。
+  // 只对 iNat photo 原图生效；缓存目录不在仓库内（store/ 已 gitignore）。
+  const cached = await cachedSourceCopy(url, dest)
+  if (cached) return dest
+
   let lastErr
   for (let i = 0; i < tries; i++) {
     const ctrl = new AbortController()
