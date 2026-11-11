@@ -952,7 +952,11 @@ function applyOverrides(base, prev) {
         return { ...a, overridden: true, type: kind, speciesId: base.id }
       })
 
-  base.images = [...toAssets(ov.images, 'image'), ...filter(base.images)].slice(0, OPT.per)
+  // 原地换位修复（replaceSlot/slotAssignments）不并自动结果：破位种的死观察已从源站消失，
+  // 自动搜索只会返回别的新观察，物化成 image-(keyBase+1)+ 后又被换位块丢弃（白下载 + 孤儿文件）。
+  // 最终序列完全由 prev 序列 + 换位块决定，见 materialize()。
+  const slotRepair = !!ov.replaceSlot || Array.isArray(ov.slotAssignments)
+  base.images = [...toAssets(ov.images, 'image'), ...(slotRepair ? [] : filter(base.images))].slice(0, OPT.per)
   base.audios = [...toAssets(ov.audios, 'audio'), ...filter(base.audios)].slice(0, OPT.per)
 
   // 定向修复：keepLeadImage = true 时，把上一版的 image-1 提到首位（保持首图不变、D1 无需更新）。
@@ -1102,6 +1106,26 @@ async function materialize(rec, id, prev) {
       out.splice(Math.min(replaceSlot - 1, out.length), 0, ...newImgs)
       rec.images = out.slice(0, OPT.per)
     }
+  }
+  // 多位换位（docs/120 §6，B 类破图修复）：slotAssignments = [{ slot, pickIndex }]，
+  // pickIndex 是 override.images 的第几张（1 起）。新图已在上面循环物化为 image-(keyBase+k)，
+  // 这里按 slot 插回 prev 序列，其余位保持 prev 顺序；不在 prev 里的 slot（如 prev 只有 4 张
+  // 时补第 5 位）也照常落位。所有坏位都必须有对应 assignment（生成侧已断言），死链不保留。
+  const slotAssignments = Array.isArray(ov?.slotAssignments) ? ov.slotAssignments : []
+  if (slotAssignments.length && prev?.images?.length) {
+    const bySlot = new Map()
+    for (const a of slotAssignments) {
+      const img = rec.images[(Number(a.pickIndex) || 0) - 1]
+      if (img && img.overridden) bySlot.set(Number(a.slot), img)
+      else console.warn(`   ⚠️ slotAssignments：pickIndex ${a.pickIndex} 没有对应 override 图（slot ${a.slot} 落空）`)
+    }
+    const maxSlot = Math.max(prev.images.length, ...bySlot.keys())
+    const out = []
+    for (let s = 1; s <= maxSlot; s++) {
+      const a = bySlot.get(s) || prev.images[s - 1]
+      if (a) out.push(a)
+    }
+    rec.images = out.slice(0, OPT.per)
   }
   rec.image = rec.images[0] || null
   rec.audio = rec.audios[0] || null
