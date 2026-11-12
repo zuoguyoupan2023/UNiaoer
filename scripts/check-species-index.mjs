@@ -158,7 +158,9 @@ try {
 
   checkGeoKeys(index, '顶层')
 
-  // 权威层(meta)交叉校验:全部 playable=true 且 taxonKey 能对回骨架。
+  // 权威层(meta)交叉校验:playable=true 且 taxonKey 能对回骨架。
+  // 例外（2026-11-13 docs/120 T4）：keepInMeta=true 的种是「图音已清空但保留在名录」的
+  // 刻意状态（宁愿没有图，也不能用错图），playable=false 属预期，不算失败。
   // 学名不一致仅在 bankMappingNotes 有注记时放行(概念合并:AviList 并入父种,保留旧学名)。
   const notes = Array.isArray(index.bankMappingNotes) ? index.bankMappingNotes : []
   const noteByKeyId = new Map(notes.map((n) => [`${n.id}|${n.taxonKey}`, n]))
@@ -170,12 +172,16 @@ try {
     const noPlayable = []
     const keyMismatch = []
     let noted = 0
+    let keepInMeta = 0
     for (const s of manifest.species) {
       if (!s.taxonKey) {
         noKey.push(s.id)
         continue
       }
-      if (s.playable !== true) noPlayable.push(s.id)
+      if (s.playable !== true) {
+        if (s.keepInMeta === true) { keepInMeta++; continue }
+        noPlayable.push(s.id)
+      }
       const e = byKey.get(s.taxonKey)
       if (!e) {
         keyMismatch.push(`${s.id}:taxonKey=${s.taxonKey} 不在骨架`)
@@ -191,7 +197,7 @@ try {
     if (noPlayable.length) fail(`${noPlayable.length} 个 meta 物种 playable≠true`)
     if (keyMismatch.length) for (const x of keyMismatch.slice(0, 10)) fail(`映射不一致:${x}`)
     console.log(
-      `· meta 交叉:${manifest.species.length} 物种 · taxonKey 全存在 ✓ · playable 全 true ✓ · 概念合并注记 ${notes.length} 条(命中 ${noted})${keyMismatch.length ? ` · 映射不一致 ${keyMismatch.length} ✗` : ''}`,
+      `· meta 交叉:${manifest.species.length} 物种 · taxonKey 全存在 ✓ · playable=${manifest.species.length - keepInMeta} true + ${keepInMeta} keepInMeta(无图留名录) ✓ · 概念合并注记 ${notes.length} 条(命中 ${noted})${keyMismatch.length ? ` · 映射不一致 ${keyMismatch.length} ✗` : ''}`,
     )
   }
 

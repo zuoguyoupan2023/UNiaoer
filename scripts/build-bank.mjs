@@ -688,7 +688,10 @@ async function buildSpecies(sp, useXc, prev) {
     applyOverrides(base, prev)
 
     // --images-only：音频回填必须放在 applyOverrides 之后，否则会被 --per 截断
-    if (OPT.imagesOnly && prev) {
+    // 例外：override 显式要求清空音频（_clearAudios）或整体清空（clearAllMedia）时不得回填
+    // ——那些音频实测是别种的（docs/120 T3）。
+    const ovHere = OVERRIDES[id] || OVERRIDES[base.nameSci]
+    if (OPT.imagesOnly && prev && !ovHere?._clearAudios && !ovHere?.clearAllMedia) {
       base.audios = prev.audios || []
       base.audio = base.audios[0] || null
     }
@@ -952,6 +955,19 @@ function applyOverrides(base, prev) {
         return { ...a, overridden: true, type: kind, speciesId: base.id }
       })
 
+  // 整体清空（2026-11-12 docs/120：iNat 上该种完全无正确素材时，连自动搜索结果一并丢弃）。
+  // 用于「图音全是别的种、iNat 又没有本种素材」的种：清空后 playable=false → 退出题库。
+  // keepInMeta：用户定「清空但留在名录」时，种仍进 manifest-meta（详情页说明无图原因）。
+  // 原文件留在 R2 不删。
+  if (ov.clearAllMedia) {
+    base.images = []
+    base.audios = []
+    base.image = null
+    base.audio = null
+    if (ov.keepInMeta) base.keepInMeta = true
+    return
+  }
+
   // 原地换位修复（replaceSlot/slotAssignments）不并自动结果：破位种的死观察已从源站消失，
   // 自动搜索只会返回别的新观察，物化成 image-(keyBase+1)+ 后又被换位块丢弃（白下载 + 孤儿文件）。
   // 最终序列完全由 prev 序列 + 换位块决定，见 materialize()。
@@ -1119,10 +1135,14 @@ async function materialize(rec, id, prev) {
       if (img && img.overridden) bySlot.set(Number(a.slot), img)
       else console.warn(`   ⚠️ slotAssignments：pickIndex ${a.pickIndex} 没有对应 override 图（slot ${a.slot} 落空）`)
     }
-    const maxSlot = Math.max(prev.images.length, ...bySlot.keys())
+    // 收窄模式（_shrinkToAssigned）：序列**只由 assignments 决定**，不保留 prev 其余位。
+    // 用于「本种所有图都不对、但候选不足 5 张」——宁少不滥（docs/120 T3）。
+    const slots = ov?._shrinkToAssigned
+      ? [...bySlot.keys()].sort((a, b) => a - b)
+      : Array.from({ length: Math.max(prev.images.length, ...bySlot.keys()) }, (_, i) => i + 1)
     const out = []
-    for (let s = 1; s <= maxSlot; s++) {
-      const a = bySlot.get(s) || prev.images[s - 1]
+    for (const s of slots) {
+      const a = bySlot.get(s) || (ov?._shrinkToAssigned ? null : prev.images[s - 1])
       if (a) out.push(a)
     }
     rec.images = out.slice(0, OPT.per)

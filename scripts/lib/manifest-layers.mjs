@@ -40,6 +40,7 @@ const META_SPECIES_KEYS = [
   'desc',
   'location',
   'habit',
+  'keepInMeta',
 ]
 
 const CORE_SPECIES_KEYS = [
@@ -269,7 +270,9 @@ export function toMeta(coreManifest, globalLedger, orderOf, usageKeys, classTabl
   let skippedNoMedia = 0
   for (const sp of globalLedger?.species || []) {
     const hasMedia = (sp.images && sp.images.length) || sp.audios && sp.audios.length || sp.image || sp.audio
-    if (!hasMedia) {
+    // keepInMeta：即使清空了全部图音也要留在名录里（用户 2026-11-12 定：
+    // 「宁愿没有图，也不能用错图」，但种本身仍应能被检索到、详情能说清原因）。
+    if (!hasMedia && !sp.keepInMeta) {
       skippedNoMedia++
       continue
     }

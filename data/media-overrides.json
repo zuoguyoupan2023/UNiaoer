@@ -4274,22 +4274,106 @@
       ]
     },
     "pternistis-capensis": {
-      "_reason": "2026-11-10 docs/118 阶段一批4：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json + 850 全量审计）。按 manifest 声明的源图（iNat photo 2018016）用未占用 key 段 image-40 重下 image-1；其余 4 张原样复用旧 key，不重编码。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 5 张）：坏位 1、2、3、4、5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 593049120，位2=photo 561828695，位3=photo 564923819，位4=photo 593049129，位5=photo 469242178）。整套替换，旧图不再展示（文件仍留 R2）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.png",
-        "https://www.inaturalist.org/photos/2018016"
+        "https://www.inaturalist.org/photos/2018016",
+        "https://bird.wewalk.world/media/pternistis-capensis/image-40.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/371715605/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/371715605/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/371715605/large.png",
+        "https://www.inaturalist.org/photos/371715605",
+        "https://www.inaturalist.org/observations/210125022",
+        "https://bird.wewalk.world/media/pternistis-capensis/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/136506153/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/136506153/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/136506153/large.png",
+        "https://www.inaturalist.org/photos/136506153",
+        "https://www.inaturalist.org/observations/83131420",
+        "https://bird.wewalk.world/media/pternistis-capensis/image-3.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112049319/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112049319/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112049319/large.png",
+        "https://www.inaturalist.org/photos/112049319",
+        "https://www.inaturalist.org/observations/69099087",
+        "https://bird.wewalk.world/media/pternistis-capensis/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/446978218/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/446978218/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/446978218/large.png",
+        "https://www.inaturalist.org/photos/446978218",
+        "https://www.inaturalist.org/observations/249981622",
+        "https://bird.wewalk.world/media/pternistis-capensis/image-5.full.webp"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) Alan Manson, some rights reserved (CC BY-SA)",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/593049120/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Alan Horstmann, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/2018016",
-          "sourceId": "2018016"
+          "sourceUrl": "https://www.inaturalist.org/observations/327355521",
+          "sourceId": "593049120",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Pternistis capensis/M3_327355521_2048x1150_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/561828695/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) MadeleinWolf, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/311238371",
+          "sourceId": "561828695",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Pternistis capensis/M2_311238371_2048x1152_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/564923819/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) corliapieterse, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/312860993",
+          "sourceId": "564923819",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Pternistis capensis/M5_312860993_2048x1365_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/593049129/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Alan Horstmann, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/327355521",
+          "sourceId": "593049129",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Pternistis capensis/M6_327355521_2048x1150_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/469242178/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Nick Leggatt, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/261214284",
+          "sourceId": "469242178",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Pternistis capensis/M10_261214284_844x704_CC-BY-NC.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
         }
       ]
     },
@@ -5355,22 +5439,110 @@
       ]
     },
     "ramphocelus-bresilia": {
-      "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种】修复：R2 上 image-1.full.webp 与 image-2.full.webp 内容相同（md5 相同），经字节级重转码比对确认 **image-1.full.webp 被覆盖**（其内容 = image-2.full.webp 的源图）。按 image-1.full.webp 自己声明的源图（iNat photo 95268822）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key。判定依据：store/dup-audit/audit-850/direction-final.json（md5 字节一致）。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 26314668，位2=photo 597167392，位3=photo 596996774，位4=photo 106266612，位5=photo 180837798）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 50,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
-        "https://www.inaturalist.org/photos/95268822"
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/ramphocelus-bresilia/image-40.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.png",
+        "https://www.inaturalist.org/photos/8174772",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://bird.wewalk.world/media/ramphocelus-bresilia/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.png",
+        "https://www.inaturalist.org/photos/13447878",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://bird.wewalk.world/media/ramphocelus-bresilia/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.png",
+        "https://www.inaturalist.org/photos/21203884",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://bird.wewalk.world/media/ramphocelus-bresilia/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.png",
+        "https://www.inaturalist.org/photos/39432879",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://bird.wewalk.world/media/ramphocelus-bresilia/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) anonymous, some rights reserved (CC BY-SA)",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/26314668/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) guyincognito, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/95268822",
-          "sourceId": "95268822"
+          "sourceUrl": "https://www.inaturalist.org/observations/17335466",
+          "sourceId": "26314668",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Ramphocelus bresilia/2_17335466_2048x1217_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/597167392/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Olivier De Clerck, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/329438309",
+          "sourceId": "597167392",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Ramphocelus bresilia/3_329438309_2048x1365_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/596996774/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Henrique Bitencourt, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/329350073",
+          "sourceId": "596996774",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Ramphocelus bresilia/M3_329350073_2048x1638_CC-BY-SA.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/106266612/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) newtongalvao, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/65978726",
+          "sourceId": "106266612",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Ramphocelus bresilia/M1_65978726_946x2048_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/180837798/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Paulo Henrique Signoretti, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/107512411",
+          "sourceId": "180837798",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Ramphocelus bresilia/1_107512411_1280x853_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
         }
       ]
     },
@@ -5616,24 +5788,114 @@
       ]
     },
     "sakesphorus-pulchellus": {
-      "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种】修复：R2 上 image-1.full.webp 与 image-2.full.webp 内容相同（md5 相同），经字节级重转码比对确认 **image-1.full.webp 被覆盖**（其内容 = image-2.full.webp 的源图）。按 image-1.full.webp 自己声明的源图（iNat photo 95268822）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key。判定依据：store/dup-audit/audit-850/direction-final.json（md5 字节一致）。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 463539304，位2=photo 65612326，位3=photo 295701514，位4=photo 465746955，位5=photo 65612162）。整套替换，旧图不再展示（文件仍留 R2）。 另：本种原有 5 条音频实为绿头鸭(Anas platyrhynchos)叫声（iNat 实测），一并清空。",
+      "imageKeyBase": 50,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
-        "https://www.inaturalist.org/photos/95268822"
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/sakesphorus-pulchellus/image-40.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.png",
+        "https://www.inaturalist.org/photos/8174772",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://bird.wewalk.world/media/sakesphorus-pulchellus/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.png",
+        "https://www.inaturalist.org/photos/13447878",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://bird.wewalk.world/media/sakesphorus-pulchellus/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.png",
+        "https://www.inaturalist.org/photos/21203884",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://bird.wewalk.world/media/sakesphorus-pulchellus/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.png",
+        "https://www.inaturalist.org/photos/39432879",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://bird.wewalk.world/media/sakesphorus-pulchellus/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) anonymous, some rights reserved (CC BY-SA)",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/463539304/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Monroy R, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/95268822",
-          "sourceId": "95268822"
+          "sourceUrl": "https://www.inaturalist.org/observations/258369296",
+          "sourceId": "463539304",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Sakesphorus pulchellus/3_258369296_1080x1350_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/65612326/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Sebastián Pardo, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/41363070",
+          "sourceId": "65612326",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Sakesphorus pulchellus/2_41363070_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/295701514/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Monroy R, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/170486675",
+          "sourceId": "295701514",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Sakesphorus pulchellus/M2_170486675_2048x1280_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/465746955/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David Monroy R, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/259453161",
+          "sourceId": "465746955",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Sakesphorus pulchellus/1_259453161_1080x720_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/65612162/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Sebastián Pardo, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/41363064",
+          "sourceId": "65612162",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Sakesphorus pulchellus/M1_41363064_2048x1536_CC-BY-NC.jpg"
         }
-      ]
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ],
+      "audios": [],
+      "_clearAudios": true
     },
     "saltator-orenocensis": {
       "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种】修复：R2 上 image-1.jpg 与 image-2.jpg 内容相同（md5 相同），经字节级重转码比对确认 **image-1.jpg 被覆盖**（其内容 = image-2.jpg 的源图）。按 image-1.jpg 自己声明的源图（iNat photo 84367446）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key。判定依据：store/dup-audit/audit-850/direction-final.json（md5 字节一致）。",
@@ -7656,24 +7918,13 @@
       ]
     },
     "xenodacnis-petersi": {
-      "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种】修复：R2 上 image-1.full.webp 与 image-2.full.webp 内容相同（md5 相同），经字节级重转码比对确认 **image-1.full.webp 被覆盖**（其内容 = image-2.full.webp 的源图）。按 image-1.full.webp 自己声明的源图（iNat photo 95268822）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key。判定依据：store/dup-audit/audit-850/direction-final.json（md5 字节一致）。",
+      "_reason": "2026-11-12 用户决定：该种 iNat 上完全无图（亚种 Xenodacnis parina petersi #732265 全站 0 条观察），现有 5 图 + 5 音全是绿头鸭(Anas platyrhynchos)的素材。按「宁愿没有图，也不能用错图」整套清空，不进题库；**但保留在名录**（用户定），详情页说明无素材原因。原文件留在 R2 不删。",
       "imageKeyBase": 40,
-      "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
-        "https://www.inaturalist.org/photos/95268822"
-      ],
-      "images": [
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) anonymous, some rights reserved (CC BY-SA)",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/95268822",
-          "sourceId": "95268822"
-        }
-      ]
+      "excludeUrls": [],
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
     },
     "xenopipo-uniformis": {
       "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种】修复：R2 上 image-1.full.webp 与 image-2.full.webp 内容相同（md5 相同），经字节级重转码比对确认 **image-1.full.webp 被覆盖**（其内容 = image-2.full.webp 的源图）。按 image-1.full.webp 自己声明的源图（iNat photo 419658019）用未占用 key 段 image-40 重下；其余 2 张原样复用旧 key。判定依据：store/dup-audit/audit-850/direction-final.json（md5 字节一致）。",
@@ -11416,24 +11667,74 @@
       ]
     },
     "silvicultrix-spodionota": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 95268822）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 2 张）：本种原画廊共 5 张（其中 5 张与别种共用），按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 106495589，位2=photo 106476264）。其余 3 位无合适候选，位次收缩为 2 张。",
+      "imageKeyBase": 50,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
-        "https://www.inaturalist.org/photos/95268822"
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/silvicultrix-spodionota/image-40.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.png",
+        "https://www.inaturalist.org/photos/8174772",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://bird.wewalk.world/media/silvicultrix-spodionota/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.png",
+        "https://www.inaturalist.org/photos/13447878",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://bird.wewalk.world/media/silvicultrix-spodionota/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.png",
+        "https://www.inaturalist.org/photos/21203884",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://bird.wewalk.world/media/silvicultrix-spodionota/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.png",
+        "https://www.inaturalist.org/photos/39432879",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://bird.wewalk.world/media/silvicultrix-spodionota/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/106495589/large.jpg",
           "license": "cc-by-sa",
-          "author": "(c) anonymous, some rights reserved (CC BY-SA)",
+          "author": "(c) Thibaud Aronson, some rights reserved (CC BY-SA)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/95268822",
-          "sourceId": "95268822"
+          "sourceUrl": "https://www.inaturalist.org/observations/66095606",
+          "sourceId": "106495589",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Silvicultrix spodionota/2_66095606_2048x1365_CC-BY-SA.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/106476264/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Thibaud Aronson, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/66095606",
+          "sourceId": "106476264",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Silvicultrix spodionota/1_66095606_2048x1365_CC-BY-SA.jpg"
         }
-      ]
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        }
+      ],
+      "_shrinkToAssigned": true
     },
     "sipia-palliata": {
       "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 79594003）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
@@ -11576,47 +11877,140 @@
       ]
     },
     "sphenopsis-melanotis": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 71783114）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 5 张）：坏位 1、2、3、4、5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 391371283，位2=photo 671676994，位3=photo 316121249，位4=photo 177760814，位5=photo 29961046）。整套替换，旧图不再展示（文件仍留 R2）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.png",
-        "https://www.inaturalist.org/photos/71783114"
+        "https://www.inaturalist.org/photos/71783114",
+        "https://bird.wewalk.world/media/sphenopsis-melanotis/image-40.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/505470065/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/505470065/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/505470065/large.png",
+        "https://www.inaturalist.org/photos/505470065",
+        "https://www.inaturalist.org/observations/281389266",
+        "https://bird.wewalk.world/media/sphenopsis-melanotis/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/43727543/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/43727543/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/43727543/large.png",
+        "https://www.inaturalist.org/photos/43727543",
+        "https://www.inaturalist.org/observations/28067829",
+        "https://bird.wewalk.world/media/sphenopsis-melanotis/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/381244481/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/381244481/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/381244481/large.png",
+        "https://www.inaturalist.org/photos/381244481",
+        "https://www.inaturalist.org/observations/215623881",
+        "https://bird.wewalk.world/media/sphenopsis-melanotis/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.png",
+        "https://www.inaturalist.org/photos/554365973",
+        "https://www.inaturalist.org/observations/307352527",
+        "https://bird.wewalk.world/media/sphenopsis-melanotis/image-5.full.webp"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/391371283/large.jpeg",
           "license": "cc-by-nc",
-          "author": "(c) David Weaver, some rights reserved (CC BY-NC), uploaded by David Weaver",
+          "author": "(c) Justin Walker, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/71783114",
-          "sourceId": "71783114"
+          "sourceUrl": "https://www.inaturalist.org/observations/221019231",
+          "sourceId": "391371283",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis melanotis/M4_221019231_1600x1200_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/671676994/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Scott Wieman, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/367786672",
+          "sourceId": "671676994",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis melanotis/M1_367786672_2048x1365_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/316121249/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Esteban Poveda, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/181411605",
+          "sourceId": "316121249",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis melanotis/M2_181411605_2048x1536_CC-BY.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/177760814/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Cullen Hanks, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/105883643",
+          "sourceId": "177760814",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis melanotis/M7_105883643_2048x1348_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/29961046/large.jpeg",
+          "license": "cc-by-sa",
+          "author": "(c) Oscar Marín, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/19473422",
+          "sourceId": "29961046",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis melanotis/M9_19473422_1360x2048_CC-BY-SA.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
         }
       ]
     },
     "sphenopsis-ochracea": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 95268822）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位5=photo 88142752）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
       "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
-        "https://www.inaturalist.org/photos/95268822"
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.png",
+        "https://www.inaturalist.org/photos/554365973",
+        "https://www.inaturalist.org/observations/307352527",
+        "https://bird.wewalk.world/media/sphenopsis-ochracea/image-54.full.webp"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) anonymous, some rights reserved (CC BY-SA)",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/88142752/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Alex Reynolds, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/95268822",
-          "sourceId": "95268822"
+          "sourceUrl": "https://www.inaturalist.org/observations/55357595",
+          "sourceId": "88142752",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis ochracea/M1_55357595_434x353_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 5,
+          "pickIndex": 1
         }
       ]
     },
     "sphenopsis-piurae": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 71783114）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
+      "_reason": "2026-11-13 iNat 该亚种（Sphenopsis melanotis piurae / piurae）0 条可用观察，现有图与 sphenopsis-melanotis 整套 5 张共用（对方已整改换新图，这 5 张实际属于谁无法确证）。按「宁愿没有图，也不能用错图」清空图音，保留在名录（keepInMeta）。",
       "imageKeyBase": 40,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.jpg",
@@ -11624,16 +12018,10 @@
         "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.png",
         "https://www.inaturalist.org/photos/71783114"
       ],
-      "images": [
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/71783114/large.jpg",
-          "license": "cc-by-nc",
-          "author": "(c) David Weaver, some rights reserved (CC BY-NC), uploaded by David Weaver",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/71783114",
-          "sourceId": "71783114"
-        }
-      ]
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
     },
     "spilornis-elgini": {
       "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 13276623）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
@@ -12636,7 +13024,7 @@
       ]
     },
     "symposiachrus-loricatus": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 119888586）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
+      "_reason": "2026-11-12 iNat 扩展取图 0 张，现有图与 Ficedula buruensis 共用、属跨属错图。按「宁愿没有图，也不能用错图」清空图音，保留在名录。",
       "imageKeyBase": 40,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/119888586/large.jpg",
@@ -12644,16 +13032,10 @@
         "https://inaturalist-open-data.s3.amazonaws.com/photos/119888586/large.png",
         "https://www.inaturalist.org/photos/119888586"
       ],
-      "images": [
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/119888586/large.jpeg",
-          "license": "cc-by-nc",
-          "author": "(c) Benoît Segerer, some rights reserved (CC BY-NC), uploaded by Benoît Segerer",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/119888586",
-          "sourceId": "119888586"
-        }
-      ]
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
     },
     "synallaxis-albigularis": {
       "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 1718792）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
@@ -13156,24 +13538,114 @@
       ]
     },
     "tachyspiza-haplochrous": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 95268822）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 42080477，位2=photo 27406162，位3=photo 27406124，位4=photo 314234690，位5=photo 346813587）。整套替换，旧图不再展示（文件仍留 R2）。 另：本种原有 5 条音频实为绿头鸭(Anas platyrhynchos)叫声（iNat 实测），一并清空。",
+      "imageKeyBase": 50,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
-        "https://www.inaturalist.org/photos/95268822"
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/tachyspiza-haplochrous/image-40.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.png",
+        "https://www.inaturalist.org/photos/8174772",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://bird.wewalk.world/media/tachyspiza-haplochrous/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.png",
+        "https://www.inaturalist.org/photos/13447878",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://bird.wewalk.world/media/tachyspiza-haplochrous/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.png",
+        "https://www.inaturalist.org/photos/21203884",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://bird.wewalk.world/media/tachyspiza-haplochrous/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.png",
+        "https://www.inaturalist.org/photos/39432879",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://bird.wewalk.world/media/tachyspiza-haplochrous/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) anonymous, some rights reserved (CC BY-SA)",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/42080477/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Frédéric Desmoulins, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/95268822",
-          "sourceId": "95268822"
+          "sourceUrl": "https://www.inaturalist.org/observations/27070351",
+          "sourceId": "42080477",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Tachyspiza haplochrous/1_27070351_1600x1067_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/27406162/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Frédéric Desmoulins, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/17937404",
+          "sourceId": "27406162",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Tachyspiza haplochrous/2_17937404_797x1200_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/27406124/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Frédéric Desmoulins, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/17937384",
+          "sourceId": "27406124",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Tachyspiza haplochrous/3_17937384_1200x800_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/314234690/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Frédéric Desmoulins, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/180399556",
+          "sourceId": "314234690",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Tachyspiza haplochrous/M2_180399556_1300x755_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/346813587/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Frédéric Desmoulins, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/196977934",
+          "sourceId": "346813587",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Tachyspiza haplochrous/M1_196977934_1400x1400_CC-BY-NC.jpg"
         }
-      ]
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ],
+      "audios": [],
+      "_clearAudios": true
     },
     "tachyspiza-hiogaster": {
       "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 4947086）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
@@ -17652,41 +18124,34 @@
       "replaceSlot": 5
     },
     "oenanthe-oenanthe": {
-      "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-3.full.webp 与 image-5.full.webp 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-3，把 image-5 替换为用户选定的新图（obs 61640594，photo 98657031）。原图替换在第 5 位（replaceSlot=5），首图未动，D1 不改。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 2（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位2=photo 156415965）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
       "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/67410847/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/67410847/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/67410847/large.png",
-        "https://www.inaturalist.org/photos/67410847",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/141885050/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/141885050/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/141885050/large.png",
+        "https://www.inaturalist.org/photos/141885050",
         "https://www.inaturalist.org/observations/141885050",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/349048969/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/349048969/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/349048969/large.png",
-        "https://www.inaturalist.org/observations/198085505",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/287827253/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/287827253/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/287827253/large.png",
-        "https://www.inaturalist.org/observations/166223119",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/257121153/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/257121153/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/257121153/large.png",
-        "https://www.inaturalist.org/observations/149232400"
+        "https://bird.wewalk.world/media/oenanthe-oenanthe/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/243165095/large.jpeg"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/98657031/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/156415965/large.jpg",
           "license": "cc-by-nc",
-          "author": "(c) Justyn Stahl, some rights reserved (CC BY-NC)",
+          "author": "(c) Valia Pavlou, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/61640594",
-          "sourceId": "98657031"
+          "sourceUrl": "https://www.inaturalist.org/observations/94300370",
+          "sourceId": "156415965",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/穗䳭 Oenanthe oenanthe/M5_94300370_1783x2048_CC-BY-NC.jpg"
         }
       ],
-      "replaceSlot": 5
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ]
     },
     "sitta-insularis": {
       "_reason": "2026-11-11 docs/118 选重修复（用户已选定）：R2 上 image-1.jpg 与 image-2.jpg 字节相同（两张源图 md5 一致，= iNat 把同一张照片记成两个 photo id）。保留编号小的 image-1，把 image-2 替换为用户选定的新图（obs 102337024，photo 612731852）。原图替换在第 2 位（replaceSlot=2），首图未动，D1 不改。",
@@ -20221,6 +20686,1959 @@
         }
       ],
       "replaceSlot": 2
+    },
+    "empidonomus-aurantioatrocristatus": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 442624164，位2=photo 26715501，位3=photo 162772160，位4=photo 62657858，位5=photo 162772174）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 50,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/empidonomus-aurantioatrocristatus/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.png",
+        "https://www.inaturalist.org/photos/8174772",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://bird.wewalk.world/media/empidonomus-aurantioatrocristatus/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.png",
+        "https://www.inaturalist.org/photos/13447878",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://bird.wewalk.world/media/empidonomus-aurantioatrocristatus/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.png",
+        "https://www.inaturalist.org/photos/21203884",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://bird.wewalk.world/media/empidonomus-aurantioatrocristatus/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.png",
+        "https://www.inaturalist.org/photos/39432879",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://bird.wewalk.world/media/empidonomus-aurantioatrocristatus/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/442624164/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Franco Palandri, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/247788856",
+          "sourceId": "442624164",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Empidonomus aurantioatrocristatus/1_247788856_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/26715501/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) guyincognito, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/17547763",
+          "sourceId": "26715501",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Empidonomus aurantioatrocristatus/2_17547763_1564x1114_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/162772160/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) sandiamant, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/97833865",
+          "sourceId": "162772160",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Empidonomus aurantioatrocristatus/3_97833865_911x972_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/62657858/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Diego Caballero, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/39488399",
+          "sourceId": "62657858",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Empidonomus aurantioatrocristatus/M2_39488399_1000x662_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/162772174/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) sandiamant, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/97833865",
+          "sourceId": "162772174",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Empidonomus aurantioatrocristatus/M1_97833865_550x677_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "icterus-bullockii": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 354590880，位2=photo 456702936，位3=photo 358624148，位4=photo 14544559，位5=photo 371270609）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 50,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/120281733/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/120281733/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/120281733/large.png",
+        "https://www.inaturalist.org/photos/120281733",
+        "https://www.inaturalist.org/observations/120281733",
+        "https://bird.wewalk.world/media/icterus-bullockii/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/203420079/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/145426/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/145426/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/145426/large.png",
+        "https://www.inaturalist.org/photos/145426",
+        "https://www.inaturalist.org/observations/145426",
+        "https://bird.wewalk.world/media/icterus-bullockii/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/200876/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/51739387/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/51739387/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/51739387/large.png",
+        "https://www.inaturalist.org/photos/51739387",
+        "https://www.inaturalist.org/observations/51739387",
+        "https://bird.wewalk.world/media/icterus-bullockii/image-3.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/82220057/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/359317919/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/359317919/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/359317919/large.png",
+        "https://www.inaturalist.org/photos/359317919",
+        "https://www.inaturalist.org/observations/359317919",
+        "https://bird.wewalk.world/media/icterus-bullockii/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/655565030/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68127351/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68127351/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68127351/large.png",
+        "https://www.inaturalist.org/photos/68127351",
+        "https://www.inaturalist.org/observations/68127351",
+        "https://bird.wewalk.world/media/icterus-bullockii/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/110236292/large.jpeg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/354590880/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) brian stahls, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/200927393",
+          "sourceId": "354590880",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/布氏拟鹂 Icterus bullockii/2_200927393_2048x1366_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/456702936/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) joannerusso, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/254910427",
+          "sourceId": "456702936",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/布氏拟鹂 Icterus bullockii/3_254910427_2048x1579_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/358624148/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) kccardif, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/203012153",
+          "sourceId": "358624148",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/布氏拟鹂 Icterus bullockii/M1_203012153_1629x2048_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14544559/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Megan Jones Patterson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/10465353",
+          "sourceId": "14544559",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/布氏拟鹂 Icterus bullockii/M2_10465353_1152x2048_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/371270609/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) William Harmon, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/209847475",
+          "sourceId": "371270609",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/布氏拟鹂 Icterus bullockii/M3_209847475_1827x1218_CC-BY.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "molothrus-armenti": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 470359530，位2=photo 314448731，位3=photo 314448808，位4=photo 314450080，位5=photo 182098418）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 50,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/molothrus-armenti/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8174772/large.png",
+        "https://www.inaturalist.org/photos/8174772",
+        "https://www.inaturalist.org/observations/8174772",
+        "https://bird.wewalk.world/media/molothrus-armenti/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/13447878/large.png",
+        "https://www.inaturalist.org/photos/13447878",
+        "https://www.inaturalist.org/observations/13447878",
+        "https://bird.wewalk.world/media/molothrus-armenti/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/21203884/large.png",
+        "https://www.inaturalist.org/photos/21203884",
+        "https://www.inaturalist.org/observations/21203884",
+        "https://bird.wewalk.world/media/molothrus-armenti/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39432879/large.png",
+        "https://www.inaturalist.org/photos/39432879",
+        "https://www.inaturalist.org/observations/39432879",
+        "https://bird.wewalk.world/media/molothrus-armenti/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/470359530/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) horco987, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/261776439",
+          "sourceId": "470359530",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Molothrus armenti/M2_261776439_2048x2048_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/314448731/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Paula Peña-Amaya, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/180514267",
+          "sourceId": "314448731",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Molothrus armenti/1_180514267_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/314448808/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Paula Peña-Amaya, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/180514274",
+          "sourceId": "314448808",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Molothrus armenti/2_180514274_1055x1007_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/314450080/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Paula Peña-Amaya, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/180514279",
+          "sourceId": "314450080",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Molothrus armenti/3_180514279_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/182098418/large.jpg",
+          "license": "cc-by",
+          "author": "(c) desertnaturalist, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/108184524",
+          "sourceId": "182098418",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Molothrus armenti/M3_108184524_597x740_CC-BY.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "suiriri-suiriri": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 135163308，位2=photo 431293088，位3=photo 706584509，位4=photo 312375838，位5=photo 277085400）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 50,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29537300/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29537300/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29537300/large.png",
+        "https://www.inaturalist.org/photos/29537300",
+        "https://www.inaturalist.org/observations/29537300",
+        "https://bird.wewalk.world/media/suiriri-suiriri/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/46102912/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28764631/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28764631/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28764631/large.png",
+        "https://www.inaturalist.org/photos/28764631",
+        "https://www.inaturalist.org/observations/28764631",
+        "https://bird.wewalk.world/media/suiriri-suiriri/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44860371/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/97610206/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/97610206/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/97610206/large.png",
+        "https://www.inaturalist.org/photos/97610206",
+        "https://www.inaturalist.org/observations/97610206",
+        "https://bird.wewalk.world/media/suiriri-suiriri/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/162361503/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/161498159/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/161498159/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/161498159/large.png",
+        "https://www.inaturalist.org/photos/161498159",
+        "https://www.inaturalist.org/observations/161498159",
+        "https://bird.wewalk.world/media/suiriri-suiriri/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/279150903/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/227297180/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/227297180/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/227297180/large.png",
+        "https://www.inaturalist.org/photos/227297180",
+        "https://www.inaturalist.org/observations/227297180",
+        "https://bird.wewalk.world/media/suiriri-suiriri/image-5.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/403213021/large.jpeg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/135163308/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Maca vazquez, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/82358916",
+          "sourceId": "135163308",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Suiriri suiriri/M3_82358916_1852x1967_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/431293088/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) joseluisblazquez, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/241958494",
+          "sourceId": "431293088",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Suiriri suiriri/1_241958494_864x1080_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/706584509/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Gabriel Reinoso Franchino, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/385933825",
+          "sourceId": "706584509",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Suiriri suiriri/2_385933825_2048x1365_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/312375838/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Pablo Edgardo Lucconi Grisolia, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/179430204",
+          "sourceId": "312375838",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Suiriri suiriri/M2_179430204_1382x1037_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/277085400/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Silvia Mallet, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/160353256",
+          "sourceId": "277085400",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Suiriri suiriri/3_160353256_1750x1791_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "tyrannus-tyrannus": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 26210699，位2=photo 42547595，位3=photo 211995843，位4=photo 417280364，位5=photo 701215310）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 50,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29537300/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29537300/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/29537300/large.png",
+        "https://www.inaturalist.org/photos/29537300",
+        "https://www.inaturalist.org/observations/29537300",
+        "https://bird.wewalk.world/media/tyrannus-tyrannus/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/46102912/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28764631/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28764631/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28764631/large.png",
+        "https://www.inaturalist.org/photos/28764631",
+        "https://www.inaturalist.org/observations/28764631",
+        "https://bird.wewalk.world/media/tyrannus-tyrannus/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/44860371/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/97610206/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/97610206/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/97610206/large.png",
+        "https://www.inaturalist.org/photos/97610206",
+        "https://www.inaturalist.org/observations/97610206",
+        "https://bird.wewalk.world/media/tyrannus-tyrannus/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/162361503/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/161498159/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/161498159/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/161498159/large.png",
+        "https://www.inaturalist.org/photos/161498159",
+        "https://www.inaturalist.org/observations/161498159",
+        "https://bird.wewalk.world/media/tyrannus-tyrannus/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/279150903/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/227297180/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/227297180/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/227297180/large.png",
+        "https://www.inaturalist.org/photos/227297180",
+        "https://www.inaturalist.org/observations/227297180",
+        "https://bird.wewalk.world/media/tyrannus-tyrannus/image-5.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/403213021/large.jpeg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/26210699/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Laura Mae, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/17276562",
+          "sourceId": "26210699",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/东美洲王霸鹟 Tyrannus tyrannus/1_17276562_2048x1536_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/42547595/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) rbbrummitt, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/27352446",
+          "sourceId": "42547595",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/东美洲王霸鹟 Tyrannus tyrannus/2_27352446_924x692_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/211995843/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Mark Dennis, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/125032417",
+          "sourceId": "211995843",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/东美洲王霸鹟 Tyrannus tyrannus/M2_125032417_864x718_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/417280364/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Carrie Lefebvre, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/234698519",
+          "sourceId": "417280364",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/东美洲王霸鹟 Tyrannus tyrannus/M3_234698519_2048x1366_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/701215310/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Alexandria Aaron, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/383138132",
+          "sourceId": "701215310",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/东美洲王霸鹟 Tyrannus tyrannus/3_383138132_1276x1478_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "icterus-bullockiorum": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 456702936，位2=photo 354590880，位3=photo 371270735，位4=photo 74789718，位5=photo 10058084）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/120281733/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/120281733/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/120281733/large.png",
+        "https://www.inaturalist.org/photos/120281733",
+        "https://www.inaturalist.org/observations/120281733",
+        "https://bird.wewalk.world/media/icterus-bullockiorum/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/203420079/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/145426/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/145426/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/145426/large.png",
+        "https://www.inaturalist.org/photos/145426",
+        "https://www.inaturalist.org/observations/145426",
+        "https://bird.wewalk.world/media/icterus-bullockiorum/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/200876/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/51739387/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/51739387/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/51739387/large.png",
+        "https://www.inaturalist.org/photos/51739387",
+        "https://www.inaturalist.org/observations/51739387",
+        "https://bird.wewalk.world/media/icterus-bullockiorum/image-3.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/82220057/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/359317919/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/359317919/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/359317919/large.png",
+        "https://www.inaturalist.org/photos/359317919",
+        "https://www.inaturalist.org/observations/359317919",
+        "https://bird.wewalk.world/media/icterus-bullockiorum/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/655565030/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68127351/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68127351/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/68127351/large.png",
+        "https://www.inaturalist.org/photos/68127351",
+        "https://www.inaturalist.org/observations/68127351",
+        "https://bird.wewalk.world/media/icterus-bullockiorum/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/110236292/large.jpeg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/456702936/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) joannerusso, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/254910427",
+          "sourceId": "456702936",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/布氏拟鹂 Icterus bullockiorum/3_254910427_2048x1579_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/354590880/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) brian stahls, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/200927393",
+          "sourceId": "354590880",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/布氏拟鹂 Icterus bullockiorum/2_200927393_2048x1366_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/371270735/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) William Harmon, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/209847475",
+          "sourceId": "371270735",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/布氏拟鹂 Icterus bullockiorum/M1_209847475_2048x1365_CC-BY.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/74789718/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Matt K, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/47159373",
+          "sourceId": "74789718",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/布氏拟鹂 Icterus bullockiorum/M3_47159373_943x622_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/10058084/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Aaron Aggeler, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/7679138",
+          "sourceId": "10058084",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/布氏拟鹂 Icterus bullockiorum/M2_7679138_1600x1200_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "campephilus-splendens": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 3 张）：本种原画廊共 5 张（其中 5 张与别种共用），按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 58605616，位2=photo 544431706，位3=photo 333652679）。其余 2 位无合适候选，位次收缩为 3 张。 追加第4张 photo 59764691（用户定：遮挡但比没有好，2026-11-12）",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/34859026/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/34859026/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/34859026/large.png",
+        "https://www.inaturalist.org/photos/34859026",
+        "https://bird.wewalk.world/media/campephilus-splendens/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50335435/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50335435/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/50335435/large.png",
+        "https://www.inaturalist.org/photos/50335435",
+        "https://www.inaturalist.org/observations/50335435",
+        "https://bird.wewalk.world/media/campephilus-splendens/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/79926412/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19767227/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19767227/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/19767227/large.png",
+        "https://www.inaturalist.org/photos/19767227",
+        "https://www.inaturalist.org/observations/19767227",
+        "https://bird.wewalk.world/media/campephilus-splendens/image-3.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/30460286/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/20875857/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/20875857/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/20875857/large.png",
+        "https://www.inaturalist.org/photos/20875857",
+        "https://www.inaturalist.org/observations/20875857",
+        "https://bird.wewalk.world/media/campephilus-splendens/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32209619/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/31467421/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/31467421/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/31467421/large.png",
+        "https://www.inaturalist.org/photos/31467421",
+        "https://www.inaturalist.org/observations/31467421",
+        "https://bird.wewalk.world/media/campephilus-splendens/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/49251954/large.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/58605616/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Oliver Komar, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/37014452",
+          "sourceId": "58605616",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/瑰麗啄木鸟 Campephilus splendens/2_37014452_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/544431706/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Oliver W Patrick, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/302106724",
+          "sourceId": "544431706",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/瑰麗啄木鸟 Campephilus splendens/3_302106724_1703x1135_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/333652679/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Nik Borrow, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/190345004",
+          "sourceId": "333652679",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/瑰麗啄木鸟 Campephilus splendens/1_190345004_1200x1800_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/59764691/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Debara, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/37669131",
+          "sourceId": "59764691",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/瑰麗啄木鸟 Campephilus splendens/M1_37669131_2048x1365_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        }
+      ],
+      "_shrinkToAssigned": true
+    },
+    "galbula-galbula": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 5719428，位2=photo 466767012，位3=photo 466766579，位4=photo 466765796，位5=photo 466765801）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/155708903/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/155708903/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/155708903/large.png",
+        "https://www.inaturalist.org/photos/155708903",
+        "https://bird.wewalk.world/media/galbula-galbula/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/25134856/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/25134856/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/25134856/large.png",
+        "https://www.inaturalist.org/photos/25134856",
+        "https://www.inaturalist.org/observations/25134856",
+        "https://bird.wewalk.world/media/galbula-galbula/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/38902123/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6679944/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6679944/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6679944/large.png",
+        "https://www.inaturalist.org/photos/6679944",
+        "https://www.inaturalist.org/observations/6679944",
+        "https://bird.wewalk.world/media/galbula-galbula/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8467192/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40249277/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40249277/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40249277/large.png",
+        "https://www.inaturalist.org/photos/40249277",
+        "https://www.inaturalist.org/observations/40249277",
+        "https://bird.wewalk.world/media/galbula-galbula/image-4.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/63939361/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116717232/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116717232/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116717232/large.png",
+        "https://www.inaturalist.org/photos/116717232",
+        "https://www.inaturalist.org/observations/116717232",
+        "https://bird.wewalk.world/media/galbula-galbula/image-5.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/197043868/large.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5719428/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Carlos Torrente, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/4730903",
+          "sourceId": "5719428",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Galbula galbula/M3_4730903_2048x1360_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/466767012/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David McCorquodale, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/259965240",
+          "sourceId": "466767012",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Galbula galbula/1_259965240_1365x2048_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/466766579/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David McCorquodale, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/259965240",
+          "sourceId": "466766579",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Galbula galbula/2_259965240_1365x2048_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/466765796/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David McCorquodale, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/259965240",
+          "sourceId": "466765796",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Galbula galbula/3_259965240_2048x1365_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/466765801/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) David McCorquodale, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/259965240",
+          "sourceId": "466765801",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/Galbula galbula/M1_259965240_2048x1365_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "icterus-icterus": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 256174086，位2=photo 57901102，位3=photo 449947178，位4=photo 450538466，位5=photo 450538463）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/155708903/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/155708903/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/155708903/large.png",
+        "https://www.inaturalist.org/photos/155708903",
+        "https://bird.wewalk.world/media/icterus-icterus/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/25134856/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/25134856/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/25134856/large.png",
+        "https://www.inaturalist.org/photos/25134856",
+        "https://www.inaturalist.org/observations/25134856",
+        "https://bird.wewalk.world/media/icterus-icterus/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/38902123/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6679944/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6679944/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6679944/large.png",
+        "https://www.inaturalist.org/photos/6679944",
+        "https://www.inaturalist.org/observations/6679944",
+        "https://bird.wewalk.world/media/icterus-icterus/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8467192/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40249277/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40249277/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/40249277/large.png",
+        "https://www.inaturalist.org/photos/40249277",
+        "https://www.inaturalist.org/observations/40249277",
+        "https://bird.wewalk.world/media/icterus-icterus/image-4.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/63939361/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116717232/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116717232/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/116717232/large.png",
+        "https://www.inaturalist.org/photos/116717232",
+        "https://www.inaturalist.org/observations/116717232",
+        "https://bird.wewalk.world/media/icterus-icterus/image-5.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/197043868/large.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/256174086/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Daniel Onea, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/148731197",
+          "sourceId": "256174086",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/擬黃鸝 Icterus icterus/M3_148731197_2048x1365_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/57901102/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Adrian Braidotti, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/36615193",
+          "sourceId": "57901102",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/擬黃鸝 Icterus icterus/M2_36615193_1900x1140_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/449947178/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Manuel Piana, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/251463043",
+          "sourceId": "449947178",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-扩充/擬黃鸝 Icterus icterus/M4_251463043_1059x1368_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/450538466/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Carrie Seltzer, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/251762479",
+          "sourceId": "450538466",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/擬黃鸝 Icterus icterus/3_251762479_727x690_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/450538463/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Carrie Seltzer, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/251762479",
+          "sourceId": "450538463",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/擬黃鸝 Icterus icterus/2_251762479_845x829_CC-BY.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "ardenna-grisea": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 14694161，位2=photo 178690753，位3=photo 565086665，位4=photo 569702392，位5=photo 391971838）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/342192558/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/342192558/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/342192558/large.png",
+        "https://www.inaturalist.org/photos/342192558",
+        "https://bird.wewalk.world/media/ardenna-grisea/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360145606/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360145606/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360145606/large.png",
+        "https://www.inaturalist.org/photos/360145606",
+        "https://www.inaturalist.org/observations/360145606",
+        "https://bird.wewalk.world/media/ardenna-grisea/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/657157073/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8709302/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8709302/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8709302/large.png",
+        "https://www.inaturalist.org/photos/8709302",
+        "https://www.inaturalist.org/observations/8709302",
+        "https://bird.wewalk.world/media/ardenna-grisea/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11677295/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/253303961/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/253303961/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/253303961/large.png",
+        "https://www.inaturalist.org/photos/253303961",
+        "https://www.inaturalist.org/observations/253303961",
+        "https://bird.wewalk.world/media/ardenna-grisea/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/453525443/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360151904/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360151904/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360151904/large.png",
+        "https://www.inaturalist.org/photos/360151904",
+        "https://www.inaturalist.org/observations/360151904",
+        "https://bird.wewalk.world/media/ardenna-grisea/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/657168014/large.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14694161/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Lloyd Esler, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/10550920",
+          "sourceId": "14694161",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/灰鹱 Ardenna grisea/2_10550920_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/178690753/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Sandra Falanga, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/106380102",
+          "sourceId": "178690753",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/灰鹱 Ardenna grisea/M3_106380102_1024x683_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/565086665/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) brock, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/312946853",
+          "sourceId": "565086665",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/灰鹱 Ardenna grisea/M2_312946853_2048x1446_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/569702392/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Ingvild Riska, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/315371802",
+          "sourceId": "569702392",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/灰鹱 Ardenna grisea/M4_315371802_536x715_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/391971838/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Elizabeth Axley, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/221338471",
+          "sourceId": "391971838",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/灰鹱 Ardenna grisea/M1_221338471_1536x2048_CC-BY.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "coracopsis-vasa": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 28345305，位2=photo 446626486，位3=photo 261038948，位4=photo 261038944，位5=photo 367803804）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112161986/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112161986/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112161986/large.png",
+        "https://www.inaturalist.org/photos/112161986",
+        "https://www.inaturalist.org/observations/69160449",
+        "https://bird.wewalk.world/media/coracopsis-vasa/image-1.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/261038813/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/261038813/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/261038813/large.png",
+        "https://www.inaturalist.org/photos/261038813",
+        "https://www.inaturalist.org/observations/151301637",
+        "https://bird.wewalk.world/media/coracopsis-vasa/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/436079726/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/436079726/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/436079726/large.png",
+        "https://www.inaturalist.org/photos/436079726",
+        "https://www.inaturalist.org/observations/244473872",
+        "https://bird.wewalk.world/media/coracopsis-vasa/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28345278/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28345278/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28345278/large.png",
+        "https://www.inaturalist.org/photos/28345278",
+        "https://www.inaturalist.org/observations/18529416",
+        "https://bird.wewalk.world/media/coracopsis-vasa/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/367803775/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/367803775/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/367803775/large.png",
+        "https://www.inaturalist.org/photos/367803775",
+        "https://www.inaturalist.org/observations/207905026",
+        "https://bird.wewalk.world/media/coracopsis-vasa/image-5.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/28345305/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Skip Russell, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/18529416",
+          "sourceId": "28345305",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/Coracopsis vasa/M2_18529416_1200x800_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/446626486/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Simon M Bell, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/249805196",
+          "sourceId": "446626486",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/Coracopsis vasa/M4_249805196_1312x1312_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/261038948/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Margaret Stevens, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/151301637",
+          "sourceId": "261038948",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Coracopsis vasa/2_151301637_1264x1272_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/261038944/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Margaret Stevens, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/151301637",
+          "sourceId": "261038944",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/Coracopsis vasa/1_151301637_1385x1390_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/367803804/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Joe Zito, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/207905026",
+          "sourceId": "367803804",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/Coracopsis vasa/M3_207905026_2048x893_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "puffinus-puffinus": {
+      "_reason": "2026-11-12 docs/120 T3 跨种共用图修复（用户已选定 5 张）：本种原画廊全部 5 张，按 docs/选择结果-t3.json 的勾选顺序换成真本种图（位1=photo 294706706，位2=photo 111005655，位3=photo 111006090，位4=photo 146462099，位5=photo 525886540）。整套替换，旧图不再展示（文件仍留 R2）。",
+      "imageKeyBase": 60,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/342192558/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/342192558/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/342192558/large.png",
+        "https://www.inaturalist.org/photos/342192558",
+        "https://bird.wewalk.world/media/puffinus-puffinus/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360145606/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360145606/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360145606/large.png",
+        "https://www.inaturalist.org/photos/360145606",
+        "https://www.inaturalist.org/observations/360145606",
+        "https://bird.wewalk.world/media/puffinus-puffinus/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/657157073/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8709302/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8709302/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/8709302/large.png",
+        "https://www.inaturalist.org/photos/8709302",
+        "https://www.inaturalist.org/observations/8709302",
+        "https://bird.wewalk.world/media/puffinus-puffinus/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11677295/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/253303961/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/253303961/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/253303961/large.png",
+        "https://www.inaturalist.org/photos/253303961",
+        "https://www.inaturalist.org/observations/253303961",
+        "https://bird.wewalk.world/media/puffinus-puffinus/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/453525443/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360151904/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360151904/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/360151904/large.png",
+        "https://www.inaturalist.org/photos/360151904",
+        "https://www.inaturalist.org/observations/360151904",
+        "https://bird.wewalk.world/media/puffinus-puffinus/image-5.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/657168014/large.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/294706706/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) mervyngreening, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/169959477",
+          "sourceId": "294706706",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/普通鹱 Puffinus puffinus/M4_169959477_2048x1365_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/111005655/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Andrew Thompson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/68538749",
+          "sourceId": "111005655",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/普通鹱 Puffinus puffinus/1_68538749_1192x791_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/111006090/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Andrew Thompson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/68538749",
+          "sourceId": "111006090",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选/普通鹱 Puffinus puffinus/2_68538749_1705x1134_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/146462099/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Debbie, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/88744708",
+          "sourceId": "146462099",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/普通鹱 Puffinus puffinus/M1_88744708_1536x2048_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/525886540/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Steve Ansell, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/292242343",
+          "sourceId": "525886540",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T3-第二批扩充/普通鹱 Puffinus puffinus/M5_292242343_1153x769_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "mascarinus-mascarinus": {
+      "_reason": "2026-11-12 已灭绝种（Mascarene Parrot），iNat 无该种成种条目，只有标本照/复原画。现有图与 Coracopsis vasa（Vasa 鹦鹉）整套共用，属错图。按「宁愿没有图，也不能用错图」清空图音，保留在名录。",
+      "imageKeyBase": 70,
+      "excludeUrls": [],
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
+    },
+    "ficedula-buruensis": {
+      "_reason": "2026-11-12 iNat 扩展取图 0 张（该种可用 CC 照片已用尽），现有图与 Symposiachrus loricatus 共用、属跨属错图。按「宁愿没有图，也不能用错图」清空图音，保留在名录。",
+      "imageKeyBase": 70,
+      "excludeUrls": [],
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
+    },
+    "alopochen-kervazoi": {
+      "_reason": "2026-11-13 留尼旺雁（已灭绝）。iNat 无本种照片；现有图是 Julian P. Hume 的复原画 photo 252204843，且与 alopochen-mauritiana（毛里求斯雁）共用同一张 —— 一张画不可能同时准确描绘两个种。按用户原则清空，保留在名录。",
+      "imageKeyBase": 70,
+      "excludeUrls": [],
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
+    },
+    "alopochen-mauritiana": {
+      "_reason": "2026-11-13 毛里求斯雁（已灭绝）。同 kervazoi：与留尼旺雁共用同一张复原画。清空，保留在名录。",
+      "imageKeyBase": 70,
+      "excludeUrls": [],
+      "images": [],
+      "audios": [],
+      "clearAllMedia": true,
+      "keepInMeta": true
+    },
+    "brachypteryx-cruralis": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 5 张）：坏位 1、2、3、4、5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 728783142，位2=photo 621396105，位3=photo 505169639，位4=photo 493217275，位5=photo 476372302）。整套替换，旧图不再展示（文件仍留 R2）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976255/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976255/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976255/large.png",
+        "https://www.inaturalist.org/photos/108976255",
+        "https://bird.wewalk.world/media/brachypteryx-cruralis/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976339/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976339/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976339/large.png",
+        "https://www.inaturalist.org/photos/108976339",
+        "https://www.inaturalist.org/observations/67448519",
+        "https://bird.wewalk.world/media/brachypteryx-cruralis/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/728783141/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/728783141/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/728783141/large.png",
+        "https://www.inaturalist.org/photos/728783141",
+        "https://www.inaturalist.org/observations/397356393",
+        "https://bird.wewalk.world/media/brachypteryx-cruralis/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/488107728/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/488107728/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/488107728/large.png",
+        "https://www.inaturalist.org/photos/488107728",
+        "https://www.inaturalist.org/observations/271358001",
+        "https://bird.wewalk.world/media/brachypteryx-cruralis/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621396097/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621396097/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621396097/large.png",
+        "https://www.inaturalist.org/photos/621396097",
+        "https://www.inaturalist.org/observations/341358795",
+        "https://bird.wewalk.world/media/brachypteryx-cruralis/image-5.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/728783142/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) itazura, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/397356393",
+          "sourceId": "728783142",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx cruralis/M1_397356393_2048x1536_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/621396105/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) sharadavakil, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/341358795",
+          "sourceId": "621396105",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx cruralis/M2_341358795_1784x1338_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/505169639/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Uday Agashe, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/281227773",
+          "sourceId": "505169639",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx cruralis/M4_281227773_1200x800_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/493217275/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Penhtah Mahakayi, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/274336359",
+          "sourceId": "493217275",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx cruralis/M9_274336359_2048x1365_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/476372302/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Xiaogang Zhou, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/265236375",
+          "sourceId": "476372302",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx cruralis/M10_265236375_2048x1365_CC-BY-NC.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "brachypteryx-montana": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 5 张）：坏位 1、2、3、4、5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 655141872，位2=photo 52166275，位3=photo 585185236，位4=photo 170704461，位5=photo 585184975）。整套替换，旧图不再展示（文件仍留 R2）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976255/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976255/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976255/large.png",
+        "https://www.inaturalist.org/photos/108976255",
+        "https://bird.wewalk.world/media/brachypteryx-montana/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976339/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976339/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/108976339/large.png",
+        "https://www.inaturalist.org/photos/108976339",
+        "https://www.inaturalist.org/observations/67448519",
+        "https://bird.wewalk.world/media/brachypteryx-montana/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/728783141/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/728783141/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/728783141/large.png",
+        "https://www.inaturalist.org/photos/728783141",
+        "https://www.inaturalist.org/observations/397356393",
+        "https://bird.wewalk.world/media/brachypteryx-montana/image-3.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/488107728/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/488107728/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/488107728/large.png",
+        "https://www.inaturalist.org/photos/488107728",
+        "https://www.inaturalist.org/observations/271358001",
+        "https://bird.wewalk.world/media/brachypteryx-montana/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621396097/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621396097/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/621396097/large.png",
+        "https://www.inaturalist.org/photos/621396097",
+        "https://www.inaturalist.org/observations/341358795",
+        "https://bird.wewalk.world/media/brachypteryx-montana/image-5.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/655141872/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Peter Ericsson, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/359094671",
+          "sourceId": "655141872",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx montana/M3_359094671_833x540_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/52166275/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Forest Botial-Jarvis, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/33225171",
+          "sourceId": "52166275",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx montana/M4_33225171_2000x1112_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/585185236/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) leekelai, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/323413202",
+          "sourceId": "585185236",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx montana/M5_323413202_2048x1365_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/170704461/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Alfian surya Fathoni, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/102152466",
+          "sourceId": "170704461",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx montana/M1_102152466_2048x1536_CC-BY-NC.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/585184975/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) leekelai, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/323413154",
+          "sourceId": "585184975",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Brachypteryx montana/M2_323413154_2048x1369_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "francolinus-francolinus": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 5 张）：坏位 1、2、3、4、5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 702083825，位2=photo 38001413，位3=photo 348255720，位4=photo 292289662，位5=photo 171321772）。整套替换，旧图不再展示（文件仍留 R2）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/2018016/large.png",
+        "https://www.inaturalist.org/photos/2018016",
+        "https://bird.wewalk.world/media/francolinus-francolinus/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/371715605/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/371715605/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/371715605/large.png",
+        "https://www.inaturalist.org/photos/371715605",
+        "https://www.inaturalist.org/observations/210125022",
+        "https://bird.wewalk.world/media/francolinus-francolinus/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/136506153/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/136506153/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/136506153/large.png",
+        "https://www.inaturalist.org/photos/136506153",
+        "https://www.inaturalist.org/observations/83131420",
+        "https://bird.wewalk.world/media/francolinus-francolinus/image-3.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112049319/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112049319/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/112049319/large.png",
+        "https://www.inaturalist.org/photos/112049319",
+        "https://www.inaturalist.org/observations/69099087",
+        "https://bird.wewalk.world/media/francolinus-francolinus/image-4.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/446978218/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/446978218/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/446978218/large.png",
+        "https://www.inaturalist.org/photos/446978218",
+        "https://www.inaturalist.org/observations/249981622",
+        "https://bird.wewalk.world/media/francolinus-francolinus/image-5.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/702083825/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) mitalikundu, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/383587888",
+          "sourceId": "702083825",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Francolinus francolinus/M4_383587888_2048x1752_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/38001413/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) A Lamberts, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/24574340",
+          "sourceId": "38001413",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Francolinus francolinus/M2_24574340_1000x665_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/348255720/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Jiro Iguchi, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/197693336",
+          "sourceId": "348255720",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Francolinus francolinus/M5_197693336_2048x1365_CC-BY.jpeg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/292289662/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Parth Kansara, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/168640501",
+          "sourceId": "292289662",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Francolinus francolinus/M10_168640501_2048x1365_CC-BY.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/171321772/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Christopher Rustay, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/102482249",
+          "sourceId": "171321772",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Francolinus francolinus/M9_102482249_2048x1152_CC-BY-NC.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ]
+    },
+    "drymophila-caudata": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 1（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 600121818）。只换坏位，其余位次保持不变（都是本种好图）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11399178/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11399178/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11399178/large.png",
+        "https://www.inaturalist.org/photos/11399178",
+        "https://bird.wewalk.world/media/drymophila-caudata/image-1.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/600121818/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Stephen John Davies, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/330888998",
+          "sourceId": "600121818",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Drymophila caudata/M1_330888998_2048x1364_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "drymophila-striaticeps": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 2（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位2=photo 382693776）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11399178/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11399178/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/11399178/large.png",
+        "https://www.inaturalist.org/photos/11399178",
+        "https://www.inaturalist.org/observations/8534590",
+        "https://bird.wewalk.world/media/drymophila-striaticeps/image-2.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/382693776/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Don Marsille, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/216397826",
+          "sourceId": "382693776",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Drymophila striaticeps/M5_216397826_974x1041_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "oenanthe-bottae": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 1（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 261886755）。只换坏位，其余位次保持不变（都是本种好图）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28011997/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28011997/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28011997/large.png",
+        "https://www.inaturalist.org/photos/28011997",
+        "https://bird.wewalk.world/media/oenanthe-bottae/image-1.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/261886755/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Jan Ebr &amp; Ivana Ebrová, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/151754793",
+          "sourceId": "261886755",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Oenanthe bottae/M3_151754793_985x989_CC-BY.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "oenanthe-frenata": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 2（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位2=photo 298447766）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28011997/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28011997/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/28011997/large.png",
+        "https://www.inaturalist.org/photos/28011997",
+        "https://www.inaturalist.org/observations/18331372",
+        "https://bird.wewalk.world/media/oenanthe-frenata/image-2.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/298447766/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Hailu Tilahun Argaw, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/171958265",
+          "sourceId": "298447766",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Oenanthe frenata/M1_171958265_2048x1536_CC-BY-NC.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "automolus-subulatus": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 1（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 727760014）。只换坏位，其余位次保持不变（都是本种好图）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32968574/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32968574/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32968574/large.png",
+        "https://www.inaturalist.org/photos/32968574",
+        "https://bird.wewalk.world/media/automolus-subulatus/image-1.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/727760014/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Miguel, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/396829751",
+          "sourceId": "727760014",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Automolus subulatus/M5_396829751_1992x2048_CC-BY-SA.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "automolus-virgatus": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 4（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位4=photo 395236404）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32968574/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32968574/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/32968574/large.png",
+        "https://www.inaturalist.org/photos/32968574",
+        "https://www.inaturalist.org/observations/21318800",
+        "https://bird.wewalk.world/media/automolus-virgatus/image-4.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/395236404/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Hannah Floyd, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/223091113",
+          "sourceId": "395236404",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Automolus virgatus/M4_223091113_2048x1589_CC-BY-NC.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 4,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "hypsipetes-longirostris": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 1（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 435253722）。只换坏位，其余位次保持不变（都是本种好图）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/37867112/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/37867112/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/37867112/large.png",
+        "https://www.inaturalist.org/photos/37867112",
+        "https://bird.wewalk.world/media/hypsipetes-longirostris/image-1.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/435253722/large.jpeg",
+          "license": "cc0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/244042096",
+          "sourceId": "435253722",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Hypsipetes longirostris/M1_244042096_2048x1365_CC0.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "hypsipetes-harterti": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 2（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位2=photo 467795524）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/37867112/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/37867112/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/37867112/large.png",
+        "https://www.inaturalist.org/photos/37867112",
+        "https://www.inaturalist.org/observations/24489015",
+        "https://bird.wewalk.world/media/hypsipetes-harterti/image-2.jpg"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/467795524/large.jpeg",
+          "license": "cc0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/260481423",
+          "sourceId": "467795524",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Hypsipetes harterti/M2_260481423_2048x1536_CC0.jpeg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "locustella-davidi": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 1（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位1=photo 136797715）。只换坏位，其余位次保持不变（都是本种好图）。首图被换，D1 需更新。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.png",
+        "https://www.inaturalist.org/photos/1380140",
+        "https://bird.wewalk.world/media/locustella-davidi/image-1.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.JPG"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/136797715/large.jpg",
+          "license": "cc-by",
+          "author": "(c) egorbirder, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/83302010",
+          "sourceId": "136797715",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Locustella davidi/M4_83302010_1200x800_CC-BY.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "locustella-thoracica": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 2（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位2=photo 695637644）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.png",
+        "https://www.inaturalist.org/photos/1380140",
+        "https://www.inaturalist.org/observations/1098131",
+        "https://bird.wewalk.world/media/locustella-thoracica/image-2.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1380140/large.JPG"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/695637644/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Erik Atwell, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/380243578",
+          "sourceId": "695637644",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Locustella thoracica/M1_380243578_2048x1366_CC-BY-NC.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ]
+    },
+    "campephilus-haematogaster": {
+      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 2（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位2=photo 67537003）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
+      "imageKeyBase": 70,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333652679/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333652679/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333652679/large.png",
+        "https://www.inaturalist.org/photos/333652679",
+        "https://www.inaturalist.org/observations/190345004",
+        "https://bird.wewalk.world/media/campephilus-haematogaster/image-2.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/67537003/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Thibaud Aronson, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/42533806",
+          "sourceId": "67537003",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Campephilus haematogaster/M2_42533806_2048x1366_CC-BY-SA.jpg"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ]
     }
   }
 }
