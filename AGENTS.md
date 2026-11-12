@@ -80,6 +80,24 @@
      自写 `wrangler` 循环、自选命令参数。
    - 若确实要改流程：**改旧文档里的那一段**，不新建文件。
 
+0-d. **iNat taxon 解析禁止用 `/taxa?q=`，必须用 `/taxa/autocomplete` + 属名严格校验。**
+   （2026-11-12 用户定为铁律：AI 用错端点导致候选图取自完全无关的物种）
+
+   - **错误做法**：`GET /v1/taxa?q=<学名>` —— 该参数是**模糊全文搜索**，不是精确学名解析。
+   实测把 `Sakesphorus pulchellus` 匹配到植物 `Streptanthus glandulosus pulchellus`（十字花科），
+   把 `Xenodacnis petersi` 匹配到羚羊 `Aepyceros melampus petersi`（牛科），
+   把 `Ramphocelus bresilia` / `Tachyspiza haplochrous` 匹配到空结果。
+   **一旦据此取图，就是给鸟种配了植物照和羚羊照。**
+   - **正确做法**：
+     1. 先查 `public/data/species-index.json` 的 `inatTaxonId`（现成的直接用）；
+     2. 没有则用 `GET /v1/taxa/autocomplete?q=<学名>&per_page=20&is_active=true`；
+     3. 优先 exact（`r.name.toLowerCase() === 学名.toLowerCase()`）；
+     4. iNat 无该种、只有亚种时，亚种必须**同时满足**「属名 === 学名的属」且「种加词 === 学名的种加词」
+        （`parts[0] === genus && parts[parts.length-1] === epithet`），任一不符即拒绝；
+     5. 取图后仍要核对 `community_taxon.name` 与目标名一致（SOP S3.4）。
+   - **禁止**用「种加词模糊包含」当兜底（`endsWith(' ' + epithet)`）——那正是匹配到植物/羚羊的原因。
+   - 参考实现：`store/dup-audit/audit-850/t3-fetch-more.mjs` 的 `resolveTaxon()`。
+
 0-c. **单次任务中，一个鸟种取图不超过 5 张**，除非用户明确要求更多。
    禁止「按票数翻页抓全站」这类做法（曾出现 7731 张、183 张候选的事故）。
 
