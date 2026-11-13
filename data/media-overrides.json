@@ -325,85 +325,106 @@
       ]
     },
     "anas-platyrhynchos": {
-      "_reason": "2026-10-28 用户复核：原 image-2（家鸭凤头品种，头顶毛冠，非野生绿头鸭形态）、image-3（无法定种的小鸭群）、image-4（白色家鸭，北京鸭类型）、image-5（雌鸟背光坐在喂食器上，主体难辨）四张不适合出题。已停用 2/3/4/5，保留 image-1（雄鸟+雌鸟标准侧身）；新增 4 张（obs 254201604 雄鸟水面近照、108300981 雄鸟雪地、158495089 雌鸟飞行、189928707 双雄争偶），使用从未出现的 key（image-6/7/8/9）以避免旧缓存；旧对象保留在 R2 备查。",
-      "imageKeyBase": 6,
+      "_reason": "2026-11-13 绿头鸭专项（用户逐位核对）：位1、位2 实为家鸭（Anas platyrhynchos domesticus）、位3 雌鸟飞行照、位4 远景两雄质量弱、位5 虽画面正确但 sourceId 95268822 在 iNat 上指向无关植物观察（署名/许可无法确证）—— **5 张全部换掉**。新图均经 iNat 核对为 Anas platyrhynchos（已排除 domesticus 亚种与历史旧图）。首图被换，D1 需更新。",
+      "imageKeyBase": 80,
       "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/10826265/large.jpg",
-        "https://www.inaturalist.org/observations/8174772",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/19738755/large.jpg",
-        "https://www.inaturalist.org/observations/13447878",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/32774133/large.jpeg",
-        "https://www.inaturalist.org/observations/21203884",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/62559471/large.jpeg",
-        "https://www.inaturalist.org/observations/39432879",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176784196/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176784196/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176784196/large.png",
+        "https://www.inaturalist.org/photos/176784196",
+        "https://www.inaturalist.org/observations/105372821",
+        "https://bird.wewalk.world/media/anas-platyrhynchos/image-80.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176829217/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176829217/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/176829217/large.png",
+        "https://www.inaturalist.org/photos/176829217",
+        "https://www.inaturalist.org/observations/105395230",
+        "https://bird.wewalk.world/media/anas-platyrhynchos/image-81.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/335451547/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/335451547/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/335451547/large.png",
+        "https://www.inaturalist.org/photos/335451547",
+        "https://www.inaturalist.org/observations/191244599",
+        "https://bird.wewalk.world/media/anas-platyrhynchos/image-82.full.webp",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/263373425/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/263373425/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/263373425/large.png",
+        "https://www.inaturalist.org/photos/263373425",
+        "https://www.inaturalist.org/observations/152560092",
+        "https://bird.wewalk.world/media/anas-platyrhynchos/image-83.full.webp",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpg",
-        "https://www.inaturalist.org/photos/95268822"
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/95268822/large.png",
+        "https://www.inaturalist.org/photos/95268822",
+        "https://bird.wewalk.world/media/anas-platyrhynchos/image-1.full.webp"
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/455270906/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/176784196/large.jpeg",
           "license": "cc-by-nc",
-          "author": "(c) Евгения, some rights reserved (CC BY-NC)",
+          "author": "(c) crazybirdy, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/254201604",
-          "sourceId": "455270906"
+          "sourceUrl": "https://www.inaturalist.org/observations/105372821",
+          "sourceId": "176784196",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-绿头鸭/绿头鸭 Anas platyrhynchos/M8_105372821_1704x1188_CC-BY-NC.jpeg"
         },
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/182316260/large.jpeg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/176829217/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Vyacheslav Luzanov, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/105395230",
+          "sourceId": "176829217",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-绿头鸭/绿头鸭 Anas platyrhynchos/M5_105395230_1900x1267_CC-BY-NC.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/335451547/large.jpeg",
           "license": "cc-by-nc",
           "author": "(c) sfreeman7, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/108300981",
-          "sourceId": "182316260"
+          "sourceUrl": "https://www.inaturalist.org/observations/191244599",
+          "sourceId": "335451547",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-绿头鸭/绿头鸭 Anas platyrhynchos/M10_191244599_2048x1356_CC-BY-NC.jpeg"
         },
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/273915788/large.jpeg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/263373425/large.jpeg",
           "license": "cc-by-nc",
-          "author": "(c) Craig Chaddock, some rights reserved (CC BY-NC)",
+          "author": "(c) Owen J., some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/158495089",
-          "sourceId": "273915788"
+          "sourceUrl": "https://www.inaturalist.org/observations/152560092",
+          "sourceId": "263373425",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-绿头鸭/绿头鸭 Anas platyrhynchos/M11_152560092_2048x1365_CC-BY-NC.jpeg"
         },
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/332833822/large.jpeg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/472597274/large.jpg",
           "license": "cc-by-nc",
-          "author": "(c) sfreeman7, some rights reserved (CC BY-NC)",
+          "author": "(c) KF, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/189928707",
-          "sourceId": "332833822"
+          "sourceUrl": "https://www.inaturalist.org/observations/263110568",
+          "sourceId": "472597274",
+          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-绿头鸭/绿头鸭 Anas platyrhynchos/M13_263110568_1920x1440_CC-BY-NC.jpg"
         }
       ],
-      "appendImageUrls": [
-        "https://bird.wewalk.world/media/anas-platyrhynchos/image-1.full.webp"
-      ],
-      "rejected": [
+      "slotAssignments": [
         {
-          "slot": "image-2",
-          "sourceUrl": "https://www.inaturalist.org/observations/8174772",
-          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-2.full.webp",
-          "reason": "家鸭凤头品种，头顶毛冠，不是野生绿头鸭形态",
-          "reportIds": []
+          "slot": 1,
+          "pickIndex": 1
         },
         {
-          "slot": "image-3",
-          "sourceUrl": "https://www.inaturalist.org/observations/13447878",
-          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-3.full.webp",
-          "reason": "幼鸭群，无法确认为绿头鸭幼鸟，作为题目不可用",
-          "reportIds": []
+          "slot": 2,
+          "pickIndex": 2
         },
         {
-          "slot": "image-4",
-          "sourceUrl": "https://www.inaturalist.org/observations/21203884",
-          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-4.full.webp",
-          "reason": "白色家鸭（北京鸭类型），不是绿头鸭",
-          "reportIds": []
+          "slot": 3,
+          "pickIndex": 3
         },
         {
-          "slot": "image-5",
-          "sourceUrl": "https://www.inaturalist.org/observations/39432879",
-          "imageUrl": "https://bird.wewalk.world/media/anas-platyrhynchos/image-5.full.webp",
-          "reason": "雌鸟背光坐在喂食器上，侧后角度，主体难辨",
-          "reportIds": []
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
         }
       ]
     },
