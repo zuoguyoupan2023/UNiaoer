@@ -169,7 +169,7 @@ async function uploadOne(rel) {
   for (let i = 0; i < TRIES; i++) {
     try {
       if (USE_S3) {
-        await R2.put(rel, await fs.readFile(file), contentTypeOf(rel))
+        await R2.putVerified(rel, await fs.readFile(file), contentTypeOf(rel))
       } else {
         await execFileP(
           'npx',

@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-11-15T13:39:15.514Z",
+  "pyrrhura-cruentata": {
+    "replaceSlot": "位5",
+    "action": "replace",
+    "photoId": 459098126,
+    "obsId": 256118017
+  },
+  "hypocnemis-subflava": {
+    "replaceSlot": "音2",
+    "action": "replace",
+    "recId": 965675
+  }
+}

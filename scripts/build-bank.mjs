@@ -15,6 +15,7 @@ import { promises as fs, rmSync as fsRmSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
@@ -879,9 +880,10 @@ function pickInatImages(results, policy, defaultPhoto) {
   const seen = new Set()
   const push = (a) => {
     if (!a) return
-    if (seen.has(a.url) || (a.sourceId && seen.has(a.sourceId))) return
-    seen.add(a.url)
-    if (a.sourceId) seen.add(a.sourceId)
+    // 2026-11-16：去重键改用 originalUrl（唯一照片/文件 id），sourceId 可能是观察号，会误去重
+    const sig = String(a.originalUrl || a.url || '')
+    if (!sig || seen.has(sig)) return
+    seen.add(sig)
     out.push(a)
   }
   if (defaultPhoto && !isGif(defaultPhoto.url) && licenseAllowed(defaultPhoto.license_code, policy)) {
@@ -980,12 +982,12 @@ function applyOverrides(base, prev) {
   if (ov.keepLeadImage && prev?.images?.length) {
     const lead = prev.images[0]
     if (lead && String(lead.url || '').startsWith((PUBLIC_BASE || '') + '/')) {
-      // 按 url / sourceId / originalUrl 三重去重：旧首图可能与自动结果里的同一张重复
+      // 按 originalUrl（唯一）为主，url 兜底；sourceId 可能是观察号，仅在两者都缺时才用
       const same = (a) =>
         a && (
           a.url === lead.url ||
-          (lead.sourceId && a.sourceId && String(a.sourceId) === String(lead.sourceId)) ||
-          (lead.originalUrl && a.originalUrl && a.originalUrl === lead.originalUrl)
+          (lead.originalUrl && a.originalUrl && a.originalUrl === lead.originalUrl) ||
+          (!lead.originalUrl && !a.originalUrl && lead.sourceId && a.sourceId && String(a.sourceId) === String(lead.sourceId))
         )
       const rest = base.images.filter((a) => !same(a))
       base.images = [lead, ...rest].slice(0, OPT.per)
@@ -1027,6 +1029,16 @@ function lengthSec(s) {
   return m ? Number(m[1]) * 60 + Number(m[2]) : 9999
 }
 
+/**
+ * 资产生成唯一指纹（2026-11-16）：用于证明「本地派生图 = 该 asset 的源图转码结果」。
+ * 组成：源文件标识（originalUrl，含真照片/文件 id）+ 许可 + 类型。
+ * 写入 `<key>.srcmd5`（stage 模式），下次 stage 跳过前比对；不符即重新下载转码。
+ */
+function assetSignature(a) {
+  const parts = [String(a.originalUrl || a.url || ''), String(a.license || ''), String(a.type || '')]
+  return createHash('sha1').update(parts.join('|')).digest('hex')
+}
+
 function asset(url, rawLicense, author, source, sourceUrl, sourceId) {
   return {
     url,
@@ -1062,7 +1074,10 @@ async function materialize(rec, id, prev) {
     rec.images[i] = kept || (await persistImage(media, id, i + keyBase))
   }
   for (let i = 0; i < (rec.audios || []).length; i++) {
-    const kept = reusableAsset(prev?.audios?.[i], rec.audios[i])
+    // 2026-11-16：音频也要给 override 豁免（此前只有图片有）。否则 override 指定的新录音
+    // 会被 reusableAsset 判为「同位同源」复用旧 URL，音频修复被静默吞掉。
+    const a = rec.audios[i]
+    const kept = a && a.overridden ? null : reusableAsset(prev?.audios?.[i], a)
     rec.audios[i] = kept || (await persistOne(rec.audios[i], id, `audio-${i + 1}`, 'mp3'))
   }
   // 053 补采:新取材比台账短时(源站下架/过滤变化),台账里已物化的多余素材原样保留
@@ -1070,16 +1085,14 @@ async function materialize(rec, id, prev) {
   // 定向修复（--images-only / appendImageUrls）时跳过：它会把上一版的多余图/音追加回来，
   // 且末尾的 slice(0, per) 会把显式追加的素材截掉。
   if (prev && PUBLIC_BASE && !OPT.imagesOnly && !appendUrls.length) {
-    const seen = new Set(
-      [...rec.images, ...rec.audios]
-        .map((a) => a && `${a.type}|${a.sourceId || a.url}`)
-        .filter(Boolean),
-    )
+    // 2026-11-16：去重标识改用 originalUrl（唯一）而非 sourceId（可能为观察号，会误去重）
+    const sigOf = (a) => (a ? `${a.type}|${a.originalUrl || a.url || a.sourceId || ''}` : null)
+    const seen = new Set([...rec.images, ...rec.audios].map(sigOf).filter(Boolean))
     for (const [kind, list] of [['images', prev.images], ['audios', prev.audios]]) {
       for (let i = rec[kind].length; i < (list?.length || 0); i++) {
         const a = list[i]
         if (!a || !String(a.url || '').startsWith(PUBLIC_BASE + '/')) continue
-        const sig = `${a.type}|${a.sourceId || a.url}`
+        const sig = sigOf(a)
         if (seen.has(sig)) continue
         seen.add(sig)
         rec[kind].push(a)
@@ -1154,14 +1167,26 @@ async function materialize(rec, id, prev) {
 /**
  * 053 补采:台账同位素材已物化(URL 指向 R2 公开域)且与本次取材同源时,原样沿用——
  * 免重下载重转码重推送(约省一半工作量),首图首音因此天然不变(D1 不受影响)。
+ *
+ * 2026-11-16 修正（媒体事故根因之一）：原实现比较 `sourceId`；而 `sourceId` 可能是
+ * iNat 观察号（`build-bank.mjs` 里 `p.id ?? o.id` 的兜底，全库 5,520 个），
+ * 当一个观察有多张照片时会把不同照片误判成「同源」→ 复用旧 URL → 不同照片显示成同一张。
+ * 改为首选 `originalUrl` 比对（iNat 含真照片 id / XC 含 /download 文件 id，唯一可靠）。
  */
 function reusableAsset(prevAsset, newAsset) {
   if (!prevAsset || !newAsset) return null
   if (!PUBLIC_BASE || !String(prevAsset.url || '').startsWith(PUBLIC_BASE + '/')) return null
-  if (prevAsset.sourceId !== newAsset.sourceId) return null
-  if ((prevAsset.sourceUrl || '') !== (newAsset.sourceUrl || '')) return null
-  if (prevAsset.license !== newAsset.license) return null
   if (prevAsset.type !== newAsset.type) return null
+  const prevOrig = String(prevAsset.originalUrl || '')
+  const newOrig = String(newAsset.originalUrl || newAsset.url || '')
+  if (prevOrig && newOrig) {
+    if (prevOrig !== newOrig) return null // 源文件不同 → 绝不复用
+  } else {
+    // 老数据缺 originalUrl 时退化为 sourceId + sourceUrl 双重比对（更严格）
+    if (prevAsset.sourceId !== newAsset.sourceId) return null
+    if ((prevAsset.sourceUrl || '') !== (newAsset.sourceUrl || '')) return null
+  }
+  if (prevAsset.license !== newAsset.license) return null
   return prevAsset
 }
 
@@ -1185,11 +1210,25 @@ async function persistImage(a, id, n) {
   }
   const exists = (f) => fs.access(f).then(() => true, () => false)
 
+  // 2026-11-16 修正（媒体事故根因之二）：原实现「三个派生文件存在即跳过下载」，
+  // 但文件名不含内容信息（image-<位次>），位次与内容一旦错位就会把旧字节配上新元数据，
+  // 且不报错。改为：跳过前必须证明「现有 full.webp 与本 asset 的源图转码结果一致」。
+  // 证明方式：读本地 `.srcmd5` 指纹（由下面正式转码时写入）；无指纹或指纹不符 → 重新下载转码。
   if (OPT.media === 'stage' && (await exists(files.thumb)) && (await exists(files.full)) && (await exists(files.xl))) {
-    const thumbhash = await thumbHashFromFile(files.thumb).catch(() => '')
-    const out = await finalizeImage(a, id, n, { thumbhash, avif: await exists(files.avif) })
-    if (OPT.verbose) console.log(`      ↳ ${name} 派生图已存在，跳过下载`)
-    return out
+    const stampFile = path.join(outDir, `${name}.srcmd5`)
+    const expectSig = assetSignature(a)
+    const gotSig = await fs.readFile(stampFile, 'utf8').then((s) => s.trim()).catch(() => '')
+    if (gotSig && gotSig === expectSig) {
+      const thumbhash = await thumbHashFromFile(files.thumb).catch(() => '')
+      const out = await finalizeImage(a, id, n, { thumbhash, avif: await exists(files.avif) })
+      if (OPT.verbose) console.log(`      ↳ ${name} 派生图已存在且源指纹一致，跳过下载`)
+      return out
+    }
+    if (OPT.verbose) {
+      console.log(
+        `      ↳ ${name} 派生图存在但源指纹${gotSig ? '不符' : '缺失'}（${gotSig || '无'} vs ${expectSig.slice(0, 12)}）→ 重新下载转码`,
+      )
+    }
   }
 
   const tmpDir = path.join(TMP, id)
@@ -1248,6 +1287,8 @@ async function persistImage(a, id, n) {
     }
     await fs.rm(raw, { force: true })
     await fs.rm(tmpDir, { recursive: true, force: true })
+    // 2026-11-16：写入源指纹，供下次 stage 跳过前校验「本地派生图是否仍对应该源」
+    await fs.writeFile(path.join(outDir, `${name}.srcmd5`), assetSignature({ ...a, url: masterUrl, originalUrl: masterUrl }), 'utf8').catch(() => {})
     return finalizeImage({ ...a, url: masterUrl, originalUrl: masterUrl }, id, n, { thumbhash, avif })
   } catch (e) {
     // 转码失败：退回单文件（保留原始扩展名），与旧行为一致；raw 复用，不再重新下载
@@ -1271,7 +1312,7 @@ async function finalizeImage(a, id, n, { thumbhash, avif }) {
     for (const rel of Object.values(rels)) {
       const local = path.join(PUBLIC_MEDIA, rel)
       const body = await fs.readFile(local)
-      await R2CLIENT.put(rel, body, 'image/webp')
+      await R2CLIENT.putVerified(rel, body, 'image/webp')
       // 053:传后即删——R2 是唯一持久副本,派生图不在本地累积(全量补采约 +20GB)
       await fs.rm(local, { force: true })
     }
@@ -1398,7 +1439,7 @@ async function persistLocalFile(a, id, kind, raw, srcUrl, ext) {
   let url
   if (OPT.media === 'r2') {
     const body = await fs.readFile(file)
-    await R2CLIENT.put(rel, body, guessContentType(srcUrl, kind, outExt))
+    await R2CLIENT.putVerified(rel, body, guessContentType(srcUrl, kind, outExt))
     url = `${R2CLIENT.publicBase}/${rel}`
   } else {
     const dir = path.join(PUBLIC_MEDIA, id)
