@@ -982,12 +982,15 @@ function applyOverrides(base, prev) {
   if (ov.keepLeadImage && prev?.images?.length) {
     const lead = prev.images[0]
     if (lead && String(lead.url || '').startsWith((PUBLIC_BASE || '') + '/')) {
-      // 按 originalUrl（唯一）为主，url 兜底；sourceId 可能是观察号，仅在两者都缺时才用
+      // 2026-11-16 修正（铁律 17）：判「同一条素材」只用 URL / originalUrl（内容 id）。
+      // **绝不**退化为比 sourceId —— sourceId 可能是 iNat 观察号，一个观察含多张照片时
+      // 会把不同照片判成同一条（本批 rhipidura 即因此出错：用户选的 457831134 与台账的
+      // 457830706 同属观察 255477894，按 sourceId 比对会误判为同一张）。
+      // 缺 originalUrl 时 fail-closed：视为「不同」，不做复用。
       const same = (a) =>
         a && (
           a.url === lead.url ||
-          (lead.originalUrl && a.originalUrl && a.originalUrl === lead.originalUrl) ||
-          (!lead.originalUrl && !a.originalUrl && lead.sourceId && a.sourceId && String(a.sourceId) === String(lead.sourceId))
+          (lead.originalUrl && a.originalUrl && a.originalUrl === lead.originalUrl)
         )
       const rest = base.images.filter((a) => !same(a))
       base.images = [lead, ...rest].slice(0, OPT.per)
@@ -1102,13 +1105,26 @@ async function materialize(rec, id, prev) {
     rec.audios = rec.audios.slice(0, OPT.per)
   }
   // 显式追加（保持旧 key，不重下载/重编码）
+  // 2026-11-16 修正（铁律 17）：去重原用 `x.sourceId === a.sourceId`，但 sourceId 可能是观察号
+  // 也可能是照片号（全库 5,520 个是观察号）。当 override 新图的 sourceId 恰为正照片号、
+  // 而某个待追加旧位的 sourceId 是同一个号时，会误判「重复」把该旧位丢弃。
+  // 实测：sphenopsis-ochracea 位1-4 的 sourceId 就是各自照片号，与本批补齐用的 photoId 同号 →
+  // 4 张新图会被静默吞掉。改用 originalUrl（内容 id，唯一）判定同源。
+  const sameSource = (x, a) => {
+    if (!x || !a) return false
+    if (x.url === a.url) return true
+    const ox = String(x.originalUrl || '')
+    const oa = String(a.originalUrl || '')
+    if (ox && oa) return ox === oa
+    return false
+  }
   for (const u of appendUrls) {
     const a = (prev?.images || []).find((x) => x && x.url === u)
     if (!a) {
       console.warn(`   ⚠️ appendImageUrls 未在上一版找到：${u}`)
       continue
     }
-    const dup = rec.images.some((x) => x && (x.url === a.url || (a.sourceId && x.sourceId === a.sourceId)))
+    const dup = rec.images.some((x) => sameSource(x, a))
     if (!dup) rec.images.push(a)
   }
   // 显式前置（保持旧 key）：用于「保留旧首图、只换中间几张」的定向修复——
@@ -1120,7 +1136,7 @@ async function materialize(rec, id, prev) {
       console.warn(`   ⚠️ prependImageUrls 未在上一版找到：${u}`)
       continue
     }
-    const dup = rec.images.some((x) => x && (x.url === a.url || (a.sourceId && x.sourceId === a.sourceId)))
+    const dup = rec.images.some((x) => sameSource(x, a))
     if (!dup) rec.images.unshift(a)
   }
   // 原地换位（docs/118 选重修复）：把 override 新图放到指定位置，其余保持上一版顺序。
@@ -1182,9 +1198,10 @@ function reusableAsset(prevAsset, newAsset) {
   if (prevOrig && newOrig) {
     if (prevOrig !== newOrig) return null // 源文件不同 → 绝不复用
   } else {
-    // 老数据缺 originalUrl 时退化为 sourceId + sourceUrl 双重比对（更严格）
-    if (prevAsset.sourceId !== newAsset.sourceId) return null
-    if ((prevAsset.sourceUrl || '') !== (newAsset.sourceUrl || '')) return null
+    // 2026-11-16 修正（铁律 17）：缺 originalUrl 时**不再**退化为比 sourceId。
+    // sourceId 可能是观察号（全库 5,520 个），一个观察含多张照片 → 不同照片会被
+    // 判成「同源」而复用旧 URL。此处改为 fail-closed：缺内容 id 就不复用。
+    return null
   }
   if (prevAsset.license !== newAsset.license) return null
   return prevAsset

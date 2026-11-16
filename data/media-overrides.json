@@ -4399,9 +4399,8 @@
       ]
     },
     "malurus-cyaneus": {
-      "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种-中间位】修复（字节级最终确认）：R2 上 image-5 与 image-4 字节相同，经重转码比对确认 **image-4 的源图字节 = R2 内容**，故 image-5 被覆盖、image-4 正确，首图不动、D1 不用改。按 image-5 自己声明的源图（iNat photo 9429372）用 image-40 段重下。判定依据：store/dup-audit/audit-850/full-audit.json + src-cache 重转码 md5 一致。",
-      "imageKeyBase": 40,
-      "keepLeadImage": true,
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位3/4/5 的 key 在 R2 缺失（4 变体全 404、本地无文件）→ 按 originalUrl 重下补齐原 key。新图落 image-42/image-43/image-44（keyBase=42）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。（旧图走 appendImageUrls 原样保留；因已有 override，位次用 slotAssignments 表达以免与历史 replaceSlot 冲突。）",
+      "imageKeyBase": 42,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/12816165/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/12816165/large.jpeg",
@@ -4410,12 +4409,46 @@
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/12816165/large.jpeg",
-          "license": "cc-by-nc",
-          "author": "",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/94982353/large.jpeg",
+          "license": "cc-by-nc-nd",
+          "author": "(c) upupamartin, some rights reserved (CC BY-NC-ND)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/9429372",
-          "sourceId": "9429372"
+          "sourceUrl": "https://www.inaturalist.org/photos/94982353",
+          "sourceId": "94982353"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/27442060/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Bird Explorers, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/27442060",
+          "sourceId": "27442060"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/344256893/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Ron Greer, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/344256893",
+          "sourceId": "344256893"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/malurus-cyaneus/image-1.jpg",
+        "https://bird.wewalk.world/media/malurus-cyaneus/image-41.full.webp"
+      ],
+      "slotAssignments": [
+        {
+          "slot": 3,
+          "pickIndex": 1
+        },
+        {
+          "slot": 4,
+          "pickIndex": 2
+        },
+        {
+          "slot": 5,
+          "pickIndex": 3
         }
       ]
     },
@@ -5668,9 +5701,8 @@
       ]
     },
     "rhipidura-albiscapa": {
-      "_reason": "2026-11-11 docs/118 阶段一【①′ 无方向种-中间位】修复（字节级最终确认）：R2 上 image-2 与 image-1 字节相同，经重转码比对确认 **image-1 的源图字节 = R2 内容**，故 image-2 被覆盖、image-1 正确，首图不动、D1 不用改。按 image-2 自己声明的源图（iNat photo 256616832）用 image-40 段重下。判定依据：store/dup-audit/audit-850/full-audit.json + src-cache 重转码 md5 一致。",
-      "imageKeyBase": 40,
-      "keepLeadImage": true,
+      "_reason": "2026-11-16 rhipidura 修正（用户 2026-11-16 明确指定）：原记录「位3 与 image-41 内容相同，替换 image-41」。用户选择 photo 457831134（obs 255477894，cc-by-nc，Konrad Szylar）。替换目标 = 位2（image-41），新图落 image-42。此前误改为位3/位4 并误用 photo 457830706，已回滚（本地 image-42/image-43 已删除重建）。",
+      "imageKeyBase": 42,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/460141162/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/460141162/large.jpeg",
@@ -5679,12 +5711,23 @@
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/460141162/large.jpeg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/457831134/large.jpg",
           "license": "cc-by-nc",
-          "author": "",
+          "author": "(c) Konrad Szylar, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/256616832",
-          "sourceId": "256616832"
+          "sourceUrl": "https://www.inaturalist.org/observations/255477894",
+          "sourceId": "457831134"
+        }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/rhipidura-albiscapa/image-1.full.webp",
+        "https://bird.wewalk.world/media/rhipidura-albiscapa/image-4.full.webp",
+        "https://bird.wewalk.world/media/rhipidura-albiscapa/image-5.full.webp"
+      ],
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
         }
       ]
     },
@@ -12002,8 +12045,8 @@
       ]
     },
     "sphenopsis-ochracea": {
-      "_reason": "2026-11-13 docs/120 T4 近缘种整改（用户已选定 1 张）：坏位 5（与近缘种共用/质量不合格）按 docs/选择结果-t4.json 替换为真本种图（位5=photo 88142752）。只换坏位，其余位次保持不变（都是本种好图）。首图未动，D1 不改。",
-      "imageKeyBase": 70,
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1/2/3/4 的 key 在 R2 缺失（4 变体全 404、本地无文件）→ 按 originalUrl 重下补齐原 key。新图落 image-50/image-51/image-52/image-53（keyBase=50）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。（旧图走 appendImageUrls 原样保留；因已有 override，位次用 slotAssignments 表达以免与历史 replaceSlot 冲突。）",
+      "imageKeyBase": 50,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/554365973/large.jpeg",
@@ -12014,19 +12057,57 @@
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/88142752/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/319312800/large.jpeg",
           "license": "cc-by-nc",
-          "author": "(c) Alex Reynolds, some rights reserved (CC BY-NC)",
+          "author": "(c) Dennis Mersky, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/55357595",
-          "sourceId": "88142752",
-          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-T4-近缘种整改/Sphenopsis ochracea/M1_55357595_434x353_CC-BY-NC.jpg"
+          "sourceUrl": "https://www.inaturalist.org/photos/319312800",
+          "sourceId": "319312800"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/262214068/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Dennis Mersky, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/262214068",
+          "sourceId": "262214068"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/590860775/large.jpg",
+          "license": "cc-by",
+          "author": "(c) tomas_kay, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/590860775",
+          "sourceId": "590860775"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/319312816/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Dennis Mersky, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/319312816",
+          "sourceId": "319312816"
         }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/sphenopsis-ochracea/image-70.full.webp"
       ],
       "slotAssignments": [
         {
-          "slot": 5,
+          "slot": 1,
           "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
         }
       ]
     },
@@ -20303,8 +20384,8 @@
       ]
     },
     "pyrrhura-cruentata": {
-      "_reason": "2026-11-12 docs/120 T2 B类破图修复：位 1、2、3、5 源图已删且 R2 无副本（页面破图），按 docs/120 §5 表补入用户选定候选（候1→位1，候2→位2，候3→位3，候4→位5）。被替换位无原图可保留（源站已删）。首图被换，需按 docs/120 T2 更新 D1。",
-      "imageKeyBase": 40,
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位5 与位4 同为 photo 341627315（同源重复占两位）；用户 2026-11-16 决定换成 photo 459098126（保留位4）。新图落 image-44（keyBase=44）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。（旧图走 appendImageUrls 原样保留；因已有 override，位次用 slotAssignments 表达以免与历史 replaceSlot 冲突。）",
+      "imageKeyBase": 44,
       "excludeUrls": [
         "https://inaturalist-open-data.s3.amazonaws.com/photos/395897384/large.jpg",
         "https://inaturalist-open-data.s3.amazonaws.com/photos/395897384/large.jpeg",
@@ -20333,58 +20414,24 @@
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/513634403/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/459098126/original.png",
           "license": "cc-by-nc",
-          "author": "(c) Maria Isabel R. Carvalho, some rights reserved (CC BY-NC)",
+          "author": "(c) brunohemerly, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/285750862",
-          "sourceId": "513634403",
-          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-B类/藍喉錐尾鸚鵡 Pyrrhura cruentata/1_285750862_1536x2048_CC-BY-NC.jpg"
-        },
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/513634493/large.jpg",
-          "license": "cc-by-nc",
-          "author": "(c) Maria Isabel R. Carvalho, some rights reserved (CC BY-NC)",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/285750862",
-          "sourceId": "513634493",
-          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-B类/藍喉錐尾鸚鵡 Pyrrhura cruentata/2_285750862_1536x2048_CC-BY-NC.jpg"
-        },
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/231550249/large.jpg",
-          "license": "cc-by-nc",
-          "author": "(c) Ronaldo Garcia, some rights reserved (CC BY-NC)",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/135734114",
-          "sourceId": "231550249",
-          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/p0-共用图核对/候选-B类/藍喉錐尾鸚鵡 Pyrrhura cruentata/3_135734114_950x762_CC-BY-NC.jpg"
-        },
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/341627315/large.jpeg",
-          "license": "cc-by",
-          "author": "(第4张，2026-11-11 补取)",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/194363107",
-          "sourceId": "341627315",
-          "localFile": "/Users/burenweiye/Documents/GitHub/UNiaoer/docs/1122-candidates/藍喉錐尾鸚鵡 Pyrrhura cruentata/4_194363107_2048x1915_CC-BY.jpg"
+          "sourceUrl": "https://www.inaturalist.org/observations/256118017",
+          "sourceId": "459098126"
         }
+      ],
+      "appendImageUrls": [
+        "https://bird.wewalk.world/media/pyrrhura-cruentata/image-40.full.webp",
+        "https://bird.wewalk.world/media/pyrrhura-cruentata/image-41.full.webp",
+        "https://bird.wewalk.world/media/pyrrhura-cruentata/image-42.full.webp",
+        "https://bird.wewalk.world/media/pyrrhura-cruentata/image-4.full.webp"
       ],
       "slotAssignments": [
         {
-          "slot": 1,
-          "pickIndex": 1
-        },
-        {
-          "slot": 2,
-          "pickIndex": 2
-        },
-        {
-          "slot": 3,
-          "pickIndex": 3
-        },
-        {
           "slot": 5,
-          "pickIndex": 4
+          "pickIndex": 1
         }
       ]
     },
@@ -22660,6 +22707,359 @@
           "pickIndex": 1
         }
       ]
+    },
+    "poecilotriccus-plumbeiceps": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 757747191。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/757747191/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) iurirudiger, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/411995081",
+          "sourceId": "757747191"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pseudocolopteryx-sclateri": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 745150767。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/745150767/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Nahuel, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/405656810",
+          "sourceId": "745150767"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pyriglena-leucoptera": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 764013978。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/764013978/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) RenataNeder, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414965656",
+          "sourceId": "764013978"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pyriglena-maura": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 760071284。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/760071284/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) georgiakay, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413012532",
+          "sourceId": "760071284"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pyrilia-barrabandi": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 760192651。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/760192651/large.jpg",
+          "license": "cc-by",
+          "author": "(c) tomas_kay, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413073726",
+          "sourceId": "760192651"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pyrilia-caica": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 747449828。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/747449828/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) stanlilley, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/406824634",
+          "sourceId": "747449828"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "saltator-maxillosus": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 758633333。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/758633333/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Laura Gaudette, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/412304137",
+          "sourceId": "758633333"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "stilpnia-preciosa": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 762915120。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/762915120/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) roberto_c_richard, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414423601",
+          "sourceId": "762915120"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "suthora-ricketti": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 641175849。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/641175849/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) 陈嘉伟, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/351358830",
+          "sourceId": "641175849"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "tangara-brasiliensis": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 759197376。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/759197376/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Diego Rocha, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/412580069",
+          "sourceId": "759197376"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "turdus-albicollis": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 760868642。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/760868642/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Lucas Leuzinger, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/413410800",
+          "sourceId": "760868642"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "xenops-minutus": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 原源图已从 iNat 删除（404）；用户 2026-11-16 从 3 张候选选定 photo 756990924。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/756990924/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Zac Peterson, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/411490223",
+          "sourceId": "756990924"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "polystictus-superciliaris": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 的 R2 字节被覆盖（重转码取证：字节 ≠ 该位 originalUrl 转码结果且等于同种另一位）；按该位自己的源图 photo 65180537 重下。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/65180537/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Hudson Martins Soares, some rights reserved (CC BY-NC), uploaded by Hudson Martins Soares",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/65180537",
+          "sourceId": "65180537"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pyrrhura-lepida": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 的 R2 字节被覆盖（重转码取证：字节 ≠ 该位 originalUrl 转码结果且等于同种另一位）；按该位自己的源图 photo 443923443 重下。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/443923443/large.jpeg",
+          "license": "cc-by",
+          "author": "(c) Christoph Moning, some rights reserved (CC BY), uploaded by Christoph Moning",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/443923443",
+          "sourceId": "443923443"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "pyrrhura-lucianii": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 的 R2 字节被覆盖（重转码取证：字节 ≠ 该位 originalUrl 转码结果且等于同种另一位）；按该位自己的源图 photo 237933477 重下。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/237933477/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) hbottai, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/237933477",
+          "sourceId": "237933477"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "sporophila-pileata": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 的 R2 字节被覆盖（重转码取证：字节 ≠ 该位 originalUrl 转码结果且等于同种另一位）；按该位自己的源图 photo 104009161 重下。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/104009161/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) jairo ortiz, some rights reserved (CC BY-NC), uploaded by jairo ortiz",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/104009161",
+          "sourceId": "104009161"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "tachyphonus-surinamus": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 的 R2 字节被覆盖（重转码取证：字节 ≠ 该位 originalUrl 转码结果且等于同种另一位）；按该位自己的源图 photo 102965 重下。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/102965/large.jpg",
+          "license": "cc-by-nc-sa",
+          "author": "(c) Sean McCann, some rights reserved (CC BY-NC-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/102965",
+          "sourceId": "102965"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "xenops-rutilans": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 的 R2 字节被覆盖（重转码取证：字节 ≠ 该位 originalUrl 转码结果且等于同种另一位）；按该位自己的源图 photo 29614437 重下。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/29614437/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Dave Wendelken, some rights reserved (CC BY-NC), uploaded by Dave Wendelken",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/29614437",
+          "sourceId": "29614437"
+        }
+      ],
+      "replaceSlot": 1
+    },
+    "ardea-intermedia": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 繁殖期特征：嘴部部分黑色（图本身正确、非错图；辨识难度高，见 docs/113 §4.1）；用户 2026-11-16 选定 photo 763797964；位4 繁殖期特征：嘴部部分黑色（图本身正确、非错图；辨识难度高，见 docs/113 §4.1）；用户 2026-11-16 选定 photo 763789566。新图落 image-6/image-7（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763797964/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) lilyshapiro, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414857730",
+          "sourceId": "763797964"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763789566/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Fadzrun, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414853819",
+          "sourceId": "763789566"
+        }
+      ],
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 4,
+          "pickIndex": 2
+        }
+      ]
+    },
+    "egretta-garzetta": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位3 疑似死亡个体，不适合作为辨识题面；用户 2026-11-16 选定 photo 764031778。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/764031778/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Thierry254, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414974468",
+          "sourceId": "764031778"
+        }
+      ],
+      "replaceSlot": 3
+    },
+    "phasianus-colchicus": {
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位3 雪地印迹，不适合作为辨识题面；用户 2026-11-16 选定 photo 763834712。新图落 image-6（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "imageKeyBase": 6,
+      "excludeUrls": [],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763834712/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Tommi R, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414875659",
+          "sourceId": "763834712"
+        }
+      ],
+      "replaceSlot": 3
     }
   }
 }
