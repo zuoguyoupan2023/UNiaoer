@@ -689,10 +689,15 @@ async function buildSpecies(sp, useXc, prev) {
     applyOverrides(base, prev)
 
     // --images-only：音频回填必须放在 applyOverrides 之后，否则会被 --per 截断
-    // 例外：override 显式要求清空音频（_clearAudios）或整体清空（clearAllMedia）时不得回填
-    // ——那些音频实测是别种的（docs/120 T3）。
+    // 例外（不得回填）：
+    //   ① _clearAudios / clearAllMedia —— 那些音频实测是别种的（docs/120 T3）；
+    //   ② 有 audioSlotAssignments —— 位次由 override 决定，回填会把整表换回 prev、
+    //      让载荷里的新音被丢弃（2026-11-17 docs/132 实测：cranioleuca 干跑时音5 仍是旧 XC 1175571）；
+    //   ③ override 给了 audios 但既非 clearAllMedia 又无位次 —— 说明用户意图是整表替换，同样不能回填。
     const ovHere = OVERRIDES[id] || OVERRIDES[base.nameSci]
-    if (OPT.imagesOnly && prev && !ovHere?._clearAudios && !ovHere?.clearAllMedia) {
+    const audioOverridden = !!ovHere?._clearAudios || !!ovHere?.clearAllMedia ||
+      Array.isArray(ovHere?.audioSlotAssignments) || Array.isArray(ovHere?.audios)
+    if (OPT.imagesOnly && prev && !audioOverridden) {
       base.audios = prev.audios || []
       base.audio = base.audios[0] || null
     }
@@ -975,7 +980,13 @@ function applyOverrides(base, prev) {
   // 最终序列完全由 prev 序列 + 换位块决定，见 materialize()。
   const slotRepair = !!ov.replaceSlot || Array.isArray(ov.slotAssignments)
   base.images = [...toAssets(ov.images, 'image'), ...(slotRepair ? [] : filter(base.images))].slice(0, OPT.per)
-  base.audios = [...toAssets(ov.audios, 'audio'), ...filter(base.audios)].slice(0, OPT.per)
+  // _clearAudios（2026-11-17 docs/132 补完语义）：清空后**只保留 override 明确给出的 audios**，
+  // 不并自动搜索结果。用于「原有音频全是别种的 + 新音频由 override 显式指定 或 根本没有」两类。
+  // 此前 _clearAudios 只用于 695 行豁免 --images-only 的回填，完整构建下仍会把自动结果并进来；
+  // 本批 pitta-abbotti/forsteni（想清空）与 erythrogenys-imberbis（想换成 iNat 的）都需要它。
+  base.audios = ov._clearAudios
+    ? [...toAssets(ov.audios, 'audio')].slice(0, OPT.per)
+    : [...toAssets(ov.audios, 'audio'), ...filter(base.audios)].slice(0, OPT.per)
 
   // 定向修复：keepLeadImage = true 时，把上一版的 image-1 提到首位（保持首图不变、D1 无需更新）。
   // 用于「只换中间几张、首图本身没问题」的批量换图；首图要被换掉的种不要设这个字段。
@@ -1063,6 +1074,12 @@ async function materialize(rec, id, prev) {
   const ov = OVERRIDES[id] || OVERRIDES[rec.nameSci]
   // 定向修复：可指定新素材的起始序号（如 6 → image-6/7/8），避免覆盖已发布 key
   const keyBase = Math.max(1, Number(ov?.imageKeyBase) || 1)
+  // 音频起始序号（2026-11-17 docs/132）：与 imageKeyBase 同构，默认 1（=保持原来的 audio-1..N）。
+  // 为什么必须存在：音频 key 原写死 audio-${i+1}，换音必然覆盖已发布对象（违反 SOP 铁律 1：
+  // 老用户/SW 媒体缓存长期还是旧内容）；而 stage 模式下 persistOne「本地文件已存在即跳过下载」
+  // 会让覆盖静默退化成「manifest 声明新源、字节还是旧的」，且不报错（SOP S5.0 的音频版）。
+  // 设了 audioKeyBase 后新音频落到从未用过的 key，本地无该文件 → 必然下载写入，不可能被跳过。
+  const audioKeyBase = Math.max(1, Number(ov?.audioKeyBase) || 1)
   // 定向修复：可显式把上一版的指定素材（按展示 URL）追加回列表，保持原 key 不重编码
   const appendUrls = Array.isArray(ov?.appendImageUrls) ? ov.appendImageUrls : []
 
@@ -1081,7 +1098,7 @@ async function materialize(rec, id, prev) {
     // 会被 reusableAsset 判为「同位同源」复用旧 URL，音频修复被静默吞掉。
     const a = rec.audios[i]
     const kept = a && a.overridden ? null : reusableAsset(prev?.audios?.[i], a)
-    rec.audios[i] = kept || (await persistOne(rec.audios[i], id, `audio-${i + 1}`, 'mp3'))
+    rec.audios[i] = kept || (await persistOne(rec.audios[i], id, `audio-${i + audioKeyBase}`, 'mp3'))
   }
   // 053 补采:新取材比台账短时(源站下架/过滤变化),台账里已物化的多余素材原样保留
   // (仍合规、文件已在 R2);按 sourceId/url 去重,防取材顺序漂移造成重复条目。
@@ -1091,7 +1108,11 @@ async function materialize(rec, id, prev) {
     // 2026-11-16：去重标识改用 originalUrl（唯一）而非 sourceId（可能为观察号，会误去重）
     const sigOf = (a) => (a ? `${a.type}|${a.originalUrl || a.url || a.sourceId || ''}` : null)
     const seen = new Set([...rec.images, ...rec.audios].map(sigOf).filter(Boolean))
-    for (const [kind, list] of [['images', prev.images], ['audios', prev.audios]]) {
+    // 2026-11-17 docs/132：_clearAudios 时**不得**补回 prev 的音频。
+    // 本段的语义是「本次取材比台账短 → 把台账多余素材原样留下」，而 _clearAudios 的语义是
+    // 「原有音频是别种的，必须清空」。若两者同时生效，清空会被这里静默抵销（错误的录音又回来）。
+    const kinds = ov?._clearAudios ? [['images', prev.images]] : [['images', prev.images], ['audios', prev.audios]]
+    for (const [kind, list] of kinds) {
       for (let i = rec[kind].length; i < (list?.length || 0); i++) {
         const a = list[i]
         if (!a || !String(a.url || '').startsWith(PUBLIC_BASE + '/')) continue
@@ -1175,6 +1196,27 @@ async function materialize(rec, id, prev) {
       if (a) out.push(a)
     }
     rec.images = out.slice(0, OPT.per)
+  }
+  // 音频换位（2026-11-17 docs/132）：audioSlotAssignments = [{ slot, pickIndex }]，语义与
+  // slotAssignments 完全对称（pickIndex 是 override.audios 的第几张，1 起；slot 是展示位号，1 起）。
+  // 为什么需要：本批 cranioleuca/eubucco 只换第 5 音、前 4 音是好的，若无此字段只能整表重抓或覆盖。
+  // 其余位保持 prev 原顺序与 key（不重编码、不覆写），符合 SOP 铁律 1。
+  // 注意：新音已在 materialize() 里按 audioKeyBase 物化成 audio-(audioKeyBase+k)，不会占用旧 key。
+  const audioSlotAssignments = Array.isArray(ov?.audioSlotAssignments) ? ov.audioSlotAssignments : []
+  if (audioSlotAssignments.length && prev?.audios?.length) {
+    const bySlot = new Map()
+    for (const a of audioSlotAssignments) {
+      const aud = rec.audios[(Number(a.pickIndex) || 0) - 1]
+      if (aud && aud.overridden) bySlot.set(Number(a.slot), aud)
+      else console.warn(`   ⚠️ audioSlotAssignments：pickIndex ${a.pickIndex} 没有对应 override 音频（slot ${a.slot} 落空）`)
+    }
+    const slots = Array.from({ length: Math.max(prev.audios.length, ...bySlot.keys()) }, (_, i) => i + 1)
+    const out = []
+    for (const s of slots) {
+      const a = bySlot.get(s) || prev.audios[s - 1]
+      if (a) out.push(a)
+    }
+    rec.audios = out.slice(0, OPT.per)
   }
   rec.image = rec.images[0] || null
   rec.audio = rec.audios[0] || null

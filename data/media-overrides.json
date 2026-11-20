@@ -23060,6 +23060,156 @@
         }
       ],
       "replaceSlot": 3
+    },
+    "dicrurus-hottentottus": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复（用户选定图片）：图3（photoId 550888460）实为黄嘴地鹃 Rhamphococcyx calyorhynchus —— 该照片在 iNaturalist 上被两个观察共用（obs 305534006 标 Dicrurus hottentottus、obs 305534002 标 Rhamphococcyx calyorhynchus），且 obs 305534006 的鉴定历史本身在 Corvus celebensis 与 Dicrurus hottentottus 之间反复（实测 iNat API：6 条鉴定里 3 条 Corvus、3 条 Dicrurus），obs 305534002 三条鉴定则完全一致。画面为黑色身体长尾 + 栗色头颈胸 + 黄色粗厚喙，与黄嘴地鹃一致、与发冠卷尾（全身黑、蓝黑光泽、喙形不同）不符。改为用户选定的 photoId 561770864（obs 311207150，community_taxon = Dicrurus hottentottus leucops 亚种，research grade，CC BY-NC）。首图未动，D1 不改。",
+      "imageKeyBase": 11,
+      "replaceSlot": 3,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/550888460/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/550888460/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/550888460/large.png",
+        "https://www.inaturalist.org/photos/550888460",
+        "https://www.inaturalist.org/observations/305534006",
+        "https://bird.wewalk.world/media/dicrurus-hottentottus/image-3.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/561770864/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/561770864/large.jpg",
+          "license": "cc-by-nc",
+          "author": "Pierre de Chabannes",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/311207150",
+          "sourceId": "561770864"
+        }
+      ]
+    },
+    "aptenodytes-patagonicus": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复（用户选定图片）：图2（photoId 455183834）与 eudyptes-schlegeli 图4（photoId 455184154）源图字节完全相同（实测下载 md5 均为 19473e25f37a，263,992 bytes）—— 同一摄影师 oscarkokako 于同日同地（2024-11-27，Macquarie Island Sandy Bay）把同一张照片作为两个物种各上传一次（obs 254160994 标 Aptenodytes patagonicus 21 票、obs 254160996 标 Eudyptes schlegeli 8 票）。画面主体是一只象海豹，国王企鹅与皇家企鹅混群作背景，不适合作为任一方的识别题面。按用户决定只换国王企鹅这张（eudyptes 图4 保留不动）。改为用户选定的 photoId 243750815（obs 142195977，community_taxon = Aptenodytes patagonicus，research grade，CC BY-NC）。首图未动，D1 不改。",
+      "imageKeyBase": 11,
+      "replaceSlot": 2,
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/455183834/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/455183834/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/455183834/large.png",
+        "https://www.inaturalist.org/photos/455183834",
+        "https://www.inaturalist.org/observations/254160994",
+        "https://bird.wewalk.world/media/aptenodytes-patagonicus/image-2.full.webp"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/243750815/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/243750815/large.jpg",
+          "license": "cc-by-nc",
+          "author": "Oscar Thomas",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/142195977",
+          "sourceId": "243750815"
+        }
+      ]
+    },
+    "cranioleuca-erythrops": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复（用户选定音频）：音5 声明 XC 1175571（Cranioleuca erythrops），但该录音与 eubucco-bourcierii 的音5（XC 1175573，Eubucco bourcierii）下载后字节完全相同（实测 md5 均为 e66c063121f7，1,179,818 bytes）—— 同一录音者 José María Loaiza B. 于 2026-08-11 在厄瓜多尔 Pichincha 同一地点提交的同一段 13 秒录音，且 XC 上 1175573 的 type 字段自己写着「song, Red-faced Spaintail, Whiskered Wren」（Red-faced Spaintail = Cranioleuca erythrops），即这是一段同时录到多种鸟的混音，被作为两个物种各提交一次。混音不适合作为单种听音题。改为用户选定的 iNat sound 1695724（obs 326812120，community_taxon = Cranioleuca erythrops，research grade，CC BY-NC）。前 4 音保持原 key 不动（audioSlotAssignments 只换第 5 位）。",
+      "audioKeyBase": 11,
+      "audioSlotAssignments": [
+        {
+          "slot": 5,
+          "pickIndex": 1
+        }
+      ],
+      "audios": [
+        {
+          "url": "https://static.inaturalist.org/sounds/1695724.mp3?1763311582",
+          "originalUrl": "https://static.inaturalist.org/sounds/1695724.mp3?1763311582",
+          "license": "cc-by-nc",
+          "author": "reginchen",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/326812120",
+          "sourceId": "1695724"
+        }
+      ]
+    },
+    "eubucco-bourcierii": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复（用户选定音频）：音5 声明 XC 1175573（Eubucco bourcierii），该录音与 cranioleuca-erythrops 的音5（XC 1175571）字节完全相同（md5 e66c063121f7）—— 同一录音者同日同地的同一段 13 秒混音被作为两个物种各提交一次，本次归属方是赤胸拟啄木鸟但录音里同时有 Red-faced Spaintail。混音不适合作为单种听音题。改为用户选定的 iNat sound 841130（obs 189902746，community_taxon = Eubucco bourcierii，research grade，CC BY-NC）。前 4 音保持原 key 不动。",
+      "audioKeyBase": 11,
+      "audioSlotAssignments": [
+        {
+          "slot": 5,
+          "pickIndex": 1
+        }
+      ],
+      "audios": [
+        {
+          "url": "https://static.inaturalist.org/sounds/841130.mp3?1699054632",
+          "originalUrl": "https://static.inaturalist.org/sounds/841130.mp3?1699054632",
+          "license": "cc-by-nc",
+          "author": "mikee84",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/189902746",
+          "sourceId": "841130"
+        }
+      ]
+    },
+    "erythrogenys-imberbis": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复：本种原有 5 段音频全部不是本种 —— XC 512785 / 8301 / 306121 / 100062 / 498595 经 XC API 逐条实查，归属均为 Psittacara erythrogenys（红面具鹦鹉）。根因：XC 上 Erythrogenys imberbis 为 0 条录音（实测 numRecordings=0），取音管线 candidateNames() 把 GBIF 的属名级同义词 Erythrogenys 当成物种名去搜 sp:\"Erythrogenys\"，命中 203 条 Microhierax erythrogenys 与 Psittacara erythrogenys 的录音。改用 iNaturalist taxon 1588732 的可用录音：iNat 全站仅 6 段许可可用（已排除 2 段 all rights reserved 与 2 段 CC-BY-NC-ND），本取 5 段，其中 4 段 research grade 且 community_taxon 确认为 E. imberbis / E. imberbis celata，1 段（sound 1280104）为 needs_id 且无 community 认定（按 SOP S3.4「研究级优先，非研究级只列给用户」注明：iNat 该种素材量不足，无法凑满 5 段 research）。旧 5 段音频不再引用（文件仍留 R2 备查）。",
+      "audioKeyBase": 11,
+      "_clearAudios": true,
+      "audios": [
+        {
+          "url": "https://static.inaturalist.org/sounds/1729163.wav?1767199514",
+          "originalUrl": "https://static.inaturalist.org/sounds/1729163.wav?1767199514",
+          "license": "cc-by",
+          "author": "Wich’yanan (Jay) Limparungpatthanakij",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/332890721",
+          "sourceId": "1729163"
+        },
+        {
+          "url": "https://static.inaturalist.org/sounds/1729165.wav?1767199516",
+          "originalUrl": "https://static.inaturalist.org/sounds/1729165.wav?1767199516",
+          "license": "cc-by",
+          "author": "Wich’yanan (Jay) Limparungpatthanakij",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/332890721",
+          "sourceId": "1729165"
+        },
+        {
+          "url": "https://static.inaturalist.org/sounds/1746637.wav?1768941713",
+          "originalUrl": "https://static.inaturalist.org/sounds/1746637.wav?1768941713",
+          "license": "cc-by",
+          "author": "Ben Costamagna",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/335518270",
+          "sourceId": "1746637"
+        },
+        {
+          "url": "https://static.inaturalist.org/sounds/884699.wav?1706349969",
+          "originalUrl": "https://static.inaturalist.org/sounds/884699.wav?1706349969",
+          "license": "cc-by",
+          "author": "Sam Hambly",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/197678871",
+          "sourceId": "884699"
+        },
+        {
+          "url": "https://static.inaturalist.org/sounds/1280104.wav?1736068186",
+          "originalUrl": "https://static.inaturalist.org/sounds/1280104.wav?1736068186",
+          "license": "cc-by-nc",
+          "author": "benjamynweil",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/257451197",
+          "sourceId": "1280104"
+        }
+      ]
+    },
+    "pitta-abbotti": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复（用户决定：移除错误音频、留空）：本种原有 5 段音频全部不是本种 —— XC 562984/795696/162843/41473/1145663 经 XC API 逐条实查：其中 562984/795696/162843/1145663 归属 Micropternus brachyurus（栗啄木鸟），41473 归属 Buteo brachyurus（短尾鵟）。根因：XC 上 Pitta abbotti 为 0 条录音（实测 numRecordings=0），取音管线 candidateNames() 把 GBIF 的属名级同义词 Brachyurus 当成物种名去搜 sp:\"Brachyurus\"，命中 274 条 Buteo/Micropternus brachyurus 的录音。iNat taxon 1508562（Pitta abbotti，Nicobar Hooded Pitta）的 observations?sounds=true 实测 total_results=0。 事实求证：iNaturalist 上该种同样没有任何可用录音（sounds 查询 total=0），因此不存在可替换的正确素材。按用户决定清空音频而非保留错素材 —— 继续挂错素材会让做题人学到错误的鸣声。清空后该种不可出听音题（playable 相应为 false），图片保留。旧音频文件仍留 R2 备查，不删除。",
+      "_clearAudios": true
+    },
+    "pitta-forsteni": {
+      "_reason": "2026-11-17 docs/132 跨属错配修复（用户决定：移除错误音频、留空）：本种原有 5 段音频全部不是本种 —— XC 562984/795696/162843/41473/1145663 经 XC API 逐条实查：其中 562984/795696/162843/1145663 归属 Micropternus brachyurus（栗啄木鸟），41473 归属 Buteo brachyurus（短尾鵟）。根因：XC 上 Pitta forsteni 为 0 条录音（实测 numRecordings=0），取音管线 candidateNames() 把 GBIF 的属名级同义词 Brachyurus 当成物种名去搜 sp:\"Brachyurus\"，命中 274 条 Buteo/Micropternus brachyurus 的录音。iNat taxon 1508565（Pitta forsteni，Minahasa Hooded Pitta）的 observations?sounds=true 实测 total_results=0。 事实求证：iNaturalist 上该种同样没有任何可用录音（sounds 查询 total=0），因此不存在可替换的正确素材。按用户决定清空音频而非保留错素材 —— 继续挂错素材会让做题人学到错误的鸣声。清空后该种不可出听音题（playable 相应为 false），图片保留。旧音频文件仍留 R2 备查，不删除。",
+      "_clearAudios": true
     }
   }
 }

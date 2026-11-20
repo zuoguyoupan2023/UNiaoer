@@ -1,0 +1,598 @@
+{
+  "exportedAt": "2026-11-16T00:52:56.137Z",
+  "selections": {
+    "phasianus-colchicus": {
+      "replacements": [
+        {
+          "replaceSlot": "位3",
+          "action": "replace",
+          "photoId": "763834712",
+          "obsId": "414875659",
+          "license": "cc-by-nc",
+          "author": "Tommi R"
+        }
+      ]
+    },
+    "poecilotriccus-plumbeiceps": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "118442274",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "polystictus-superciliaris": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "65180537",
+          "license": "CC-BY-NC",
+          "author": "(c) Hudson Martins Soares, some rights reserved (CC BY-NC), uploaded by Hudson Martins Soares"
+        }
+      ]
+    },
+    "pseudocolopteryx-sclateri": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "119328106",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "pseudoleistes-guirahuro": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "442402880",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "pyriglena-leucoptera": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "139367700",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "pyriglena-maura": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "118594683",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "pyrilia-barrabandi": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "118300227",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "pyrilia-caica": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "118300462",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "pyrrhura-lepida": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "443923443",
+          "license": "CC-BY",
+          "author": "(c) Christoph Moning, some rights reserved (CC BY), uploaded by Christoph Moning"
+        }
+      ]
+    },
+    "pyrrhura-lucianii": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "237933477",
+          "license": "CC-BY-NC",
+          "author": "(c) hbottai, some rights reserved (CC BY-NC)"
+        }
+      ]
+    },
+    "ramphotrigon-megacephalum": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "60274852",
+          "license": "CC-BY-NC",
+          "author": "(c) Oswaldo Hernández, some rights reserved (CC BY-NC), uploaded by Oswaldo Hernández"
+        }
+      ]
+    },
+    "rufirallus-xenopterus": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "176298508",
+          "license": "CC-BY-NC",
+          "author": "(c) Luiz Alberto Santos, some rights reserved (CC BY-NC), uploaded by Luiz Alberto Santos"
+        }
+      ]
+    },
+    "saltator-maxillosus": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "118924869",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "sporophila-pileata": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "104009161",
+          "license": "CC-BY-NC",
+          "author": "(c) jairo ortiz, some rights reserved (CC BY-NC), uploaded by jairo ortiz"
+        }
+      ]
+    },
+    "stilpnia-preciosa": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "118977504",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "suthora-ricketti": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "457506124",
+          "license": "CC-BY-NC",
+          "author": "(c) Mengshuai Ge, some rights reserved (CC BY-NC), uploaded by Mengshuai Ge"
+        }
+      ]
+    },
+    "syndactyla-ucayalae": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "412383435",
+          "license": "CC-BY-NC",
+          "author": "(c) Max Wolf Breshears, some rights reserved (CC BY-NC), uploaded by Max Wolf Breshears"
+        }
+      ]
+    },
+    "tachyphonus-surinamus": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "102965",
+          "license": "CC-BY-NC-SA",
+          "author": "(c) Sean McCann, some rights reserved (CC BY-NC-SA)"
+        }
+      ]
+    },
+    "tangara-brasiliensis": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "178379831",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "turdus-albicollis": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "415633664",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "xenops-minutus": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "176974820",
+          "license": "CC-BY-NC",
+          "author": "(c) Luciano Bernardes, some rights reserved (CC BY-NC), uploaded by Luciano Bernardes"
+        }
+      ]
+    },
+    "xenops-rutilans": {
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "action": "replace",
+          "photoId": "29614437",
+          "license": "CC-BY-NC",
+          "author": "(c) Dave Wendelken, some rights reserved (CC BY-NC), uploaded by Dave Wendelken"
+        }
+      ]
+    },
+    "numenius-americanus": {
+      "replacements": [
+        {
+          "replaceSlot": "音5",
+          "action": "replace",
+          "recId": "1047420",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Paul Marvin"
+        }
+      ]
+    },
+    "corvus-splendens": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "replace",
+          "recId": "1169643",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "David Darrell-Lambert"
+        }
+      ]
+    },
+    "todiramphus-chloris": {
+      "replacements": [
+        {
+          "replaceSlot": "音2",
+          "action": "replace",
+          "recId": "1166880",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Joan Theng"
+        }
+      ]
+    },
+    "alauda-razae": {
+      "replacements": [
+        {
+          "replaceSlot": "音2",
+          "action": "remove"
+        }
+      ]
+    },
+    "alcedo-hercules": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "remove"
+        }
+      ]
+    },
+    "amazona-guildingii": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "remove"
+        }
+      ]
+    },
+    "chlamydotis-macqueenii": {
+      "replacements": [
+        {
+          "replaceSlot": "音2",
+          "action": "remove"
+        }
+      ]
+    },
+    "cinclodes-antarcticus": {
+      "replacements": [
+        {
+          "replaceSlot": "音5",
+          "action": "replace",
+          "recId": "254446",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Andrew Spencer"
+        }
+      ]
+    },
+    "elanus-scriptus": {
+      "replacements": [
+        {
+          "replaceSlot": "音5",
+          "action": "replace",
+          "recId": "924855",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Louis Masarei"
+        }
+      ]
+    },
+    "lanius-phoenicuroides": {
+      "replacements": [
+        {
+          "replaceSlot": "音4",
+          "action": "replace",
+          "recId": "1052830",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "David Darrell-Lambert"
+        }
+      ]
+    },
+    "mustelirallus-erythrops": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "remove"
+        }
+      ]
+    },
+    "napothera-pasquieri": {
+      "replacements": [
+        {
+          "replaceSlot": "音4",
+          "action": "replace",
+          "recId": "1148601",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Tim Dinh / Annambirding"
+        }
+      ]
+    },
+    "rheinardia-ocellata": {
+      "replacements": [
+        {
+          "replaceSlot": "音5",
+          "action": "remove"
+        }
+      ]
+    },
+    "tangara-velia": {
+      "replacements": [
+        {
+          "replaceSlot": "音4",
+          "action": "replace",
+          "recId": "1190894",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Marcos Pérsio"
+        }
+      ]
+    },
+    "amytornis-rowleyi": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "remove"
+        }
+      ]
+    },
+    "centropus-nigrorufus": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "remove"
+        }
+      ]
+    },
+    "chlorocichla-falkensteini": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "replace",
+          "recId": "815859",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Niall Perrins"
+        },
+        {
+          "replaceSlot": "音5",
+          "action": "replace",
+          "recId": "815859",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Niall Perrins"
+        }
+      ]
+    },
+    "cisticola-anonymus": {
+      "replacements": [
+        {
+          "replaceSlot": "音2",
+          "action": "replace",
+          "recId": "1011255",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Matthew L. Brady"
+        }
+      ]
+    },
+    "melozone-cabanisi": {
+      "replacements": [
+        {
+          "replaceSlot": "音5",
+          "action": "replace",
+          "recId": "371719",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Juan D Astorga"
+        }
+      ]
+    },
+    "phoenicurus-moussieri": {
+      "replacements": [
+        {
+          "replaceSlot": "音5",
+          "action": "replace",
+          "recId": "1097913",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Stanislas Wroza"
+        }
+      ]
+    },
+    "trachylaemus-purpuratus": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "remove"
+        }
+      ]
+    },
+    "vireo-pallens": {
+      "replacements": [
+        {
+          "replaceSlot": "音3",
+          "action": "replace",
+          "recId": "789196",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Olivier SWIFT"
+        },
+        {
+          "replaceSlot": "音4",
+          "action": "replace",
+          "recId": "824010",
+          "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "author": "Enrique Varela"
+        }
+      ]
+    },
+    "rhipidura-albiscapa": {
+      "replacements": [
+        {
+          "replaceSlot": "位41",
+          "action": "replace",
+          "photoId": "457831134",
+          "obsId": "255477894",
+          "license": "cc-by-nc",
+          "author": "Konrad Szylar"
+        }
+      ]
+    },
+    "ptilinopus-solomonensis": {
+      "replacements": [
+        {
+          "replaceSlot": "位40",
+          "action": "replace",
+          "photoId": "761040759",
+          "obsId": "413494264",
+          "license": "cc-by-nc",
+          "author": "Oscar Thomas"
+        }
+      ]
+    },
+    "scytalopus-griseicollis": {
+      "replacements": [
+        {
+          "replaceSlot": "位40",
+          "action": "replace",
+          "photoId": "720295896",
+          "obsId": "393005446",
+          "license": "cc-by-nc",
+          "author": "Oleg Rouvinski Vasilieva"
+        }
+      ]
+    },
+    "symposiachrus-bimaculatus": {
+      "replacements": [
+        {
+          "replaceSlot": "位40",
+          "action": "replace",
+          "photoId": "523186097",
+          "obsId": "290813334",
+          "license": "cc-by-nc",
+          "author": "Gideon Lam"
+        }
+      ]
+    },
+    "malurus-cyaneus": {
+      "replacements": [
+        {
+          "replaceSlot": "位42",
+          "action": "replace",
+          "photoId": "59444551",
+          "license": "CC-BY-NC-ND",
+          "author": "(c) upupamartin, some rights reserved (CC BY-NC-ND)"
+        },
+        {
+          "replaceSlot": "位43",
+          "action": "replace",
+          "photoId": "17957400",
+          "license": "CC-BY-NC",
+          "author": "(c) Bird Explorers, some rights reserved (CC BY-NC)"
+        },
+        {
+          "replaceSlot": "位44",
+          "action": "replace",
+          "photoId": "195652444",
+          "license": "CC-BY-NC",
+          "author": "(c) Ron Greer, some rights reserved (CC BY-NC)"
+        }
+      ]
+    },
+    "sphenopsis-ochracea": {
+      "replacements": [
+        {
+          "replaceSlot": "位50",
+          "action": "replace",
+          "photoId": "319312800",
+          "license": "CC-BY-NC",
+          "author": "(c) Dennis Mersky, some rights reserved (CC BY-NC)"
+        },
+        {
+          "replaceSlot": "位51",
+          "action": "replace",
+          "photoId": "262214068",
+          "license": "CC-BY-NC",
+          "author": "(c) Dennis Mersky, some rights reserved (CC BY-NC)"
+        },
+        {
+          "replaceSlot": "位52",
+          "action": "replace",
+          "photoId": "590860775",
+          "license": "CC-BY",
+          "author": "(c) tomas_kay, some rights reserved (CC BY)"
+        },
+        {
+          "replaceSlot": "位53",
+          "action": "replace",
+          "photoId": "319312816",
+          "license": "CC-BY-NC",
+          "author": "(c) Dennis Mersky, some rights reserved (CC BY-NC)"
+        }
+      ]
+    }
+  },
+  "unselected": [
+    "ardea-intermedia 位1",
+    "ardea-intermedia 位3",
+    "egretta-garzetta 位3"
+  ]
+}

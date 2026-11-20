@@ -323,6 +323,7 @@ export const messages = {
     count: '（{n}）',
     photoN: '照片 {n}',
     audioN: '录音 {n}',
+    noAudio: '本站暂无该种音频素材',
     photoLargeAlt: '放大的照片',
   },
   faq: {

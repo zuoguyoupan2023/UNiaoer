@@ -1,0 +1,90 @@
+{
+  "exportedAt": "2026-11-16T04:21:04.234Z",
+  "selections": {
+    "poecilotriccus-plumbeiceps": {
+      "nameZh": "Ochre-faced Tody-Flycatcher",
+      "replaceSlot": "位1",
+      "photoId": "757747191",
+      "obsId": "411995081",
+      "license": "cc-by-nc"
+    },
+    "pseudocolopteryx-sclateri": {
+      "nameZh": "Crested Doradito",
+      "replaceSlot": "位1",
+      "photoId": "745150767",
+      "obsId": "405656810",
+      "license": "cc-by-nc"
+    },
+    "pyriglena-leucoptera": {
+      "nameZh": "White-shouldered Fire-eye",
+      "replaceSlot": "位1",
+      "photoId": "764013978",
+      "obsId": "414965656",
+      "license": "cc-by-nc"
+    },
+    "pyriglena-maura": {
+      "nameZh": "Western Fire-eye",
+      "replaceSlot": "位1",
+      "photoId": "760071284",
+      "obsId": "413012532",
+      "license": "cc-by-nc"
+    },
+    "pyrilia-barrabandi": {
+      "nameZh": "Orange-cheeked Parrot",
+      "replaceSlot": "位1",
+      "photoId": "760192651",
+      "obsId": "413073726",
+      "license": "cc-by"
+    },
+    "pyrilia-caica": {
+      "nameZh": "Caica Parrot",
+      "replaceSlot": "位1",
+      "photoId": "747449828",
+      "obsId": "406824634",
+      "license": "cc-by-nc"
+    },
+    "saltator-maxillosus": {
+      "nameZh": "Thick-billed Saltator",
+      "replaceSlot": "位1",
+      "photoId": "758633333",
+      "obsId": "412304137",
+      "license": "cc-by"
+    },
+    "stilpnia-preciosa": {
+      "nameZh": "Chestnut-backed Tanager",
+      "replaceSlot": "位1",
+      "photoId": "762915120",
+      "obsId": "414423601",
+      "license": "cc-by-nc"
+    },
+    "suthora-ricketti": {
+      "nameZh": "Eye-ringed Parrotbill",
+      "replaceSlot": "位1",
+      "photoId": "641175849",
+      "obsId": "351358830",
+      "license": "cc-by-nc"
+    },
+    "tangara-brasiliensis": {
+      "nameZh": "White-bellied Tanager",
+      "replaceSlot": "位1",
+      "photoId": "759197376",
+      "obsId": "412580069",
+      "license": "cc-by-nc"
+    },
+    "turdus-albicollis": {
+      "nameZh": "White-necked Thrush",
+      "replaceSlot": "位1",
+      "photoId": "760868642",
+      "obsId": "413410800",
+      "license": "cc-by-nc"
+    },
+    "xenops-minutus": {
+      "nameZh": "Atlantic Plain Xenops",
+      "replaceSlot": "位1",
+      "photoId": "756990924",
+      "obsId": 411490223,
+      "license": "cc-by"
+    }
+  },
+  "unselected": []
+}

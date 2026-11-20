@@ -92,6 +92,12 @@ function closeZoom() {
         </div>
       </div>
 
+      <!-- 无音频时显式说明（docs/132）：仅当该种「有图但确实没有可用录音」才显示，
+           避免和「整个画廊都没素材」的种混在一起。措辞只陈述事实，不解释数据口径。 -->
+      <div v-if="!audios.length && images.length" class="sg-group">
+        <span class="sg-cap"><Music class="ic" :size="12" /> {{ t('gallery.audios') }}</span>
+        <p class="sg-empty">{{ t('gallery.noAudio') }}</p>
+      </div>
       <div v-if="audios.length" class="sg-group">
         <span class="sg-cap"><Music class="ic" :size="12" /> {{ t('gallery.audios') }}</span>
         <div v-if="mode === 'browse'" class="sg-audios">
@@ -190,6 +196,11 @@ function closeZoom() {
   gap: 4px;
   font-size: 0.72rem;
   font-weight: 700;
+  color: var(--text-light);
+}
+.sg-empty {
+  margin: 0;
+  font-size: 0.78rem;
   color: var(--text-light);
 }
 .sg-row {

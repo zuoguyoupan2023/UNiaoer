@@ -1,0 +1,45 @@
+{
+  "exportedAt": "2026-11-16T05:38:49.133Z",
+  "selections": {
+    "ardea-intermedia": {
+      "nameZh": "中白鹭",
+      "replacements": [
+        {
+          "replaceSlot": "位1",
+          "photoId": "763797964",
+          "obsId": "414857730",
+          "license": "cc-by-nc"
+        },
+        {
+          "replaceSlot": "位4",
+          "photoId": "763789566",
+          "obsId": "414853819",
+          "license": "cc-by-nc"
+        }
+      ]
+    },
+    "egretta-garzetta": {
+      "nameZh": "小白鹭",
+      "replacements": [
+        {
+          "replaceSlot": "位3",
+          "photoId": "764031778",
+          "obsId": "414974468",
+          "license": "cc-by"
+        }
+      ]
+    },
+    "phasianus-colchicus": {
+      "nameZh": "环颈雉",
+      "replacements": [
+        {
+          "replaceSlot": "位3",
+          "photoId": "763834712",
+          "obsId": "414875659",
+          "license": "cc-by-nc"
+        }
+      ]
+    }
+  },
+  "unselected": []
+}

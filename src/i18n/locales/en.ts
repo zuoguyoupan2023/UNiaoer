@@ -340,6 +340,7 @@ const en: typeof zhMessages = {
     count: ' ({n})',
     photoN: 'Photo {n}',
     audioN: 'Recording {n}',
+    noAudio: 'No recording available for this species',
     photoLargeAlt: 'Enlarged photo',
   },
   faq: {
