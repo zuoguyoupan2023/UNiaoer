@@ -95,9 +95,20 @@ function contentTypeOf(rel) {
   return CONTENT_TYPES[ext] || 'application/octet-stream'
 }
 
+/**
+ * 遍历媒体目录。
+ * 跳过 macOS 垃圾文件（2026-11-20）：`.DS_Store` 与 AppleDouble `._*` 是 Finder 在本地
+ * 目录里留下的元数据，不是媒体素材。历史台账里已误传过 `media/.DS_Store`，
+ * 新目录也会持续生成 —— 在入口过滤掉，不依赖人记得手动删。
+ */
+function isJunk(name) {
+  return name === '.DS_Store' || name.startsWith('._') || name === 'Thumbs.db'
+}
+
 async function walk(dir) {
   const out = []
   for (const entry of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    if (isJunk(entry.name)) continue
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) out.push(...(await walk(full)))
     else out.push(full)

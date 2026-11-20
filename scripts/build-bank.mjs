@@ -1444,13 +1444,24 @@ async function persistOne(a, id, kind, ext) {
   }
 
   // stage 增量：目标文件已在本地则跳过下载（补抓只拉缺失的）
+  // 2026-11-20 修正（docs/134 P0b）：原实现只判断「文件是否存在」就跳过，存在与图片
+  // 「S5.0 内容错位」完全相同的缺陷 —— key 按位置算（audio-N），位次一变，
+  // 旧文件字节就配上新元数据，且不报错。图片侧已用 `.srcmd5` 指纹修掉（见 persistImage），
+  // 音频侧此前没有。现在补上：跳过前必须证明现有文件与本 asset 的源一致。
   if (
     OPT.media === 'stage' &&
     (outExt === ext || !a.transcode) &&
     (await fs.access(localPath).then(() => true, () => false))
   ) {
-    if (OPT.verbose) console.log(`      ↳ ${kind} 已存在，跳过下载`)
-    return { ...a, url: `${PUBLIC_BASE}/media/${id}/${kind}.${outExt}` }
+    const stampFile = path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}.srcmd5`)
+    const expectSig = assetSignature(a)
+    const gotSig = await fs.readFile(stampFile, 'utf8').then((s) => s.trim()).catch(() => '')
+    if (gotSig && gotSig === expectSig) {
+      if (OPT.verbose) console.log(`      ↳ ${kind} 已存在且指纹一致，跳过下载`)
+      return { ...a, url: `${PUBLIC_BASE}/media/${id}/${kind}.${outExt}` }
+    }
+    // 无指纹（历史遗留文件）或指纹不符 → 不信任现有文件，重新下载覆盖
+    if (OPT.verbose) console.log(`      ↳ ${kind} 存在但指纹${gotSig ? '不符' : '缺失'}，重新下载`)
   }
 
   let raw
@@ -1508,6 +1519,15 @@ async function persistLocalFile(a, id, kind, raw, srcUrl, ext) {
     url = OPT.media === 'stage' ? `${PUBLIC_BASE}/${rel}` : `/media/${id}/${kind}.${outExt}`
   }
   await fs.rm(tmpDir, { recursive: true, force: true })
+  // 写指纹（docs/134 P0b）：与 persistImage 同构。下次 stage 跳过前先比对，
+  // 不符则重新下载 —— 这是「本地文件存在 ≠ 内容正确」的唯一凭据。
+  await fs
+    .writeFile(
+      path.join(PUBLIC_MEDIA, id, `${kind}.${outExt}.srcmd5`),
+      assetSignature({ ...a, url: srcUrl, originalUrl: a.originalUrl || srcUrl }),
+      'utf8',
+    )
+    .catch(() => {})
   const out = { ...a, url }
   delete out.altUrl
   return out
