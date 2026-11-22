@@ -9071,22 +9071,23 @@
       ]
     },
     "ptilinopus-solomonensis": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 3001560）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
-      "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/3001560/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/3001560/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/3001560/large.png",
-        "https://www.inaturalist.org/photos/3001560"
+      "_reason": "2026-11-22 docs/134 P1 B类修复（源站同画面）：实测 photo 3001560 与 photo 45058663 两个源文件解码像素逐位相同（800×571，md5 不同但画面一致），R2 image-40 与 image-2 也同字节 —— 即「按 photoId 重下」在这组永远拿回同一张画，11-11 那批的修法因此失效。处置：保留图1（key image-40，内容与声明源一致，D1 首图不动），图2 换用户选定候选 photo 761042126（obs 413494296，Oscar Thomas，CC BY-NC）。旧 image-1/image-40 对象留在 R2 备查。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3001560/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/761042126/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/761042126/large.jpg",
           "license": "cc-by-nc",
-          "author": "(c) Nik Borrow, some rights reserved (CC BY-NC)",
+          "author": "(c) Oscar Thomas, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/3001560",
-          "sourceId": "3001560"
+          "sourceUrl": "https://www.inaturalist.org/observations/413494296",
+          "sourceId": "761042126"
         }
       ]
     },
@@ -10991,22 +10992,23 @@
       ]
     },
     "scytalopus-griseicollis": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 11555381）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
-      "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/11555381/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/11555381/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/11555381/large.png",
-        "https://www.inaturalist.org/photos/11555381"
+      "_reason": "2026-11-22 docs/134 P1 B类修复（源站同画面）：photo 11555381 与 photo 12934078 源文件 md5 逐位相同（c89fa006bb，1024×881），R2 image-40 与 image-5 同字节 —— 重下声明源无效。R2 image-40 与声明源 photo 11555381 容差比对一致（ahash 0 / 直方图差 0.019），故图1 是正确的、图5 是被覆盖位。处置：保留图1，图5 换用户选定候选 photo 720295896（obs 393005446，Oleg Rouvinski Vasilieva，CC BY-NC）。D1 不动。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 5,
+          "pickIndex": 1
+        }
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/11555381/large.jpg",
-          "license": "cc-by-sa",
-          "author": "(c) Andres Cuervo, some rights reserved (CC BY-SA)",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/720295896/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/720295896/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Oleg Rouvinski Vasilieva, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/11555381",
-          "sourceId": "11555381"
+          "sourceUrl": "https://www.inaturalist.org/observations/393005446",
+          "sourceId": "720295896"
         }
       ]
     },
@@ -13066,22 +13068,23 @@
       ]
     },
     "symposiachrus-bimaculatus": {
-      "_reason": "2026-11-11 docs/118 阶段一【有方向剩余】修复：R2 上 image-1 的字节被 image-2 覆盖（dup-diagnose-fixed.json 的 Last-Modified 判定）。按 image-1 自己声明的源图（iNat photo 180729882）用未占用 key 段 image-40 重下；其余 4 张原样复用旧 key，不重编码。源图取自本地缓存 store/dup-audit/audit-850/src-cache（已下载并 md5 校验）。",
-      "imageKeyBase": 40,
-      "excludeUrls": [
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/180729882/large.jpg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/180729882/large.jpeg",
-        "https://inaturalist-open-data.s3.amazonaws.com/photos/180729882/large.png",
-        "https://www.inaturalist.org/photos/180729882"
+      "_reason": "2026-11-22 docs/134 P1 B类修复（源站同画面）：photo 180729882 与 photo 53259578 源文件 md5 逐位相同（7900ca2a33，863×600），R2 image-3 与 image-40 同字节 —— 重下声明源无效。处置：默认换图3（非首图，D1 不动），用户选定候选 photo 759385993（obs 412673681，Noah Strycker，CC BY-NC）。图1 保持 image-40 不动。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 3,
+          "pickIndex": 1
+        }
       ],
       "images": [
         {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/180729882/large.jpg",
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/759385993/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/759385993/large.jpg",
           "license": "cc-by-nc",
-          "author": "(c) Mehd Halaouate, some rights reserved (CC BY-NC), uploaded by Mehd Halaouate",
+          "author": "(c) Noah Strycker, some rights reserved (CC BY-NC)",
           "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/photos/180729882",
-          "sourceId": "180729882"
+          "sourceUrl": "https://www.inaturalist.org/observations/412673681",
+          "sourceId": "759385993"
         }
       ]
     },
@@ -23210,6 +23213,129 @@
     "pitta-forsteni": {
       "_reason": "2026-11-17 docs/132 跨属错配修复（用户决定：移除错误音频、留空）：本种原有 5 段音频全部不是本种 —— XC 562984/795696/162843/41473/1145663 经 XC API 逐条实查：其中 562984/795696/162843/1145663 归属 Micropternus brachyurus（栗啄木鸟），41473 归属 Buteo brachyurus（短尾鵟）。根因：XC 上 Pitta forsteni 为 0 条录音（实测 numRecordings=0），取音管线 candidateNames() 把 GBIF 的属名级同义词 Brachyurus 当成物种名去搜 sp:\"Brachyurus\"，命中 274 条 Buteo/Micropternus brachyurus 的录音。iNat taxon 1508565（Pitta forsteni，Minahasa Hooded Pitta）的 observations?sounds=true 实测 total_results=0。 事实求证：iNaturalist 上该种同样没有任何可用录音（sounds 查询 total=0），因此不存在可替换的正确素材。按用户决定清空音频而非保留错素材 —— 继续挂错素材会让做题人学到错误的鸣声。清空后该种不可出听音题（playable 相应为 false），图片保留。旧音频文件仍留 R2 备查，不删除。",
       "_clearAudios": true
+    },
+    "pseudoleistes-guirahuro": {
+      "_reason": "2026-11-22 docs/134 P1 B类修复（双源删除）：图1 声明源 photo 442402880 与图2 声明源 photo 263108656 均已从 iNaturalist 删除（open-data large/original/medium 全 404），R2 上 image-1 与 image-2 字节完全相同（md5 7e74b691）= 唯一存活副本。处置：图1 保留孤本字节（不写 excludeUrls，避免重建掉首图），图2 换用户选定候选 photo 408351088（obs 230009413，Guilherme Cameis Freda，CC BY-SA）。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        }
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/408351088/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/408351088/large.jpg",
+          "license": "cc-by-sa",
+          "author": "(c) Guilherme Cameis Freda, some rights reserved (CC BY-SA)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/230009413",
+          "sourceId": "408351088"
+        }
+      ]
+    },
+    "ramphotrigon-megacephalum": {
+      "_reason": "2026-11-22 docs/134 P1 B类修复（覆盖 + 源删除）：图2 声明源 photo 205883635 已从 iNaturalist 删除；R2 image-1 与 image-2 同字节（md5 13452d04），且实测该字节与图1 声明源 photo 60274852（存活）不同图（1024×768 vs 1024×684，直方图差 0.39）—— 两格装的都是已删源的内容。处置：图1 重下声明源 photo 60274852（Oswaldo Hernández，CC BY-NC）落新 key image-6，图2 换用户选定候选 photo 692285013（obs 378518120，Marcelo Schmidt Roberti，CC BY）。D1 首图 img_url 需更新到 image-6。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        }
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/60274852/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/60274852/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Oswaldo Hernández, some rights reserved (CC BY-NC), uploaded by Oswaldo Hernández",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/60274852",
+          "sourceId": "60274852"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/692285013/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/692285013/large.jpg",
+          "license": "cc-by",
+          "author": "(c) Marcelo Schmidt Roberti, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/378518120",
+          "sourceId": "692285013"
+        }
+      ]
+    },
+    "rufirallus-xenopterus": {
+      "_reason": "2026-11-22 docs/134 P1 B类修复（覆盖 + 源删除）：图2 声明源 photo 118326907 已删除；R2 image-1 与 image-2 同字节（md5 c7bd014a），且与图1 声明源 photo 176298508（存活）不同图（直方图差 0.55）。处置：图1 重下声明源 photo 176298508（Luiz Alberto Santos，CC BY-NC）落 image-6，图2 换用户选定候选 photo 762882894（obs 414406976，chris_ahlgrimm，CC BY-NC）。D1 首图需更新到 image-6。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        }
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/176298508/large.jpeg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/176298508/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Luiz Alberto Santos, some rights reserved (CC BY-NC), uploaded by Luiz Alberto Santos",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/176298508",
+          "sourceId": "176298508"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/762882894/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/762882894/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) chris_ahlgrimm, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414406976",
+          "sourceId": "762882894"
+        }
+      ]
+    },
+    "syndactyla-ucayalae": {
+      "_reason": "2026-11-22 docs/134 P1 B类修复（覆盖 + 源删除）：图2 声明源 photo 432115187 已删除；R2 image-1 与 image-2 同字节（md5 4497cae7），且与图1 声明源 photo 412383435（存活）不同图（直方图差 0.21）。处置：图1 重下声明源 photo 412383435（Max Wolf Breshears，CC BY-NC）落 image-6，图2 换用户选定候选 photo 531210828（obs 295094138，Filho Manfredini，CC BY-NC）。D1 首图需更新到 image-6。注：该种 iNat research 观察仅 8 条，画廊占 3 条观察，候选池天然受限。",
+      "imageKeyBase": 6,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        }
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/412383435/large.jpeg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/412383435/large.jpeg",
+          "license": "cc-by-nc",
+          "author": "(c) Max Wolf Breshears, some rights reserved (CC BY-NC), uploaded by Max Wolf Breshears",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/photos/412383435",
+          "sourceId": "412383435"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/531210828/large.jpg",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/531210828/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Filho Manfredini, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/295094138",
+          "sourceId": "531210828"
+        }
+      ]
     }
   }
 }
