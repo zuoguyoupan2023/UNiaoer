@@ -162,40 +162,47 @@ function bucketNameFor(id: string): string {
 const MAX_BUCKET_ATTEMPTS = 3
 const bucketAttempts = new Map<string, number>()
 
+/**
+ * 确保某个 assets 桶已加载（同名去重 + inflight 复用 + 失败可重试）。
+ * 桶名 → species id 的解析由调用方完成；这里只负责那一次 fetch。
+ */
+async function ensureBucket(name: string): Promise<void> {
+  if (!name || bucketLoaded.has(name)) return
+  let p = bucketInflight.get(name)
+  if (!p) {
+    const attempts = bucketAttempts.get(name) ?? 0
+    if (attempts >= MAX_BUCKET_ATTEMPTS) return // 放弃（离线/持续失败），不再打空请求
+    bucketAttempts.set(name, attempts + 1)
+    p = (async () => {
+      const url = `${import.meta.env.BASE_URL}data/assets/${name}.json`
+      try {
+        const res = await fetch(url)
+        if (res.ok) {
+          const data = (await res.json()) as { species?: Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }> }
+          for (const [sid, entry] of Object.entries(data.species || {})) {
+            assetCache.set(sid, entry)
+          }
+          // 只有成功才标记"该桶已加载"——失败保持可重试
+          bucketLoaded.add(name)
+        }
+      } catch {
+        /* 分片加载失败:调用方回退 core 首图首音；下次调用会再试（有次数上限） */
+      } finally {
+        bucketInflight.delete(name)
+      }
+    })()
+    bucketInflight.set(name, p)
+  }
+  await p
+}
+
 export async function loadSpeciesAssets(
   id: string,
 ): Promise<{ images?: MediaAsset[]; audios?: MediaAsset[] } | null> {
   if (assetCache.has(id)) return assetCache.get(id)!
   const name = bucketNameFor(id)
   if (!name) return null
-  if (!bucketLoaded.has(name)) {
-    let p = bucketInflight.get(name)
-    if (!p) {
-      const attempts = bucketAttempts.get(name) ?? 0
-      if (attempts >= MAX_BUCKET_ATTEMPTS) return null // 放弃（离线/持续失败），不再打空请求
-      bucketAttempts.set(name, attempts + 1)
-      p = (async () => {
-        const url = `${import.meta.env.BASE_URL}data/assets/${name}.json`
-        try {
-          const res = await fetch(url)
-          if (res.ok) {
-            const data = (await res.json()) as { species?: Record<string, { images?: MediaAsset[]; audios?: MediaAsset[] }> }
-            for (const [sid, entry] of Object.entries(data.species || {})) {
-              assetCache.set(sid, entry)
-            }
-            // 只有成功才标记"该桶已加载"——失败保持可重试
-            bucketLoaded.add(name)
-          }
-        } catch {
-          /* 分片加载失败:调用方回退 core 首图首音；下次调用会再试（有次数上限） */
-        } finally {
-          bucketInflight.delete(name)
-        }
-      })()
-      bucketInflight.set(name, p)
-    }
-    await p
-  }
+  await ensureBucket(name)
   return assetCache.get(id) ?? null
 }
 
@@ -205,6 +212,31 @@ export function cachedSpeciesAssets(
 ): { images?: MediaAsset[]; audios?: MediaAsset[] } | null {
   if (!id) return null
   return assetCache.get(id) ?? null
+}
+
+/**
+ * docs/137 §4.3-a：名录就地预览的**限量桶级预取**（不是逐行 mouseenter）。
+ *
+ * 为什么按桶限量：一个 assets 桶中位 gzip 5.4 KB、最大 39.7 KB；
+ * 但「搜 a」会命中 11,026 种 → 跨 649 桶 ≈ 全库 5.8 MB。逐行预取同样会失控
+ * （划过 20 行可能触发几十桶）。所以只允许调用方传入**已经筛过的少量 id**，
+ * 并在超过 `maxBuckets` 时整体放弃——宁可点开时再等一次网络，也不静默拉全库。
+ *
+ * @returns 实际发起的桶数；`skipped` 表示因超限而整体放弃（调用方无需再等）
+ */
+export async function prefetchSpeciesAssets(
+  ids: readonly string[],
+  maxBuckets = 6,
+): Promise<{ buckets: number; skipped: boolean }> {
+  const names = new Set<string>()
+  for (const id of ids) {
+    if (assetCache.has(id)) continue
+    const name = bucketNameFor(id)
+    if (name && !bucketLoaded.has(name)) names.add(name)
+  }
+  if (names.size > maxBuckets) return { buckets: 0, skipped: true }
+  await Promise.all([...names].map((n) => ensureBucket(n)))
+  return { buckets: names.size, skipped: false }
 }
 
 /**

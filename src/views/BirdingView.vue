@@ -4,9 +4,9 @@
  *
  * 结构（2026-10-31 用户定，三区域自上而下）——
  * ①标题与说明（页面顶部）；②地区选择（移动端：标题下常驻触发条 + 抽屉；桌面：大洲胶囊
- * 居中 + 左侧常驻国家树；**横屏 = ②居左、③居右**两栏）；③内容三标签：
- * 「该地鸟种」（默认；记录数降序，内嵌「预习模式」浮窗）→「观鸟点」（含附近鸟点开关）→
- * 「名录」（2026-10-31 起由共享组件 CatalogPanel 提供，与独立 /catalog 页同源）。
+ * 居中 + 左侧常驻国家树；**横屏 = ②居左、③居右**两栏）；③内容两标签：
+ * 「该地鸟种」（默认；记录数降序，内嵌「预习模式」浮窗）→「观鸟点」（含附近鸟点开关）。
+ * 名录已于 2026-11-23（docs/137 §4.4-a）独立为 `/catalog`，本页不再挂载名录标签。
  * 打开页面时按 IP 粗定位（Worker `/api/geo`）自动选中用户所在国家/省份；用户手动
  * 选过则记住上次选择（localStorage），URL 显式参数永远优先。
  * 旧路由 `/region` / `/nearby` 由 router 重定向到本页并还原状态（见 router/index.ts）。
@@ -30,7 +30,6 @@ import {
   X,
   ZoomIn,
 } from 'lucide-vue-next'
-import CatalogPanel from '@/components/CatalogPanel.vue'
 import NearbySpotsPanel from '@/components/NearbySpotsPanel.vue'
 import SpeciesFacts from '@/components/SpeciesFacts.vue'
 import AttributionLine from '@/components/AttributionLine.vue'
@@ -115,10 +114,8 @@ const continent = ref<Continent>('asia')
 const selected = ref('CN')
 /** 已选省级 code（空 = 国家级） */
 const province = ref('')
-/** 右侧面板标签页：该地鸟种（默认）→ 观鸟点 → 名录（2026-10-31 用户定顺序） */
-const activeTab = ref<'spots' | 'regions' | 'catalog'>('regions')
-/** 名录标签懒挂载：首次切到「名录」才加载 catalog.json（~1.3MB），此后 v-show 保持状态 */
-const catalogShown = ref(false)
+/** 右侧面板标签页：该地鸟种（默认）→ 观鸟点（名录已独立为 /catalog，见 docs/137） */
+const activeTab = ref<'spots' | 'regions'>('regions')
 /** 「附近鸟点」开关（默认关；开 → 观鸟点列表改为按定位排序的附近点位） */
 const nearby = ref(false)
 /** 选中国家的省级二级列表是否展开（点击已选国家切换） */
@@ -219,10 +216,10 @@ function saveLastRegion() {
 function applyQuery() {
   const q = route.query
   // 默认标签 = 该地鸟种（2026-10-29 用户定：预习优先，该地鸟种为第一标签）
-  const tab = q.tab === 'spots' ? 'spots' : q.tab === 'catalog' ? 'catalog' : 'regions'
+  // 名录已独立为 /catalog（docs/137）：旧链接 `?tab=catalog` 不作兼容跳转（2026-11-23 用户定），
+  // 走默认分支即落到「该地鸟种」。
+  const tab = q.tab === 'spots' ? 'spots' : 'regions'
   activeTab.value = tab
-  // 深链直进名录（?tab=catalog）：懒挂载标记必须立即置位，否则面板永远不渲染
-  if (tab === 'catalog') catalogShown.value = true
   nearby.value = tab === 'spots' && q.nearby === '1'
   if (typeof q.cc === 'string' && q.cc) selected.value = q.cc.toUpperCase()
   if (typeof q.sub === 'string') province.value = q.sub
@@ -242,9 +239,8 @@ function applyQuery() {
 }
 
 /** 标签/开关/地区变化 → 写回 URL（保证刷新与分享可还原） */
-function setTab(next: 'spots' | 'regions' | 'catalog') {
+function setTab(next: 'spots' | 'regions') {
   activeTab.value = next
-  if (next === 'catalog') catalogShown.value = true
   syncQuery()
 }
 function toggleNearby() {
@@ -256,7 +252,6 @@ function syncQuery() {
   const q: Record<string, string> = {}
   // 默认标签（regions）不写参数，保持链接干净；显式传 tab=regions 也兼容
   if (activeTab.value === 'spots') q.tab = 'spots'
-  if (activeTab.value === 'catalog') q.tab = 'catalog'
   if (nearby.value) q.nearby = '1'
   // 地区也进 URL：默认国（CN）不写，保持链接干净；省份总是写
   if (selected.value && selected.value !== 'CN') q.cc = selected.value
@@ -1389,7 +1384,7 @@ function pickProvince(code: string) {
         </Teleport>
 
         <div class="species">
-          <!-- 2026-10-31 用户定：该地鸟种（默认）→ 观鸟点 → 名录 三标签 -->
+          <!-- 2026-10-31 用户定：该地鸟种（默认）→ 观鸟点 两标签（名录已独立为 /catalog，docs/137） -->
           <div class="panel-tabs" role="tablist">
             <button
               type="button"
@@ -1431,18 +1426,6 @@ function pickProvince(code: string) {
                   }}</span>
                 </template>
               </span>
-            </button>
-            <!-- 名录（第三标签）：catalog.json ~1.3MB 懒加载，首次切到才挂载 CatalogPanel；
-                 挂载后 v-show 保持，来回切换不丢展开状态与搜索词 -->
-            <button
-              type="button"
-              role="tab"
-              class="panel-tab"
-              :class="{ active: activeTab === 'catalog' }"
-              :aria-selected="activeTab === 'catalog'"
-              @click="setTab('catalog')"
-            >
-              <span class="tab-label">{{ t('region.tabCatalog') }}</span>
             </button>
           </div>
 
@@ -1637,11 +1620,6 @@ function pickProvince(code: string) {
             <p v-if="provinces.length" class="prov-source muted">
               {{ t('region.provinceSource', { sources: provinceSources }) }}
             </p>
-          </div>
-
-          <!-- ---------- 标签页 3：名录（2026-10-31 并入；与 /catalog 共用 CatalogPanel） ---------- -->
-          <div v-if="catalogShown" v-show="activeTab === 'catalog'" class="catalog-pane">
-            <CatalogPanel />
           </div>
         </div>
       </div>
@@ -3339,12 +3317,6 @@ function pickProvince(code: string) {
   margin: 10px 0 0;
   font-size: 0.68rem;
   line-height: 1.6;
-}
-
-/* ── 名录标签页（2026-10-31 并入；面板自带样式，这里只定位） ── */
-.catalog-pane {
-  text-align: center;
-  margin-top: 4px;
 }
 
 /* ── 预习浮窗 · 地区选择（2026-10-31）：与看图/听音选区同构（摘要 + 大洲手风琴 → 国家 → 省 chips） ── */

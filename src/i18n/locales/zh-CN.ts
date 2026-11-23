@@ -360,7 +360,7 @@ export const messages = {
   },
   catalog: {
     title: '全量名录',
-    lead: '题库收录的全部鸟类，按目 → 科 → 种组织。列出学名、英文名与中文名（有则给出），并标注图片/音频可得性。',
+    lead: '题库收录的全部鸟类，按目 → 科 → 种组织。列出学名、英文名与中文名（有则给出）；点开任意一种即可看图与听音。',
     counts: '{total} 种 · {orders} 目 · {families} 科',
     mediaCounts: '图片 {image} · 音频 {audio}',
     search: '搜索学名 / 中文名 / 英文名',
@@ -373,9 +373,11 @@ export const messages = {
     sortCommonHint: '按各目内的科与种重排：常见的鸟排在前面。',
     jumpLabel: '按拼音首字母跳转',
     loading: '正在加载名录…',
-    flags: '图片与音频可得性',
+    pvNoImage: '暂无图片',
+    pvNoAudio: '暂无音频',
+    pvDetail: '查看详情',
     footnote:
-      '中文名为空表示该种在开放数据源中暂无通行中文名（界面回退显示英文名或学名）。科名来自 Wikidata / GBIF，少数没有通行中文名的科显示拉丁名。灰色图标表示该素材缺失（原因见答疑专栏「关于题库覆盖」）。',
+      '中文名为空表示该种在开放数据源中暂无通行中文名（界面回退显示英文名或学名）。科名来自 Wikidata / GBIF，少数没有通行中文名的科显示拉丁名。尚无素材的种在展开时会标出缺失的图片或音频（原因见答疑专栏「关于题库覆盖」）。',
   },
   // 039 P1 附近观鸟点（/nearby；粗定位来自 Worker /api/geo，坐标不落库）
   nearby: {
@@ -546,8 +548,6 @@ export const messages = {
     tabSpecies: '鸟种',
     tabRegions: '该地鸟种',
     tabHotspots: '观鸟点',
-    // 名录（第三标签，2026-10-31 并入观鸟页）
-    tabCatalog: '名录',
     // 预习浮窗内的地区选择（2026-10-31）
     pvRegionChange: '更改',
     // 预习浮窗：大图灯箱 / 多素材展开 / 数据面板（2026-10-31）

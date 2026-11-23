@@ -26,6 +26,27 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-23',
+    zh: {
+      title: '名录独立成页 · 就地看图听音',
+      items: [
+        '顶部导航加回「名录」，一键直达',
+        '名录从「观鸟」页移出，成为独立页面',
+        '在名录里点开任意一种鸟，就地显示它的图片与鸣声，不必来回跳页；「查看详情」仍可进入完整档案',
+        '搜索加了停顿后才触发的等待，输入过程不再卡顿',
+      ],
+    },
+    en: {
+      title: 'Catalogue gets its own page · see and hear birds in place',
+      items: [
+        'A Catalogue link is back in the main navigation',
+        'The catalogue moved out of the Birding page into its own page',
+        'Tap any species to see its photo and hear its call right there, no more back-and-forth; "View details" still opens the full profile',
+        'Search now waits for a short pause in typing, so input stays smooth',
+      ],
+    },
+  },
+  {
     date: '2026-11-04',
     zh: {
       title: '称号与徽章改版',

@@ -40,16 +40,59 @@ const catalog = {
   ],
 }
 
+/** thumbs 索引夹具：只给 bubo-bubo 一条首图/首音，其余种视为无素材 */
+const thumbs = {
+  schemaVersion: 1,
+  base: 'https://media.test/media/',
+  thumb: { 'bubo-bubo': 'image-1.thumb.webp' },
+  audio: { 'bubo-bubo': 'audio-1.mp3' },
+}
+
+/** assets 分片夹具：bubo-bubo 首图带完整署名（展开时用来验证 AttributionLine 接线） */
+const assetsBucket = {
+  species: {
+    'bubo-bubo': {
+      images: [
+        {
+          speciesId: 'bubo-bubo',
+          type: 'image',
+          url: 'https://media.test/media/bubo-bubo/image-1.full.webp',
+          thumbUrl: 'https://media.test/media/bubo-bubo/image-1.thumb.webp',
+          license: 'CC BY-NC',
+          author: 'Test Photographer',
+          source: 'iNaturalist',
+          sourceUrl: 'https://example.test/obs/1',
+        },
+      ],
+      audios: [
+        {
+          speciesId: 'bubo-bubo',
+          type: 'audio',
+          url: 'https://media.test/media/bubo-bubo/audio-1.mp3',
+          license: 'CC BY-SA',
+          author: 'Test Recordist',
+          source: 'Xeno-canto',
+          sourceUrl: 'https://example.test/xc/1',
+        },
+      ],
+    },
+  },
+}
+
 function stubFetch() {
   vi.stubGlobal(
     'fetch',
-    vi.fn(
-      async () =>
-        new Response(JSON.stringify(catalog), {
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      const json = (body: unknown) =>
+        new Response(JSON.stringify(body), {
           status: 200,
           headers: { 'content-type': 'application/json' },
-        }),
-    ),
+        })
+      if (url.includes('/data/thumbs.json')) return json(thumbs)
+      if (url.includes('/data/assets/')) return json(assetsBucket)
+      return json(catalog)
+    }),
   )
 }
 
@@ -127,7 +170,77 @@ describe('/catalog 排序（031 D-031-2）', () => {
     // 雀形目（家燕所在）已展开
     const open = w.findAll('details[open]')
     expect(open.length).toBeGreaterThan(0)
-    expect(open.some((d) => d.find('.cat-sp-link[href="/species/hirundo-rustica"]').exists())).toBe(true)
+    expect(open.some((d) => d.find('#cat-sp-hirundo-rustica').exists())).toBe(true)
+  })
+
+  it('行内始终有详情按钮；点击名字就地展开素材、再点收起', async () => {
+    const w = await mountView()
+    // 名字是可展开按钮（不跳页），详情是旁边常驻的主按钮（docs/137 B 线，2026-11-23 改版）
+    const row = w.find('#cat-sp-bubo-bubo .cat-sp-link')
+    expect(row.element.tagName).toBe('BUTTON')
+    expect(row.attributes('aria-expanded')).toBe('false')
+
+    // 未展开也有详情按钮
+    const detail = w.find('#cat-sp-bubo-bubo .cat-sp-detail')
+    expect(detail.exists()).toBe(true)
+    expect(detail.attributes('href')).toBe('/species/bubo-bubo')
+
+    await row.trigger('click')
+    await flushPromises()
+    expect(w.find('#cat-sp-bubo-bubo .cat-sp-link').attributes('aria-expanded')).toBe('true')
+    expect(w.find('#cat-pv-bubo-bubo').exists()).toBe(true)
+
+    // 再点同一行收起（详情按钮仍在）
+    await w.find('#cat-sp-bubo-bubo .cat-sp-link').trigger('click')
+    await flushPromises()
+    expect(w.find('#cat-pv-bubo-bubo').exists()).toBe(false)
+    expect(w.find('#cat-sp-bubo-bubo .cat-sp-detail').exists()).toBe(true)
+  })
+
+  it('多张卡片可同时展开（比较多个种时不必来回收起）', async () => {
+    const w = await mountView()
+    await w.find('#cat-sp-bubo-bubo .cat-sp-link').trigger('click')
+    await flushPromises()
+    await w.find('#cat-sp-athene-noctua .cat-sp-link').trigger('click')
+    await flushPromises()
+    expect(w.find('#cat-pv-bubo-bubo').exists()).toBe(true)
+    expect(w.find('#cat-pv-athene-noctua').exists()).toBe(true)
+    // 各自独立收起
+    await w.find('#cat-sp-bubo-bubo .cat-sp-link').trigger('click')
+    await flushPromises()
+    expect(w.find('#cat-pv-bubo-bubo').exists()).toBe(false)
+    expect(w.find('#cat-pv-athene-noctua').exists()).toBe(true)
+  })
+
+  it('搜索命中不跨科时自动展开素材（无需逐点点开）', async () => {
+    vi.useFakeTimers()
+    try {
+      const w = await mountView()
+      await w.find('.cat-search').setValue('jiayan')
+      vi.advanceTimersByTime(300)
+      await flushPromises()
+      // 只有 Hirundinidae 里的家燕命中 → 单科单种 → 自动展开
+      expect(w.find('#cat-pv-hirundo-rustica').exists()).toBe(true)
+      expect(w.find('#cat-sp-hirundo-rustica .cat-sp-detail').attributes('href')).toBe(
+        '/species/hirundo-rustica',
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('搜索命中跨科时保持点开才展开（不自动铺开）', async () => {
+    vi.useFakeTimers()
+    try {
+      const w = await mountView()
+      // 「a」在夹具里跨 Strigidae / Hirundinidae 两个科
+      await w.find('.cat-search').setValue('a')
+      vi.advanceTimersByTime(300)
+      await flushPromises()
+      expect(w.findAll('.cat-pv').length).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('切回「分类序」:恢复原顺序并隐藏字母条', async () => {

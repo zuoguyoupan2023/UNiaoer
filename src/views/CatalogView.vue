@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * 029 数据透明度:全量名录目录（/catalog）。
- * 2026-10-31 起：名录内容抽成 `CatalogPanel.vue` 共享组件——/birding 第三标签「名录」
- * 与本页共用同一份逻辑与模板；本页只剩卡片壳（标题 + 说明 + 面板）。
+ * 2026-10-31 起：名录内容抽成 `CatalogPanel.vue` 共享组件。
+ * 2026-11-23（docs/137 §4.4-a）：名录从 /birding 标签栏移除，本页成为**唯一入口**；
+ * 本页只剩卡片壳（标题 + 说明 + 面板）。
  */
 import { Library } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'

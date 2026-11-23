@@ -378,7 +378,7 @@ const en: typeof zhMessages = {
   },
   catalog: {
     title: 'Full catalogue',
-    lead: 'Every species in the bank, organised by order → family → species, with scientific, English and Chinese names (where available) and photo/audio availability.',
+    lead: 'Every species in the bank, organised by order → family → species, with scientific, English and Chinese names (where available). Tap any species to see its photo and hear its call.',
     counts: '{total} species · {orders} orders · {families} families',
     mediaCounts: '{image} photos · {audio} recordings',
     search: 'Search scientific / English / Chinese name',
@@ -393,9 +393,11 @@ const en: typeof zhMessages = {
       'Re-sorts families and species within each order: the most commonly seen birds come first.',
     jumpLabel: 'Jump by pinyin initial',
     loading: 'Loading catalogue…',
-    flags: 'Photo & audio availability',
+    pvNoImage: 'No photo yet',
+    pvNoAudio: 'No audio yet',
+    pvDetail: 'View details',
     footnote:
-      'An empty Chinese name means no common Chinese name exists in open data (the UI falls back to English or the scientific name). Family names come from Wikidata / GBIF; the few families without an established Chinese name are shown in Latin. Grey icons mark missing media (see the Explainer, "About our coverage").',
+      'An empty Chinese name means no common Chinese name exists in open data (the UI falls back to English or the scientific name). Family names come from Wikidata / GBIF; the few families without an established Chinese name are shown in Latin. Species without media say so when expanded (see the Explainer, "About our coverage").',
   },
   // 039 P1 nearby birding spots (/nearby; coarse location from Worker /api/geo, never stored)
   nearby: {
@@ -566,7 +568,6 @@ const en: typeof zhMessages = {
     tabSpecies: 'Species',
     tabRegions: 'Zone birds',
     tabHotspots: 'Birding spots',
-    tabCatalog: 'Catalog',
     pvRegionChange: 'Change',
     pvZoom: 'Full image',
     pvView: 'View',
