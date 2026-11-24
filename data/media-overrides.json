@@ -23000,27 +23000,8 @@
       "replaceSlot": 1
     },
     "ardea-intermedia": {
-      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 繁殖期特征：嘴部部分黑色（图本身正确、非错图；辨识难度高，见 docs/113 §4.1）；用户 2026-11-16 选定 photo 763797964；位4 繁殖期特征：嘴部部分黑色（图本身正确、非错图；辨识难度高，见 docs/113 §4.1）；用户 2026-11-16 选定 photo 763789566。新图落 image-6/image-7（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。",
+      "_reason": "2026-11-16 docs/128 批次（25 种，用户定「先修旧体系明显坏图，再切 117」）：位1 繁殖期特征：嘴部部分黑色（图本身正确、非错图；辨识难度高，见 docs/113 §4.1）；用户 2026-11-16 选定 photo 763797964；位4 繁殖期特征：嘴部部分黑色（图本身正确、非错图；辨识难度高，见 docs/113 §4.1）；用户 2026-11-16 选定 photo 763789566。新图落 image-6/image-7（keyBase=6）；其余位沿用上一版 key，不重编码、不覆写。未设 keepLeadImage（它会使 key 索引整体 +1，实证见 malurus 的 image-41 偏移）。 || 2026-11-24 docs/138：图2 主体为东方白鹳（中白鹭被遮挡），用户选定 photo 444622077 替换；新图落 image-20，其余位沿用上一版 key。",
       "imageKeyBase": 6,
-      "excludeUrls": [],
-      "images": [
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763797964/large.jpg",
-          "license": "cc-by-nc",
-          "author": "(c) lilyshapiro, some rights reserved (CC BY-NC)",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/414857730",
-          "sourceId": "763797964"
-        },
-        {
-          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763789566/large.jpg",
-          "license": "cc-by-nc",
-          "author": "(c) Fadzrun, some rights reserved (CC BY-NC)",
-          "source": "iNaturalist",
-          "sourceUrl": "https://www.inaturalist.org/observations/414853819",
-          "sourceId": "763789566"
-        }
-      ],
       "slotAssignments": [
         {
           "slot": 1,
@@ -23029,6 +23010,47 @@
         {
           "slot": 4,
           "pickIndex": 2
+        },
+        {
+          "slot": 2,
+          "pickIndex": 3
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438388099/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438388099/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438388099/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/438388099/original.jpg",
+        "https://www.inaturalist.org/photos/438388099",
+        "https://www.inaturalist.org/observations/245649972"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763797964/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) lilyshapiro, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414857730",
+          "sourceId": "763797964",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/763797964/large.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/763789566/large.jpg",
+          "license": "cc-by-nc",
+          "author": "(c) Fadzrun, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/414853819",
+          "sourceId": "763789566",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/763789566/large.jpg"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/444622077/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) Andrey Mikhaylov, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/248794980",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/444622077/large.jpeg",
+          "sourceId": "444622077"
         }
       ]
     },
@@ -23334,6 +23356,341 @@
           "source": "iNaturalist",
           "sourceUrl": "https://www.inaturalist.org/observations/295094138",
           "sourceId": "531210828"
+        }
+      ]
+    },
+    "alle-alle": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图1(image-1)、图2(image-2)、图3(image-3)、图4(image-4)、图5(image-5)，按用户选择替换为 247564977、101345507、409916578、542290921、230873787",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 2,
+          "pickIndex": 2
+        },
+        {
+          "slot": 3,
+          "pickIndex": 3
+        },
+        {
+          "slot": 4,
+          "pickIndex": 4
+        },
+        {
+          "slot": 5,
+          "pickIndex": 5
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/69382531/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/69382531/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/69382531/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/69382531/original.jpg",
+        "https://www.inaturalist.org/photos/69382531",
+        "https://www.inaturalist.org/observations/43748264",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67750645/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67750645/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67750645/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/67750645/original.jpg",
+        "https://www.inaturalist.org/photos/67750645",
+        "https://www.inaturalist.org/observations/42662883",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/369323702/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/369323702/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/369323702/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/369323702/original.jpg",
+        "https://www.inaturalist.org/photos/369323702",
+        "https://www.inaturalist.org/observations/208729774",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6714609/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6714609/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6714609/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/6714609/original.jpg",
+        "https://www.inaturalist.org/photos/6714609",
+        "https://www.inaturalist.org/observations/5455046",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39650821/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39650821/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39650821/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/39650821/original.jpg",
+        "https://www.inaturalist.org/photos/39650821",
+        "https://www.inaturalist.org/observations/25589816"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/247564977/large.jpeg",
+          "license": "CC-BY",
+          "author": "(c) Owen Strickland, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/144263017",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/247564977/large.jpeg",
+          "sourceId": "247564977"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/101345507/large.jpeg",
+          "license": "CC-BY",
+          "author": "(c) Christoph Moning, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/63174856",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/101345507/large.jpeg",
+          "sourceId": "101345507"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/409916578/large.jpg",
+          "license": "CC-BY-NC",
+          "author": "(c) IanLJones, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/230841582",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/409916578/large.jpg",
+          "sourceId": "409916578"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/542290921/large.jpg",
+          "license": "CC-BY-NC",
+          "author": "(c) eva_pos, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/300877159",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/542290921/large.jpg",
+          "sourceId": "542290921"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/230873787/large.jpg",
+          "license": "CC-BY-NC",
+          "author": "(c) clicque, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/135368878",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/230873787/large.jpg",
+          "sourceId": "230873787"
+        }
+      ]
+    },
+    "geothlypis-trichas": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图1(image-1)、图5(image-5)，按用户选择替换为 79301180、17898632",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 5,
+          "pickIndex": 2
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5099127/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5099127/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5099127/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/5099127/original.jpg",
+        "https://www.inaturalist.org/photos/5099127",
+        "https://www.inaturalist.org/observations/4260621",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/440620267/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/440620267/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/440620267/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/440620267/original.jpg",
+        "https://www.inaturalist.org/photos/440620267",
+        "https://www.inaturalist.org/observations/246777513"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/79301180/large.jpg",
+          "license": "CC0",
+          "author": "no rights reserved",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/49945853",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/79301180/large.jpg",
+          "sourceId": "79301180"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/17898632/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) cgbb2004, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/12414901",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/17898632/large.jpeg",
+          "sourceId": "17898632"
+        }
+      ]
+    },
+    "parkesia-noveboracensis": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图1(image-1)，按用户选择替换为 356834930",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333272609/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333272609/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333272609/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/333272609/original.jpg",
+        "https://www.inaturalist.org/photos/333272609",
+        "https://www.inaturalist.org/observations/190149838"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/356834930/large.jpg",
+          "license": "CC-BY",
+          "author": "(c) MarvalPhotography19, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/202081705",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/356834930/large.jpg",
+          "sourceId": "356834930"
+        }
+      ]
+    },
+    "cardellina-pusilla": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图1(image-1)，按用户选择替换为 243027298",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332482/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332482/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332482/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/332482/original.jpg",
+        "https://www.inaturalist.org/photos/332482",
+        "https://www.inaturalist.org/observations/268708"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/243027298/large.jpg",
+          "license": "CC-BY",
+          "author": "(c) MarvalPhotography19, some rights reserved (CC BY)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/141813789",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/243027298/large.jpg",
+          "sourceId": "243027298"
+        }
+      ]
+    },
+    "botaurus-lentiginosus": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图1(image-1)，按用户选择替换为 484012383",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232963956/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232963956/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232963956/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/232963956/original.jpg",
+        "https://www.inaturalist.org/photos/232963956",
+        "https://www.inaturalist.org/observations/136496546"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/484012383/large.jpg",
+          "license": "CC-BY-NC",
+          "author": "(c) Lisa Mayo, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/269210698",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/484012383/large.jpg",
+          "sourceId": "484012383"
+        }
+      ]
+    },
+    "buteo-lineatus": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图2(image-2)、图3(image-3)，按用户选择替换为 62217537、377405336",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 2,
+          "pickIndex": 1
+        },
+        {
+          "slot": 3,
+          "pickIndex": 2
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/160500346/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/160500346/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/160500346/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/160500346/original.jpg",
+        "https://www.inaturalist.org/photos/160500346",
+        "https://www.inaturalist.org/observations/96597872",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/113715541/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/113715541/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/113715541/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/113715541/original.jpg",
+        "https://www.inaturalist.org/photos/113715541",
+        "https://www.inaturalist.org/observations/70001650"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/62217537/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) Tommy Farquhar, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/39233676",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/62217537/large.jpeg",
+          "sourceId": "62217537"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/377405336/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) Tom Murray, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/213549548",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/377405336/large.jpeg",
+          "sourceId": "377405336"
+        }
+      ]
+    },
+    "circus-spilonotus": {
+      "_reason": "2026-11-24 docs/138 用户报错处理：停用 图1(image-1)、图4(image-4)，按用户选择替换为 328189829、613817681",
+      "imageKeyBase": 20,
+      "slotAssignments": [
+        {
+          "slot": 1,
+          "pickIndex": 1
+        },
+        {
+          "slot": 4,
+          "pickIndex": 2
+        }
+      ],
+      "excludeUrls": [
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/93101697/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/93101697/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/93101697/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/93101697/original.jpg",
+        "https://www.inaturalist.org/photos/93101697",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617078266/large.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617078266/large.jpeg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617078266/large.png",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/617078266/original.jpg",
+        "https://www.inaturalist.org/photos/617078266",
+        "https://www.inaturalist.org/observations/339239710"
+      ],
+      "images": [
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/328189829/large.jpeg",
+          "license": "CC-BY-NC",
+          "author": "(c) 龙栩川, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/187639644",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/328189829/large.jpeg",
+          "sourceId": "328189829"
+        },
+        {
+          "url": "https://inaturalist-open-data.s3.amazonaws.com/photos/613817681/large.jpg",
+          "license": "CC-BY-NC",
+          "author": "(c) Andrew Pierce, some rights reserved (CC BY-NC)",
+          "source": "iNaturalist",
+          "sourceUrl": "https://www.inaturalist.org/observations/337640413",
+          "originalUrl": "https://inaturalist-open-data.s3.amazonaws.com/photos/613817681/large.jpg",
+          "sourceId": "613817681"
         }
       ]
     }

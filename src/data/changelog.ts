@@ -26,6 +26,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-24',
+    zh: {
+      title: '8 种鸟的错图已修正',
+      items: [
+        '小海雀：原来的 5 张图全部是植物，已全部换成小海雀照片',
+        '中白鹭、黄喉地莺、黄眉灶莺、黑头威森莺、美洲麻鳽、赤肩鵟、白腹鹞：各有 1–2 张不适合作为题面的图已替换',
+        '替换后的图片都经过逐张核对，旧文件保留在服务器上备查',
+      ],
+    },
+    en: {
+      title: 'Wrong images fixed for eight species',
+      items: [
+        'Little Auk: all five previous images were plants; they have been replaced with Little Auk photographs',
+        'Medium Egret, Common Yellowthroat, Northern Waterthrush, Wilson\'s Warbler, American Bittern, Red-shouldered Hawk and Eastern Marsh Harrier: one or two unsuitable quiz images replaced for each',
+        'Every replacement was checked image by image; the old files remain on the server for reference',
+      ],
+    },
+  },
+  {
     date: '2026-11-23',
     zh: {
       title: '名录独立成页 · 就地看图听音',
